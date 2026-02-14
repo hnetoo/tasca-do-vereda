@@ -17,9 +17,9 @@
         "minWidth": 800,
         "minHeight": 600,
         "dragDropEnabled": false,
-        "dataDirectory": "stable-v1.1.70",
-        "devtools": false,
-        "additionalBrowserArgs": "--disable-gpu --disable-software-rasterizer --disable-dev-shm-usage"
+        "dataDirectory": "stable-v1.1.70-fixed",
+        "devtools": true,
+        "additionalBrowserArgs": "--disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --disable-features=RendererCodeIntegrity"
       }
     ],
     "security": {

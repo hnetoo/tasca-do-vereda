@@ -12,7 +12,9 @@
     <link rel="manifest" href="./manifest.json" />
     <script>
       (() => {
-        if (window.location.protocol === 'file:') return;
+        // Desativa redirecionamento se estiver em ambiente Tauri (file: ou localhost no Tauri)
+        if (window.location.protocol === 'file:' || window.__TAURI_INTERNALS__) return;
+        
         const base = '%BASE_URL%';
         const { pathname, search, hash } = window.location;
         if (hash && hash.startsWith('#/')) return;
@@ -39,7 +41,7 @@
     <script>
       // Redirect for Hash Router compatibility with printed QRs
       (function() {
-        if (window.location.protocol === 'file:') return;
+        if (window.location.protocol === 'file:' || window.__TAURI_INTERNALS__) return;
         var path = window.location.pathname;
         if (path !== '/' && path.indexOf('/menu/public') !== -1 && window.location.hash === '') {
           window.location.href = '/#' + path;
