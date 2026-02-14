@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { thesisData } from '../data/thesisData';
 
-interface RemoteDashboardData {
+export interface RemoteDashboardData {
   summary?: {
     total_revenue?: number;
     total_orders?: number;
