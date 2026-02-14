@@ -19,7 +19,7 @@
         "dragDropEnabled": false,
         "dataDirectory": "stable-v1.1.71",
         "devtools": false,
-        "additionalBrowserArgs": "--disable-gpu --disable-software-rasterizer --disable-dev-shm-usage --disable-features=RendererCodeIntegrity"
+        "additionalBrowserArgs": ""
       }
     ],
     "security": {

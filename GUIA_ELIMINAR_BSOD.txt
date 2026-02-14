@@ -1,0 +1,47 @@
+# 🚨 GUIA RÁPIDO - ELIMINAR BSOD DO IIS
+
+## ETAPA 1: EXECUTAR COMO ADMINISTRADOR
+1. Clique com botão direito no PowerShell
+2. Selecione "Executar como administrador"
+3. Execute estes comandos:
+
+```powershell
+# Parar IIS completamente
+net stop W3SVC /y
+net stop IISADMIN /y
+
+# Desabilitar IIS no startup
+sc config W3SVC start= disabled
+sc config IISADMIN start= disabled
+
+# Matar processos w3wp se ainda existirem
+taskkill /F /IM w3wp.exe
+
+# Verificar se parou
+sc query W3SVC
+```
+
+## ETAPA 2: INSTALAR MSI COMO ADMIN
+1. **IMPORTANTE**: Clique direito no arquivo MSI
+2. Selecione "Executar como administrador"
+3. **NÃO clique duas vezes diretamente**
+
+## ETAPA 3: VERIFICAR RESULTADO
+Execute após instalação:
+```powershell
+# Verificar se IIS está parado
+sc query W3SVC
+
+# Verificar se Tasca está rodando
+Get-Process | Where-Object {$_.ProcessName -like "*tasca*"}
+```
+
+## 🎯 PROBLEMA IDENTIFICADO:
+- **Causa**: IIS (Servidor Web) conflitando com WebView2
+- **Sintoma**: Tela azul quando aplicação tenta acessar rede
+- **Solução**: Desabilitar IIS completamente
+
+## 📁 ARQUIVO MSI:
+`C:\Users\hneto\tasca-do-vereda---gestão_msi_vscode\src-tauri\target\release\bundle\msi\Tasca Do VEREDA_1.1.71_x64_en-US.msi`
+
+Execute agora como administrador!
