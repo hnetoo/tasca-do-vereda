@@ -16,6 +16,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "tauri:build:release": "tauri build",
+    "check-branch": "node -e \"const b = require('child_process').execSync('git branch --show-current').toString().trim(); if (b === 'main') { console.error('ERRO: Não use o branch main! Use o branch master.'); process.exit(1); }\"",
     "prepare": "husky"
   },
   "dependencies": {
