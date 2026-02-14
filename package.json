@@ -1,7 +1,7 @@
 {
   "name": "tasca-do-vereda-app",
   "private": true,
-  "version": "1.1.70",
+  "version": "1.1.71",
   "description": "REST AI - Sistema de Gestão Inteligente",
   "author": "Helder Neto",
   "type": "module",
