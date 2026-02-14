@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Tasca Do VEREDA</title>
+  </head>
+  <body>
+    <script>
+      (() => {
+        const base = '%BASE_URL%';
+        const { pathname, search } = window.location;
+        const knownRoots = new Set([
+          'owner','menu','menu-digital','customer-display','qr-scanner','login','dashboard','pos','kitchen',
+          'tables-layout','tables','finance','reports','settings','employees','customers','reservations',
+          'analytics','manual','system-health','recovery','schedules','encomendas','mobile-dashboard','developer-settings'
+        ]);
+        const segments = pathname.split('/').filter(Boolean);
+        let basePath = '';
+        if (base.startsWith('/')) {
+          basePath = base.endsWith('/') ? base.slice(0, -1) : base;
+        } else if (segments.length > 0 && !knownRoots.has(segments[0])) {
+          basePath = `/${segments[0]}`;
+        }
+        const route = basePath && pathname.startsWith(basePath) ? pathname.slice(basePath.length) : pathname;
+        const target = `${basePath}/#${route}${search}`;
+        window.location.replace(target);
+      })();
+    </script>
+  </body>
+</html>

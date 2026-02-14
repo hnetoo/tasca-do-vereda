@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: Menu Digital API
+  version: 1.0.0
+  description: API RESTful para Owner Dashboard e Menu Digital
+servers:
+  - url: http://localhost:5173/api
+    description: Desenvolvimento local
+security:
+  - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    DashboardSummary:
+      type: object
+      properties:
+        total_revenue:
+          type: number
+        total_orders:
+          type: integer
+        active_orders_count:
+          type: integer
+        last_updated:
+          type: string
+          format: date-time
+    Category:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        icon: { type: string }
+        sort_order: { type: integer }
+    MenuItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        price: { type: number }
+        category_id: { type: string }
+        image_url: { type: string }
+        available: { type: boolean }
+        tax_rate: { type: number }
+paths:
+  /owner/dashboard/summary:
+    get:
+      tags: [Owner]
+      summary: Obter resumo do dashboard
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+        '401':
+          description: Não autorizado
+  /menu/categories:
+    get:
+      tags: [Menu]
+      summary: Listar categorias
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          description: Não autorizado
+  /menu/items:
+    get:
+      tags: [Menu]
+      summary: Listar itens do menu
+      parameters:
+        - in: query
+          name: category_id
+          schema: { type: string }
+        - in: query
+          name: available
+          schema: { type: boolean }
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+        '401':
+          description: Não autorizado
+  /owner/expenses:
+    get:
+      tags: [Owner]
+      summary: Listar despesas
+      parameters:
+        - in: query
+          name: date_from
+          schema: { type: string, format: date }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date }
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Não autorizado
+  /owner/revenues:
+    get:
+      tags: [Owner]
+      summary: Listar receitas
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Não autorizado
+  /owner/events:
+    get:
+      tags: [Owner]
+      summary: Stream SSE de eventos do dashboard
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Stream
+          content:
+            text/event-stream:
+              schema:
+                type: string

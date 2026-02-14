@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TascaVereda" />
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3448/3448609.png" />
+    <link rel="manifest" href="./manifest.json" />
+    <script>
+      (() => {
+        if (window.location.protocol === 'file:') return;
+        const base = '%BASE_URL%';
+        const { pathname, search, hash } = window.location;
+        if (hash && hash.startsWith('#/')) return;
+        const knownRoots = new Set([
+          'owner','menu','menu-digital','customer-display','qr-scanner','login','dashboard','pos','kitchen',
+          'tables-layout','tables','finance','reports','settings','employees','customers','reservations',
+          'analytics','manual','system-health','recovery','schedules','encomendas','mobile-dashboard','developer-settings'
+        ]);
+        const segments = pathname.split('/').filter(Boolean);
+        let basePath = '';
+        if (base.startsWith('/')) {
+          basePath = base.endsWith('/') ? base.slice(0, -1) : base;
+        } else if (segments.length > 0 && !knownRoots.has(segments[0])) {
+          basePath = `/${segments[0]}`;
+        }
+        if (pathname === basePath || pathname === `${basePath}/`) return;
+        const route = basePath && pathname.startsWith(basePath) ? pathname.slice(basePath.length) : pathname;
+        const target = `${basePath}/#${route}${search}`;
+        window.location.replace(target);
+      })();
+    </script>
+    
+    <title>Tasca Do VEREDA - Gestão Inteligente</title>
+    <script>
+      // Redirect for Hash Router compatibility with printed QRs
+      (function() {
+        if (window.location.protocol === 'file:') return;
+        var path = window.location.pathname;
+        if (path !== '/' && path.indexOf('/menu/public') !== -1 && window.location.hash === '') {
+          window.location.href = '/#' + path;
+        }
+      })();
+    </script>
+    <style>
+      body { 
+        font-family: 'Inter', sans-serif; 
+        background-color: #0f172a;
+        color: #f8fafc;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      .glass-panel {
+        background: rgba(30, 41, 59, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .text-glow {
+        text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+      }
+
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+      }
+      .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
+
+      /* Safe area padding for mobile notches */
+      main {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    </style>
+  <link rel="stylesheet" href="./index.css">
+  </head>
+  <body class="selection:bg-primary selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+</body>
+</html>

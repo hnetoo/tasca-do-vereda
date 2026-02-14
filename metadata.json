@@ -1,0 +1,10 @@
+
+{
+  "name": "Tasca Do VEREDA - Gestão Inteligente",
+  "description": "PWA Inovadora para gestão de restaurantes com IA, POS, KDS e Analytics avançado.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

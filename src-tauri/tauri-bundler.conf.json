@@ -1,0 +1,28 @@
+{
+  "productName": "Tasca Do VEREDA",
+  "appVersion": "1.1.66",
+  "copyright": "Copyright © 2025 Tasca Do VEREDA Team",
+  "authors": ["Tasca Do VEREDA Team"],
+  "description": "Sistema de Gestão Inteligente para Restaurantes",
+  "homepage": "https://tasca-do-vereda.com",
+  "windows": {
+    "msi": {
+      "title": "Tasca Do VEREDA",
+      "description": "Instale o Tasca Do VEREDA - Sistema de Gestão Inteligente",
+      "language": "pt",
+      "supportURL": "https://tasca-do-vereda.com",
+      "upgradeCode": "D8369025-2359-4658-8897-652398541236",
+      "createStartMenuShortcut": true,
+      "createDesktopShortcut": true,
+      "perMachine": true,
+      "runAfterInstall": true
+    },
+    "nsis": {
+      "displayLanguageSelector": false,
+      "installerIcon": "icons/icon.ico",
+      "uninstallerIcon": "icons/icon.ico",
+      "installerHeader": "icons/icon.ico",
+      "installerSidebar": "icons/128x128.png"
+    }
+  }
+}

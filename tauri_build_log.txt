@@ -1,0 +1,57 @@
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> tasca-do-vereda-app@1.1.67 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mÔ£ô[39m 2781 modules transformed.
+rendering chunks...
+[plugin vite:reporter] 
+(!) C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/database/operations.ts is dynamically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/slices/financeSlice.ts but also statically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/disasterRecoveryService.ts, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/slices/menuSlice.ts, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/slices/operationalSlice.ts, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/slices/staffSlice.ts, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/useStore.ts, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/supabaseService.ts is dynamically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/components/QRMenuConfig.tsx, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/components/QRMenuConfig.tsx, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/logger.ts but also statically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/pages/MobileDashboard.tsx, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/pages/PublicMenu.tsx, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/pages/Settings.tsx, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/disasterRecoveryService.ts, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/slices/authSlice.ts, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/useStore.ts, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/node_modules/@tauri-apps/plugin-dialog/dist-js/index.js is dynamically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/feedPublisher.ts but also statically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/exportService.ts, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/node_modules/@tauri-apps/plugin-fs/dist-js/index.js is dynamically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/disasterRecoveryService.ts, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/feedPublisher.ts but also statically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/exportService.ts, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/services/cryptoService.ts is dynamically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/slices/authSlice.ts but also statically imported by C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/pages/Login.tsx, C:/Users/hneto/tasca-do-vereda---gest├úo_msi_vscode/store/useStore.ts, dynamic import will not move module into another chunk.
+
+computing gzip size...
+[2mdist/[22m[32massets/manifest-jNWGMmtG.json       [39m[1m[2m    0.62 kB[22m[1m[22m[2m Ôöé gzip:   0.34 kB[22m
+[2mdist/[22m[32mindex.html                          [39m[1m[2m    4.84 kB[22m[1m[22m[2m Ôöé gzip:   1.89 kB[22m
+[2mdist/[22m[35massets/index-CvMMR9_S.css           [39m[1m[2m  139.61 kB[22m[1m[22m[2m Ôöé gzip:  18.90 kB[22m
+[2mdist/[22m[36massets/index-O6h-tFk1.js            [39m[1m[2m    2.23 kB[22m[1m[22m[2m Ôöé gzip:   0.83 kB[22m
+[2mdist/[22m[36massets/purify.es-Bzr520pe.js        [39m[1m[2m   22.45 kB[22m[1m[22m[2m Ôöé gzip:   8.63 kB[22m
+[2mdist/[22m[36massets/vendor-BBjsSjzN.js           [39m[1m[2m   48.35 kB[22m[1m[22m[2m Ôöé gzip:  17.19 kB[22m
+[2mdist/[22m[36massets/index.es-BnDch0Xf.js         [39m[1m[2m  158.63 kB[22m[1m[22m[2m Ôöé gzip:  52.93 kB[22m
+[2mdist/[22m[36massets/html2canvas.esm-3ybT_T2r.js  [39m[1m[2m  201.04 kB[22m[1m[22m[2m Ôöé gzip:  47.43 kB[22m
+[2mdist/[22m[36massets/index-BYoFfYw5.js            [39m[1m[33m3,549.61 kB[39m[22m[2m Ôöé gzip: 990.08 kB[22m
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[32mÔ£ô built in 8m 49s[39m
+warning: unused config key `build.lto` in `C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\.cargo\config.toml`
+warning: unused config key `build.strip` in `C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\.cargo\config.toml`
+warning: unused config key `build.codegen-units` in `C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\.cargo\config.toml`
+warning: unused config key `build.opt-level` in `C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\.cargo\config.toml`
+   Compiling tasca_do_vereda v1.1.67 (C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\src-tauri)
+    Finished `release` profile [optimized] target(s) in 10m 46s
+       Built application at: C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\src-tauri\target\release\tasca_do_vereda.exe
+        Info Target: x64
+     Running candle for "C:\\Users\\hneto\\tasca-do-vereda---gest├úo_msi_vscode\\src-tauri\\target\\release\\wix\\x64\\main.wxs"
+     Running light to produce C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\src-tauri\target\release\bundle\msi\Tasca Do VEREDA_1.1.67_x64_en-US.msi
+        Info Target: x64
+     Running makensis to produce C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\src-tauri\target\release\bundle\nsis\Tasca Do VEREDA_1.1.67_x64-setup.exe
+    Finished 2 bundles at:
+        C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\src-tauri\target\release\bundle\msi\Tasca Do VEREDA_1.1.67_x64_en-US.msi
+        C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\src-tauri\target\release\bundle\nsis\Tasca Do VEREDA_1.1.67_x64-setup.exe
+

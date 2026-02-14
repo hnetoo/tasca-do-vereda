@@ -1,0 +1,23 @@
+
+PARA ATUALIZAR O ÍCONE DO APLICATIVO (MSI / ÁREA DE TRABALHO):
+
+Você precisa substituir os ícones padrão do Tauri pelos seus. Como eu não consigo salvar a imagem que você enviou diretamente, siga estes passos:
+
+1. Prepare a imagem do seu logotipo.
+2. Você precisará gerar dois arquivos principais:
+   - `icon.ico` (Para o Windows/Instalador)
+   - `icon.png` (Para Linux/Outros)
+
+3. Copie esses arquivos para a pasta:
+   `c:\Users\hneto\tasca-do-vereda---gestão-inteligente_msi_vscode\src-tauri\icons\`
+   
+   Substitua os arquivos existentes (`icon.ico` e `icon.png`).
+
+4. Para atualizar o ícone dentro do aplicativo (barra lateral):
+   - Salve sua imagem como `logo.png`
+   - Coloque-a na pasta `public` que acabei de criar na raiz do projeto:
+     `c:\Users\hneto\tasca-do-vereda---gestão-inteligente_msi_vscode\public\`
+   - Depois, vá em Configurações no app e defina o URL do Logo como `/logo.png`
+
+5. Para aplicar as mudanças no instalador, você precisará gerar uma nova build:
+   Execute o comando: `npm run tauri:build`

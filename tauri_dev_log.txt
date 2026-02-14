@@ -1,0 +1,329 @@
+     Running BeforeDevCommand (`npm run dev`)
+
+> tasca-do-vereda-app@1.1.67 dev
+> vite --host
+
+
+  [32m[1mVITE[22m v7.3.1[39m  [2mready in [0m[1m1030[22m[2m[0m ms[22m
+
+  [32mÔ×£[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32mÔ×£[39m  [1mNetwork[22m: [36mhttp://172.20.208.1:[1m5173[22m/[39m
+  [32mÔ×£[39m  [1mNetwork[22m: [36mhttp://192.168.1.48:[1m5173[22m/[39m
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+warning: unused config key `build.opt-level` in `C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\.cargo\config.toml`
+warning: unused config key `build.codegen-units` in `C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\.cargo\config.toml`
+warning: unused config key `build.strip` in `C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\.cargo\config.toml`
+warning: unused config key `build.lto` in `C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\.cargo\config.toml`
+        Info Watching C:\Users\hneto\tasca-do-vereda---gest├úo_msi_vscode\src-tauri for changes...
+    Blocking waiting for file lock on artifact directory
+   Compiling serde_core v1.0.228
+   Compiling serde v1.0.228
+   Compiling serde_json v1.0.149
+   Compiling uuid v1.20.0
+   Compiling alloc-stdlib v0.2.2
+   Compiling phf_generator v0.10.0
+   Compiling thiserror v1.0.69
+   Compiling serde_with_macros v3.16.1
+   Compiling unic-ucd-ident v0.9.0
+   Compiling phf_generator v0.8.0
+   Compiling regex v1.12.3
+   Compiling phf_codegen v0.11.3
+    Building [=====>                   ] 139/532: unic-ucÔÇª
+                                                            
+   Compiling smallvec v1.15.1
+    Building [=====>                   ] 140/532: unic-ucÔÇª
+                                                            
+   Compiling string_cache_codegen v0.5.4
+    Building [=====>                   ] 141/532: unic-ucÔÇª
+                                                            
+   Compiling subtle v2.6.1
+    Building [=====>                   ] 145/532: unic-ucÔÇª
+                                                            
+   Compiling phf_macros v0.10.0
+   Compiling phf_codegen v0.8.0
+    Building [======>                  ] 149/532: unic-ucÔÇª
+                                                            
+   Compiling brotli-decompressor v5.0.0
+    Building [======>                  ] 150/532: regex, ÔÇª
+                                                            
+   Compiling parking_lot_core v0.9.12
+    Building [======>                  ] 151/532: regex, ÔÇª
+                                                            
+   Compiling icu_normalizer v2.1.1
+    Building [======>                  ] 152/532: regex, ÔÇª
+                                                            
+   Compiling windows_x86_64_msvc v0.53.1
+    Building [======>                  ] 153/532: string_ÔÇª
+                                                            
+   Compiling parking_lot v0.12.5
+    Building [======>                  ] 154/532: parkingÔÇª
+                                                            
+   Compiling idna_adapter v1.2.1
+    Building [======>                  ] 155/532: parkingÔÇª
+    Building [======>                  ] 156/532: parkingÔÇª
+                                                            
+   Compiling crypto-common v0.1.7
+    Building [======>                  ] 157/532: parkingÔÇª
+                                                            
+   Compiling idna v1.1.0
+    Building [======>                  ] 158/532: parkingÔÇª
+                                                            
+   Compiling block-buffer v0.10.4
+    Building [======>                  ] 159/532: parkingÔÇª
+                                                            
+   Compiling url v2.5.8
+    Building [======>                  ] 160/532: url, paÔÇª
+                                                            
+   Compiling http v1.4.0
+   Compiling serde_spanned v1.0.4
+    Building [======>                  ] 163/532: url, paÔÇª
+                                                            
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+    Building [======>                  ] 165/532: url, paÔÇª
+                                                            
+   Compiling markup5ever v0.14.1
+    Building [======>                  ] 166/532: url, paÔÇª
+                                                            
+   Compiling stable_deref_trait v1.2.1
+    Building [======>                  ] 170/532: url, paÔÇª
+                                                            
+   Compiling digest v0.10.7
+    Building [=======>                 ] 174/532: url, paÔÇª
+                                                            
+   Compiling toml v0.9.11+spec-1.1.0
+    Building [=======>                 ] 175/532: url, seÔÇª
+                                                            
+   Compiling string_cache v0.8.9
+    Building [=======>                 ] 176/532: url, seÔÇª
+                                                            
+   Compiling yoke v0.8.1
+    Building [=======>                 ] 177/532: url, seÔÇª
+                                                            
+   Compiling selectors v0.24.0
+    Building [=======>                 ] 178/532: url, seÔÇª
+                                                            
+   Compiling brotli v8.0.2
+    Building [=======>                 ] 179/532: url, seÔÇª
+                                                            
+   Compiling windows-targets v0.53.5
+    Building [=======>                 ] 180/532: url, seÔÇª
+                                                            
+   Compiling phf v0.10.1
+    Building [=======>                 ] 181/532: url, seÔÇª
+                                                            
+   Compiling anyhow v1.0.100
+    Building [=======>                 ] 182/532: url, seÔÇª
+                                                            
+   Compiling phf v0.11.3
+    Building [=======>                 ] 183/532: url, seÔÇª
+                                                            
+   Compiling pin-project-lite v0.2.16
+    Building [=======>                 ] 187/532: url, seÔÇª
+    Building [=======>                 ] 188/532: url, seÔÇª
+                                                            
+   Compiling glob v0.3.3
+    Building [========>                ] 193/532: url, seÔÇª
+                                                            
+   Compiling cssparser v0.29.6
+    Building [========>                ] 197/532: url, seÔÇª
+    Building [========>                ] 198/532: url, seÔÇª
+                                                            
+   Compiling winapi-util v0.1.11
+    Building [========>                ] 201/532: url, seÔÇª
+                                                            
+   Compiling fxhash v0.2.1
+    Building [========>                ] 203/532: url, seÔÇª
+                                                            
+   Compiling indexmap v1.9.3
+    Building [========>                ] 207/532: url, seÔÇª
+    Building [========>                ] 208/532: url, seÔÇª
+                                                            
+   Compiling zerovec v0.11.5
+    Building [========>                ] 212/532: url, seÔÇª
+                                                            
+   Compiling same-file v1.0.6
+    Building [=========>               ] 213/532: selectoÔÇª
+                                                            
+   Compiling jsonptr v0.6.3
+   Compiling cargo-platform v0.1.9
+    Building [=========>               ] 215/532: cargo-pÔÇª
+                                                            
+   Compiling html5ever v0.29.1
+    Building [=========>               ] 216/532: cargo-pÔÇª
+    Building [=========>               ] 217/532: cargo-pÔÇª
+                                                            
+   Compiling cfb v0.7.3
+    Building [=========>               ] 218/532: cargo-pÔÇª
+                                                            
+   Compiling erased-serde v0.4.9
+    Building [=========>               ] 219/532: cargo-pÔÇª
+                                                            
+   Compiling windows-sys v0.61.2
+    Building [=========>               ] 220/532: jsonptrÔÇª
+                                                            
+   Compiling once_cell v1.21.3
+    Building [=========>               ] 222/532: jsonptrÔÇª
+                                                            
+   Compiling schemars v0.8.22
+    Building [=========>               ] 225/532: jsonptrÔÇª
+                                                            
+   Compiling json-patch v3.0.1
+   Compiling cargo_metadata v0.19.2
+    Building [=========>               ] 227/532: cargo_mÔÇª
+                                                            
+   Compiling kuchikiki v0.8.8-speedreader
+    Building [=========>               ] 228/532: cargo_mÔÇª
+                                                            
+   Compiling infer v0.19.0
+    Building [=========>               ] 229/532: cargo_mÔÇª
+                                                            
+   Compiling serde-untagged v0.1.9
+   Compiling walkdir v2.5.0
+    Building [=========>               ] 231/532: cargo_mÔÇª
+                                                            
+   Compiling urlpattern v0.3.0
+    Building [=========>               ] 232/532: cargo_mÔÇª
+                                                            
+   Compiling serde_with v3.16.1
+    Building [=========>               ] 233/532: cargo_mÔÇª
+    Building [=========>               ] 234/532: cargo_mÔÇª
+                                                            
+   Compiling zeroize v1.8.2
+    Building [==========>              ] 236/532: cargo_mÔÇª
+                                                            
+   Compiling crossbeam-utils v0.8.21
+    Building [==========>              ] 238/532: cargo_mÔÇª
+                                                            
+   Compiling time-core v0.1.8
+    Building [==========>              ] 239/532: cargo_mÔÇª
+                                                            
+   Compiling powerfmt v0.2.0
+    Building [==========>              ] 240/532: cargo_mÔÇª
+                                                            
+   Compiling num-conv v0.2.0
+   Compiling windows_x86_64_msvc v0.52.6
+    Building [==========>              ] 244/532: cargo_mÔÇª
+                                                            
+   Compiling deranged v0.5.5
+    Building [==========>              ] 245/532: cargo_mÔÇª
+                                                            
+   Compiling tinystr v0.8.2
+    Building [==========>              ] 246/532: cargo_mÔÇª
+                                                            
+   Compiling windows-targets v0.52.6
+    Building [==========>              ] 249/532: windowsÔÇª
+                                                            
+   Compiling libc v0.2.180
+    Building [==========>              ] 250/532: windowsÔÇª
+                                                            
+   Compiling tauri-utils v2.8.2
+    Building [==========>              ] 251/532: windowsÔÇª
+                                                            
+   Compiling time-macros v0.2.26
+    Building [==========>              ] 252/532: windowsÔÇª
+                                                            
+   Compiling icu_locale_core v2.1.1
+    Building [==========>              ] 253/532: windowsÔÇª
+                                                            
+   Compiling potential_utf v0.1.4
+    Building [==========>              ] 254/532: windowsÔÇª
+                                                            
+   Compiling zerotrie v0.2.3
+    Building [==========>              ] 255/532: windowsÔÇª
+                                                            
+   Compiling cpufeatures v0.2.17
+    Building [===========>             ] 257/532: windowsÔÇª
+                                                            
+   Compiling libm v0.2.16
+    Building [===========>             ] 259/532: derangeÔÇª
+                                                            
+   Compiling tracing-core v0.1.36
+    Building [===========>             ] 260/532: derangeÔÇª
+                                                            
+   Compiling spin v0.9.8
+    Building [===========>             ] 263/532: derangeÔÇª
+                                                            
+   Compiling heck v0.5.0
+    Building [===========>             ] 265/532: derangeÔÇª
+                                                            
+   Compiling icu_collections v2.1.1
+    Building [===========>             ] 266/532: tauri-uÔÇª
+                                                            
+   Compiling option-ext v0.2.0
+    Building [===========>             ] 267/532: option-ÔÇª
+                                                            
+   Compiling icu_provider v2.1.1
+    Building [===========>             ] 268/532: option-ÔÇª
+                                                            
+   Compiling value-bag v1.12.0
+    Building [===========>             ] 269/532: value-bÔÇª
+                                                            
+   Compiling futures-core v0.3.31
+    Building [===========>             ] 270/532: value-bÔÇª
+                                                            
+   Compiling num-traits v0.2.19
+    Building [===========>             ] 271/532: value-bÔÇª
+                                                            
+   Compiling windows-link v0.1.3
+    Building [===========>             ] 272/532: value-bÔÇª
+                                                            
+   Compiling log v0.4.29
+    Building [===========>             ] 274/532: value-bÔÇª
+                                                            
+   Compiling icu_properties v2.1.2
+   Compiling vswhom-sys v0.1.3
+    Building [===========>             ] 276/532: log, taÔÇª
+                                                            
+   Compiling windows-sys v0.59.0
+    Building [============>            ] 277/532: windowsÔÇª
+    Building [============>            ] 281/532: windowsÔÇª
+                                                            
+   Compiling windows-strings v0.4.2
+    Building [============>            ] 282/532: windowsÔÇª
+                                                            
+   Compiling vswhom v0.1.0
+    Building [============>            ] 283/532: windowsÔÇª
+                                                            
+   Compiling windows-result v0.3.4
+    Building [============>            ] 284/532: windowsÔÇª
+                                                            
+   Compiling dirs-sys v0.5.0
+    Building [============>            ] 285/532: windowsÔÇª
+                                                            
+   Compiling lazy_static v1.5.0
+    Building [============>            ] 286/532: windowsÔÇª
+                                                            
+   Compiling windows-sys v0.60.2
+    Building [============>            ] 287/532: windowsÔÇª
+                                                            
+   Compiling windows-core v0.61.2
+    Building [============>            ] 291/532: windowsÔÇª
+    Building [============>            ] 292/532: windowsÔÇª
+                                                            
+   Compiling dirs v6.0.0
+    Building [============>            ] 294/532: windowsÔÇª
+                                                            
+   Compiling rustls-pki-types v1.14.0
+    Building [============>            ] 295/532: windowsÔÇª
+                                                            
+   Compiling cargo_toml v0.22.3
+    Building [============>            ] 296/532: windowsÔÇª
+    Building [============>            ] 297/532: windowsÔÇª
+    Building [=============>           ] 298/532: windowsÔÇª
+    Building [=============>           ] 299/532: windowsÔÇª
+                                                            
+   Compiling futures-sink v0.3.31
+    Building [=============>           ] 300/532: windowsÔÇª
+                                                            
+   Compiling time v0.3.46
+    Building [=============>           ] 301/532: windowsÔÇª
+                                                            
+   Compiling sha2 v0.10.9
+    Building [=============>           ] 302/532: windowsÔÇª
+    Building [=============>           ] 303/532: windowsÔÇª
+                                                            
+   Compiling untrusted v0.9.0
+    Building [=============>           ] 304/532: windowsÔÇª
+                                                            
+   Compiling winreg v0.55.0
+    Building [=============>           ] 305/532: windowsÔÇª

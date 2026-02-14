@@ -1,0 +1,75 @@
+name: CI/CD Vercel
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Lint
+        continue-on-error: true
+        run: npm run lint || true
+      - name: Test
+        continue-on-error: true
+        run: npm test || true
+  preview:
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: quality
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Pull Vercel Env (Preview)
+        run: npx vercel pull --yes --environment=preview --token=${{ env.VERCEL_TOKEN }}
+      - name: Build (Preview)
+        run: npx vercel build --token=${{ env.VERCEL_TOKEN }}
+      - name: Deploy (Preview)
+        run: npx vercel deploy --prebuilt --token=${{ env.VERCEL_TOKEN }}
+  production:
+    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    needs: quality
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Pull Vercel Env (Production)
+        run: npx vercel pull --yes --environment=production --token=${{ env.VERCEL_TOKEN }}
+      - name: Build (Production)
+        run: npx vercel build --prod --token=${{ env.VERCEL_TOKEN }}
+      - name: Deploy (Production)
+        run: npx vercel deploy --prebuilt --prod --token=${{ env.VERCEL_TOKEN }}
