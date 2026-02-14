@@ -17,7 +17,7 @@
         "minWidth": 800,
         "minHeight": 600,
         "dragDropEnabled": false,
-        "dataDirectory": "stable-v1.1.71",
+        "dataDirectory": "stable-v1.1.72",
         "devtools": false,
         "additionalBrowserArgs": ""
       }
@@ -34,7 +34,7 @@
     ],
     "windows": {
       "webviewInstallMode": {
-        "type": "embedBootstrapper",
+        "type": "offlineInstaller",
         "silent": true
       }
     },
@@ -47,6 +47,6 @@
     ]
   },
   "productName": "Tasca Do VEREDA",
-  "version": "1.1.71",
+  "version": "1.1.72",
   "identifier": "com.tasca-do-vereda.client"
 }

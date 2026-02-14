@@ -29,6 +29,7 @@ export interface RemoteDashboardData {
   revenues?: Revenue[];
   menu?: Array<{ dishName: string; sold: number }>;
   users?: User[];
+  categories?: any[];
 }
 
 export type AlertConfig = {
@@ -283,6 +284,26 @@ const MobileDashboard = () => {
                   }));
               }
           }).catch(console.error);
+
+          supabaseService.fetchMenu().then(menuRes => {
+              if (menuRes.success && menuRes.data) {
+                  lastRemoteUpdateAt.current = Date.now();
+                  setRemoteData(prev => ({ 
+                    ...prev, 
+                    categories: menuRes.data.categories,
+                    menu: menuRes.data.dishes
+                  }));
+
+                  // Sync to local store to ensure they appear in categories/menu management
+                  if (menuRes.data.categories && menuRes.data.dishes) {
+                    useStore.getState().importCloudItems({
+                      categories: menuRes.data.categories,
+                      dishes: menuRes.data.dishes,
+                      preferCloud: true
+                    });
+                  }
+              }
+          }).catch(console.error);
         }, 0);
      } else {
          setTimeout(() => setIsRemote(false), 0);
@@ -357,14 +378,39 @@ const MobileDashboard = () => {
       }));
     };
 
+    const handleMenuChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
+      lastRemoteUpdateAt.current = Date.now();
+      // Re-fetch full menu when categories or menu_items change to ensure consistency
+      supabaseService.fetchMenu().then(menuRes => {
+        if (menuRes.success && menuRes.data) {
+          setRemoteData(prev => ({ 
+            ...prev, 
+            categories: menuRes.data.categories,
+            menu: menuRes.data.dishes
+          }));
+          if (menuRes.data.categories && menuRes.data.dishes) {
+            useStore.getState().importCloudItems({
+              categories: menuRes.data.categories,
+              dishes: menuRes.data.dishes,
+              preferCloud: true
+            });
+          }
+        }
+      }).catch(console.error);
+    };
+
     const unsubscribeRevenues = supabaseService.subscribeToTableChanges('revenues', handleRevenueChange);
     const unsubscribeExpenses = supabaseService.subscribeToTableChanges('expenses', handleExpenseChange);
     const unsubscribeSummary = supabaseService.subscribeToTableChanges('dashboard_summary', handleSummaryChange);
+    const unsubscribeCategories = supabaseService.subscribeToTableChanges('categories', handleMenuChange);
+    const unsubscribeMenuItems = supabaseService.subscribeToTableChanges('menu_items', handleMenuChange);
 
     return () => {
       unsubscribeRevenues();
       unsubscribeExpenses();
       unsubscribeSummary();
+      unsubscribeCategories();
+      unsubscribeMenuItems();
     };
   }, [isRemote, settings.supabaseConfig?.enabled]);
 
@@ -398,6 +444,26 @@ const MobileDashboard = () => {
             ...prev,
             users: usersRes.data as User[]
           }));
+        }
+      }).catch(console.error);
+
+      supabaseService.fetchMenu().then(menuRes => {
+        if (menuRes.success && menuRes.data) {
+          lastRemoteUpdateAt.current = Date.now();
+          setRemoteData(prev => ({
+            ...prev,
+            categories: menuRes.data.categories,
+            menu: menuRes.data.dishes
+          }));
+
+          // Sync to local store periodically to keep it fresh
+          if (menuRes.data.categories && menuRes.data.dishes) {
+            useStore.getState().importCloudItems({
+              categories: menuRes.data.categories,
+              dishes: menuRes.data.dishes,
+              preferCloud: true
+            });
+          }
         }
       }).catch(console.error);
     }, 2000);
@@ -440,6 +506,11 @@ const MobileDashboard = () => {
     if (mobileAuth === 'true') {
         setTimeout(() => setAuthStep('AUTHENTICATED'), 0);
     }
+
+    // Force clear error screen state on initial mount to fix "blue screen" issue
+    // if it was caused by a stale error state.
+    // However, if the user says "refresh fixes it", it's likely a timing issue 
+    // with WebView2 or a JS crash that is transient.
   }, []);
 
   const handleUserSelect = (user: User) => {
@@ -1349,6 +1420,36 @@ const MobileDashboard = () => {
                       <span className="text-[8px] text-slate-500 uppercase font-bold block mb-1">Ticket Médio (30d)</span>
                       <p className="text-lg font-black text-green-400">{formatKz(todayAnalytics.avgOrder)}</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Cloud Categories Section */}
+                <div className="glass-panel rounded-xl p-2.5 border border-white/5 col-span-full">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-[10px] font-black text-white uppercase tracking-wider">Categorias na Nuvem</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[8px] font-black uppercase">
+                      {remoteData?.categories?.length || 0} Ativas
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    {(!remoteData?.categories || remoteData.categories.length === 0) ? (
+                      <div className="col-span-2 p-4 text-center border border-dashed border-white/10 rounded-lg">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">Nenhuma categoria encontrada na nuvem</p>
+                      </div>
+                    ) : (
+                      remoteData.categories.map((cat, i) => (
+                        <div key={cat.id || i} className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                             <BarChart3 size={14} />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[11px] font-black text-white truncate max-w-[100px]">{cat.name}</span>
+                            <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">ID: {String(cat.id).substring(0, 5)}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

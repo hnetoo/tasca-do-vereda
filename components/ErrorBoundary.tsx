@@ -24,6 +24,21 @@ class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     logger.error('Uncaught error caught by boundary', { error: error.toString(), componentStack: errorInfo.componentStack }, 'ErrorBoundary');
     console.error('Uncaught error:', error, errorInfo);
+
+    // Auto-refresh logic: if an error occurs within the first 10 seconds of app load,
+    // and it's the first time we're seeing it this session, try a one-time auto-refresh.
+    // This addresses the "blue screen fixed by refresh" issue reported by the user.
+    const APP_LOAD_TIME_THRESHOLD = 10000; // 10 seconds
+    const appLoadTime = performance.now();
+    const hasAutoRefreshed = sessionStorage.getItem('auto_refresh_on_error') === 'true';
+
+    if (appLoadTime < APP_LOAD_TIME_THRESHOLD && !hasAutoRefreshed) {
+      sessionStorage.setItem('auto_refresh_on_error', 'true');
+      logger.info('Auto-refreshing app due to early crash', { appLoadTime }, 'ErrorBoundary');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
   }
 
   private handleReload = () => {
