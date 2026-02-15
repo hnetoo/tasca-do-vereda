@@ -19,6 +19,12 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
+      - name: Install Supabase CLI
+        run: npm install -g supabase
+      - name: Run Supabase Migrations
+        run: supabase migration up
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       - name: Lint
         continue-on-error: true
         run: npm run lint || true
