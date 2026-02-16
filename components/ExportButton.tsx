@@ -25,7 +25,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({ data, fileName }) => {
   return (
     <button 
       onClick={handleExport}
-      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+      className="flex items-center gap-2 px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
     >
       <Download size={18} />
       Exportar

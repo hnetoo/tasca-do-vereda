@@ -305,6 +305,8 @@ const POS = () => {
 
   const handleTransferTable = () => {
     if (activeTableId && transferTargetId) {
+      console.log('handleTransferTable: activeTableId', activeTableId);
+      console.log('handleTransferTable: transferTargetId', transferTargetId);
       transferTable(activeTableId, transferTargetId);
       setIsTransferModalOpen(false);
       setTransferTargetId(null);

@@ -252,10 +252,10 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 h-full overflow-y-auto no-scrollbar bg-slate-950 text-white">
+    <div className="p-4 sm:p-6 h-full overflow-y-auto no-scrollbar bg-slate-950 text-white">
       
       {/* Header Section */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+      <header className="flex flex-col md:flex-row justify-between items-center md:items-end mb-8 gap-2 md:gap-4">
         <div>
           <div className="flex items-center gap-2 text-primary mb-1">
              <Activity size={16} className="animate-pulse"/>
@@ -321,7 +321,7 @@ const Dashboard = () => {
               Receita Total
             </div>
             <div>
-              <p className="text-3xl md:text-4xl font-mono font-bold text-white tracking-tighter">{formatKz(totalSales)}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-mono font-bold text-white tracking-tighter">{formatKz(totalSales)}</p>
               <div className="mt-2 text-xs text-emerald-400 flex items-center gap-1 font-bold bg-emerald-400/10 w-fit px-2 py-1 rounded-lg">
                  <TrendingUp size={12} /> +12.5% vs ontem
               </div>
@@ -340,7 +340,7 @@ const Dashboard = () => {
               Lucro do Dia
             </div>
             <div>
-              <p className="text-3xl md:text-4xl font-mono font-bold text-white tracking-tighter">{formatKz(todayStats?.totalProfit ?? 0)}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-mono font-bold text-white tracking-tighter">{formatKz(todayStats?.totalProfit ?? 0)}</p>
               <div className="mt-2 text-xs text-emerald-400 flex items-center gap-1 font-bold bg-emerald-400/10 w-fit px-2 py-1 rounded-lg">
                  <TrendingUp size={12} /> Estimado
               </div>
@@ -359,7 +359,7 @@ const Dashboard = () => {
               Pedidos Ativos
             </div>
             <div className="flex items-end justify-between">
-              <p className="text-4xl md:text-5xl font-mono font-bold text-white tracking-tighter">{activeOrderCount}</p>
+              <p className="text-3xl sm:text-4xl md:text-5xl font-mono font-bold text-white tracking-tighter">{activeOrderCount}</p>
               <div className="flex -space-x-2">
                 {[...Array(Math.min(3, activeOrderCount))].map((_, i) => (
                   <div key={i} className="w-8 h-8 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center text-xs">
@@ -438,7 +438,7 @@ const Dashboard = () => {
             </select>
           </div>
           
-          <div className="h-[200px] w-full">
+          <div className="h-[150px] sm:h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -534,7 +534,7 @@ const Dashboard = () => {
               </button>
             </div>
           </div>
-          <div className="h-[260px] w-full">
+          <div className="h-[200px] sm:h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={paymentChartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
