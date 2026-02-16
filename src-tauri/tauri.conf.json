@@ -1,64 +1,18 @@
 {
+  "productName": "Tasca do Vereda",
+  "version": "1.1.80",
+  "identifier": "com.tasca-do-vereda.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:3000",
-    "distDir": "../out",
-    "withGlobalTauri": true
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../out"
   },
-  "package": {
-    "productName": "Tasca do Vereda",
-    "version": "1.1.80"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "fs": {
-        "all": true,
-        "scope": ["$APPDATA/*", "$DESKTOP/*", "$DOWNLOAD/*", "$RESOURCE/*"]
-      },
-      "shell": {
-        "all": true,
-        "execute": true,
-        "open": true,
-        "sidecar": true
-      },
-      "dialog": {
-        "all": true,
-        "open": true,
-        "save": true
-      },
-      "http": {
-        "all": true,
-        "request": true,
-        "scope": ["http://*", "https://*"]
-      },
-      "window": {
-        "all": true
-      },
-      "protocol": {
-        "all": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.tasca-do-vereda.app",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "resources": [],
-      "externalBin": []
-    },
-    "security": {
-      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: filesystem: ws: wss: http: https: tauri:;"
-    },
+  "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "Gestão de Restaurante",
         "width": 1200,
         "height": 800,
@@ -67,7 +21,23 @@
         "visible": false,
         "decorations": true
       }
-    ]
+    ],
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: filesystem: ws: wss: http: https: tauri:;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "externalBin": []
   },
   "plugins": {
     "sql": {
