@@ -5,7 +5,8 @@ export const thesisData: RemoteDashboardData = {
   summary: {
     total_revenue: 5840250,
     total_orders: 312,
-    active_orders_count: 15
+    active_orders_count: 15,
+    total_expenses: 822000
   },
   analytics: {
     totalCustomers: 1245,

@@ -124,7 +124,8 @@ const MobileDashboard = () => {
       summary: {
         total_revenue: 1284500,
         total_orders: 86,
-        active_orders_count: 7
+        active_orders_count: 7,
+        total_expenses: 65900
       },
       analytics: {
         totalCustomers: 312,

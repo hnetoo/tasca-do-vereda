@@ -4038,7 +4038,7 @@ export const useStore = create<StoreState>()(
         get().addNotification('info', 'A restaurar backup financeiro completo...');
         
         try {
-          const backupPackage = backupService.loadFullBackup();
+          const backupPackage = await backupService.loadFullBackup();
           if (!backupPackage) {
             get().addNotification('error', 'Nenhum backup completo encontrado.');
             return false;

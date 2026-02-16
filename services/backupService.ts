@@ -1,4 +1,5 @@
 import { StoreState, Dish, MenuCategory, Order, Expense, Revenue, User, Employee, AttendanceRecord, StockItem, Fornecedor, FinancialBackupData } from '../types';
+export type { FinancialBackupData };
 import { databaseOperations } from './database/operations';
 import { logger } from './logger';
 import { integrationAPIService } from './integrationAPIService';
@@ -93,6 +94,72 @@ export class BackupService {
         } catch (error: any) {
             logger.error('Failed to restore from local file', { error: error.message, filepath }, 'BACKUP');
             throw error;
+        }
+    }
+
+    /**
+     * Load auto backup categories
+     */
+    loadAutoBackup(): { categories: MenuCategory[] } {
+        try {
+            const raw = localStorage.getItem(AUTO_BACKUP_KEY);
+            if (!raw) return { categories: [] };
+            const data = JSON.parse(raw);
+            return { categories: data.data || [] };
+        } catch {
+            return { categories: [] };
+        }
+    }
+
+    /**
+     * Load manual backup categories (fallback)
+     */
+    loadBackup(): { categories: MenuCategory[] } {
+        try {
+            const raw = localStorage.getItem(FINANCIAL_BACKUP_KEY);
+            if (!raw) return { categories: [] };
+            const data = JSON.parse(raw);
+            return { categories: data.menu?.categories || [] };
+        } catch {
+            return { categories: [] };
+        }
+    }
+
+    /**
+     * Save only financial data
+     */
+    async saveFinancialBackup(data: FinancialBackupData): Promise<boolean> {
+        try {
+            const backupPackage = {
+                metadata: {
+                    version: '1.0',
+                    timestamp: new Date().toISOString(),
+                    totals: this.calculateFinancialTotals(data),
+                    checksum: await this.generateChecksum({ financial: data })
+                },
+                financial: data
+            };
+            
+            localStorage.setItem(FINANCIAL_BACKUP_KEY, JSON.stringify(backupPackage));
+            return true;
+        } catch (error: any) {
+            logger.error('Failed to save financial backup', { error: error.message }, 'BACKUP');
+            return false;
+        }
+    }
+
+    /**
+     * Load only financial data
+     */
+    async loadFinancialBackup(): Promise<FinancialBackupData | null> {
+        try {
+            const raw = localStorage.getItem(FINANCIAL_BACKUP_KEY);
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            return data.financial || null;
+        } catch (error: any) {
+            logger.error('Failed to load financial backup', { error: error.message }, 'BACKUP');
+            return null;
         }
     }
 

@@ -338,6 +338,7 @@ export interface RemoteDashboardData {
     total_revenue: number;
     total_orders: number;
     active_orders_count: number;
+    total_expenses: number;
   };
   analytics: {
     totalCustomers: number;
