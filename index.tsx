@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { isTauri } from '@tauri-apps/api/core';
 import App from './App';
 import './i18n';
+import './src/tailwind.css';
 import { initTauri } from './services/tauriInit';
 
 // Limpar localStorage se necessário (desenvolvimento)

@@ -3,18 +3,31 @@ import { useStore } from '../store/useStore';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, BarChart, Bar } from 'recharts';
 import { DollarSign, ShoppingBag, Users, TrendingUp, Sparkles, Loader2, Activity, ChefHat, QrCode, ArrowRight, Utensils, Clock, Download } from 'lucide-react';
 import { analyzeBusinessPerformance } from '../services/geminiService';
-import { AIAnalysisResult, PaymentMethod } from '../types';
+import { AIAnalysisResult, PaymentMethod, PedidoPayload, DailyAnalyticsPayload } from '../types';
 import { useNavigate } from 'react-router-dom';
 import ExportButton from '../components/ExportButton';
 import { exportChartToPDF } from '../services/exportService';
 import { formatKz } from '../services/utils/currencyFormatter';
 import { getOrderDate, normalizeDate, buildDateRange } from '../services/utils/dateUtils';
+import { useRealtimeSync } from '../hooks/useRealtimeSync';
 
 const Dashboard = () => {
   const { 
     activeOrders, orders, customers, menu, settings, expenses, revenues,
-    getDailySalesAnalytics, getMenuAnalytics, saveStatus 
+    getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange 
   } = useStore();
+
+  const [realtimeActivity, setRealtimeActivity] = useState(false);
+
+  useRealtimeSync('pedidos', (payload) => {
+    onRealtimeChange({ tableName: 'pedidos', eventType: payload.eventType, new: payload.new, old: payload.old });
+    setRealtimeActivity(true);
+  });
+
+  useRealtimeSync('daily_analytics', (payload) => {
+    onRealtimeChange({ tableName: 'daily_analytics', eventType: payload.eventType, new: payload.new, old: payload.old });
+    setRealtimeActivity(true);
+  });
   
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
@@ -22,8 +35,16 @@ const Dashboard = () => {
   const [paymentPeriod, setPaymentPeriod] = useState<'DIA' | 'SEMANA' | 'MES' | 'ANO'>('SEMANA');
   const [paymentYear, setPaymentYear] = useState(new Date().getFullYear());
   const [paymentMetric, setPaymentMetric] = useState<'VENDAS' | 'LUCRO'>('VENDAS');
+  const [realtimeActivity, setRealtimeActivity] = useState(false);
   const paymentChartRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (realtimeActivity) {
+      const timer = setTimeout(() => setRealtimeActivity(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [realtimeActivity]);
 
   // Métricas em Tempo Real
   const closedOrders = useMemo(() => orders.filter(o => o.status === 'FECHADO'), [orders]);
@@ -259,6 +280,9 @@ const Dashboard = () => {
                 {saveStatus === 'SAVING' ? 'Sincronizando...' : 
                  saveStatus === 'ERROR' ? 'Erro Sinc' : 'Cloud Link'}
               </span>
+              {realtimeActivity && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-ping-slow" />
+              )}
             </div>
           )}
 

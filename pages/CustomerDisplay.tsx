@@ -1,100 +1,36 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { listen } from '@tauri-apps/api/event';
 import { useStore } from '../store/useStore';
 import { ChefHat, ShoppingBasket, Sparkles, CheckCircle2 } from 'lucide-react';
-import { CustomerDisplayEvent } from '../types';
+import { CustomerDisplayEvent, Order } from '../types';
+import { useRealtimeSync } from '../src/hooks/useRealtimeSync';
 
 const CustomerDisplay = () => {
   const { tableId } = useParams();
-  const { activeOrders, menu, settings, tables } = useStore();
+  const { activeOrders, menu, settings, tables, addNotification, currentUser } = useStore();
   const [imageErrorMap, setImageErrorMap] = useState<Record<string, boolean>>({});
   const [logoError, setLogoError] = useState(false);
   const [promoIndex, setPromoIndex] = useState(0);
 
-  // Filter menu items that have images and are appropriate for display
-  const promoItems = menu.filter(item => item.image && item.categoryId !== 'BEBIDAS' && !imageErrorMap[item.id]);
-  
-  // Fallback item if no menu items found
-  const defaultPromo = {
-    id: 'default-promo',
-    name: 'Grelhada Mista',
-    description: `Receita tradicional com o toque único da ${settings.restaurantName}.`,
-    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80',
-    price: 0
-  };
-
-  const currentPromo = promoItems.length > 0 ? promoItems[promoIndex % promoItems.length] : defaultPromo;
-
-  useEffect(() => {
-    if (promoItems.length <= 1) return;
-    const interval = setInterval(() => {
-      setPromoIndex(prev => (prev + 1) % promoItems.length);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [promoItems.length]);
-
-  const renderLogo = (sizeClass: string, iconSize: number) => {
-    if (settings.appLogoUrl && !logoError) {
-      return (
-        <img 
-          src={settings.appLogoUrl} 
-          alt="Logo" 
-          className={`${sizeClass} rounded-3xl object-cover shadow-glow border border-white/10 shrink-0`}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.onerror = null;
-            setLogoError(true);
-          }}
-        />
-      );
+  const handleOrderRealtimeUpdate = useCallback((payload: any) => {
+    if (payload.eventType === 'UPDATE' && payload.new && payload.new.tableId === Number(tableId)) {
+      const updatedOrder = payload.new as Order;
+      addNotification('info', `O estado do seu pedido foi atualizado para: ${updatedOrder.status}`);
+      // Optionally, you might want to re-fetch active orders or update them directly in the store
+      // For now, relying on useStore's onRealtimeChange to update activeOrders
     }
-    return (
-      <div className={`${sizeClass} bg-gradient-to-br from-primary to-blue-600 rounded-3xl flex items-center justify-center shadow-glow border border-white/10 shrink-0`}>
-        <ChefHat size={iconSize} className="text-white" />
-      </div>
-    );
-  };
+  }, [tableId, addNotification]);
 
-  // Listen for storage events to sync state across windows
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'tasca-vereda-storage-v2') {
-        useStore.persist.rehydrate();
-      }
-    };
+  // Realtime sync for orders
+  useRealtimeSync(
+    'orders',
+    handleOrderRealtimeUpdate,
+    (tableId && currentUser?.id) ? { column: 'userId', value: currentUser.id } : undefined
+  );
 
-    window.addEventListener('storage', handleStorageChange);
 
-    // Listen for route updates
-    const setupListener = async () => {
-      return await listen('update-customer-display-route', (event: CustomerDisplayEvent) => {
-        if (event.payload && (event.payload as any).path) {
-          const targetPath = (event.payload as any).path as string;
-          if (window.location.pathname === targetPath) {
-            window.location.reload();
-          } else {
-            window.location.href = targetPath;
-          }
-        } else if (event.payload && (event.payload as any).hash) {
-          const targetPath = String((event.payload as any).hash).replace(/^#/, '');
-          if (window.location.pathname === targetPath) {
-            window.location.reload();
-          } else {
-            window.location.href = targetPath;
-          }
-        }
-      });
-    };
-    
-    const unlistenPromise = setupListener();
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      unlistenPromise.then(unlisten => unlisten());
-    };
-  }, []);
 
   const table = tables.find(t => t.id === Number(tableId));
   const tableOrders = activeOrders.filter(o => o.tableId === Number(tableId) && o.status === 'ABERTO');

@@ -57,6 +57,8 @@ export class SupabaseService {
           }
       });
 
+      this.setupRealtimeConnectionListeners();
+
       logger.info('Supabase client initialized via src/lib/supabase', {}, 'SupabaseService');
       if (onRealtimeChange) {
         this.realtimeHandlers.set('default', onRealtimeChange);
@@ -65,6 +67,43 @@ export class SupabaseService {
     } catch (error: any) {
       logger.error('Failed to initialize Supabase client', { error: error.message }, 'SupabaseService');
     }
+  }
+
+  private setupRealtimeConnectionListeners() {
+    if (!this.client) {
+        logger.warn('Supabase client not initialized for realtime listeners.', {}, 'SupabaseService');
+        return;
+    }
+
+    this.client.realtime.onOpen(() => {
+        logger.info('Supabase Realtime connection opened.', {}, 'SupabaseService');
+        this.syncStatus.isConnected = true;
+        this.syncStatus.status = 'success';
+        this.syncStatus.lastSuccessAt = Date.now();
+        this.syncStatus.retries = 0;
+        this.syncStatus.hasCriticalError = false;
+        this.syncStatus.criticalErrorMessage = undefined;
+        this.reconnect();
+    });
+
+    this.client.realtime.onClose(() => {
+        logger.warn('Supabase Realtime connection closed. Attempting to reconnect...', {}, 'SupabaseService');
+        this.syncStatus.isConnected = false;
+        this.syncStatus.status = 'retrying';
+        this.syncStatus.lastErrorAt = Date.now();
+        this.syncStatus.retries++;
+        setTimeout(() => this.reconnect(), 3000);
+    });
+
+    this.client.realtime.onError((event: ErrorEvent) => {
+        logger.error('Supabase Realtime connection error.', { error: event.message || event }, 'SupabaseService');
+        this.syncStatus.isConnected = false;
+        this.syncStatus.status = 'error';
+        this.syncStatus.lastErrorAt = Date.now();
+        this.syncStatus.errorMessage = event.message || 'Unknown Realtime error';
+        this.syncStatus.retries++;
+        setTimeout(() => this.reconnect(), 3000);
+    });
   }
 
   private async setupSubscriptions(handler: (payload: any) => void) {

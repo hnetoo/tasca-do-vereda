@@ -25,6 +25,9 @@ const getEnv = (key: string): string | undefined => {
 export const supabaseUrl = getEnv('VITE_SUPABASE_URL') || getEnv('NEXT_PUBLIC_SUPABASE_URL');
 export const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Anon Key:', supabaseAnonKey);
+
 // Validação Estrita (Fase 1 Requirement)
 if (!supabaseUrl) {
   throw new Error('Missing Env Vars: NEXT_PUBLIC_SUPABASE_URL (or VITE_SUPABASE_URL)');

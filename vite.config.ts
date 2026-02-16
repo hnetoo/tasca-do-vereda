@@ -34,7 +34,6 @@ export default defineConfig(() => {
   return {
     plugins: [
       react(),
-      tailwindcss(),
     ],
     base,
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'], // Support both prefixes

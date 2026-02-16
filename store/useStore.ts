@@ -42,7 +42,7 @@ const customStorage: StateStorage = {
     }
   },
 };
-import { IntegrityIssue, MenuCategory, StoreState, Permission, IntegrationLog, Fornecedor, SystemSettings, Notification, Dish, User, StockItem, CashShift, Order, PaymentMethod, PayrollRecord, Expense, DailySalesAnalytics, MenuAnalytics, Delivery, Employee, AttendanceRecord, AuditLog, MenuAccessLog, OfflineAction, Revenue, DashboardSummary } from '../types';
+import { IntegrityIssue, MenuCategory, StoreState, Permission, IntegrationLog, Fornecedor, SystemSettings, Notification, Dish, User, StockItem, CashShift, Order, PaymentMethod, PayrollRecord, Expense, DailySalesAnalytics, MenuAnalytics, Delivery, Employee, AttendanceRecord, AuditLog, MenuAccessLog, OfflineAction, Revenue, DashboardSummary, DailyAnalyticsPayload } from '../types';
 import { MOCK_MENU, MOCK_STOCK, MOCK_USERS, MOCK_CATEGORIES, MOCK_TABLES, MOCK_CUSTOMERS, MOCK_RESERVATIONS } from '../constants';
 import { calculateIRT, calculateINSS, calculateDeductions } from '../services/salaryCalculatorAngola';
 import { backupService, FinancialBackupData } from '../services/backupService';
@@ -75,6 +75,8 @@ export const useStore = create<StoreState>()(
       users: MOCK_USERS,
       payroll: [], // Initialize payroll array
       loyaltyRewards: [], // Initialize loyaltyRewards
+      dailyAnalyticsData: null,
+      setDailyAnalyticsData: (data) => set({ dailyAnalyticsData: data }),
  // Initialize menuAccessLogs
       getMenuAccessStats: () => {
         const logs = get().menuAccessLogs;
@@ -257,6 +259,12 @@ export const useStore = create<StoreState>()(
                 const newSettings = payload.new as Partial<SystemSettings>;
                 state.updateSettings(newSettings);
                 logger.info('Settings updated via Realtime Sync', { settings: newSettings }, 'STORE');
+            }
+            break;
+          case 'daily_analytics':
+            if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+              state.setDailyAnalyticsData(payload.new as DailyAnalyticsPayload['new']);
+              logger.info('Daily analytics updated via Realtime Sync', { data: payload.new }, 'STORE');
             }
             break;
           default:
