@@ -16,7 +16,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "npm run db:sync && tauri build",
     "tauri:build:release": "tauri build",
-    "db:sync": "npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/supabase.ts",
+    "db:sync": "npx supabase gen types typescript --project-id ratzyxwpzrqbtpheygch > src/types/supabase.ts",
     "backup:local": "npx supabase db dump -f local_backup.sql",
     "check-branch": "node -e \"const b = require('child_process').execSync('git branch --show-current').toString().trim(); if (b === 'main') { console.error('ERRO: Não use o branch main! Use o branch master.'); process.exit(1); }\"",
     "build:scripts": "tsc -p tsconfig.script.json",
