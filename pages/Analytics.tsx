@@ -11,6 +11,8 @@ import {
 import ExportButton from '../components/ExportButton';
 import { exportChartToPDF } from '../services/exportService';
 import { PaymentMethod } from '../types';
+import { getOrderDate, normalizeDate, buildDateRange } from '../services/utils/dateUtils';
+import { formatKz } from '../services/utils/currencyFormatter';
 
 const Analytics = () => {
   const {
@@ -55,26 +57,6 @@ const Analytics = () => {
     Card: 'Cartão',
     MBWay: 'MBWay',
     Other: 'Outros'
-  };
-
-  const formatKz = (val: number) => 
-    new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
-
-  const getOrderDate = (timestamp?: string | number | Date) => {
-    const d = timestamp ? new Date(timestamp) : new Date(0);
-    return isNaN(d.getTime()) ? new Date(0) : d;
-  };
-
-  const normalizeDate = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  const buildDateRange = (start: Date, end: Date) => {
-    const dates: Date[] = [];
-    const cursor = new Date(start);
-    while (cursor <= end) {
-      dates.push(new Date(cursor));
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return dates;
   };
 
   const extractPayments = (order: typeof activeOrders[number]) => {

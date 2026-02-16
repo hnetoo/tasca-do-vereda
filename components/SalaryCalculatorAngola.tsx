@@ -1,8 +1,8 @@
 import React from 'react';
 import { DollarSign, TrendingDown, TrendingUp, AlertCircle, Check } from 'lucide-react';
+import { formatKzDetailed } from '../services/utils/currencyFormatter';
 import {
   calculateSalaryBreakdown,
-  formatKzDetailed,
   validateMinimumWage,
   MINIMUM_WAGES_ANGOLA,
   SalaryBreakdown,

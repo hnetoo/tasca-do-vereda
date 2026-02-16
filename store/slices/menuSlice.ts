@@ -46,7 +46,7 @@ export const createMenuSlice: StateCreator<
   setCategories: (categories) => set({ categories }),
   
   getDishById: (id) => get().menu.find(d => d.id === id),
-  getDishesByCategory: (categoryId) => get().menu.filter(d => d.categoryId === categoryId),
+  getDishesByCategory: (category_id: string) => get().menu.filter(d => d.category_id === category_id),
   getCategoryById: (id) => get().categories.find(c => c.id === id),
   rebuildMenu: (categories, dishes) => set({ categories, menu: dishes }),
   
@@ -71,10 +71,12 @@ export const createMenuSlice: StateCreator<
   
   removeCategory: (id) => {
     set((state) => ({
-      categories: state.categories.filter((c) => c.id !== id),
-      deletedCategoryIds: [...state.deletedCategoryIds, id]
+      categories: state.categories.map((c) =>
+        c.id === id ? { ...c, deletedAt: new Date().toISOString() } : c
+      ),
+      deletedCategoryIds: [...state.deletedCategoryIds, id],
     }));
-    databaseOperations.deleteCategory(id);
+    // databaseOperations.deleteCategory(id); // No longer physically delete
     get().triggerSync?.();
   },
 
@@ -110,9 +112,11 @@ export const createMenuSlice: StateCreator<
 
   removeDish: (id) => {
     set((state) => ({
-      menu: state.menu.filter((d) => d.id !== id),
+      menu: state.menu.map((d) =>
+        d.id === id ? { ...d, deletedAt: new Date().toISOString() } : d
+      ),
     }));
-    databaseOperations.deleteDish(id);
+    // databaseOperations.deleteDish(id); // No longer physically delete
     get().triggerSync?.();
   },
 
@@ -124,7 +128,7 @@ export const createMenuSlice: StateCreator<
     if (categories.length > 0 || dishes.length > 0) {
       set({ 
         categories: categories.map((c) => ({...c, is_active: !!c.is_active})), 
-        menu: dishes.map((d) => ({...d, categoryId: d.categoryId, price: Number(d.price)})) 
+        menu: dishes.map((d) => ({...d, category_id: d.category_id, price: Number(d.price)})) 
       });
       logger.info(`Restored ${categories.length} categories and ${dishes.length} dishes`, undefined, 'DATABASE');
     }
@@ -159,13 +163,13 @@ export const createMenuSlice: StateCreator<
                     description: d.description,
                     price: Number(d.price),
                     precoCusto: Number(d.precoCusto),
-                    categoryId: d.categoryId,
+                    category_id: d.category_id,
                     image: d.image,
                     taxCode: d.taxCode,
                     taxPercentage: Number(d.taxPercentage),
                     tempo_preparo: d.tempo_preparo,
                     disponivel: !!d.disponivel,
-                    isAvailableOnDigitalMenu: !!d.isAvailableOnDigitalMenu,
+                    availableOnDigitalMenu: !!d.availableOnDigitalMenu,
                     controlaEstoque: !!d.controlaEstoque,
                     quantidadeEstoque: Number(d.quantidadeEstoque),
                     quantidadeMinima: Number(d.quantidadeMinima),

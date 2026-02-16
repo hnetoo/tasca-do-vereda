@@ -4,7 +4,7 @@ import {
 import { databaseOperations } from "./database/operations";
 import { logger, LogEntry } from "./logger";
 import { validationService } from "./validationService";
-import { supabaseService } from "./supabaseService";
+import { integrationAPIService } from "./integrationAPIService";
 import { dlpAlertService } from "./dlpAlertService";
 
 // Store injection for Web Mode support
@@ -545,9 +545,9 @@ export const disasterRecoveryService = {
             }
 
             // 3. Cloud Redundancy (Supabase)
-            if (supabaseService.isConnected()) {
+            if (integrationAPIService.isConnected()) {
                 try {
-                    await supabaseService.syncBackup(metadata, state);
+                    await integrationAPIService.syncBackup(metadata, state);
                     metadata.storage.push('CLOUD');
                     if (metadata.compliance) metadata.compliance.georeplicated = true;
                     logger.info(`DLP: Backup ${backupId} georeplicated to Supabase`, undefined, 'DLP');

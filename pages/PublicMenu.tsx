@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { supabaseService } from '../services/supabaseService';
+import { integrationAPIService } from '../services/integrationAPIService';
 import { logger } from '../services/logger';
 import { 
   ShoppingBasket, Plus, Minus, Search, ChevronRight, X, Menu, 
@@ -14,6 +14,7 @@ import { CategoryMenu, getCategoryIcon } from '../components/public-menu/Categor
 import { ProductMenu } from '../components/public-menu/ProductMenu';
 import { isValidImageUrl } from '../services/qrMenuService';
 import { fetchMenuFromFeed } from '../services/feedFetch';
+import { formatKz } from '../services/utils/currencyFormatter';
 
 const PublicMenu = () => {
   const { tableId } = useParams();
@@ -40,23 +41,7 @@ const PublicMenu = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Data State (Local or Remote)
-  const [remoteMenu, setRemoteMenu] = useState<Dish[] | null>(null);
-  const [remoteCategories, setRemoteCategories] = useState<MenuCategory[] | null>(null);
-  const [remoteSettings, setRemoteSettings] = useState<SystemSettings | null>(null);
-  const [syncStatus, setSyncStatus] = useState(() => supabaseService.getSyncStatus());
-
-  const applyRemoteData = (data: { categories?: MenuCategory[]; dishes?: Dish[]; settings?: SystemSettings | null }) => {
-    if (data.categories) {
-      setRemoteCategories(data.categories);
-    }
-    if (data.dishes) {
-      setRemoteMenu(data.dishes);
-    }
-    if (data.settings) {
-      setRemoteSettings(data.settings);
-    }
-  };
+  const [syncStatus, setSyncStatus] = useState(() => integrationAPIService.getSyncStatus());
 
   const normalizeError = (raw: string) => {
     const msg = String(raw || '');
@@ -76,26 +61,18 @@ const PublicMenu = () => {
   };
 
   const menu = useMemo(() => {
-    const remote = remoteMenu && remoteMenu.length > 0 ? remoteMenu : [];
-    const local = localMenu && localMenu.length > 0 ? localMenu : [];
-    const byId = new Set(local.map(d => d.id));
-    const merged = [...local, ...remote.filter(d => !byId.has(d.id))];
-    return merged;
-  }, [settings.supabaseConfig?.enabled, remoteMenu, localMenu]);
+    return localMenu;
+  }, [localMenu]);
 
   const categories = useMemo(() => {
-    const remote = remoteCategories && remoteCategories.length > 0 ? remoteCategories : [];
-    const local = localCategories && localCategories.length > 0 ? localCategories : [];
-    const byId = new Set(local.map(c => c.id));
-    const merged = [...local, ...remote.filter(c => !byId.has(c.id))];
-    return merged;
-  }, [settings.supabaseConfig?.enabled, remoteCategories, localCategories]);
+    return localCategories;
+  }, [localCategories]);
 
   const effectiveCategories = useMemo(() => {
     if (categories.length > 0 || menu.length === 0) return categories;
     const map = new Map<string, MenuCategory>();
     menu.forEach(dish => {
-      const rawId = String(dish.categoryId || '').trim();
+      const rawId = String(dish.category_id || '').trim();
       const rawName = String(dish.categoryName || rawId || 'Sem Categoria').trim();
       const id = rawId || rawName.toLowerCase().replace(/\s+/g, '_');
       if (!id) return;
@@ -125,67 +102,30 @@ const PublicMenu = () => {
     const fetchRemote = async () => {
       try {
         if (supabaseEnabled) {
-          if (!supabaseService.isConnected()) {
-            supabaseService.initialize(
-              supabaseUrl,
-              supabaseKey,
-              shouldSubscribeRealtime ? (payload) => {
-                if (payload.tableName === 'menu_items') {
-                  const newDish: Dish = {
-                    id: String(payload.new?.id),
-                    name: String(payload.new?.name),
-                    description: String(payload.new?.description || ''),
-                    price: Number((payload.new as any)?.price || 0),
-                    categoryId: String((payload.new as any)?.category_id || ''),
-                    image: String((payload.new as any)?.image_url || ''),
-                    disponivel: (payload.new as any)?.available !== false,
-                    taxCode: 'NOR',
-                    taxPercentage: Number((payload.new as any)?.tax_rate || 14)
-                  };
-                  setRemoteMenu(prev => {
-                    const base = prev || [];
-                    if (payload.eventType === 'INSERT') return [...base, newDish];
-                    if (payload.eventType === 'UPDATE') return base.map(d => d.id === newDish.id ? newDish : d);
-                    if (payload.eventType === 'DELETE') return base.filter(d => d.id !== String(payload.old?.id));
-                    return base;
-                  });
-                } else if (payload.tableName === 'categories') {
-                  const newCategory: MenuCategory = {
-                    id: String(payload.new?.id),
-                    name: String(payload.new?.name),
-                    icon: String((payload.new as any)?.icon || ''),
-                    sort_order: Number((payload.new as any)?.sort_order || 0),
-                    parentId: (payload.new as any)?.parent_id,
-                    is_active: !(payload.new as any)?.deleted_at
-                  };
-                  setRemoteCategories(prev => {
-                    const base = prev || [];
-                    if (payload.eventType === 'INSERT') return [...base, newCategory];
-                    if (payload.eventType === 'UPDATE') return base.map(c => c.id === newCategory.id ? newCategory : c);
-                    if (payload.eventType === 'DELETE') return base.filter(c => c.id !== String(payload.old?.id));
-                    return base;
-                  });
-                }
-              } : undefined
-            );
+          if (!integrationAPIService.isConnected()) {
+            integrationAPIService.initialize(supabaseUrl, supabaseKey);
           }
           
-          const res = await supabaseService.fetchMenu();
+          const res = await integrationAPIService.fetchMenu();
           if (!isMounted) return;
 
           if (res.success && res.data) {
             const data = res.data as any;
-            applyRemoteData(data);
+            useStore.getState().importCloudItems({
+              categories: data.categories,
+              dishes: data.dishes,
+              preferCloud: true
+            });
 
             if ((!data.categories || data.categories.length === 0) && (!data.dishes || data.dishes.length === 0)) {
               logger.warn('API returned empty menu, trying feed fallback', null, 'PublicMenu');
               const feed = await fetchMenuFromFeed(settings);
               if (!isMounted) return;
               if ((feed.categories?.length || 0) > 0 || (feed.dishes?.length || 0) > 0) {
-                applyRemoteData({
+                useStore.getState().importCloudItems({
                   categories: feed.categories,
                   dishes: feed.dishes,
-                  settings: feed.settings ? { ...settings, ...feed.settings } : null
+                  preferCloud: true
                 });
                 logger.info('Menu carregado via feed fallback', { categories: feed.categories.length, dishes: feed.dishes.length }, 'PublicMenu');
               } else if (localMenu.length === 0 && localCategories.length === 0) {
@@ -201,10 +141,10 @@ const PublicMenu = () => {
             const feed = await fetchMenuFromFeed(settings);
             if (!isMounted) return;
             if ((feed.categories?.length || 0) > 0 || (feed.dishes?.length || 0) > 0) {
-              applyRemoteData({
+              useStore.getState().importCloudItems({
                 categories: feed.categories,
                 dishes: feed.dishes,
-                settings: feed.settings ? { ...settings, ...feed.settings } : null
+                preferCloud: true
               });
               setError(null);
               logger.info('Menu carregado via feed fallback após erro Supabase', { categories: feed.categories.length, dishes: feed.dishes.length }, 'PublicMenu');
@@ -237,7 +177,7 @@ const PublicMenu = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setSyncStatus(supabaseService.getSyncStatus());
+      setSyncStatus(integrationAPIService.getSyncStatus());
     }, 1000);
     return () => clearInterval(interval);
   }, []);
@@ -249,20 +189,24 @@ const PublicMenu = () => {
       const doFetch = async () => {
         try {
           if (supabaseEnabled) {
-            if (!supabaseService.isConnected()) {
-              supabaseService.initialize(supabaseUrl, supabaseKey);
+            if (!integrationAPIService.isConnected()) {
+              integrationAPIService.initialize(supabaseUrl, supabaseKey);
             }
-            const res = await supabaseService.fetchMenu();
+            const res = await integrationAPIService.fetchMenu();
             if (res.success && res.data) {
               const data = res.data as any;
-              applyRemoteData(data);
+              useStore.getState().importCloudItems({
+                categories: data.categories,
+                dishes: data.dishes,
+                preferCloud: true
+              });
               if ((!data.categories || data.categories.length === 0) && (!data.dishes || data.dishes.length === 0)) {
                 const feed = await fetchMenuFromFeed(settings);
                 if ((feed.categories?.length || 0) > 0 || (feed.dishes?.length || 0) > 0) {
-                  applyRemoteData({
+                  useStore.getState().importCloudItems({
                     categories: feed.categories,
                     dishes: feed.dishes,
-                    settings: feed.settings ? { ...settings, ...feed.settings } : null
+                    preferCloud: true
                   });
                 }
               }
@@ -271,10 +215,10 @@ const PublicMenu = () => {
               const errorMsg = normalizeError((res as any).error || 'Falha ao carregar menu remoto');
               const feed = await fetchMenuFromFeed(settings);
               if ((feed.categories?.length || 0) > 0 || (feed.dishes?.length || 0) > 0) {
-                applyRemoteData({
+                useStore.getState().importCloudItems({
                   categories: feed.categories,
                   dishes: feed.dishes,
-                  settings: feed.settings ? { ...settings, ...feed.settings } : null
+                  preferCloud: true
                 });
                 setError(null);
               } else {
@@ -291,7 +235,7 @@ const PublicMenu = () => {
     }, 0);
   };
   
-  const displaySettings = (remoteSettings || settings || {}) as SystemSettings;
+  const displaySettings = (settings || {}) as SystemSettings;
   
   const logoUrl = displaySettings.qrMenuLogo || displaySettings.appLogoUrl || settings.appLogoUrl;
   const restaurantName = (
@@ -376,7 +320,7 @@ const PublicMenu = () => {
   const matchesCategoryLogic = (dish: Dish, cat: MenuCategory & { originalId?: string; isModified?: boolean }) => {
       if (!cat) return false;
       
-      const dishCatId = String(dish.categoryId || '').trim();
+      const dishCatId = String(dish.category_id || '').trim();
       const catId = String(cat.id || '').trim();
       const catOriginalId = String(cat.originalId || '').trim();
       const catName = String(cat.name || '').trim().toLowerCase();
@@ -419,7 +363,7 @@ const PublicMenu = () => {
         if (!found) {
             logger.warn('[PublicMenu] Dish not matched to any safe category', { 
                 dishName: dish.name, 
-                categoryId: dish.categoryId,
+                category_id: dish.category_id,
                 categoryName: dish.categoryName
             }, 'PublicMenu');
         }
@@ -473,7 +417,7 @@ const PublicMenu = () => {
         if (visibleCategories.length === 0) {
           matchesCategory = true;
         } else {
-          const dishCatId = String(dish.categoryId || '').trim();
+          const dishCatId = String(dish.category_id || '').trim();
           matchesCategory = visibleCategoryIds.has(dishCatId);
           
           if (!matchesCategory) {
@@ -486,7 +430,7 @@ const PublicMenu = () => {
             matchesCategory = matchesCategoryLogic(dish, activeCat);
         } else {
             // Fallback for safety
-            matchesCategory = areIdsEqual(dish.categoryId, selectedCatId);
+            matchesCategory = areIdsEqual(dish.category_id, selectedCatId);
         }
       }
 
@@ -543,7 +487,7 @@ const PublicMenu = () => {
     return acc + (dish?.price || 0) * data.quantity;
   }, 0);
 
-  const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
+
 
   const handleSendOrder = async () => {
     if (isReadOnly) {
@@ -767,7 +711,7 @@ const PublicMenu = () => {
       </div>
 
       {/* Desktop Sidebar (Category Menu) */}
-      <aside className="hidden lg:flex flex-col w-80 xl:w-96 bg-slate-900 border-r border-slate-800 z-20 h-full relative overflow-hidden">
+      <aside className="hidden lg:flex flex-col w-80 xl:w-96 bg-slate-900/80 backdrop-blur-md border-r border-slate-800 z-20 h-full relative overflow-hidden rounded-2xl shadow-2xl">
          
          <div className="p-8 shrink-0 border-b border-white/5 relative z-10 flex flex-col items-center">
              {logoUrl ? (
@@ -823,9 +767,9 @@ const PublicMenu = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-950 min-h-0">
          {/* Header */}
-         <header className="shrink-0 p-4 lg:p-6 flex items-center justify-between gap-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl z-20">
+         <header className="shrink-0 p-4 lg:p-6 flex items-center justify-between gap-4 border-b border-slate-800 bg-slate-900/80 backdrop-blur-xl z-20 rounded-2xl shadow-2xl border-white/10">
              {/* Mobile & Tablet Header (Logo & Name) */}
-             <div className="lg:hidden flex items-center justify-between w-full">
+             <div className="lg:hidden flex items-center justify-between w-full rounded-2xl shadow-2xl border-white/10">
                  <div className="flex items-center gap-3 min-w-0">
                      <div className="relative shrink-0">
                        {logoUrl ? (
@@ -889,7 +833,7 @@ const PublicMenu = () => {
                         placeholder="BUSCAR MÓDULO..." 
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="bg-white/5 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-[10px] font-mono focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 w-64 transition-all uppercase tracking-widest placeholder:text-slate-600"
+                        className="bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-mono focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 w-64 transition-all uppercase tracking-widest placeholder:text-slate-600 shadow-lg"
                     />
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/50 group-focus-within:text-primary transition-colors" size={14} />
                  </div>
@@ -897,7 +841,7 @@ const PublicMenu = () => {
          </header>
 
          {/* Mobile Category Strip & Search */}
-         <div className="lg:hidden shrink-0 border-b border-slate-800 bg-slate-900 backdrop-blur-md">
+         <div className="lg:hidden shrink-0 border-b border-slate-800 bg-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-white/10">
             <div className="px-4 pt-4">
               <div className="relative group">
                   <input 
@@ -905,7 +849,7 @@ const PublicMenu = () => {
                       placeholder="BUSCAR NO MENU..." 
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-mono focus:outline-none focus:border-primary/50 transition-all uppercase tracking-widest placeholder:text-slate-600"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs font-mono focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all uppercase tracking-widest placeholder:text-slate-600 shadow-lg"
                   />
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/40" size={16} />
               </div>
@@ -1035,7 +979,7 @@ const PublicMenu = () => {
                  <div className="absolute bottom-6 left-6 flex items-center gap-3">
                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
                     <span className="px-3 py-1 bg-primary/10 border border-primary/30 text-primary text-[10px] font-mono font-black uppercase tracking-[0.2em] rounded-md backdrop-blur-sm">
-                        SEC-{selectedDish.categoryId?.toString().substring(0,6) || 'CORE'}
+                        SEC-{selectedDish.category_id?.toString().substring(0,6) || 'CORE'}
                     </span>
                  </div>
               </div>

@@ -7,7 +7,8 @@ import {
 import { Employee, WorkShift, UserRole, PayrollRecord } from '../types';
 import ExportButton from '../components/ExportButton';
 import SalaryCalculatorAngola from '../components/SalaryCalculatorAngola';
-import { MOCK_EMPLOYEES_ANGOLA, calculateSalaryBreakdown, formatKzDetailed } from '../services/salaryCalculatorAngola';
+import { MOCK_EMPLOYEES_ANGOLA, calculateSalaryBreakdown } from '../services/salaryCalculatorAngola';
+import { formatKz, formatKzDetailed } from '../services/utils/currencyFormatter';
 
 const DAYS_OF_WEEK = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
@@ -49,8 +50,6 @@ const Employees = () => {
   const [empForm, setEmpForm] = useState<Partial<Employee>>({
     name: '', role: 'GARCOM', phone: '', salary: 0, status: 'ATIVO', color: '#06b6d4', workDaysPerMonth: 22, dailyWorkHours: 8, externalBioId: '', bi: '', nif: ''
   });
-
-  const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
 
   const getAttendanceStatus = (empId: string) => {
     const today = new Date().toISOString().split('T')[0];

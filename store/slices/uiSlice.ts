@@ -71,7 +71,18 @@ export const createUISlice: StateCreator<
   })),
 
   triggerSync: async () => {
-    // Sync logic
-    logger.info("Sync triggered (Local Mode)", undefined, 'STORE');
+    const { categories, menu, settings, addOfflineAction } = get();
+    if (settings.supabaseConfig?.enabled && settings.supabaseConfig?.url && settings.supabaseConfig?.key) {
+      logger.info('Sincronização manual acionada...', null, 'CLOUD');
+      try {
+        await supabaseService.syncMenu(categories, menu, settings);
+        logger.info('Sincronização manual concluída com sucesso.', null, 'CLOUD');
+      } catch (e: unknown) {
+        logger.error('Falha na sincronização manual com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
+        addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_MENU', payload: { categories, menu, settings }, timestamp: Date.now() });
+      }
+    } else {
+      logger.warn('Sincronização manual ignorada: Supabase não configurado ou desativado.', null, 'CLOUD');
+    }
   }
 });

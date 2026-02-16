@@ -7,15 +7,7 @@ import { publishFeedHybrid } from '../services/feedPublisher';
 import { Dish, MenuCategory, StockItem } from '../types';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Link as LinkIcon, AlertCircle, Check, Tag, Box, Utensils, Grid3X3, Coffee, Pizza, Beer, IceCream, Copy, RefreshCw } from 'lucide-react';
 
-// Icons available for categories
-const AVAILABLE_ICONS = [
-  { name: 'Grid3X3', label: 'Geral', icon: Grid3X3 },
-  { name: 'Coffee', label: 'Pequeno Almoço/Bebidas Quentes', icon: Coffee },
-  { name: 'Pizza', label: 'Pratos Principais', icon: Pizza },
-  { name: 'Beer', label: 'Bebidas Alcoólicas', icon: Beer },
-  { name: 'IceCream', label: 'Sobremesas', icon: IceCream },
-  { name: 'Utensils', label: 'Talheres', icon: Utensils },
-];
+import { AVAILABLE_ICONS } from './Categories';
 
 const Inventory = () => {
   const { 
@@ -79,9 +71,9 @@ const Inventory = () => {
     name: '',
     description: '',
     price: 0,
-    categoryId: '',
+    category_id: '',
     image: '',
-    isAvailableOnDigitalMenu: true,
+    availableOnDigitalMenu: true,
     taxCode: 'NOR',
     stockItemId: '',
     fornecedorPadraoId: ''
@@ -91,7 +83,7 @@ const Inventory = () => {
     name: '',
     icon: 'Grid3X3',
     parentId: '',
-    isAvailableOnDigitalMenu: true
+    availableOnDigitalMenu: true
   });
 
   const [stockForm, setStockForm] = useState<Partial<StockItem>>({
@@ -123,7 +115,7 @@ const Inventory = () => {
   // Filtered lists
   const filteredMenu = menu.filter(dish => {
     const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'TODOS' || String(dish.categoryId) === String(selectedCategory);
+    const matchesCategory = selectedCategory === 'TODOS' || String(dish.category_id) === String(selectedCategory);
     return matchesSearch && matchesCategory;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -132,7 +124,7 @@ const Inventory = () => {
       setEditingId(dish.id);
       setDishForm({
         ...dish,
-        isAvailableOnDigitalMenu: dish.isAvailableOnDigitalMenu !== false,
+        availableOnDigitalMenu: dish.availableOnDigitalMenu !== false,
         stockItemId: dish.stockItemId || '',
         fornecedorPadraoId: dish.fornecedorPadraoId || ''
       });
@@ -142,9 +134,9 @@ const Inventory = () => {
         name: '',
         description: '',
         price: 0,
-        categoryId: categories[0]?.id || '',
+        category_id: categories[0]?.id || '',
         image: '',
-        isAvailableOnDigitalMenu: true,
+        availableOnDigitalMenu: true,
         taxCode: 'NOR',
         stockItemId: '',
         fornecedorPadraoId: ''
@@ -159,11 +151,11 @@ const Inventory = () => {
       setCatForm({
         ...cat,
         parentId: cat.parentId || '',
-        isAvailableOnDigitalMenu: cat.isAvailableOnDigitalMenu !== false
+        availableOnDigitalMenu: cat.availableOnDigitalMenu !== false
       });
     } else {
       setEditingId(null);
-      setCatForm({ name: '', icon: 'Grid3X3', parentId: '', isAvailableOnDigitalMenu: true });
+      setCatForm({ name: '', icon: 'Grid3X3', parentId: '', availableOnDigitalMenu: true });
     }
     setIsCatModalOpen(true);
   };
@@ -188,7 +180,7 @@ const Inventory = () => {
 
   const handleSubmitDish = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dishForm.name || !dishForm.price || !dishForm.categoryId) return;
+    if (!dishForm.name || !dishForm.price || !dishForm.category_id) return;
 
     let finalImage = dishForm.image;
 
@@ -204,19 +196,19 @@ const Inventory = () => {
        }
     }
 
-    const selectedCat = categories.find(c => c.id === dishForm.categoryId);
+    const selectedCat = categories.find(c => c.id === dishForm.category_id);
     const dishData = {
       ...dishForm,
       image: finalImage,
       price: Number(dishForm.price),
-      isAvailableOnDigitalMenu: dishForm.isAvailableOnDigitalMenu ?? true,
+      availableOnDigitalMenu: dishForm.availableOnDigitalMenu ?? true,
       categoryName: selectedCat?.name || '',
       fornecedorPadraoId: dishForm.fornecedorPadraoId || ''
     } as Dish;
 
     if (editingId) {
       const existing = menu.find(d => d.id === editingId);
-      const changedCategory = existing && existing.categoryId !== dishData.categoryId;
+      const changedCategory = existing && existing.category_id !== dishData.category_id;
       if (changedCategory) {
         const ok = confirm(`Confirma mover "${existing?.name}" para a categoria "${selectedCat?.name}"?`);
         if (!ok) return;
@@ -237,9 +229,9 @@ const Inventory = () => {
         name: '',
         description: '',
         price: 0,
-        categoryId: dishForm.categoryId, 
+        category_id: dishForm.category_id, 
         image: '',
-        isAvailableOnDigitalMenu: true,
+        availableOnDigitalMenu: true,
         taxCode: 'NOR',
         stockItemId: '',
         fornecedorPadraoId: ''
@@ -317,9 +309,7 @@ const Inventory = () => {
     }
   };
 
-  const formatKz = (value: number) => {
-    return new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA' }).format(value);
-  };
+
 
   const getAutomaticIcon = (name: string) => {
     const n = name.toLowerCase();
@@ -569,7 +559,7 @@ const Inventory = () => {
                         <Utensils size={24} />
                       </div>
                     )}
-                    {!dish.isAvailableOnDigitalMenu && (
+                    {!dish.availableOnDigitalMenu && (
                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                           <span className="text-[8px] font-black text-white uppercase bg-red-500/80 px-2 py-1 rounded">Oculto</span>
                        </div>
@@ -616,7 +606,7 @@ const Inventory = () => {
                 <div>
                    <h3 className="font-bold text-white text-lg tracking-tight leading-none">{cat.name}</h3>
                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                      {menu.filter(d => d.categoryId === cat.id).length} Produtos
+                      {menu.filter(d => d.category_id === cat.id).length} Produtos
                    </p>
                 </div>
               </div>
@@ -871,7 +861,7 @@ const Inventory = () => {
                     </div>
                     <div className="space-y-4">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
-                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={dishForm.categoryId} onChange={e => setDishForm({...dishForm, categoryId: e.target.value})}>
+                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={dishForm.category_id} onChange={e => setDishForm({...dishForm, category_id: e.target.value})}>
                       {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
                         <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                       ))}
@@ -914,10 +904,10 @@ const Inventory = () => {
                   <div className="space-y-4">
                      <div 
                         className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer hover:bg-white/10 transition-all select-none"
-                        onClick={() => setDishForm(prev => ({...prev, isAvailableOnDigitalMenu: !prev.isAvailableOnDigitalMenu}))}
+                        onClick={() => setDishForm(prev => ({...prev, availableOnDigitalMenu: !prev.availableOnDigitalMenu}))}
                      >
-                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${dishForm.isAvailableOnDigitalMenu ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
-                           {dishForm.isAvailableOnDigitalMenu && <Check size={14} />}
+                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${dishForm.availableOnDigitalMenu ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
+                           {dishForm.availableOnDigitalMenu && <Check size={14} />}
                         </div>
                         <span className="text-xs font-bold text-white uppercase tracking-wide">Visível no Menu Digital</span>
                      </div>
@@ -1052,10 +1042,10 @@ const Inventory = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setCatForm({...catForm, isAvailableOnDigitalMenu: !catForm.isAvailableOnDigitalMenu})}
-                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ${catForm.isAvailableOnDigitalMenu ? 'bg-primary shadow-glow' : 'bg-slate-700'}`}
+                    onClick={() => setCatForm({...catForm, availableOnDigitalMenu: !catForm.availableOnDigitalMenu})}
+                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ${catForm.availableOnDigitalMenu ? 'bg-primary shadow-glow' : 'bg-slate-700'}`}
                   >
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${catForm.isAvailableOnDigitalMenu ? 'right-1' : 'left-1'}`} />
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${catForm.availableOnDigitalMenu ? 'right-1' : 'left-1'}`} />
                   </button>
                </div>
 

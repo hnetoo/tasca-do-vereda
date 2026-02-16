@@ -213,14 +213,7 @@ export const MOCK_EMPLOYEES_ANGOLA = [
 /**
  * Formatador de Moeda Angolana
  */
-export const formatKzDetailed = (value: number): string => {
-  return new Intl.NumberFormat('pt-AO', {
-    style: 'currency',
-    currency: 'AOA',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-};
+import { formatKz } from './utils/currencyFormatter';
 
 /**
  * Gerar Relatório de Salário Completo

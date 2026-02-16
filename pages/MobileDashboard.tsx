@@ -1,36 +1,18 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { supabaseService } from '../services/supabaseService';
-import { SystemSettings, Expense, Revenue, User } from '../types';
+import { SystemSettings, Expense, Revenue, User, RemoteDashboardData, Dish, MenuCategory } from '../types';
 import {
   TrendingUp, Users, ShoppingBag, Clock, AlertTriangle,
   Smartphone, LogOut, Settings, Bell, BarChart3,
   Calendar, CalendarDays, ChevronLeft, Delete
 } from 'lucide-react';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts';
 import { thesisData } from '../data/thesisData';
-
-export interface RemoteDashboardData {
-  summary?: {
-    total_revenue?: number;
-    total_orders?: number;
-    active_orders_count?: number;
-  };
-  analytics?: {
-    totalCustomers?: number;
-    retentionRate?: number;
-    menu?: Array<{ dishName: string; sold: number }>;
-  };
-  settings?: SystemSettings;
-  expenses?: Expense[];
-  revenues?: Revenue[];
-  menu?: Array<{ dishName: string; sold: number }>;
-  users?: User[];
-  categories?: any[];
-}
+import { SupabaseCategory, SupabaseDish } from '../services/supabaseService';
 
 export type AlertConfig = {
   revenueDropPercent: number;
@@ -179,13 +161,17 @@ const MobileDashboard = () => {
         { id: 'rev-3', amount: 61500, description: 'Takeaway', date: day, category: 'VENDAS' }
       ],
       menu: [
-        { dishName: 'Francesinha Vereda', sold: 48 },
-        { dishName: 'Bife à Casa', sold: 34 },
-        { dishName: 'Risotto de Camarão', sold: 29 }
+        { id: 'dish-1', name: 'Francesinha Vereda', description: 'Uma deliciosa francesinha', price: 1500, category_id: 'cat-1', image_url: '', available: true, tax_rate: 14 },
+        { id: 'dish-2', name: 'Bife à Casa', description: 'Bife suculento com molho especial', price: 1200, category_id: 'cat-1', image_url: '', available: true, tax_rate: 14 },
+        { id: 'dish-3', name: 'Risotto de Camarão', description: 'Risotto cremoso com camarões frescos', price: 1800, category_id: 'cat-2', image_url: '', available: true, tax_rate: 14 }
       ],
       users: [
         { id: 'owner-demo', name: 'Owner Demo', role: 'OWNER', pin: '1234' },
         { id: 'admin-demo', name: 'Admin Demo', role: 'ADMIN', pin: '1234' }
+      ],
+      categories: [
+        { id: 'cat-1', name: 'Pratos Principais', sortOrder: 1, is_active: true, availableOnDigitalMenu: true },
+        { id: 'cat-2', name: 'Sobremesas', sortOrder: 2, is_active: true, availableOnDigitalMenu: true }
       ]
     };
   }, [settings]);
@@ -261,6 +247,7 @@ const MobileDashboard = () => {
         return;
      }
      if (settings.supabaseConfig?.enabled && settings.supabaseConfig?.url && settings.supabaseConfig?.key) {
+        const today = new Date().toISOString().split('T')[0];
         setTimeout(() => {
           setIsRemote(true);
           if (!supabaseService.isConnected()) {
@@ -268,18 +255,47 @@ const MobileDashboard = () => {
           }
           
           // Fetch data independently so one failure doesn't block the other
-          supabaseService.fetchDashboard().then(dashRes => {
+          supabaseService.fetchDashboard(today, today).then(dashRes => {
               if (dashRes.success && dashRes.data) {
                   lastRemoteUpdateAt.current = Date.now();
-                  setRemoteData(prev => ({ ...prev, ...dashRes.data }));
+                  setRemoteData(prev => {
+                    const baseData: RemoteDashboardData = prev || {
+                      summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 },
+                      analytics: { totalCustomers: 0, retentionRate: 0, menu: [] },
+                      settings: {} as SystemSettings,
+                      expenses: [],
+                      revenues: [],
+                      menu: [],
+                      users: [],
+                      categories: [],
+                    };
+                    return {
+                      ...baseData,
+                      summary: dashRes.data.summary || { total_revenue: 0, total_orders: 0, active_orders_count: 0 },
+                      analytics: dashRes.data.analytics,
+                      settings: dashRes.data.settings || {} as SystemSettings,
+                      expenses: dashRes.data.expenses || [],
+                      revenues: dashRes.data.revenues || [],
+                      menu: dashRes.data.menu || [],
+                      users: dashRes.data.users || [],
+                      categories: dashRes.data.categories || [],
+                    };
+                  });
               }
           }).catch(console.error);
 
           supabaseService.fetchUsers().then(usersRes => {
               if (usersRes.success && usersRes.data) {
                   lastRemoteUpdateAt.current = Date.now();
-                  setRemoteData(prev => ({ 
-                    ...prev, 
+                  setRemoteData(prev => ({
+                    ...(prev || {}),
+                    summary: prev?.summary || { total_revenue: 0, total_orders: 0, active_orders_count: 0 },
+                    analytics: prev?.analytics || { totalCustomers: 0, retentionRate: 0, menu: [] },
+                    settings: prev?.settings || {} as SystemSettings,
+                    expenses: prev?.expenses || [],
+                    revenues: prev?.revenues || [],
+                    menu: prev?.menu || [],
+                    categories: prev?.categories || [],
                     users: usersRes.data as User[]
                   }));
               }
@@ -288,11 +304,23 @@ const MobileDashboard = () => {
           supabaseService.fetchMenu().then(menuRes => {
               if (menuRes.success && menuRes.data) {
                   lastRemoteUpdateAt.current = Date.now();
-                  setRemoteData(prev => ({ 
-                    ...prev, 
-                    categories: menuRes.data.categories,
-                    menu: menuRes.data.dishes
-                  }));
+                  setRemoteData(prev => {
+                    const baseData: RemoteDashboardData = prev || {
+                      summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 },
+                      analytics: { totalCustomers: 0, retentionRate: 0, menu: [] },
+                      settings: {} as SystemSettings,
+                      expenses: [],
+                      revenues: [],
+                      menu: [],
+                      users: [],
+                      categories: [],
+                    };
+                    return {
+                      ...baseData,
+                      categories: menuRes.data.categories,
+                      menu: menuRes.data.dishes
+                    };
+                  });
 
                   // Sync to local store to ensure they appear in categories/menu management
                   if (menuRes.data.categories && menuRes.data.dishes) {
@@ -318,7 +346,7 @@ const MobileDashboard = () => {
     const handleRevenueChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
       setRemoteData(prev => {
         lastRemoteUpdateAt.current = Date.now();
-        const previous = prev || {};
+        const previous = prev || { menu: [], categories: [], summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 }, analytics: { totalCustomers: 0, retentionRate: 0, menu: [] }, settings: {} as SystemSettings, expenses: [], revenues: [], users: [] };
         const currentRevenues = Array.isArray(previous.revenues) ? previous.revenues : [];
         const mapped: Revenue = {
           id: String(payload.new?.id || payload.old?.id || crypto.randomUUID()),
@@ -343,7 +371,7 @@ const MobileDashboard = () => {
     const handleExpenseChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
       setRemoteData(prev => {
         lastRemoteUpdateAt.current = Date.now();
-        const previous = prev || {};
+        const previous = prev || { menu: [], categories: [], summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 }, analytics: { totalCustomers: 0, retentionRate: 0, menu: [] }, settings: {} as SystemSettings, expenses: [], revenues: [], users: [] };
         const currentExpenses = Array.isArray(previous.expenses) ? previous.expenses : [];
         const mapped: Expense = {
           id: String(payload.new?.id || payload.old?.id || crypto.randomUUID()),
@@ -378,32 +406,104 @@ const MobileDashboard = () => {
       }));
     };
 
-    const handleMenuChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
+    const handleCategoryChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
       lastRemoteUpdateAt.current = Date.now();
-      // Re-fetch full menu when categories or menu_items change to ensure consistency
-      supabaseService.fetchMenu().then(menuRes => {
-        if (menuRes.success && menuRes.data) {
-          setRemoteData(prev => ({ 
-            ...prev, 
-            categories: menuRes.data.categories,
-            menu: menuRes.data.dishes
-          }));
-          if (menuRes.data.categories && menuRes.data.dishes) {
-            useStore.getState().importCloudItems({
-              categories: menuRes.data.categories,
-              dishes: menuRes.data.dishes,
-              preferCloud: true
-            });
-          }
+      setRemoteData(prev => {
+        const previous = prev || { menu: [], categories: [], summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 }, analytics: { totalCustomers: 0, retentionRate: 0, menu: [] }, settings: {} as SystemSettings, expenses: [], revenues: [], users: [] };
+        const currentCategories = Array.isArray(previous.categories) ? previous.categories : [];
+        const mapped: MenuCategory = {
+          id: String(payload.new?.id || payload.old?.id || crypto.randomUUID()),
+          name: String(payload.new?.name || ''),
+          icon: String(payload.new?.icon || ''),
+          sortOrder: Number(payload.new?.sort_order || 0),
+          sort_order: Number(payload.new?.sort_order || 0),
+          parentId: payload.new?.parent_id ? String(payload.new?.parent_id) : undefined,
+          parent_id: payload.new?.parent_id ? String(payload.new?.parent_id) : undefined,
+          is_active: Boolean(payload.new?.is_active ?? (payload.new?.deleted_at === null || payload.new?.deleted_at === undefined)),
+          deletedAt: payload.new?.deleted_at ? String(payload.new?.deleted_at) : null,
+          deleted_at: payload.new?.deleted_at ? String(payload.new?.deleted_at) : null,
+          availableOnDigitalMenu: Boolean(payload.new?.available_on_digital_menu ?? true),
+        };
+
+        let nextCategories = [...currentCategories];
+
+        if (payload.eventType === 'INSERT') {
+          nextCategories.push(mapped);
+        } else if (payload.eventType === 'UPDATE') {
+          nextCategories = currentCategories.map(cat => cat.id === mapped.id ? mapped : cat);
+        } else if (payload.eventType === 'DELETE') {
+          nextCategories = currentCategories.filter(cat => cat.id !== String(payload.old?.id));
         }
-      }).catch(console.error);
+        
+        useStore.getState().importCloudItems({
+          categories: nextCategories,
+          dishes: previous.menu || [], // Keep existing dishes
+          preferCloud: true
+        });
+
+        return { ...previous, categories: nextCategories };
+      });
+    };
+
+    const handleDishChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
+      lastRemoteUpdateAt.current = Date.now();
+      setRemoteData(prev => {
+        const previous = prev || { menu: [], categories: [], summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 }, analytics: { totalCustomers: 0, retentionRate: 0, menu: [] }, settings: {} as SystemSettings, expenses: [], revenues: [], users: [] };
+        const currentDishes = Array.isArray(previous.menu) ? previous.menu : [];
+        const mapped: Dish = {
+          id: String(payload.new?.id || payload.old?.id || crypto.randomUUID()),
+          name: String(payload.new?.name || ''),
+          description: String(payload.new?.description || ''),
+          price: Number(payload.new?.price || 0),
+          category_id: String(payload.new?.category_id || ''),
+          image_url: payload.new?.image_url ? String(payload.new?.image_url) : undefined,
+          image: payload.new?.image_url ? String(payload.new?.image_url) : undefined, // Map image_url to image for local compatibility
+          available: Boolean(payload.new?.available ?? true),
+          disponivel: Boolean(payload.new?.available ?? true), // Map available to disponivel for local compatibility
+          tax_rate: Number(payload.new?.tax_rate || 0),
+          taxPercentage: Number(payload.new?.tax_rate || 0), // Map tax_rate to taxPercentage for local compatibility
+          createdAt: payload.new?.created_at ? new Date(String(payload.new?.created_at)) : new Date(),
+          updatedAt: payload.new?.updated_at ? new Date(String(payload.new?.updated_at)) : new Date(),
+          deletedAt: payload.new?.deleted_at ? String(payload.new?.deleted_at) : null,
+          deleted_at: payload.new?.deleted_at ? String(payload.new?.deleted_at) : null,
+          taxCode: payload.new?.tax_code ? String(payload.new?.tax_code) : undefined,
+          precoCusto: payload.new?.preco_custo ? Number(payload.new?.preco_custo) : undefined,
+          tempo_preparo: payload.new?.tempo_preparo ? String(payload.new?.tempo_preparo) : undefined,
+          availableOnDigitalMenu: Boolean(payload.new?.available_on_digital_menu ?? true),
+          controlaEstoque: Boolean(payload.new?.controla_estoque ?? false),
+          quantidadeEstoque: payload.new?.quantidade_estoque ? Number(payload.new?.quantidade_estoque) : undefined,
+          quantidadeMinima: payload.new?.quantidade_minima ? Number(payload.new?.quantidade_minima) : undefined,
+          quantidadeMaxima: payload.new?.quantidade_maxima ? Number(payload.new?.quantidade_maxima) : undefined,
+          unidadeMedida: payload.new?.unidade_medida ? String(payload.new?.unidade_medida) : undefined,
+          fornecedorPadraoId: payload.new?.fornecedor_padrao_id ? String(payload.new?.fornecedor_padrao_id) : undefined,
+          stockItemId: payload.new?.stock_item_id ? String(payload.new?.stock_item_id) : undefined,
+        };
+
+        let nextDishes = [...currentDishes];
+
+        if (payload.eventType === 'INSERT') {
+          nextDishes.push(mapped);
+        } else if (payload.eventType === 'UPDATE') {
+          nextDishes = currentDishes.map(dish => dish.id === mapped.id ? mapped : dish);
+        } else if (payload.eventType === 'DELETE') {
+          nextDishes = currentDishes.filter(dish => dish.id !== String(payload.old?.id));
+        }
+
+        useStore.getState().importCloudItems({
+          categories: previous.categories || [], // Keep existing categories
+          dishes: nextDishes,
+          preferCloud: true
+        });
+
+        return { ...previous, menu: nextDishes };
+      });
     };
 
     const unsubscribeRevenues = supabaseService.subscribeToTableChanges('revenues', handleRevenueChange);
     const unsubscribeExpenses = supabaseService.subscribeToTableChanges('expenses', handleExpenseChange);
     const unsubscribeSummary = supabaseService.subscribeToTableChanges('dashboard_summary', handleSummaryChange);
-    const unsubscribeCategories = supabaseService.subscribeToTableChanges('categories', handleMenuChange);
-    const unsubscribeMenuItems = supabaseService.subscribeToTableChanges('menu_items', handleMenuChange);
+    const unsubscribeCategories = supabaseService.subscribeToTableChanges('categories', handleCategoryChange);
+    const unsubscribeMenuItems = supabaseService.subscribeToTableChanges('menu_items', handleDishChange);
 
     return () => {
       unsubscribeRevenues();
@@ -430,7 +530,8 @@ const MobileDashboard = () => {
       if (now - lastRemoteUpdateAt.current < 1800) {
         return;
       }
-      supabaseService.fetchDashboard().then(dashRes => {
+      const today = new Date().toISOString().split('T')[0];
+      supabaseService.fetchDashboard(today, today).then(dashRes => {
         if (dashRes.success && dashRes.data) {
           lastRemoteUpdateAt.current = Date.now();
           setRemoteData(prev => ({ ...prev, ...dashRes.data }));
@@ -819,7 +920,8 @@ const MobileDashboard = () => {
     const interval = setInterval(() => {
       // Refresh remote data if enabled
       if (isRemote && settings.supabaseConfig?.enabled) {
-          supabaseService.fetchDashboard().then(res => {
+          const today = new Date().toISOString().split('T')[0];
+          supabaseService.fetchDashboard(today, today).then(res => {
             if (res.success && res.data) {
                 setRemoteData(prev => prev ? ({ ...prev, ...res.data }) : res.data);
             }
@@ -1423,35 +1525,7 @@ const MobileDashboard = () => {
                   </div>
                 </div>
 
-                {/* Cloud Categories Section */}
-                <div className="glass-panel rounded-xl p-2.5 border border-white/5 col-span-full">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-[10px] font-black text-white uppercase tracking-wider">Categorias na Nuvem</h3>
-                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[8px] font-black uppercase">
-                      {remoteData?.categories?.length || 0} Ativas
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    {(!remoteData?.categories || remoteData.categories.length === 0) ? (
-                      <div className="col-span-2 p-4 text-center border border-dashed border-white/10 rounded-lg">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">Nenhuma categoria encontrada na nuvem</p>
-                      </div>
-                    ) : (
-                      remoteData.categories.map((cat, i) => (
-                        <div key={cat.id || i} className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                             <BarChart3 size={14} />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[11px] font-black text-white truncate max-w-[100px]">{cat.name}</span>
-                            <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">ID: {String(cat.id).substring(0, 5)}</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+                {/* Cloud Categories Section Removed */}
               </div>
             )}
 

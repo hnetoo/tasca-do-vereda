@@ -51,7 +51,7 @@ export const validationService = {
             if (!dish.id) errors.push(`Produto no índice ${i} sem ID`);
             if (!dish.name) errors.push(`Produto ${dish.id || i} sem nome`);
             if (dish.price === undefined || dish.price < 0) errors.push(`Produto ${dish.name || dish.id} com preço inválido`);
-            if (!dish.categoryId) warnings.push(`Produto ${dish.name || dish.id} sem categoria associada`);
+            if (!dish.category_id) warnings.push(`Produto ${dish.name || dish.id} sem categoria associada`);
 
             if (i > 0 && i % 100 === 0) await validationService.yield();
         }

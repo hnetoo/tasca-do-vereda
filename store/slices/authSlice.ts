@@ -2,7 +2,7 @@ import { StateCreator } from 'zustand';
 import { User, StoreState, Permission } from '../../types';
 import { MOCK_USERS } from '../../constants';
 import { logger } from '../../services/logger';
-import { supabaseService } from '../../services/supabaseService';
+import { calculateHash } from '../../utils/crypto';
 
 export interface AuthSlice {
   users: User[];
@@ -51,7 +51,7 @@ export const createAuthSlice: StateCreator<
             break;
           }
           if (u.pin.length === 64) {
-            const hashedInput = await supabaseService.calculateHash(pin);
+            const hashedInput = await calculateHash(pin);
             if (u.pin === hashedInput) {
               user = u;
               break;
@@ -64,7 +64,7 @@ export const createAuthSlice: StateCreator<
       if (user && pin) {
         let isCorrectPin = false;
         if (user.pin.length === 64) {
-          const hashedInput = await supabaseService.calculateHash(pin);
+          const hashedInput = await calculateHash(pin);
           isCorrectPin = user.pin === hashedInput;
         } else {
           isCorrectPin = user.pin === pin;

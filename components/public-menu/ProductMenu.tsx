@@ -94,9 +94,9 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
 
   return (
     <div className={`
-      grid pb-28 px-4 py-5 sm:px-5 md:px-6 lg:px-8 gap-4 sm:gap-5
+      grid pb-28 px-4 py-5 sm:px-5 md:px-6 lg:px-8 gap-6 sm:gap-8
       ${viewMode === 'grid' 
-        ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' 
+        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
         : 'grid-cols-1'
       }
     `}>
@@ -116,51 +116,106 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
             key={dish.id}
             onClick={() => onProductClick(dish)}
             className="
-              group bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden 
-              hover:border-primary/50 hover:shadow-lg transition-all duration-300
-              flex flex-col relative active:scale-[0.98]
+              group bg-white/[0.03] border border-white/5 rounded-[2rem] overflow-hidden 
+              hover:bg-white/[0.06] hover:border-primary/40 transition-all duration-500
+              flex flex-col relative active:scale-[0.98] shadow-xl hover:shadow-primary/10
             "
-            style={{ animationDelay: `${index * 40}ms` }}
+            style={{ animationDelay: `${index * 50}ms` }}
           >
+            {/* Price Badge */}
+            <div className="absolute top-4 right-4 z-20">
+              <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-lg">
+                <span className="text-primary font-black text-sm tracking-tight">
+                  {formatPrice(dish.price)}
+                </span>
+              </div>
+            </div>
+
+            {/* Image Container */}
             <div className={`
-              relative overflow-hidden bg-slate-950/40 border-b border-slate-800
-              ${viewMode === 'grid' ? 'h-44 sm:h-48 lg:h-52' : 'h-28 w-full'}
+              relative overflow-hidden bg-white/[0.02]
+              ${viewMode === 'grid' ? 'h-56 sm:h-64' : 'h-32 w-full'}
             `}>
               {hasImage ? (
-                <img 
-                  src={dish.image} 
-                  srcSet={srcSet}
-                  sizes={srcSet ? sizes : undefined}
-                  alt={dish.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  onError={() => setImageErrorMap(prev => ({ ...prev, [dish.id]: true }))}
-                  loading="lazy"
-                  decoding="async"
-                />
+                <>
+                  <img 
+                    src={dish.image} 
+                    srcSet={srcSet}
+                    sizes={srcSet ? sizes : undefined}
+                    alt={dish.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    onError={() => setImageErrorMap(prev => ({ ...prev, [dish.id]: true }))}
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-500" />
+                </>
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-900/30">
-                  <ShoppingBasket size={28} className="mb-2 opacity-40" />
-                  <span className="text-[11px]">Sem imagem</span>
+                <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 bg-white/[0.01]">
+                  <ShoppingBasket size={40} strokeWidth={1.5} className="mb-2 opacity-20" />
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-30">Sem imagem</span>
+                </div>
+              )}
+
+              {quantity > 0 && (
+                <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
+                  <div className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center font-black shadow-xl border-2 border-black/20 animate-in zoom-in duration-300">
+                    {quantity}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="p-4 sm:p-5 flex flex-col flex-1">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="font-semibold text-base sm:text-lg text-white group-hover:text-primary transition-colors">
+            {/* Content */}
+            <div className="p-6 flex flex-col flex-1 relative">
+              <div className="flex flex-col gap-1 mb-3">
+                <h3 className="font-black text-lg sm:text-xl text-white group-hover:text-primary transition-colors leading-tight uppercase tracking-wide">
                   {dish.name}
                 </h3>
+                {dish.categoryName && (
+                  <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">
+                    {dish.categoryName}
+                  </span>
+                )}
               </div>
+              
               {dish.description && (
-                <p className="text-sm sm:text-base text-slate-400 mt-2 line-clamp-2">
+                <p className="text-sm text-slate-400 line-clamp-2 font-medium leading-relaxed mb-4 group-hover:text-slate-300 transition-colors">
                   {dish.description}
                 </p>
               )}
-              <div className="mt-auto pt-3 flex items-center justify-between border-t border-slate-800">
-                <span className="text-sm sm:text-base text-slate-500">Preço</span>
-                <span className="font-semibold text-primary text-base sm:text-lg">
-                  {formatPrice(dish.price)}
-                </span>
+
+              <div className="mt-auto pt-4 flex items-center justify-between border-t border-white/5">
+                <button 
+                  className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors"
+                >
+                  Ver Detalhes
+                  <Plus size={14} strokeWidth={3} />
+                </button>
+                
+                {quantity > 0 ? (
+                  <div className="flex items-center gap-3 bg-white/5 rounded-full p-1 border border-white/10" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      onClick={() => onUpdateCart(dish.id, -1)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-all"
+                    >
+                      <Minus size={16} strokeWidth={3} />
+                    </button>
+                    <span className="text-sm font-black text-white w-4 text-center">{quantity}</span>
+                    <button 
+                      onClick={() => onUpdateCart(dish.id, 1)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-green-500/20 text-slate-400 hover:text-green-400 transition-all"
+                    >
+                      <Plus size={16} strokeWidth={3} />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onAddToCart(dish.id, 1, ''); }}
+                    className="bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/40 text-white p-2 rounded-full transition-all duration-300"
+                  >
+                    <Plus size={18} strokeWidth={3} />
+                  </button>
+                )}
               </div>
             </div>
           </div>

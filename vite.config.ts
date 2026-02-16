@@ -75,6 +75,11 @@ export default defineConfig(() => {
       globals: true,
       environment: 'jsdom',
       setupFiles: './src/setupTests.ts',
+      resolve: {
+        alias: {
+          '@': '/src'
+        }
+      },
       coverage: {
         provider: 'v8' as const,
         reporter: ['text', 'json', 'html'],

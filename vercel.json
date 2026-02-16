@@ -1,4 +1,9 @@
 {
+  "name": "tasca-do-vereda-app",
+
+  "framework": "vite",
+  "buildCommand": "vite build",
+  "installCommand": "pnpm install",
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ]

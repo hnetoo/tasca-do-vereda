@@ -7,6 +7,8 @@ import { AIAnalysisResult, PaymentMethod } from '../types';
 import { useNavigate } from 'react-router-dom';
 import ExportButton from '../components/ExportButton';
 import { exportChartToPDF } from '../services/exportService';
+import { formatKz } from '../services/utils/currencyFormatter';
+import { getOrderDate, normalizeDate, buildDateRange } from '../services/utils/dateUtils';
 
 const Dashboard = () => {
   const { 
@@ -40,7 +42,7 @@ const Dashboard = () => {
     lucro: d.totalProfit
   }));
 
-  const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE'];
+  const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE', 'MBWAY', 'OUTROS', 'Cash', 'Card', 'MBWay', 'Other'];
   const paymentLabels: Record<PaymentMethod, string> = {
     NUMERARIO: 'Numerário',
     TPA: 'Cartão',
@@ -60,27 +62,6 @@ const Dashboard = () => {
     const result = await analyzeBusinessPerformance(activeOrders, menu);
     setAiAnalysis(result);
     setLoadingAi(false);
-  };
-
-  const formatKz = (val: number) => {
-    return new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
-  };
-
-  const getOrderDate = (timestamp?: string | number | Date) => {
-    const d = timestamp ? new Date(timestamp) : new Date(0);
-    return isNaN(d.getTime()) ? new Date(0) : d;
-  };
-
-  const normalizeDate = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  const buildDateRange = (start: Date, end: Date) => {
-    const dates: Date[] = [];
-    const cursor = new Date(start);
-    while (cursor <= end) {
-      dates.push(new Date(cursor));
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return dates;
   };
 
   const extractPayments = (order: typeof orders[number]) => {

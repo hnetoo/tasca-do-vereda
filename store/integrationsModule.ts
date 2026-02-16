@@ -46,7 +46,7 @@ interface IntegrationsState {
   revokeMobileSession: (sessionId: string) => void;
   
   // Integration API
-  initializeAPI: (apiKey: string, apiSecret: string) => IntegrationAPIService;
+
   processBiometricWebhook: (payload: {
     externalBioId: string;
     type: string;
@@ -274,9 +274,7 @@ export function setupIntegrationsModule() {
       }
     },
 
-    initializeAPI: (apiKey, apiSecret) => {
-      return initializeIntegrationAPI(apiKey, apiSecret);
-    },
+
 
     processBiometricWebhook: async (payload) => {
       try {

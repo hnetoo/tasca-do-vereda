@@ -5,7 +5,7 @@ import { MenuCategory } from '../types';
 import { Search, Plus, Trash2, Edit2, X, Save, RefreshCw, Grid3X3, Coffee, Pizza, Beer, IceCream, Utensils } from 'lucide-react';
 
 // Icons available for categories
-const AVAILABLE_ICONS = [
+export const AVAILABLE_ICONS = [
   { name: 'Grid3X3', label: 'Geral', icon: Grid3X3 },
   { name: 'Coffee', label: 'Pequeno Almoço/Bebidas Quentes', icon: Coffee },
   { name: 'Pizza', label: 'Pratos Principais', icon: Pizza },

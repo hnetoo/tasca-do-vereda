@@ -15,6 +15,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { availableMonitors, primaryMonitor } from '@tauri-apps/api/window';
 import ExportButton from '../components/ExportButton';
 import { logger } from '../services/logger';
+import { formatKz, formatKzDetailed } from '../services/utils/currencyFormatter';
 
 const AVAILABLE_ICONS = [
   { name: 'Utensils', icon: Utensils, label: 'Geral' },
@@ -43,7 +44,7 @@ const POS = () => {
     tables, activeTableId, setActiveTable, 
     menu, categories, activeOrders, activeOrderId, setActiveOrder, 
     createNewOrder, addToOrder, removeFromOrder, 
-    checkoutTable, closeTableWithoutOrders, transferTable,
+    checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
     settings, addNotification,
     currentShiftId, openShift, toggleSidebar, currentUser,
     auditLogs, addTable
@@ -165,7 +166,7 @@ const POS = () => {
     return matchesCategory && matchesSearch;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
+
   
   const totalWithTax = currentOrder ? currentOrder.total : 0;
 
@@ -311,14 +312,13 @@ const POS = () => {
   };
 
   const generateStandardInvoiceHTML = (order: Order): string => {
-    const formatNumber = (val: number) => new Intl.NumberFormat('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
     const customerTaxId = order.customerNif || '999999999';
     
     const itemsHtml = order.items.map(item => {
       const dish = menu.find(d => d.id === item.dishId);
       const name = dish?.name || 'Item Desconhecido';
-      const unitPrice = formatNumber(item.unitPrice);
-      const subTotal = formatNumber(item.unitPrice * item.quantity);
+      const unitPrice = formatKzDetailed(item.unitPrice);
+      const subTotal = formatKzDetailed(item.unitPrice * item.quantity);
 
       return `
       <div style="margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 6px;">
@@ -449,14 +449,13 @@ const POS = () => {
 
   // Função para gerar HTML de factura térmica (80mm de largura)
   const generateThermalReceiptHTML = (order: Order): string => {
-    const formatNumber = (val: number) => new Intl.NumberFormat('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
     const customerTaxId = order.customerNif || '999999999';
     
     const itemsHtml = order.items.map(item => {
       const dish = menu.find(d => d.id === item.dishId);
       const name = dish?.name || 'Item Desconhecido';
-      const unitPrice = formatNumber(item.unitPrice);
-      const subTotal = formatNumber(item.unitPrice * item.quantity);
+      const unitPrice = formatKzDetailed(item.unitPrice);
+      const subTotal = formatKzDetailed(item.unitPrice * item.quantity);
 
       return `
       <div style="margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 4px;">
@@ -1214,15 +1213,29 @@ const POS = () => {
               {/* Sub-account tabs within the table */}
               <div className="flex gap-2 flex-wrap pb-2">
                  {openOrdersForTable.map(order => (
-                    <button 
-                      key={order.id} 
-                      onClick={() => setActiveOrder(order.id)}
-                      className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap
-                        ${activeOrderId === order.id ? 'bg-primary border-primary text-black shadow-glow' : 'bg-white/5 border-white/10 text-slate-500'}
-                      `}
-                    >
-                      {order.subAccountName}
-                    </button>
+                    <div key={order.id} className="relative group">
+                      <button 
+                        onClick={() => setActiveOrder(order.id)}
+                        className={`px-4 py-2 pr-8 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap
+                          ${activeOrderId === order.id ? 'bg-primary border-primary text-black shadow-glow' : 'bg-white/5 border-white/10 text-slate-500'}
+                        `}
+                      >
+                        {order.subAccountName}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (order.items.length > 0) {
+                            if (!window.confirm('Tem a certeza que deseja remover esta subconta com itens?')) return;
+                          }
+                          removeOrder(order.id);
+                        }}
+                        className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-black/20 transition-colors ${activeOrderId === order.id ? 'text-black/50 hover:text-black' : 'text-slate-500 hover:text-white'}`}
+                        title="Fechar Subconta"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
                  ))}
               </div>
             </div>

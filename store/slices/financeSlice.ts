@@ -1,7 +1,8 @@
 import { StateCreator } from 'zustand';
-import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics } from '../../types';
+import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary } from '../../types';
 import { logger } from '../../services/logger';
 import { backupService } from '../../services/backupService';
+import { integrationAPIService } from '../../services/integrationAPIService';
 
 import { executeQuery } from '../../services/database/connection';
 
@@ -40,6 +41,7 @@ export interface FinanceSlice {
   getDailySalesAnalytics: (days?: number) => DailySalesAnalytics[];
   getMenuAnalytics: (days?: number) => MenuAnalytics[];
   getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
+  syncFinancialMetricsToDashboard: () => Promise<void>;
 }
 
 export const createFinanceSlice: StateCreator<
@@ -210,6 +212,27 @@ export const createFinanceSlice: StateCreator<
     return Object.entries(revenueByDate)
       .map(([date, totalRevenue]) => ({ date, totalRevenue }))
       .sort((a, b) => a.date.localeCompare(b.date));
+  },
+
+  syncFinancialMetricsToDashboard: async () => {
+    const state = get();
+    const totalRevenue = state.revenues.reduce((sum, r) => sum + r.amount, 0) + state.orders.filter(o => o.status === 'FECHADO').reduce((sum, o) => sum + o.total, 0);
+    const totalOrders = state.orders.length;
+    const activeOrdersCount = state.activeOrders.length;
+
+    const summary: DashboardSummary = {
+      totalRevenue,
+      totalOrders,
+      activeOrdersCount,
+    };
+
+    try {
+      await integrationAPIService.syncDashboardData(summary, state.activeOrders);
+      logger.info('Métricas financeiras sincronizadas com o dashboard', summary, 'FINANCE');
+    } catch (error) {
+      logger.error('Erro ao sincronizar métricas financeiras com o dashboard', error, 'FINANCE');
+      state.addNotification('error', 'Erro ao sincronizar métricas financeiras com o dashboard.');
+    }
   },
 
   removeOrder: (id) => set((state) => ({

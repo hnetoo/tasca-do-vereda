@@ -4,7 +4,7 @@ import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { logger } from '../services/logger';
 import { validationService } from '../services/validationService';
 import { disasterRecoveryService } from '../services/disasterRecoveryService';
-import { supabaseService } from '../services/supabaseService';
+import { integrationAPIService } from '../services/integrationAPIService';
 
 const customStorage: StateStorage = {
   getItem: (name: string): string | null => {
@@ -40,7 +40,7 @@ const customStorage: StateStorage = {
     }
   },
 };
-import { IntegrityIssue, MenuCategory, StoreState, Permission, IntegrationLog, Fornecedor, SystemSettings, Notification, Dish, User, StockItem, CashShift, Order, PaymentMethod, PayrollRecord, Expense, DailySalesAnalytics, MenuAnalytics, Delivery, Employee, AttendanceRecord, AuditLog, MenuAccessLog, OfflineAction, Revenue } from '../types';
+import { IntegrityIssue, MenuCategory, StoreState, Permission, IntegrationLog, Fornecedor, SystemSettings, Notification, Dish, User, StockItem, CashShift, Order, PaymentMethod, PayrollRecord, Expense, DailySalesAnalytics, MenuAnalytics, Delivery, Employee, AttendanceRecord, AuditLog, MenuAccessLog, OfflineAction, Revenue, DashboardSummary } from '../types';
 import { MOCK_MENU, MOCK_STOCK, MOCK_USERS, MOCK_CATEGORIES, MOCK_TABLES, MOCK_CUSTOMERS, MOCK_RESERVATIONS } from '../constants';
 import { calculateIRT, calculateINSS, calculateDeductions } from '../services/salaryCalculatorAngola';
 import { backupService, FinancialBackupData } from '../services/backupService';
@@ -60,6 +60,7 @@ import { createOperationalSlice } from './slices/operationalSlice';
 
 import { recoveryService } from '../services/recoveryService';
 import { CryptoService } from '../services/cryptoService';
+import { formatKz } from '../services/utils/currencyFormatter'; // Added import
 
 export const useStore = create<StoreState>()(
   persist(
@@ -143,7 +144,7 @@ export const useStore = create<StoreState>()(
       addIntegrationLog: (log: { type: string; message: string; details?: Record<string, unknown> }) => set((state) => {
         const newIntegrationLog: IntegrationLog = {
           id: `log-${Date.now()}`,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           integrationName: 'AppStore', 
           eventType: log.type,
           status: 'INFO', 
@@ -187,6 +188,54 @@ export const useStore = create<StoreState>()(
       removeNotification: (id) => set(state => ({
         notifications: state.notifications.filter(n => n.id !== id)
       })),
+      onRealtimeChange: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => {
+        logger.info(`Realtime change received for table: ${payload.tableName}, event: ${payload.eventType}`, payload, 'STORE');
+        const state = get();
+        switch (payload.tableName) {
+          case 'menu_items':
+            if (payload.eventType === 'INSERT') state.addDish(payload.new as Dish);
+            if (payload.eventType === 'UPDATE') state.updateDish(payload.new as Dish);
+            if (payload.eventType === 'DELETE') state.removeDish(payload.old.id as string);
+            break;
+          case 'categories':
+            if (payload.eventType === 'INSERT') state.addCategory(payload.new as MenuCategory);
+            if (payload.eventType === 'UPDATE') state.updateCategory(payload.new as unknown as MenuCategory);
+            if (payload.eventType === 'DELETE') state.removeCategory(payload.old.id as string);
+            break;
+          case 'employees':
+            if (payload.eventType === 'INSERT') state.addEmployee(payload.new as Employee);
+            if (payload.eventType === 'UPDATE') state.updateEmployee(payload.new as Employee);
+            if (payload.eventType === 'DELETE') state.removeEmployee(payload.old.id as string);
+            break;
+          case 'attendance_records':
+            // Assuming attendance records are primarily added or updated, not deleted via real-time
+            if (payload.eventType === 'INSERT') state.addAttendanceRecord(payload.new as AttendanceRecord);
+            if (payload.eventType === 'UPDATE') state.updateAttendanceRecord(payload.new as AttendanceRecord);
+            break;
+          case 'payroll_records':
+            if (payload.eventType === 'INSERT') state.addPayrollRecord(payload.new as PayrollRecord);
+            if (payload.eventType === 'UPDATE') state.updatePayrollRecord(payload.new as PayrollRecord);
+            if (payload.eventType === 'DELETE') state.removePayrollRecord(payload.old.id as string);
+            break;
+          case 'revenues':
+            if (payload.eventType === 'INSERT') state.addRevenue(payload.new as Revenue);
+            if (payload.eventType === 'UPDATE') state.updateRevenue(payload.new as Revenue);
+            if (payload.eventType === 'DELETE') state.removeRevenue(payload.old.id as string);
+            break;
+          case 'expenses':
+            if (payload.eventType === 'INSERT') state.addExpense(payload.new as unknown as Expense); 
+            if (payload.eventType === 'UPDATE') state.updateExpense(payload.new as unknown as Expense);
+            if (payload.eventType === 'DELETE') state.removeExpense(payload.old.id as string);
+            break;
+          case 'dashboard_summary':
+            // Dashboard summary is typically updated, not inserted/deleted directly via real-time
+            if (payload.eventType === 'UPDATE') state.setDashboardSummary(payload.new as unknown as DashboardSummary);
+            break;
+          default:
+            logger.warn(`Unhandled real-time change for table: ${payload.tableName}`, payload, 'STORE');
+            break;
+        }
+      },
       settings: {
     restaurantName: "Tasca Do VEREDA",
     appLogoUrl: "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Professional%20restaurant%20logo%20for%20%22TASCA%20DO%20VEREDA%22%2C%20shield%20crest%20shape%2C%20gold%20double%20border%2C%20dark%20olive%20green%20background%2C%20arched%20white%20text%20%22TASCA%20DO%20VEREDA%22%2C%20yellow%20text%20%22RESTAURANTE%22%2C%20illustration%20of%20grilled%20steak%20with%20crossed%20fork%20and%20knife%2C%20elegant%20gold%20flourish%20at%20bottom%2C%20luxury%20style%2C%20high%20resolution&image_size=square_hd", 
@@ -230,10 +279,12 @@ export const useStore = create<StoreState>()(
             
             // Sync to Supabase if enabled
             if (updated.supabaseConfig?.enabled && updated.supabaseConfig?.autoSync) {
-                if (!supabaseService.isConnected()) {
-                    supabaseService.initialize(updated.supabaseConfig.url, updated.supabaseConfig.key);
+                if (!integrationAPIService.isConnected()) {
+                    integrationAPIService.initialize(updated.supabaseConfig.url, updated.supabaseConfig.key, get().onRealtimeChange);
                 }
-                supabaseService.syncSettings(updated).catch(e => logger.error('Failed to sync settings to Supabase', { error: e.message }, 'CLOUD'));
+                integrationAPIService.syncSettings(updated).then(res => {
+                    if (!res.success) logger.error('Failed to sync settings to Supabase', { error: res.error }, 'CLOUD');
+                }).catch(e => logger.error('Exception syncing settings to Supabase', { error: e.message }, 'CLOUD'));
             }
 
             logger.info('Settings updated.', { supabaseEnabled: updated.supabaseConfig?.enabled }, 'STORE');
@@ -353,7 +404,7 @@ export const useStore = create<StoreState>()(
           // 4. Persist to SQL (CRITICAL)
           databaseOperations.saveCategory(cat).then(success => {
               if (success) {
-                  logger.info('Categoria guardada em SQL com sucesso', { categoryId: cat.id }, 'DATABASE');
+                  logger.info('Categoria guardada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
               } else {
                   logger.error('Falha na persistência SQL da categoria', { category: cat }, 'DATABASE');
                   get().addNotification('error', 'Erro ao guardar categoria na base de dados local.');
@@ -404,7 +455,7 @@ export const useStore = create<StoreState>()(
         try {
           // 5. Update related dishes categoryName to maintain consistency
           const updatedMenu = state.menu.map(d => 
-            d.categoryId === cat.id ? { ...d, categoryName: cat.name } : d
+            d.category_id === cat.id ? { ...d, categoryName: cat.name } : d
           );
 
           set((state) => ({
@@ -417,7 +468,7 @@ export const useStore = create<StoreState>()(
           // 6. Persist to SQL (CRITICAL)
           databaseOperations.saveCategory(cat).then(success => {
               if (success) {
-                  logger.info('Categoria atualizada em SQL com sucesso', { categoryId: cat.id }, 'DATABASE');
+                  logger.info('Categoria atualizada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
               } else {
                   logger.error('Falha na atualização SQL da categoria', { category: cat }, 'DATABASE');
                   get().addNotification('error', 'Erro ao atualizar categoria na base de dados local.');
@@ -587,7 +638,7 @@ export const useStore = create<StoreState>()(
               logger.error('Erro de execução na persistência SQL', { error: (e as Error).message }, 'DATABASE');
           });
 
-          get().addAuditLog('DISH_ADDED', 'Dish', finalDish.id, { message: `Produto adicionado: ${finalDish.name}`, categoryId: finalDish.categoryId });
+          get().addAuditLog('DISH_ADDED', 'Dish', finalDish.id, { message: `Produto adicionado: ${finalDish.name}`, category_id: finalDish.category_id });
           get().triggerSync();
         } catch (e: unknown) {
           logger.error('Critical error adding dish', { error: (e as Error).message }, 'STORE');
@@ -903,13 +954,13 @@ export const useStore = create<StoreState>()(
           if (!lc) {
             nextCategories.push({
               ...rc,
-              isAvailableOnDigitalMenu: rc.isAvailableOnDigitalMenu !== false
+              availableOnDigitalMenu: rc.availableOnDigitalMenu !== false
             });
           } else {
             const keep = preferCloud ? rc : lc;
-            const merged = {
-              ...(lc as Record<string, any>),
-              ...(keep as Record<string, any>)
+            const merged: MenuCategory = {
+              ...(lc as MenuCategory),
+              ...(keep as MenuCategory)
             };
             const idx = nextCategories.findIndex(c => c.id === lc.id);
             if (idx >= 0) nextCategories[idx] = merged;
@@ -924,9 +975,9 @@ export const useStore = create<StoreState>()(
             });
           } else {
             const keep = preferCloud ? rd : ld;
-            const merged = {
-              ...(ld as Record<string, any>),
-              ...(keep as Record<string, any>)
+            const merged: Dish = {
+              ...(ld as Dish),
+              ...(keep as Dish)
             };
             const idx = nextMenu.findIndex(d => d.id === ld.id);
             if (idx >= 0) nextMenu[idx] = merged;
@@ -955,7 +1006,7 @@ export const useStore = create<StoreState>()(
           const ld = localDishById.get(rd.id) as Record<string, any> | undefined;
           if (ld) {
             const a = JSON.stringify({ name: ld.name, price: ld.price, categoryId: ld.categoryId, taxCode: ld.taxCode });
-            const b = JSON.stringify({ name: rd.name, price: rd.price, categoryId: rd.categoryId, taxCode: rd.taxCode });
+            const b = JSON.stringify({ name: rd.name, price: rd.price, category_id: rd.category_id, taxCode: rd.taxCode });
             if (a !== b) conflicts.dishes.push(rd);
           }
         });
@@ -1008,10 +1059,10 @@ export const useStore = create<StoreState>()(
             id, 
             userId: currentUser.id, 
             userName: currentUser.name,
-            startTime: new Date(), 
+            startTime: new Date().toISOString(), 
             openingBalance: amount, 
             status: 'OPEN',
-            salesBreakdown: { NUMERARIO: 0, TPA: 0, TRANSFERENCIA: 0, CONTA_CORRENTE: 0, QR_CODE: 0 }
+            salesBreakdown: { NUMERARIO: 0, TPA: 0, TRANSFERENCIA: 0, CONTA_CORRENTE: 0, QR_CODE: 0, MBWAY: 0, OUTROS: 0, Cash: 0, Card: 0, MBWay: 0, Other: 0 }
           };
 
           // Transferir automaticamente todas as contas em aberto para este novo turno
@@ -1165,7 +1216,7 @@ export const useStore = create<StoreState>()(
             tableId, 
             items: [],
             status: 'ABERTO', 
-            timestamp: new Date(), 
+            timestamp: new Date().toISOString(), 
             total: 0, 
             taxTotal: 0,
             shiftId: currentShiftId || '',
@@ -1536,29 +1587,65 @@ export const useStore = create<StoreState>()(
 
       removeOrder: (id) => {
         try {
-          const order = get().activeOrders.find(o => o.id === id);
+          const state = get();
+          const order = state.activeOrders.find(o => o.id === id);
           if (order) {
             // Restaurar stock para todos os itens da ordem
             order.items.forEach(item => {
-              const dish = get().menu.find(d => d.id === item.dishId);
+              const dish = state.menu.find(d => d.id === item.dishId);
               if (dish?.stockItemId) {
                 get().updateStockQuantity(dish.stockItemId, item.quantity);
               }
             });
-          }
 
-          // Persist deletion to SQL
-          databaseOperations.deleteOrder(id)
-            .then(() => {
-              set((state) => ({
-                activeOrders: state.activeOrders.filter(o => o.id !== id)
-              }));
-              logger.info(`Ordem removida: ${id}`, {}, 'STORE');
-            })
-            .catch((e: unknown) => {
-              logger.error('Falha ao eliminar ordem no SQL', { orderId: id, error: (e as Error).message }, 'DATABASE');
-              get().addNotification('error', 'Erro interno ao remover pedido.');
-            });
+            const tableId = order.tableId;
+
+            // Persist deletion to SQL
+            databaseOperations.deleteOrder(id)
+              .then(() => {
+                set((state) => {
+                  const newOrders = state.activeOrders.filter(o => o.id !== id);
+                  
+                  // Calcular estado da mesa
+                  const remainingOrders = newOrders.filter(o => o.tableId === tableId && o.status === 'ABERTO');
+                  const isTableFree = remainingOrders.length === 0;
+                  
+                  const newTables = state.tables.map(t => 
+                    t.id === tableId ? { ...t, status: isTableFree ? 'LIVRE' : 'OCUPADO' } : t
+                  );
+
+                  // Se a mesa ficou livre, atualizar no banco
+                  if (isTableFree) {
+                    const table = state.tables.find(t => t.id === tableId);
+                    if (table) {
+                      databaseOperations.saveTable({ ...table, status: 'LIVRE' }).catch(e => 
+                        logger.error('Failed to update table status on order remove', { error: e.message }, 'DATABASE')
+                      );
+                    }
+                  }
+
+                  // Gerir seleção ativa
+                  let newActiveOrderId = state.activeOrderId;
+                  if (state.activeOrderId === id) {
+                    newActiveOrderId = remainingOrders.length > 0 ? remainingOrders[0].id : null;
+                  }
+
+                  const newActiveTableId = isTableFree && state.activeTableId === tableId ? null : state.activeTableId;
+
+                  return {
+                    activeOrders: newOrders,
+                    tables: newTables,
+                    activeOrderId: newActiveOrderId,
+                    activeTableId: newActiveTableId
+                  };
+                });
+                logger.info(`Ordem removida: ${id}`, {}, 'STORE');
+              })
+              .catch((e: unknown) => {
+                logger.error('Falha ao eliminar ordem no SQL', { orderId: id, error: (e as Error).message }, 'DATABASE');
+                get().addNotification('error', 'Erro interno ao remover pedido.');
+              });
+          }
         } catch (e: unknown) {
           logger.error('Erro crítico ao remover ordem', { orderId: id, error: (e as Error).message }, 'STORE');
           get().addNotification('error', 'Erro interno ao remover pedido.');
@@ -2199,7 +2286,7 @@ export const useStore = create<StoreState>()(
           
           const expenseRecord: Expense = {
             id: `exp-${Date.now()}`,
-            date: new Date(),
+            date: new Date().toISOString(),
             category: 'SALARIOS',
             description: `Salário - ${employee.name} - ${month + 1}/${year}`,
             amount: Number(netSalary.toFixed(2)),
@@ -2213,10 +2300,10 @@ export const useStore = create<StoreState>()(
             'PAYROLL_PROCESSED',
             'Payroll',
             employeeId,
-            { message: `Folha processada: ${employee.name} (${month + 1}/${year}). Líquido: ${netSalary.toFixed(2)} Kz`, month, year, netSalary }
+            { message: `Folha processada: ${employee.name} (${month + 1}/${year}). Líquido: ${formatKz(netSalary)}`, month, year, netSalary }
           );
 
-          get().addNotification('success', `Folha de ${employee.name} processada: ${Number(netSalary.toFixed(2))} Kz`);
+          get().addNotification('success', `Folha de ${employee.name} processada: ${formatKz(netSalary)}`);
           logger.info(`Folha de pagamento processada: ${employee.name}`, { month, year, netSalary }, 'HR');
         } catch (e: unknown) {
           const error = e as Error;
@@ -2820,25 +2907,25 @@ export const useStore = create<StoreState>()(
                   logger.warn(`${action.type} na fila offline, mas o serviço de entrega Supabase está desativado.`, undefined, 'OFFLINE_QUEUE');
                   break;
                 case 'SYNC_MENU':
-                  await supabaseService.syncMenu(action.payload.categories, action.payload.menu, action.payload.settings);
+                  await integrationAPIService.syncMenu(action.payload.categories, action.payload.menu, action.payload.settings);
                   break;
                 case 'SYNC_USERS':
-                  await supabaseService.syncUsers(action.payload.users);
+                  await integrationAPIService.syncUsers(action.payload.users);
                   break;
                 case 'SYNC_AUDIT_LOGS':
-                  await supabaseService.syncAuditLogs(action.payload.auditLogs);
+                  await integrationAPIService.syncAuditLogs(action.payload.auditLogs);
                   break;
                 case 'SYNC_DASHBOARD_DATA':
-                  await supabaseService.syncDashboardData(action.payload.summary, action.payload.activeOrders);
+                  await integrationAPIService.syncDashboardData(action.payload.summary, action.payload.activeOrders);
                   break;
                 case 'SYNC_STOCK':
-                  await supabaseService.syncStock(action.payload.stock);
+                  await integrationAPIService.syncStock(action.payload.stock);
                   break;
                 case 'SYNC_SUPPLIERS':
-                  await supabaseService.syncSuppliers(action.payload.suppliers);
+                  await integrationAPIService.syncSuppliers(action.payload.suppliers);
                   break;
                 case 'SYNC_FINANCIALS':
-                  await supabaseService.syncFinancials(action.payload.revenues, action.payload.expenses);
+                  await integrationAPIService.syncFinancials(action.payload.revenues, action.payload.expenses);
                   break;
                 default:
                   logger.warn(`Tipo de ação offline desconhecido ou não implementado: ${action.type}`, undefined, 'OFFLINE_QUEUE');
@@ -2963,10 +3050,10 @@ export const useStore = create<StoreState>()(
           if (dishIds.has(d.id)) issues.push(createIssue(`ID de produto duplicado: ${d.id} (${d.name}).`, 'DISH', d.id, 'CRITICAL'));
           dishIds.add(d.id);
 
-          if (!d.categoryId) {
+          if (!d.category_id) {
             issues.push(createIssue(`Produto "${d.name}" sem categoria associada.`, 'DISH', d.id, 'MEDIUM'));
-          } else if (!catIds.has(d.categoryId)) {
-            issues.push(createIssue(`Produto "${d.name}" refere categoria inexistente (ID: ${d.categoryId}).`, 'DISH', d.id, 'HIGH'));
+          } else if (!catIds.has(d.category_id)) {
+            issues.push(createIssue(`Produto "${d.name}" refere categoria inexistente (ID: ${d.category_id}).`, 'DISH', d.id, 'HIGH'));
           }
 
           if (d.price < 0) issues.push(createIssue(`Produto "${d.name}" com preço negativo.`, 'DISH', d.id, 'HIGH'));
@@ -3200,6 +3287,7 @@ export const useStore = create<StoreState>()(
           logger.info('Carregando dados exclusivamente do SQL Local (Security Mode)...', undefined, 'DATABASE');
           
           const sqlCategories = await databaseOperations.getCategories();
+          logger.debug('sqlCategories from databaseOperations.getCategories()', sqlCategories, 'STORE');
           const sqlDishes = await databaseOperations.getDishes();
           const sqlStock = await databaseOperations.getStockItems();
           const sqlExpenses = await databaseOperations.getExpenses();
@@ -3208,7 +3296,8 @@ export const useStore = create<StoreState>()(
           
           // Validação de Integridade Pós-Carga
           const cleanCategories = sqlCategories.filter(c => c.id && c.name);
-          const cleanDishes = sqlDishes.filter(d => d.id && d.name && d.categoryId);
+          logger.debug('cleanCategories after filter', cleanCategories, 'STORE');
+          const cleanDishes = sqlDishes.filter(d => d.id && d.name && d.category_id);
           
           set({ 
             categories: cleanCategories, 
@@ -3264,11 +3353,11 @@ export const useStore = create<StoreState>()(
              const sbKey = settings.supabaseConfig?.key || "sb_publishable_brYx8iH2oCK5uVUowtUhTQ_c7X4nrAo"; // Fallback for public demo
 
              if (sbUrl && sbKey) {
-                 supabaseService.initialize(sbUrl, sbKey);
+                 integrationAPIService.initialize(sbUrl, sbKey);
                  
                  // 1. Fetch Menu (Categories & Dishes)
                  logger.info('STORE: Iniciando carga de dados do Supabase...', undefined, 'STORE');
-                 const menuData = await supabaseService.fetchMenu();
+                 const menuData = await integrationAPIService.fetchMenu();
                  if (menuData.success && menuData.data) {
                      const data = menuData.data as { categories?: any[], dishes?: any[], settings?: any };
                      const hasData = (data.categories?.length && data.categories.length > 0) || (data.dishes?.length && data.dishes.length > 0);
@@ -3305,7 +3394,7 @@ export const useStore = create<StoreState>()(
                  }
 
                  // 2. Fetch Users (for Mobile App Login)
-                 const usersData = await supabaseService.fetchUsers();
+                 const usersData = await integrationAPIService.fetchUsers();
                  if (usersData.success && usersData.data) {
                      const users = (usersData.data as any[]).map((u: any) => ({
                          id: u.id,
@@ -3332,7 +3421,8 @@ export const useStore = create<StoreState>()(
                  }
 
                  // 3. Fetch Dashboard/Orders (Optional for public view)
-                 const dashData = await supabaseService.fetchDashboard();
+                 const today = new Date().toISOString().split('T')[0];
+                  const dashData = await integrationAPIService.fetchDashboard(today, today);
                  if (dashData.success && dashData.data) {
                      // Hydrate minimal state if needed
                  }
@@ -3406,7 +3496,7 @@ export const useStore = create<StoreState>()(
                 icon: 'Grid3X3',
                 sort_order: 999,
                 is_active: true,
-                isAvailableOnDigitalMenu: true
+                availableOnDigitalMenu: true
               };
               set({ categories: [...get().categories, def] });
               return def;
@@ -3494,10 +3584,10 @@ export const useStore = create<StoreState>()(
                       name: payload.new.name,
                       description: payload.new.description,
                       price: payload.new.price,
-                      categoryId: payload.new.category_id,
+                      category_id: payload.new.category_id,
                       image: payload.new.image_url,
-                      isAvailable: payload.new.available !== false,
-                      isFeatured: payload.new.is_featured || false,
+                      available: payload.new.available !== false,
+ 
                       createdAt: new Date(payload.new.created_at || Date.now()),
                       updatedAt: new Date(payload.new.updated_at || Date.now()),
                       taxCode: String(payload.new.tax_rate || 'NOR'),
@@ -3519,7 +3609,7 @@ export const useStore = create<StoreState>()(
                         sort_order: payload.new.sort_order || 0,
                         is_active: payload.new.is_active !== false,
                         parent_id: payload.new.parent_id,
-                        isAvailableOnDigitalMenu: payload.new.is_available_on_digital_menu !== false,
+                        availableOnDigitalMenu: payload.new.is_available_on_digital_menu !== false,
                         deletedAt: payload.new.deleted_at,
                       };
                     if (payload.eventType === 'INSERT') {
@@ -3582,7 +3672,7 @@ export const useStore = create<StoreState>()(
                       id: payload.new.id,
                       amount: payload.new.amount,
                       description: payload.new.description,
-                      date: new Date(payload.new.date),
+                      date: new Date(payload.new.date).toISOString(),
                       category: payload.new.category || 'VENDAS',
                       paymentMethod: payload.new.payment_method || 'NUMERARIO',
                       orderId: payload.new.order_id,
@@ -3603,12 +3693,12 @@ export const useStore = create<StoreState>()(
                       id: payload.new.id,
                       amount: payload.new.amount,
                       description: payload.new.description,
-                      date: new Date(payload.new.date),
+                      date: new Date(payload.new.date).toISOString(),
                       category: payload.new.category || 'OUTROS',
                       paymentMethod: payload.new.payment_method || 'NUMERARIO',
-                      supplierId: payload.new.supplier_id,
-                      status: payload.new.status || 'PAGO',
-                      createdAt: new Date(payload.new.created_at || Date.now()),
+                      createdAt: String(payload.new?.created_at || ''),
+    supplierId: payload.new.supplier_id,
+    status: payload.new.status || 'PAGO',
                     };
                     if (payload.eventType === 'INSERT') {
                       return { expenses: [...state.expenses, newExpense] } as Partial<StoreState>;
@@ -3651,7 +3741,7 @@ export const useStore = create<StoreState>()(
                      if (settings.supabaseConfig.autoSync) {
                          logger.info('Sincronizando menu e configurações...', null, 'CLOUD');
                          try {
-                             await supabaseService.syncMenu(categories, menu, settings);
+                             await integrationAPIService.syncMenu(categories, menu, settings);
                          } catch (e: unknown) {
                              logger.error('Falha ao sincronizar menu com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
                              get().addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_MENU', payload: { categories, menu, settings }, timestamp: Date.now() });
@@ -3660,13 +3750,13 @@ export const useStore = create<StoreState>()(
                          // Sync Stock and Suppliers
                          logger.info('Sincronizando stock e fornecedores...', { stockCount: stock.length, supplierCount: suppliers.length }, 'CLOUD');
                          try {
-                             await supabaseService.syncStock(stock);
+                             await integrationAPIService.syncStock(stock);
                          } catch (e: unknown) {
                              logger.error('Falha ao sincronizar stock com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
                              get().addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_STOCK', payload: { stock }, timestamp: Date.now() });
                          }
                          try {
-                             await supabaseService.syncSuppliers(suppliers);
+                             await integrationAPIService.syncSuppliers(suppliers);
                          } catch (e: unknown) {
                              logger.error('Falha ao sincronizar fornecedores com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
                              get().addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_SUPPLIERS', payload: { suppliers }, timestamp: Date.now() });
@@ -3675,7 +3765,7 @@ export const useStore = create<StoreState>()(
                          // Sync Financials (Expenses and Revenues)
                          logger.info('Sincronizando dados financeiros...', { expenseCount: expenses.length, revenueCount: revenues.length }, 'CLOUD');
                          try {
-                             await supabaseService.syncFinancials(revenues, expenses);
+                             await integrationAPIService.syncFinancials(revenues, expenses);
                          } catch (e: unknown) {
                              logger.error('Falha ao sincronizar dados financeiros com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
                              get().addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_FINANCIALS', payload: { revenues, expenses }, timestamp: Date.now() });
@@ -3685,7 +3775,7 @@ export const useStore = create<StoreState>()(
                      // Sync Users (System Users with PINs)
                      logger.info('Sincronizando utilizadores...', { userCount: users.length }, 'CLOUD');
                      try {
-                         await supabaseService.syncUsers(users);
+                         await integrationAPIService.syncUsers(users);
                      } catch (e: unknown) {
                          logger.error('Falha ao sincronizar utilizadores com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
                          get().addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_USERS', payload: { users }, timestamp: Date.now() });
@@ -3694,26 +3784,21 @@ export const useStore = create<StoreState>()(
                      // Sync Audit Logs (Incremental)
                      logger.info('Sincronizando logs de auditoria...', null, 'CLOUD');
                      try {
-                         await supabaseService.syncAuditLogs(auditLogs.slice(-50));
+                         await integrationAPIService.syncAuditLogs(auditLogs.slice(-50));
                      } catch (e: unknown) {
                          logger.error('Falha ao sincronizar logs de auditoria com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
                          get().addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_AUDIT_LOGS', payload: { auditLogs: auditLogs.slice(-50) }, timestamp: Date.now() });
                      }
 
                      // Sync Dashboard (Revenue, Orders, etc.)
-                     const summary = {
+                     const summary: DashboardSummary = {
                         totalRevenue: revenues.reduce((acc, r) => acc + r.amount, 0),
-                        totalOrders: activeOrders.length, 
-                        avgOrderValue: 0, 
-                        peakHour: 0,
-                        topDish: '',
-                        employeesWorking: employees.filter(e => e.isActive).length,
-                        tablesOccupied: tables.filter(t => t.status === 'OCUPADO').length,
-                        lastUpdated: new Date()
+                        totalOrders: activeOrders.length,
+                        activeOrdersCount: activeOrders.length
                      };
                      logger.info('Sincronizando resumo do painel...', null, 'CLOUD');
                      try {
-                         await supabaseService.syncDashboardData(summary, activeOrders);
+                         await integrationAPIService.syncDashboardData(summary, activeOrders);
                      } catch (e: unknown) {
                          logger.error('Falha ao sincronizar dados do painel com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
                          get().addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_DASHBOARD_DATA', payload: { summary, activeOrders }, timestamp: Date.now() });
@@ -3819,69 +3904,10 @@ export const useStore = create<StoreState>()(
             // 1. Secure Wipe (SQL + State) - Elimina dados existentes
             await databaseOperations.recreateMenuSchema();
             
-            // 2. Load from Local Backup (Priority)
-            const integrity = backupService.checkIntegrity([], []); 
-            
-            const restoredCategories = integrity.suggestedCategories || [];
-            const restoredDishes = integrity.suggestedDishes || [];
+            // 2. Load from SQL exclusively
+            await get().loadFromSQLExclusively();
 
-
-            // 3. Fallback to Cloud if local is empty
-            // (Supabase removal - Cloud fallback disabled)
-
-
-            // 4. Validate and Repair Data (Business Rules)
-            // Regra: Produtos sem categoria vão para 'Sem Categoria' (evita 'Bebidas')
-            const validCatIds = new Set(restoredCategories.map(c => c.id));
-            let fixedCount = 0;
-
-            const finalDishes = restoredDishes.map(d => {
-                // If category exists, keep it
-                if (d.categoryId && validCatIds.has(d.categoryId)) return d;
-                
-                // If invalid/missing, assign to 'uncategorized'
-                // NEVER guess 'Bebidas' or other categories
-                fixedCount++;
-                return { ...d, categoryId: 'uncategorized' };
-            });
-
-            if (fixedCount > 0) {
-                // Ensure 'uncategorized' category exists if we used it
-                if (!validCatIds.has('uncategorized')) {
-                    restoredCategories.push({ 
-                        id: 'uncategorized', 
-                        name: 'Sem Categoria', 
-                        icon: 'Grid3X3',
-                        sort_order: 999,
-                        is_active: true,
-                        isAvailableOnDigitalMenu: true
-                    });
-                }
-                logger.warn('Restore integrity fix: assigned items to uncategorized', { count: fixedCount }, 'STORE');
-            }
-
-            // 5. Apply Restored State
-            set({ categories: restoredCategories, menu: finalDishes });
-            
-            // 5.1 Persist Restored Data to SQL (Critical Fix)
-            try {
-                await Promise.all([
-                    databaseOperations.saveCategories(restoredCategories),
-                    databaseOperations.saveDishes(finalDishes)
-                ]);
-                logger.info('Restored data successfully persisted to SQL', { 
-                    categories: restoredCategories.length, 
-                    dishes: finalDishes.length 
-                }, 'STORE');
-            } catch (sqlError) {
-                console.error('Failed to persist restored data to SQL:', sqlError);
-                get().addNotification('warning', 'Dados restaurados no estado, mas falha ao gravar no banco local.');
-            }
-            
-            // 6. Update Backups & Cloud (if needed)
-            backupService.autoBackup(restoredCategories, finalDishes);
-            
-            get().addNotification('success', `Restauro completo: ${restoredCategories.length} categorias, ${finalDishes.length} produtos.`);
+            get().addNotification('success', `Restauro completo do menu a partir do SQL.`);
             
         } catch (error) {
             console.error("Secure restore failed:", error);

@@ -10,6 +10,8 @@ import ExportButton from '../components/ExportButton';
 import { PaymentMethod, Expense, PayrollRecord, Employee } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { exportChartToPDF } from '../services/exportService';
+import { getOrderDate, normalizeDate, buildDateRange } from '../services/utils/dateUtils';
+import { formatKz } from '../services/utils/currencyFormatter';
 
 type FinanceTab = 'OVERVIEW' | 'SHIFTS' | 'EXPENSES' | 'FIXED' | 'SALARIES' | 'PAYROLL' | 'PAYMENT_CORRECTION';
 
@@ -65,7 +67,7 @@ const Finance = () => {
   const [paymentMetric, setPaymentMetric] = useState<'VENDAS' | 'LUCRO'>('VENDAS');
   const paymentChartRef = useRef<HTMLDivElement | null>(null);
 
-  const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
+
 
   const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE'];
   const paymentLabels: Record<PaymentMethod, string> = {
@@ -80,23 +82,6 @@ const Finance = () => {
     Card: 'Cartão',
     MBWay: 'MBWay',
     Other: 'Outros'
-  };
-
-  const getOrderDate = (timestamp?: string | number | Date) => {
-    const d = timestamp ? new Date(timestamp) : new Date(0);
-    return isNaN(d.getTime()) ? new Date(0) : d;
-  };
-
-  const normalizeDate = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  const buildDateRange = (start: Date, end: Date) => {
-    const dates: Date[] = [];
-    const cursor = new Date(start);
-    while (cursor <= end) {
-      dates.push(new Date(cursor));
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    return dates;
   };
 
   const extractPayments = (order: typeof activeOrders[number]) => {
@@ -726,12 +711,12 @@ const Finance = () => {
               <div className="glass-panel p-8 rounded-[2.5rem] border border-green-500/20 relative overflow-hidden group">
                  <div className="absolute -right-4 -top-4 text-green-500/10 group-hover:scale-110 transition-transform"><TrendingUp size={100} /></div>
                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Faturamento Bruto</p>
-                 <p className="text-3xl font-mono font-bold text-white">{(new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(activeOrders.filter(o => o.status === 'FECHADO').reduce((acc, o) => acc + o.total, 0)))}</p>
+                 <p className="text-3xl font-mono font-bold text-white">{formatKz(activeOrders.filter(o => o.status === 'FECHADO').reduce((acc, o) => acc + o.total, 0))}</p>
               </div>
               <div className="glass-panel p-8 rounded-[2.5rem] border border-red-500/20 relative overflow-hidden group">
                  <div className="absolute -right-4 -top-4 text-red-500/10 group-hover:scale-110 transition-transform"><TrendingDown size={100} /></div>
                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Despesas</p>
-                 <p className="text-3xl font-mono font-bold text-white">{(new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(expenses.reduce((acc, e) => acc + e.amount, 0) + fixedExpenses.reduce((acc, e) => acc + e.amount, 0)))}</p>
+                 <p className="text-3xl font-mono font-bold text-white">{formatKz(expenses.reduce((acc, e) => acc + e.amount, 0) + fixedExpenses.reduce((acc, e) => acc + e.amount, 0))}</p>
               </div>
               <div className="glass-panel p-8 rounded-[2.5rem] border border-emerald-500/40 relative overflow-hidden group shadow-glow">
                  <div className="absolute -right-4 -top-4 text-emerald-500/10 group-hover:scale-110 transition-transform"><TrendingUp size={100} /></div>
@@ -741,7 +726,7 @@ const Finance = () => {
               <div className="glass-panel p-8 rounded-[2.5rem] border border-primary/40 relative overflow-hidden group shadow-glow">
                  <div className="absolute -right-4 -top-4 text-primary/10 group-hover:scale-110 transition-transform"><DollarSign size={100} /></div>
                  <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-2">Lucro Operacional Total</p>
-                 <p className="text-3xl font-mono font-bold text-white text-glow">{(new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(activeOrders.filter(o => o.status === 'FECHADO').reduce((acc, o) => acc + o.total, 0) - (expenses.reduce((acc, e) => acc + e.amount, 0) + fixedExpenses.reduce((acc, e) => acc + e.amount, 0))))}</p>
+                 <p className="text-3xl font-mono font-bold text-white text-glow">{formatKz(activeOrders.filter(o => o.status === 'FECHADO').reduce((acc, o) => acc + o.total, 0) - (expenses.reduce((acc, e) => acc + e.amount, 0) + fixedExpenses.reduce((acc, e) => acc + e.amount, 0)))}</p>
               </div>
            </div>
            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/10 space-y-6" ref={paymentChartRef}>

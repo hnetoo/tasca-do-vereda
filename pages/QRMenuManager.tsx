@@ -342,20 +342,20 @@ const QRMenuManager = () => {
                   </div>
                   <button
                     onClick={() => {
-                      const newStatus = cat.isAvailableOnDigitalMenu === false;
+                      const newStatus = cat.availableOnDigitalMenu === false;
                       updateCategory({
                         ...cat,
-                        isAvailableOnDigitalMenu: newStatus
+                        availableOnDigitalMenu: newStatus
                       });
                       addNotification('success', `Categoria ${cat.name} agora está ${newStatus ? 'visível' : 'oculta'} no menu digital.`);
                     }}
                     className={`px-2 py-1 rounded text-[10px] font-black uppercase transition-all ${
-                      cat.isAvailableOnDigitalMenu !== false 
+                      cat.availableOnDigitalMenu !== false 
                         ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
                         : 'bg-slate-700/50 text-slate-500 border border-white/5'
                     }`}
                   >
-                    {cat.isAvailableOnDigitalMenu !== false ? 'Visível' : 'Oculto'}
+                    {cat.availableOnDigitalMenu !== false ? 'Visível' : 'Oculto'}
                   </button>
                 </div>
               ))}
@@ -423,10 +423,10 @@ const QRMenuManager = () => {
                   <span className="text-xs font-bold truncate max-w-[120px]">{cat.name}</span>
                   <button
                     onClick={() => {
-                      const newStatus = cat.isAvailableOnDigitalMenu === false;
+                      const newStatus = cat.availableOnDigitalMenu === false;
                       updateCategory({
                         ...cat,
-                        isAvailableOnDigitalMenu: newStatus
+                        availableOnDigitalMenu: newStatus
                       });
                       addNotification('success', `Categoria ${cat.name} agora está ${newStatus ? 'visível' : 'oculta'} no menu digital.`);
                     }}

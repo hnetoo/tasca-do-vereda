@@ -23,7 +23,7 @@ import { disasterRecoveryService } from '../services/disasterRecoveryService';
 
 import { logger } from '../services/logger';
 
-import { supabaseService } from '../services/supabaseService';
+import { integrationAPIService } from '../services/integrationAPIService';
 import { healthMonitorService, SystemHealthReport, SystemIssue } from '../services/healthMonitorService';
 
 const CloudImportPanel = () => {
@@ -49,13 +49,13 @@ const CloudImportPanel = () => {
       addNotification('warning', 'Configure a cloud antes de importar');
       return;
     }
-    if (!supabaseService.isConnected()) {
-      supabaseService.initialize(settings.supabaseConfig.url, settings.supabaseConfig.key);
+    if (!integrationAPIService.isConnected()) {
+      integrationAPIService.initialize(settings.supabaseConfig.url, settings.supabaseConfig.key);
     }
     setIsLoading(true);
     try {
-      const catsRes = await supabaseService.fetchCategoriesPaged({ page: 1, pageSize: 100, search });
-      const dishesRes = await supabaseService.fetchDishesPaged({ page: 1, pageSize: 200, search, categoryId: categoryFilter });
+      const catsRes = await integrationAPIService.fetchCategoriesPaged({ page: 1, pageSize: 100, search });
+      const dishesRes = await integrationAPIService.fetchDishesPaged({ page: 1, pageSize: 200, search, categoryId: categoryFilter });
       if (catsRes.success && catsRes.data) setRemoteCategories(catsRes.data);
       if (dishesRes.success && dishesRes.data) setRemoteDishes(dishesRes.data);
       addNotification('success', 'Itens carregados da cloud');
@@ -236,7 +236,7 @@ const Settings = () => {
     logger.info('Iniciando teste de conexão Supabase...', null, 'CLOUD');
 
     try {
-      const result = await supabaseService.testConnection(localSettings.supabaseConfig.url, localSettings.supabaseConfig.key);
+      const result = await integrationAPIService.testConnection(localSettings.supabaseConfig.url, localSettings.supabaseConfig.key);
       if (result) {
         setCloudStatus('success');
         addNotification('success', 'Conexão Supabase estabelecida com sucesso!');
@@ -278,7 +278,7 @@ const Settings = () => {
   };
 
   const handleSetupRLS = async () => {
-    if (!supabaseService.isConnected()) {
+    if (!integrationAPIService.isConnected()) {
       addNotification('warning', 'Supabase não inicializado. Configure e teste a conexão primeiro.');
       logger.warn('Tentativa de configurar RLS sem conexão Supabase ativa', null, 'SECURITY');
       return;
@@ -286,7 +286,7 @@ const Settings = () => {
     
     addNotification('info', 'Validando conexão para políticas de segurança...');
     logger.info('Iniciando validação de políticas RLS', null, 'SECURITY');
-    const result = await supabaseService.setupRLS();
+    const result = await integrationAPIService.setupRLS();
     if (result.success) {
       addNotification('success', (result as any).message || 'Políticas validadas com sucesso.');
       logger.info('RLS validado com sucesso', { result }, 'SECURITY');
@@ -297,7 +297,7 @@ const Settings = () => {
   };
 
   const handleSetupBuckets = async () => {
-    if (!supabaseService.isConnected()) {
+    if (!integrationAPIService.isConnected()) {
       addNotification('warning', 'Supabase não inicializado. Configure e teste a conexão primeiro.');
       logger.warn('Tentativa de configurar buckets sem conexão Supabase ativa', null, 'STORAGE');
       return;
@@ -305,7 +305,7 @@ const Settings = () => {
 
     addNotification('info', 'Configurando buckets de armazenamento...');
     logger.info('Iniciando configuração de buckets de armazenamento', null, 'STORAGE');
-    const result = await supabaseService.setupBuckets();
+    const result = await integrationAPIService.setupBuckets();
     if (result.success) {
       addNotification('success', (result as any).message || 'Buckets configurados com sucesso.');
       logger.info('Buckets configurados com sucesso', { result }, 'STORAGE');
@@ -396,32 +396,32 @@ const Settings = () => {
              const validCatIds = new Set(cleanCategories.map((c) => c.id));
              
              cleanMenu = cleanMenu.map((d) => {
-                 let effectiveCatId = d.categoryId;
-                 if (idMap.has(d.categoryId)) {
-                     effectiveCatId = idMap.get(d.categoryId);
-                 }
-                 if (effectiveCatId && validCatIds.has(effectiveCatId)) {
-                     return { ...d, categoryId: effectiveCatId };
-                 }
-                 if (d.categoryName) {
-                     const normalizedCatName = d.categoryName.trim().toLowerCase();
-                     const matchByName = cleanCategories.find((c) => 
-                         c.name.trim().toLowerCase() === normalizedCatName
-                     );
-                     if (matchByName) return { ...d, categoryId: matchByName.id };
-                 }
-                 return { ...d, categoryId: 'uncategorized' };
+                 let effectiveCatId = d.category_id;
+             if (idMap.has(d.category_id)) {
+                 effectiveCatId = idMap.get(d.category_id);
+             }
+             if (effectiveCatId && validCatIds.has(effectiveCatId)) {
+                 return { ...d, category_id: effectiveCatId };
+             }
+             if (d.categoryName) {
+                 const normalizedCatName = d.categoryName.trim().toLowerCase();
+                 const matchByName = cleanCategories.find((c) =>
+                     c.name.trim().toLowerCase() === normalizedCatName
+                 );
+                 if (matchByName) return { ...d, category_id: matchByName.id };
+             }
+             return { ...d, category_id: 'uncategorized' };
+         });
+         
+         // 3. Ensure 'uncategorized' exists if needed
+         const hasUncategorizedItems = cleanMenu.some((d) => d.category_id === 'uncategorized');
+         if (hasUncategorizedItems && !validCatIds.has('uncategorized')) {
+             const existingUncategorized = cleanCategories.find(c => {
+                 const n = c.name.trim().toLowerCase();
+                 return n === 'sem categoria' || n === 'uncategorized' || n === 'outros' || n === 'geral';
              });
-             
-             // 3. Ensure 'uncategorized' exists if needed
-             const hasUncategorizedItems = cleanMenu.some((d) => d.categoryId === 'uncategorized');
-             if (hasUncategorizedItems && !validCatIds.has('uncategorized')) {
-                 const existingUncategorized = cleanCategories.find(c => {
-                     const n = c.name.trim().toLowerCase();
-                     return n === 'sem categoria' || n === 'uncategorized' || n === 'outros' || n === 'geral';
-                 });
-                 if (existingUncategorized) {
-                    cleanMenu = cleanMenu.map(d => d.categoryId === 'uncategorized' ? { ...d, categoryId: existingUncategorized.id } : d);
+             if (existingUncategorized) {
+                cleanMenu = cleanMenu.map(d => d.category_id === 'uncategorized' ? { ...d, category_id: existingUncategorized.id } : d);
                 } else {
                     cleanCategories.push({ id: 'uncategorized', name: 'Sem Categoria', icon: 'Grid3X3', sort_order: 999, is_active: true });
                 }
@@ -430,8 +430,8 @@ const Settings = () => {
             // 4. PRUNE EMPTY CATEGORIES
             const productCounts = new Map<string, number>();
             cleanMenu.forEach(d => {
-                const count = productCounts.get(d.categoryId) || 0;
-                productCounts.set(d.categoryId, count + 1);
+                const count = productCounts.get(d.category_id) || 0;
+                productCounts.set(d.category_id, count + 1);
             });
             cleanCategories = cleanCategories.filter(c => (productCounts.get(c.id) || 0) > 0);
             if (cleanCategories.length === 0) {

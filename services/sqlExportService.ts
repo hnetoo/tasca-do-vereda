@@ -46,7 +46,7 @@ export const generateSQLSchema = (
   sql += `  description TEXT,\n`;
   sql += `  image_url TEXT,\n`;
   sql += `  is_available BOOLEAN DEFAULT TRUE,\n`;
-  sql += `  is_available_on_digital_menu BOOLEAN DEFAULT TRUE,\n`;
+  sql += `  available_on_digital_menu BOOLEAN DEFAULT TRUE,\n`;
   sql += `  tax_percentage DECIMAL(5,2),\n`;
   sql += `  FOREIGN KEY (category_id) REFERENCES menu_categories(id) ON DELETE SET NULL\n`;
   sql += `);\n\n`;
@@ -79,9 +79,9 @@ export const generateSQLSchema = (
   // Dishes
   if (dishes.length > 0) {
     sql += `-- Data: dishes\n`;
-    sql += `INSERT INTO dishes (id, category_id, name, price, description, image_url, is_available, is_available_on_digital_menu, tax_percentage) VALUES\n`;
+    sql += `INSERT INTO dishes (id, category_id, name, price, description, image_url, is_available, available_on_digital_menu, tax_percentage) VALUES\n`;
     const dishValues = dishes.map(dish => {
-      return `  ('${dish.id}', '${dish.categoryId}', '${escapeSQL(dish.name)}', ${dish.price}, '${escapeSQL(dish.description || '')}', '${escapeSQL(dish.image || '')}', 1, ${dish.isAvailableOnDigitalMenu !== false ? 1 : 0}, ${settings.taxRate || 0})`;
+      return `  ('${dish.id}', '${dish.category_id}', '${escapeSQL(dish.name)}', ${dish.price}, '${escapeSQL(dish.description || '')}', '${escapeSQL(dish.image || '')}', 1, ${dish.availableOnDigitalMenu !== false ? 1 : 0}, ${settings.taxRate || 0})`;
     });
     sql += dishValues.join(',\n') + ';\n\n';
   }

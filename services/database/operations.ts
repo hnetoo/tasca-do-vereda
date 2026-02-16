@@ -725,7 +725,7 @@ export const databaseOperations = {
             cat.sort_order !== undefined ? cat.sort_order : ((cat as any).sortOrder || 0), 
             (cat.is_active !== undefined ? cat.is_active : ((cat as any).isActive !== false)) ? 1 : 0,
             cat.parentId || (cat as any).parent_id || null,
-            (cat.isAvailableOnDigitalMenu !== undefined ? cat.isAvailableOnDigitalMenu : ((cat as any).is_available_on_digital_menu !== false)) ? 1 : 0,
+            (cat.availableOnDigitalMenu !== undefined ? cat.availableOnDigitalMenu : ((cat as any).is_available_on_digital_menu !== false)) ? 1 : 0,
             cat.deletedAt || (cat as any).deleted_at || null
         ]
       );
@@ -772,7 +772,7 @@ export const databaseOperations = {
                 cat.sort_order !== undefined ? cat.sort_order : ((cat as any).sortOrder || 0), 
                 (cat.is_active !== undefined ? cat.is_active : ((cat as any).isActive !== false)) ? 1 : 0,
                 cat.parentId || (cat as any).parent_id || null,
-                (cat.isAvailableOnDigitalMenu !== undefined ? cat.isAvailableOnDigitalMenu : ((cat as any).is_available_on_digital_menu !== false)) ? 1 : 0,
+                (cat.availableOnDigitalMenu !== undefined ? cat.availableOnDigitalMenu : ((cat as any).is_available_on_digital_menu !== false)) ? 1 : 0,
                 cat.deletedAt || (cat as any).deleted_at || null
             ]
           );
@@ -858,13 +858,13 @@ export const databaseOperations = {
           dish.description || null,
           dish.price,
           dish.precoCusto || (dish as any).preco_custo || 0,
-          dish.categoryId || (dish as any).category_id,
+          dish.category_id,
           dish.image || null,
           dish.taxCode || (dish as any).tax_code || 'NOR',
           dish.taxPercentage || (dish as any).tax_percentage || 14.00,
           dish.tempo_preparo || (dish as any).tempo_preparo || null,
           dish.disponivel !== undefined ? dish.disponivel : (dish as any).is_available !== false,
-          dish.isAvailableOnDigitalMenu !== undefined ? dish.isAvailableOnDigitalMenu : (dish as any).is_available_on_digital_menu !== false,
+          dish.availableOnDigitalMenu !== undefined ? dish.availableOnDigitalMenu : (dish as any).available_on_digital_menu !== false,
           (dish.controlaEstoque || (dish as any).controla_estoque) ? 1 : 0,
           dish.quantidadeEstoque || (dish as any).quantidade_estoque || 0,
           dish.quantidadeMinima || (dish as any).quantidade_minima || 0,
@@ -922,13 +922,13 @@ export const databaseOperations = {
               dish.description || null, 
               dish.price, 
               dish.precoCusto || (dish as any).preco_custo || 0,
-              dish.categoryId || (dish as any).category_id || null, 
+              dish.category_id || null, 
               dish.image || null, 
               dish.taxCode || (dish as any).tax_code || 'NOR', 
               dish.taxPercentage || (dish as any).tax_percentage || 23, 
               dish.tempo_preparo || (dish as any).preparationTime || null, 
               dish.disponivel !== undefined ? dish.disponivel : (dish as any).is_available !== false,
-              dish.isAvailableOnDigitalMenu !== undefined ? dish.isAvailableOnDigitalMenu : (dish as any).is_available_on_digital_menu !== false,
+              dish.availableOnDigitalMenu !== undefined ? dish.availableOnDigitalMenu : (dish as any).available_on_digital_menu !== false,
               (dish.controlaEstoque || (dish as any).controla_estoque) ? 1 : 0,
               dish.quantidadeEstoque || (dish as any).quantidade_estoque || 0,
               dish.quantidadeMinima || (dish as any).quantidade_minima || 0,

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { QrCode, RefreshCw, ExternalLink, Globe, Wifi, Search, Eye, EyeOff, Edit2, Trash2, Plus, Image as ImageIcon, Cloud, Monitor, X, Save, Book, AlertCircle, UtensilsCrossed, Coffee, Wine, IceCream, Sandwich, Fish, Beef, Pizza, Soup, Beer, Cake, Wheat } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -36,6 +37,8 @@ const ensureMenuPath = (url: string) => {
   return `${cleanBase}/#/menu/public`;
 };
 
+import { formatKz } from '../services/utils/currencyFormatter';
+
 const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
   const { settings, updateSettings, addNotification, menu, categories, updateDish, removeDish, addDish } = useStore();
   const [activeTab, setActiveTab] = useState<'qrcode' | 'manager'>('manager');
@@ -57,7 +60,7 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
   const [isDishModalOpen, setIsDishModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dishForm, setDishForm] = useState<Partial<Dish>>({
-    name: '', price: 0, categoryId: '', description: '', image: ''
+    name: '', price: 0, category_id: '', description: '', image: ''
   });
   
   // Ref for QR Code Download
@@ -249,18 +252,18 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
            // For modified categories (fixed or dup), we must check originalId
            if (!activeCat.originalId || activeCat.originalId === 'undefined' || activeCat.originalId === 'null') {
                // Matches dishes with no category or undefined/null category
-               matchesCategory = !dish.categoryId || dish.categoryId === 'undefined' || dish.categoryId === 'null';
+               matchesCategory = !dish.category_id || dish.category_id === 'undefined' || dish.category_id === 'null';
            } else {
                // Matches dishes with specific originalId
-               matchesCategory = String(dish.categoryId) === String(activeCat.originalId);
+               matchesCategory = String(dish.category_id) === String(activeCat.originalId);
            }
         } else {
            // Standard category, match by ID
-           matchesCategory = (dish.categoryId !== undefined && dish.categoryId !== null && String(dish.categoryId) === String(activeCat.id));
+           matchesCategory = (dish.category_id !== undefined && dish.category_id !== null && String(dish.category_id) === String(activeCat.id));
         }
       } else {
         // Fallback: direct string match if category object not found
-        matchesCategory = String(dish.categoryId) === String(selectedCategory);
+        matchesCategory = String(dish.category_id) === String(selectedCategory);
       }
     }
 
@@ -271,7 +274,7 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
   const handleToggleVisibility = (dishId: string, currentStatus?: boolean) => {
     const dish = menu.find(d => d.id === dishId);
     if (dish) {
-      updateDish({ ...dish, isAvailableOnDigitalMenu: !currentStatus });
+      updateDish({ ...dish, availableOnDigitalMenu: !currentStatus });
       addNotification('success', 'Visibilidade atualizada');
     }
   };
@@ -284,7 +287,7 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
     } else {
       setEditingId(null);
       setDishForm({
-        name: '', price: 0, categoryId: categories[0]?.id || '',
+        name: '', price: 0, category_id: categories[0]?.id || '',
         description: '', image: '', taxCode: 'NOR', isAvailableOnDigitalMenu: true
       });
     }
@@ -293,7 +296,7 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
 
   const handleSubmitDish = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dishForm.name || !dishForm.price || !dishForm.categoryId) {
+    if (!dishForm.name || !dishForm.price || !dishForm.category_id) {
       addNotification('error', 'Preencha os campos obrigatórios');
       return;
     }
@@ -312,11 +315,11 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
         id: `dish-${Date.now()}`,
         name: dishForm.name,
         price: Number(dishForm.price),
-        categoryId: dishForm.categoryId,
+        category_id: dishForm.category_id,
         description: dishForm.description || '',
         image: finalImage,
         taxCode: dishForm.taxCode || 'NOR',
-        isAvailableOnDigitalMenu: true,
+        availableOnDigitalMenu: true,
         available: true
       } as unknown as Dish);
       addNotification('success', 'Prato criado com sucesso');
@@ -495,7 +498,7 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
                           
                           <div className="flex items-center justify-between w-full md:w-auto gap-6 shrink-0 md:pl-4 border-t border-white/5 md:border-0 pt-3 md:pt-0">
                             <span className="font-mono font-bold text-primary text-sm">
-                              {new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(dish.price)}
+import { formatKz } from '../services/utils/currencyFormatter';
                             </span>
                             
                             <div className="flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/5">
@@ -797,8 +800,8 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
                         <select 
                           required
                           className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white text-sm focus:border-primary outline-none appearance-none"
-                          value={dishForm.categoryId}
-                          onChange={e => setDishForm(prev => ({ ...prev, categoryId: e.target.value }))}
+                          value={dishForm.category_id}
+                          onChange={e => setDishForm(prev => ({ ...prev, category_id: e.target.value }))}
                         >
                            <option value="" disabled>Selecione...</option>
                            {categories.map(cat => (

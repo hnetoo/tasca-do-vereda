@@ -62,9 +62,11 @@ class LoggerService {
 
     // Auto-sync logs to Supabase if it's a critical error, security alert, or audit event
     if (level === 'error' || context === 'SECURITY' || context === 'AUTH' || context === 'AUDIT') {
-      import('./supabaseService').then(({ supabaseService }) => {
-        if (supabaseService.isConnected()) {
-          supabaseService.syncAuditLogs([entry]).catch(err => {
+      import('./integrationAPIService').then(({ integrationAPIService }) => {
+        if (integrationAPIService) {
+          integrationAPIService.syncAuditLogs([entry]).then(res => {
+            if (!res.success) console.warn('Failed to sync log to cloud:', res.error);
+          }).catch(err => {
             console.warn('Failed to sync log to cloud:', err);
           });
         }

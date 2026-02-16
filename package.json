@@ -17,6 +17,9 @@
     "tauri:build": "tauri build",
     "tauri:build:release": "tauri build",
     "check-branch": "node -e \"const b = require('child_process').execSync('git branch --show-current').toString().trim(); if (b === 'main') { console.error('ERRO: Não use o branch main! Use o branch master.'); process.exit(1); }\"",
+    "build:scripts": "tsc -p tsconfig.script.json",
+    "supabase:preview:create": "npm run build:scripts && cross-env SUPABASE_PREVIEW_ACTION=create VERCEL_GIT_COMMIT_REF=test-branch VERCEL_ENV=preview node dist/scripts/supabase-preview-manager.js",
+    "supabase:preview:delete": "npm run build:scripts && cross-env SUPABASE_PREVIEW_ACTION=delete VERCEL_GIT_COMMIT_REF=test-branch VERCEL_ENV=preview node dist/scripts/supabase-preview-manager.js",
     "prepare": "husky"
   },
   "dependencies": {
@@ -55,6 +58,7 @@
     "@rollup/plugin-commonjs": "^29.0.0",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/cli": "^2.10.0",
+    "@types/node": "^25.2.3",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
@@ -62,6 +66,8 @@
     "@vitejs/plugin-react": "^5.1.3",
     "@vitest/coverage-v8": "^4.0.18",
     "autoprefixer": "^10.4.24",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.3.1",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",

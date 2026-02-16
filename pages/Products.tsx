@@ -19,9 +19,9 @@ const Products = () => {
     name: '',
     description: '',
     price: 0,
-    categoryId: '',
+    category_id: '',
     image: '',
-    isAvailableOnDigitalMenu: true,
+    availableOnDigitalMenu: true,
     taxCode: 'NOR',
     stockItemId: ''
   });
@@ -37,7 +37,7 @@ const Products = () => {
 
   const filteredMenu = menu.filter(dish => {
     const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'TODOS' || String(dish.categoryId) === String(selectedCategory);
+    const matchesCategory = selectedCategory === 'TODOS' || String(dish.category_id) === String(selectedCategory);
     return matchesSearch && matchesCategory;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -46,8 +46,9 @@ const Products = () => {
       setEditingId(dish.id);
       setDishForm({
         ...dish,
-        isAvailableOnDigitalMenu: dish.isAvailableOnDigitalMenu !== false,
-        stockItemId: dish.stockItemId || ''
+        availableOnDigitalMenu: dish.availableOnDigitalMenu !== false,
+        stockItemId: dish.stockItemId || '',
+        category_id: dish.category_id // Ensure category_id is used when editing
       });
     } else {
       setEditingId(null);
@@ -55,9 +56,9 @@ const Products = () => {
         name: '',
         description: '',
         price: 0,
-        categoryId: categories[0]?.id || '',
+        category_id: categories[0]?.id || '',
         image: '',
-        isAvailableOnDigitalMenu: true,
+        availableOnDigitalMenu: true,
         taxCode: 'NOR',
         stockItemId: ''
       });
@@ -103,7 +104,7 @@ const Products = () => {
 
   const handleSubmitDish = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dishForm.name || !dishForm.price || !dishForm.categoryId) return;
+    if (!dishForm.name || !dishForm.price || !dishForm.category_id) return;
 
     let finalImage = dishForm.image;
 
@@ -119,18 +120,18 @@ const Products = () => {
        }
     }
 
-    const selectedCat = categories.find(c => c.id === dishForm.categoryId);
+    const selectedCat = categories.find(c => c.id === dishForm.category_id);
     const dishData = {
       ...dishForm,
       image: finalImage,
       price: Number(dishForm.price),
-      isAvailableOnDigitalMenu: dishForm.isAvailableOnDigitalMenu ?? true,
+      availableOnDigitalMenu: dishForm.availableOnDigitalMenu ?? true,
       categoryName: selectedCat?.name || ''
     } as Dish;
 
     if (editingId) {
       const existing = menu.find(d => d.id === editingId);
-      const changedCategory = existing && existing.categoryId !== dishData.categoryId;
+      const changedCategory = existing && existing.category_id !== dishData.category_id;
       if (changedCategory) {
         const ok = confirm(`Confirma mover "${existing?.name}" para a categoria "${selectedCat?.name}"?`);
         if (!ok) return;
@@ -148,9 +149,9 @@ const Products = () => {
         name: '',
         description: '',
         price: 0,
-        categoryId: dishForm.categoryId, 
+        category_id: dishForm.category_id, 
         image: '',
-        isAvailableOnDigitalMenu: true,
+        availableOnDigitalMenu: true,
         taxCode: 'NOR'
       });
     }
@@ -283,7 +284,7 @@ const Products = () => {
                       <Utensils size={24} />
                     </div>
                   )}
-                  {!dish.isAvailableOnDigitalMenu && (
+                  {!dish.availableOnDigitalMenu && (
                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                         <span className="text-[8px] font-black text-white uppercase bg-red-500/80 px-2 py-1 rounded">Oculto</span>
                      </div>
@@ -388,8 +389,8 @@ const Products = () => {
                         <select 
                           required
                           className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-primary focus:bg-white/10 outline-none transition-all appearance-none cursor-pointer"
-                          value={dishForm.categoryId}
-                          onChange={e => setDishForm({...dishForm, categoryId: e.target.value})}
+                          value={dishForm.category_id}
+                          onChange={e => setDishForm({...dishForm, category_id: e.target.value})}
                         >
                           <option value="" disabled>Selecione...</option>
                           {categories.map(cat => (
@@ -420,8 +421,8 @@ const Products = () => {
                     <input 
                       type="checkbox" 
                       className="sr-only peer"
-                      checked={dishForm.isAvailableOnDigitalMenu}
-                      onChange={e => setDishForm({...dishForm, isAvailableOnDigitalMenu: e.target.checked})}
+                      checked={dishForm.availableOnDigitalMenu}
+                      onChange={e => setDishForm({...dishForm, availableOnDigitalMenu: e.target.checked})}
                     />
                     <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>

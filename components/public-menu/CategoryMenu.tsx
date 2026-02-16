@@ -59,8 +59,8 @@ export const CategoryMenu: React.FC<CategoryMenuProps> = React.memo(({
   className
 }) => {
   const containerClassName = isSidebarOpen
-    ? 'flex flex-col gap-3 overflow-y-auto p-4 md:p-6 custom-scrollbar'
-    : 'flex gap-3 overflow-x-auto p-4 custom-scrollbar snap-x snap-mandatory';
+    ? 'flex flex-col gap-4 overflow-y-auto p-4 md:p-6 custom-scrollbar'
+    : 'flex gap-4 overflow-x-auto px-6 py-4 custom-scrollbar snap-x snap-mandatory scroll-smooth';
 
   return (
     <div className={`
@@ -68,9 +68,9 @@ export const CategoryMenu: React.FC<CategoryMenuProps> = React.memo(({
       ${className}
     `}>
       {isSidebarOpen && (
-        <div className="flex items-center gap-2 px-1">
-          <div className="w-2 h-2 bg-primary rounded-full" />
-          <h2 className="text-xs font-semibold text-slate-300">
+        <div className="flex items-center gap-2 px-1 mb-2">
+          <div className="w-1.5 h-6 bg-primary rounded-full" />
+          <h2 className="text-sm font-black text-white uppercase tracking-widest">
             Categorias
           </h2>
         </div>
@@ -79,63 +79,76 @@ export const CategoryMenu: React.FC<CategoryMenuProps> = React.memo(({
       <button
         onClick={() => onSelectCategory('TODOS')}
         className={`
-          flex items-center gap-3 rounded-xl transition-all duration-300 group shrink-0 border
+          flex items-center gap-4 rounded-2xl transition-all duration-500 group shrink-0 border relative overflow-hidden
           ${selectedCatId === 'TODOS' 
-            ? 'bg-primary/15 border-primary/40 text-primary' 
-            : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-900 hover:text-white'
+            ? 'bg-primary/20 border-primary/50 text-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.15)]' 
+            : 'bg-white/[0.03] border-white/5 text-slate-400 hover:bg-white/[0.08] hover:border-white/20 hover:text-white'
           }
-          ${isSidebarOpen ? 'w-full px-4 py-3' : 'min-w-[170px] px-4 py-3 snap-start'}
+          ${isSidebarOpen ? 'w-full px-5 py-4' : 'min-w-[160px] px-5 py-4 snap-start'}
         `}
       >
+        {selectedCatId === 'TODOS' && (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50" />
+        )}
         <div className={`
-          w-9 h-9 rounded-md flex items-center justify-center transition-all duration-300
-          ${selectedCatId === 'TODOS' ? 'bg-primary/20 text-primary' : 'bg-slate-800 text-slate-400'}
+          w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-500 relative z-10
+          ${selectedCatId === 'TODOS' ? 'bg-primary text-white scale-110 shadow-lg' : 'bg-white/5 text-slate-500 group-hover:scale-110'}
         `}>
-          <LayoutGrid size={18} />
+          <LayoutGrid size={22} strokeWidth={2.5} />
         </div>
-        <div className="flex-1 text-left min-w-0">
-          <span className="block font-semibold text-sm sm:text-base truncate">Todos</span>
-          <span className="text-[11px] text-slate-500">{categoryCounts['TODOS'] || 0} itens</span>
+        <div className="flex-1 text-left min-w-0 relative z-10">
+          <span className={`block font-black text-sm uppercase tracking-wider ${selectedCatId === 'TODOS' ? 'text-white' : ''}`}>
+            Todos
+          </span>
+          <span className={`text-[10px] font-bold uppercase tracking-tighter opacity-60 ${selectedCatId === 'TODOS' ? 'text-primary-foreground' : ''}`}>
+            {categoryCounts['TODOS'] || 0} Itens
+          </span>
         </div>
       </button>
 
       {categories.map((cat, idx) => {
         if (!cat || !cat.id) return null;
         const isActive = selectedCatId === cat.id;
+        const count = categoryCounts[cat.id] || 0;
+        
         return (
           <button
             key={cat.id || `fallback-${idx}`}
             onClick={() => onSelectCategory(cat.id)}
-          className={`
-              flex items-center gap-3 rounded-xl transition-all duration-300 group shrink-0 border
+            className={`
+              flex items-center gap-4 rounded-2xl transition-all duration-500 group shrink-0 border relative overflow-hidden
               ${isActive 
-                ? 'bg-primary/15 border-primary/40 text-primary' 
-                : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-900 hover:text-white'
+                ? 'bg-primary/20 border-primary/50 text-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.15)]' 
+                : 'bg-white/[0.03] border-white/5 text-slate-400 hover:bg-white/[0.08] hover:border-white/20 hover:text-white'
               }
-              ${isSidebarOpen ? 'w-full px-4 py-3' : 'min-w-[170px] px-4 py-3 snap-start'}
+              ${isSidebarOpen ? 'w-full px-5 py-4' : 'min-w-[160px] px-5 py-4 snap-start'}
             `}
           >
+            {isActive && (
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50" />
+            )}
             <div className={`
-              w-9 h-9 rounded-md flex items-center justify-center transition-all duration-300
-              ${isActive ? 'bg-primary/20 text-primary' : 'bg-slate-800 text-slate-400'}
+              w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-500 relative z-10
+              ${isActive ? 'bg-primary text-white scale-110 shadow-lg' : 'bg-white/5 text-slate-500 group-hover:scale-110'}
             `}>
-              {React.cloneElement(getCategoryIcon(cat.name || '') as React.ReactElement<{ size?: number }>, { 
-                size: 18
+              {React.cloneElement(getCategoryIcon(cat.name || '') as React.ReactElement<{ size?: number; strokeWidth?: number }>, { 
+                size: 22,
+                strokeWidth: 2.5
               })}
             </div>
-            <div className="flex-1 text-left min-w-0">
-              <span className="block font-semibold text-sm sm:text-base truncate">
+            <div className="flex-1 text-left min-w-0 relative z-10">
+              <span className={`block font-black text-sm uppercase tracking-wider truncate ${isActive ? 'text-white' : ''}`}>
                 {cat.name || 'Setor-X'}
               </span>
-              <span className="text-[11px] text-slate-500">
-                {categoryCounts[cat.id] || 0} itens
+              <span className={`text-[10px] font-bold uppercase tracking-tighter opacity-60 ${isActive ? 'text-primary-foreground' : ''}`}>
+                {count} Itens
               </span>
             </div>
           </button>
         );
       })}
       
-      <div className="h-12 md:h-0 shrink-0" />
+      {!isSidebarOpen && <div className="min-w-[24px] shrink-0" />}
     </div>
   );
 });

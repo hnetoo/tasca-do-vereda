@@ -5,7 +5,7 @@ export const buildFeed = (categories: MenuCategory[], dishes: Dish[], settings: 
   try {
     const safeCats = categories.filter(c => c.id && c.name);
     const validCatIds = new Set(safeCats.map(c => c.id));
-    const safeDishes = dishes.filter(d => d.id && d.name && validCatIds.has(d.categoryId));
+    const safeDishes = dishes.filter(d => d.id && d.name && validCatIds.has(d.category_id));
     
     const feed = {
       restaurant: { name: settings.restaurantName, logo: settings.qrMenuLogo || settings.appLogoUrl || "" },

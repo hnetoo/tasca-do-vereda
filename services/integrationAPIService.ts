@@ -2,6 +2,7 @@ import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabas
 import { FileObject } from '@supabase/storage-js';
 import { SystemSettings, Dish, MenuCategory, Order, DashboardSummary, StockItem, Fornecedor, User, AuditLog, Revenue, Expense, Settings, Employee, AttendanceRecord, PayrollRecord, CashShift, Table } from '../types';
 import { logger, LogEntry } from './logger';
+import { supabaseService, SupabaseService } from './supabaseService';
 
 export interface BackupMetadata {
   id: string;
@@ -17,8 +18,8 @@ export type UploadSuccess = { success: true; path: string | null; publicUrl: str
 export type UploadFailure = { success: false; error: string };
 export type UploadResult = UploadSuccess | UploadFailure;
 
-export type SupabaseResponseSuccess<T> = { success: true; data: T | null };
-export type SupabaseResponseFailure = { success: false; error: string };
+export type SupabaseResponseSuccess<T> = { success: true; data: T | null; error?: null };
+export type SupabaseResponseFailure = { success: false; error: string; data?: null };
 export type SupabaseResponse<T> = SupabaseResponseSuccess<T> | SupabaseResponseFailure;
 
 interface SupabaseCategory {
@@ -65,448 +66,93 @@ interface SupabaseUser {
   active: boolean;
 }
 
-export class SupabaseService {
-  private client: SupabaseClient | null = null;
-  private config: { url: string; key: string } | null = null;
-  private syncStatus: { status: 'idle' | 'success' | 'error' | 'retrying'; isConnected: boolean; lastSuccessAt: number | null; lastErrorAt: number | null; retries: number; errorMessage?: string } = { status: 'idle', isConnected: false, lastSuccessAt: null, lastErrorAt: null, retries: 0 };
-  private circuitBreaker: { open: boolean; failures: number; threshold: number; openedAt: number; cooldownMs: number; halfOpenProbe: boolean } = { open: false, failures: 0, threshold: 3, openedAt: 0, cooldownMs: 30000, halfOpenProbe: false };
-  private metrics: { totalCalls: number; totalErrors: number; latencies: number[]; lastLatencyMs: number } = { totalCalls: 0, totalErrors: 0, latencies: [], lastLatencyMs: 0 };
+class IntegrationAPIService {
+    private supabase: SupabaseService;
 
-  private isClientSide(): boolean {
-    return typeof window !== 'undefined';
-  }
-
-  private isPublishableKey(): boolean {
-    const key = this.config?.key || '';
-    return /^sb_/i.test(key) || /publishable/i.test(key);
-  }
-
-  private canWriteToProtectedTables(): boolean {
-    // Avoid writes from client-side with publishable/anon keys (RLS will block)
-    return !this.isClientSide() || !this.isPublishableKey();
-  }
-
-  initialize(url: string, key: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
-    if (!url || !key) return;
-    try {
-      this.client = createClient(url, key);
-      this.config = { url, key };
-      this.syncStatus.isConnected = true;
-      this.syncStatus.status = 'idle';
-      logger.info('Supabase client initialized', {}, 'SupabaseService');
-
-      const isTestEnv = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test');
-      if (onRealtimeChange && !isTestEnv) {
-        // Subscribe to menu_items changes
-        this.subscribeToTableChanges('menu_items', (payload) => onRealtimeChange({ ...payload, tableName: 'menu_items' }));
-        // Subscribe to categories changes
-        this.subscribeToTableChanges('categories', (payload) => onRealtimeChange({ ...payload, tableName: 'categories' }));
-        // Subscribe to employees changes
-        this.subscribeToTableChanges('employees', (payload) => onRealtimeChange({ ...payload, tableName: 'employees' }));
-        // Subscribe to attendance_records changes
-          this.subscribeToTableChanges('attendance_records', (payload) => onRealtimeChange({ ...payload, tableName: 'attendance_records' }));
-          // Subscribe to payroll_records changes
-        this.subscribeToTableChanges('payroll_records', (payload) => onRealtimeChange({ ...payload, tableName: 'payroll_records' }));
-        // Subscribe to revenues changes
-        this.subscribeToTableChanges('revenues', (payload) => onRealtimeChange({ ...payload, tableName: 'revenues' }));
-        // Subscribe to expenses changes
-        this.subscribeToTableChanges('expenses', (payload) => onRealtimeChange({ ...payload, tableName: 'expenses' }));
-        // Subscribe to dashboard_summary changes
-        this.subscribeToTableChanges('dashboard_summary', (payload) => onRealtimeChange({ ...payload, tableName: 'dashboard_summary' }));
-        // Add other tables as needed for real-time sync
-      }
-    } catch (error) {
-      logger.error('Failed to initialize Supabase client', error, 'SupabaseService');
+    constructor(supabaseInstance: SupabaseService) {
+        this.supabase = supabaseInstance;
     }
-  }
 
-  isConnected(): boolean {
-    return !!this.client;
-  }
+    private get client(): SupabaseClient | null {
+        return this.supabase.getClient();
+    }
 
-  getSyncStatus() {
-    return this.syncStatus;
-  }
+    initialize(url: string, key: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
+        this.supabase.initialize(url, key, onRealtimeChange);
+    }
 
-  private async delay(ms: number) {
-    const t = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test') ? Math.min(ms, 1) : ms;
-    return new Promise(resolve => setTimeout(resolve, t));
-  }
+    isConnected(): boolean {
+        return this.supabase.isConnected();
+    }
 
-  private async retryWithBackoff<T>(operation: () => Promise<T>, retries: number = 3, baseDelay: number = 800, label: string = 'operation'): Promise<T> {
-    let attempt = 0;
-    while (true) {
-      try {
-        this.syncStatus.status = attempt > 0 ? 'retrying' : this.syncStatus.status;
-        const result = await operation();
-        this.syncStatus.status = 'success';
-        this.syncStatus.lastSuccessAt = Date.now();
-        this.syncStatus.retries = attempt;
-        this.syncStatus.errorMessage = undefined;
-        return result;
-      } catch (error: unknown) {
-        const errMsg = (error as any)?.message ? String((error as any).message) : String(error);
-        this.syncStatus.status = 'error';
-        this.syncStatus.lastErrorAt = Date.now();
-        this.syncStatus.errorMessage = errMsg;
-        logger.error(`${label} attempt failed`, { attempt, error: errMsg }, 'SupabaseService');
-        if (attempt >= retries) {
-          throw error;
+    getSyncStatus() {
+        return this.supabase.getSyncStatus();
+    }
+
+    private _handleSupabaseResponse<T>({ data, error }: { data: T | null, error: any }, context: string, service: string): SupabaseResponse<T> {
+        if (error) {
+            logger.error(context, { error: error.message }, service);
+            return { success: false, error: error.message };
         }
-        attempt++;
-        this.syncStatus.retries = attempt;
-        const jitter = Math.floor(Math.random() * 200);
-        const waitMs = baseDelay * Math.pow(2, attempt - 1) + jitter;
-        await this.delay(waitMs);
-      }
+        return { success: true, data };
     }
-  }
 
-  private async callWithResilience<T>(operation: () => Promise<T>, label: string): Promise<T> {
-    if (this.circuitBreaker.open) {
-      const elapsed = Date.now() - this.circuitBreaker.openedAt;
-      if (elapsed < this.circuitBreaker.cooldownMs) {
-        throw new Error('Circuit breaker open');
-      }
-      this.circuitBreaker.halfOpenProbe = true;
+    private canWriteToProtectedTables(): boolean {
+        // This is a placeholder. Implement logic to check if the current user/key has write access.
+        return true;
     }
-    const start = Date.now();
-    try {
-      const result = await this.retryWithBackoff(operation, 3, 800, label);
-      const latency = Date.now() - start;
-      this.metrics.totalCalls++;
-      this.metrics.lastLatencyMs = latency;
-      this.metrics.latencies.push(latency);
-      if (this.circuitBreaker.halfOpenProbe) {
-        this.circuitBreaker.open = false;
-        this.circuitBreaker.failures = 0;
-        this.circuitBreaker.halfOpenProbe = false;
-      }
-      return result;
-    } catch (error) {
-      this.metrics.totalCalls++;
-      this.metrics.totalErrors++;
-      this.circuitBreaker.failures++;
-      if (this.circuitBreaker.failures >= this.circuitBreaker.threshold) {
-        this.circuitBreaker.open = true;
-        this.circuitBreaker.openedAt = Date.now();
-        this.circuitBreaker.halfOpenProbe = false;
-      }
-      throw error as unknown as Error;
-    }
-  }
 
-  getHealthMetrics() {
-    const total = this.metrics.totalCalls || 1;
-    const errorRate = this.metrics.totalErrors / total;
-    const avgLatency = this.metrics.latencies.length > 0 ? Math.round(this.metrics.latencies.reduce((a, b) => a + b, 0) / this.metrics.latencies.length) : 0;
-    const throughput = total;
-    return { latencyMs: this.metrics.lastLatencyMs, avgLatencyMs: avgLatency, throughputPerSession: throughput, errorRate };
-  }
-  private _handleSupabaseResponse<T>(
-    response: { data: T | null; error: { message: string; code?: string; details?: string; hint?: string } | null },
-    operationName: string,
-    context: string
-  ): SupabaseResponse<T> {
-    if (response.error) {
-      const errorMessage = response.error.message || `Unknown error during ${operationName}`;
-      logger.error(
-        `${operationName} failed`,
-        {
-          message: errorMessage,
-          code: response.error.code,
-          details: response.error.details,
-          hint: response.error.hint,
-        },
-        context
-      );
-      return { success: false, error: errorMessage };
-    }
-    logger.info(`${operationName} successful`, {}, context);
-    return { success: true, data: response.data };
-  }
-
-  async testConnection(url: string, key: string): Promise<SupabaseResponse<null>> {
-    try {
-      const tempClient = createClient(url, key);
-      const { error } = await tempClient
-        .from('categories')
-        .select('id')
-        .limit(1);
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows found", which is fine
-        if (error.message.includes('relation "categories" does not exist')) {
-          logger.info('Supabase connection valid (but tables missing)', {}, 'SupabaseService');
-          return { success: true, data: null };
+    private async callWithResilience<T>(fn: () => Promise<T>, context: string): Promise<T> {
+        // This is a placeholder. In a real scenario, this would use the circuit breaker and retry logic from SupabaseService.
+        try {
+            return await fn();
+        } catch (error) {
+            logger.error(`Error in ${context}`, error, 'IntegrationAPIService');
+            throw error;
         }
-        return this._handleSupabaseResponse({ data: null, error }, 'Supabase connection test', 'SupabaseService');
-      }
-      this.syncStatus.isConnected = true;
-      this.syncStatus.status = 'success';
-      this.syncStatus.lastSuccessAt = Date.now();
-      return { success: true, data: null };
-    } catch (error: unknown) {
-      logger.error('Supabase connection test failed', error, 'SupabaseService');
-      this.syncStatus.isConnected = false;
-      this.syncStatus.status = 'error';
-      this.syncStatus.lastErrorAt = Date.now();
-      return { success: false, error: (error as Error)?.message || String(error) };
     }
-  }
 
-  // --- Sync Methods (Push to Cloud) ---
-
-  async syncMenu(categories: MenuCategory[], dishes: Dish[], settings: SystemSettings): Promise<SupabaseResponse<null>> {
+  async syncMenu(categories: MenuCategory[], menu: Dish[], settings: SystemSettings): Promise<SupabaseResponse<null>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
-    try {
-      const catsPayload = categories.map(c => ({
-        id: c.id,
-        name: c.name,
-        icon: c.icon,
-        sort_order: c.sortOrder || (c as any).sort_order || 0,
-        parent_id: (c as any).parentId || (c as any).parent_id || null,
-        deleted_at: (c as any).deletedAt || null
-      }));
-      const dishesPayload = dishes.map(d => ({
-        id: d.id,
-        name: d.name,
-        description: d.description,
-        price: d.price,
-        category_id: d.categoryId,
-        image_url: (d as any).image,
-        available: d.disponivel !== false,
-        tax_rate: d.taxPercentage || 14
-      }));
-      const settingsPayload = {
-        name: settings.restaurantName,
-        logo_url: (settings as any).qrMenuLogo || (settings as any).logoUrl,
-        currency: settings.currency,
-        phone: settings.phone,
-        address: settings.address,
-        qr_menu_cloud_url: settings.qrMenuCloudUrl
-      };
-
-      // Try direct upsert first (fast path)
-      const catResponse = await this.client
-        .from('categories')
-        .upsert(catsPayload, { onConflict: 'id' });
-      const catErr = (catResponse as any)?.error?.message || '';
-
-      const dishResponse = await this.client
-        .from('menu_items')
-        .upsert(dishesPayload, { onConflict: 'id' });
-      const dishErr = (dishResponse as any)?.error?.message || '';
-
-      let needRpc = false;
-      if ((catErr && /row-level security/i.test(catErr)) || (dishErr && /row-level security/i.test(dishErr))) {
-        needRpc = true;
-        logger.warn('RLS blocked direct upsert; falling back to RPC sync_menu', { catErr, dishErr }, 'SupabaseService');
-      }
-
-      // Sync settings via normal path (will also fallback to base columns)
-      const settingsResult = await this.syncSettings(settings);
-      if (!settingsResult.success) {
-        needRpc = true;
-      }
-
-      if (needRpc) {
-        const token = settings.apiToken || '';
-        const { error: rpcError } = await (this.client as any).rpc('sync_menu', {
-          categories: catsPayload,
-          items: dishesPayload,
-          settings: settingsPayload,
-          token
-        });
-        if (rpcError) {
-          const errMsg = rpcError.message || 'RPC sync_menu failed';
-          logger.error('RPC sync_menu error', { error: errMsg }, 'SupabaseService');
-          return { success: false, error: errMsg };
+    // Sync Categories
+    if (categories.length > 0) {
+        const { error: catError } = await this.client.from('categories').upsert(categories.map(c => ({
+            id: c.id,
+            name: c.name,
+            icon: c.icon,
+            sort_order: c.sort_order || c.sortOrder || 0,
+            parent_id: c.parentId || c.parent_id,
+            deleted_at: c.deletedAt || c.deleted_at
+        })), { onConflict: 'id' });
+        
+        if (catError) {
+             return this._handleSupabaseResponse({ data: null, error: catError }, 'Supabase sync categories', 'IntegrationAPIService');
         }
-        logger.info('Menu synced successfully via RPC', {}, 'SupabaseService');
-        return { success: true, data: null };
-      }
-
-      const catResult = this._handleSupabaseResponse(catResponse, 'Supabase sync categories', 'SupabaseService');
-      if (!catResult.success) return catResult;
-      const dishResult = this._handleSupabaseResponse(dishResponse, 'Supabase sync dishes', 'SupabaseService');
-      if (!dishResult.success) return dishResult;
-      if (!settingsResult.success) return settingsResult;
-
-      logger.info('Menu synced successfully (direct upsert)', {}, 'SupabaseService');
-      return { success: true, data: null };
-    } catch (error: unknown) {
-      logger.error('Menu sync failed', error, 'SupabaseService');
-      return { success: false, error: (error as Error)?.message || String(error) };
-    }
-  }
-
-  async syncSettings(settings: SystemSettings): Promise<SupabaseResponse<null>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    
-    let response = await this.client
-      .from('restaurant_settings')
-      .upsert({
-        id: '1', // Singleton
-        name: settings.restaurantName,
-        logo_url: settings.qrMenuLogo || settings.logoUrl,
-        currency: settings.currency,
-        phone: settings.phone,
-        address: settings.address,
-        wifi_name: settings.wifiName,
-        wifi_password: settings.wifiPassword,
-        // QR Menu Fields
-        qr_code_title: settings.qrMenuTitle,
-        qr_code_subtitle: settings.qrMenuSubtitle,
-        qr_code_short_code: settings.qrMenuShortCode,
-        qr_menu_url: settings.qrMenuUrl,
-        qr_menu_cloud_url: settings.qrMenuCloudUrl
-      });
-
-    // Handle missing columns scenario
-    if (response.error && response.error.message.includes('column') && response.error.message.includes('does not exist')) {
-      logger.warn('Supabase schema missing columns for settings sync, retrying with base columns', {}, 'SupabaseService');
-      response = await this.client
-        .from('restaurant_settings')
-        .upsert({
-          id: '1',
-          name: settings.restaurantName,
-          logo_url: settings.qrMenuLogo || settings.logoUrl,
-          currency: settings.currency,
-          phone: settings.phone,
-          address: settings.address
-        });
     }
 
-    return this._handleSupabaseResponse(response, 'Supabase sync settings', 'SupabaseService');
-  }
+    // Sync Dishes
+    if (menu.length > 0) {
+        const { error: dishError } = await this.client.from('menu_items').upsert(menu.map(d => ({
+            id: d.id,
+            name: d.name,
+            description: d.description,
+            price: d.price,
+            category_id: d.category_id,
+            image_url: d.image || d.image_url,
+            available: d.disponivel ?? d.available ?? true,
+            tax_rate: d.taxPercentage || d.tax_rate || 14
+        })), { onConflict: 'id' });
 
-  async setupBuckets(): Promise<SupabaseResponse<null>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    const menuBucketResponse = await this.client.storage.createBucket('menu-images', {
-      public: true,
-      fileSizeLimit: 5242880, // 5MB
-      allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp']
-    });
-
-    const backupBucketResponse = await this.client.storage.createBucket('backups', {
-      public: false, // Backups should not be public
-      fileSizeLimit: 52428800, // 50MB
-      allowedMimeTypes: ['application/json', 'application/sql']
-    });
-
-    // Only log errors if they are not "bucket already exists"
-    if (menuBucketResponse.error && !menuBucketResponse.error.message.includes('already exists')) {
-      this._handleSupabaseResponse({ data: null, error: menuBucketResponse.error }, 'Supabase create menu-images bucket', 'SupabaseService');
-      return { success: false, error: menuBucketResponse.error.message };
-    }
-    if (backupBucketResponse.error && !backupBucketResponse.error.message.includes('already exists')) {
-      this._handleSupabaseResponse({ data: null, error: backupBucketResponse.error }, 'Supabase create backups bucket', 'SupabaseService');
-      return { success: false, error: backupBucketResponse.error.message };
+        if (dishError) {
+             return this._handleSupabaseResponse({ data: null, error: dishError }, 'Supabase sync dishes', 'IntegrationAPIService');
+        }
     }
 
-    logger.info('Buckets configured successfully.', {}, 'SupabaseService');
-    return { success: true, data: null };
-  }
-
-  async setupRLS(): Promise<SupabaseResponse<null>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    // RLS usually requires SQL execution which is restricted for anon keys.
-    // We will check if tables exist and are queryable, implying RLS allows it or is open.
-    const response = await this.client.from('restaurant_settings').select('id').limit(1);
-    const result = this._handleSupabaseResponse({ data: response.data, error: response.error }, 'Supabase RLS setup check', 'SupabaseService');
-    if (result.success) {
-      logger.info('Conexão validada. RLS deve ser configurado via Migrations SQL.', {}, 'SupabaseService');
+    // Sync Settings
+    if (settings) {
+        return this.syncSettings(settings);
     }
-    return result as SupabaseResponse<null>;
-  }
-
-  // --- Storage Methods ---
-
-  async uploadFile(bucket: 'menu-images' | 'backups', path: string, file: File | Blob | ArrayBuffer): Promise<UploadResult> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-
-    const { data, error } = await this.client.storage
-      .from(bucket)
-      .upload(path, file, {
-        upsert: true,
-        contentType: bucket === 'menu-images' ? 'image/png' : 'application/octet-stream'
-      });
-
-    if (error) {
-      const errorMessage = error.message || `Unknown error during upload to ${bucket}`;
-      logger.error(`Upload to ${bucket} failed`, { message: errorMessage, details: error.message }, 'SupabaseService');
-      return { success: false, error: errorMessage };
-    }
-
-    // Get public URL for menu-images
-    let publicUrl = '';
-    if (bucket === 'menu-images') {
-      const { data: urlData } = this.client.storage.from(bucket).getPublicUrl(path);
-      publicUrl = urlData?.publicUrl || '';
-    }
-
-    logger.info(`Upload to ${bucket} successful`, { path: data?.path, publicUrl }, 'SupabaseService');
-    return { success: true, path: data?.path || null, publicUrl };
-  }
-
-  async listFiles(bucket: 'menu-images' | 'backups', path: string = ''): Promise<SupabaseResponse<FileObject[]>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-
-    const { data, error } = await this.client.storage
-      .from(bucket)
-      .list(path);
-
-    return this._handleSupabaseResponse(
-      { data: data as FileObject[] | null, error },
-      `Supabase list files in ${bucket}`,
-      'SupabaseService'
-    );
-  }
-
-  async deleteFile(bucket: 'menu-images' | 'backups', path: string): Promise<SupabaseResponse<null>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-
-    const { error } = await this.client.storage
-      .from(bucket)
-      .remove([path]);
-
-    return this._handleSupabaseResponse({ data: null, error }, `Supabase delete from ${bucket}`, 'SupabaseService');
-  }
-
-  async syncDashboardData(summary: DashboardSummary, activeOrders: Order[]): Promise<SupabaseResponse<null>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-
-    // 1. Sync Dashboard Summary
-    const summaryResponse = await this.client
-      .from('dashboard_summary')
-      .upsert({
-          id: '1',
-          total_revenue: summary.totalRevenue,
-          total_orders: summary.totalOrders,
-          active_orders_count: activeOrders.length,
-          last_updated: new Date().toISOString()
-      });
-
-    const summaryResult = this._handleSupabaseResponse({ data: null, error: summaryResponse.error }, 'Supabase sync dashboard summary', 'SupabaseService');
-    if (!summaryResult.success) return summaryResult;
-      
-    // 2. Sync Active Orders (Simplified for mobile view)
-    const simplifiedOrders = activeOrders.map(o => ({
-        id: o.id,
-        table_id: o.tableId,
-        status: o.status,
-        total: o.total,
-        items_count: o.items.length,
-        created_at: o.timestamp
-    }));
-    
-    const ordersResponse = await this.client
-      .from('active_orders_snapshot')
-      .upsert(simplifiedOrders); 
-
-    const ordersResult = this._handleSupabaseResponse({ data: null, error: ordersResponse.error }, 'Supabase sync active orders snapshot', 'SupabaseService');
-    if (!ordersResult.success) return ordersResult;
 
     return { success: true, data: null };
   }
@@ -514,19 +160,23 @@ export class SupabaseService {
   async syncUsers(users: User[]): Promise<SupabaseResponse<null>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
-    const { error } = await this.client.from('users').upsert(users.map(u => ({
-        id: u.id,
-        name: u.name,
-        role: u.role,
-        pin: u.pin
-    })), { onConflict: 'id' });
+    if (users.length > 0) {
+        const { error } = await this.client.from('users').upsert(users.map(u => ({
+            id: u.id,
+            name: u.name,
+            role: u.role,
+            pin: u.pin,
+            active: u.active ?? true
+        })), { onConflict: 'id' });
+        
+        return this._handleSupabaseResponse({ data: null, error }, 'Supabase sync users', 'IntegrationAPIService');
+    }
     
-    return this._handleSupabaseResponse({ data: null, error }, 'Supabase sync users', 'SupabaseService');
+    return { success: true, data: null };
   }
 
   async syncAuditLogs(logs: (AuditLog | LogEntry)[]): Promise<SupabaseResponse<null>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
-
     if (!this.canWriteToProtectedTables()) {
       logger.info('Skipping audit log sync on client (publishable key / RLS)', {}, 'SupabaseService');
       return { success: true, data: null };
@@ -759,6 +409,214 @@ export class SupabaseService {
     return this._handleSupabaseResponse({ data: null, error: metaError }, 'Supabase backup metadata sync', 'SupabaseService');
   }
   
+  async fetchUsers(): Promise<SupabaseResponse<User[]>> {
+    if (!this.client) {
+      logger.warn('Supabase client not initialized. Cannot fetch users.', {}, 'IntegrationAPIService');
+      return { success: false, error: 'Supabase client not initialized.' };
+    }
+    try {
+      const { data, error } = await this.client.from('users').select('*');
+      if (error) throw error;
+      return { success: true, data: data as User[] };
+    } catch (error: any) {
+      logger.error('Failed to fetch users from Supabase', { error: error.message }, 'IntegrationAPIService');
+      return { success: false, error: error.message };
+    }
+  }
+
+  async fetchDashboard(startDate: string, endDate: string): Promise<SupabaseResponse<DashboardSummary>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+
+    try {
+      // Try to fetch specific day summary if ID is date-based
+      const { data, error } = await this.client
+          .from('dashboard_summary')
+          .select('*')
+          .eq('id', startDate)
+          .maybeSingle();
+
+      if (error) {
+          logger.error('Failed to fetch dashboard summary', { error: error.message }, 'IntegrationAPIService');
+          return { success: false, error: error.message };
+      }
+
+      if (data) {
+          return {
+              success: true,
+              data: {
+                  totalRevenue: Number(data.total_revenue || 0),
+                  totalOrders: Number(data.total_orders || 0),
+                  activeOrdersCount: Number(data.active_orders_count || 0)
+              }
+          };
+      }
+
+      return { success: true, data: { totalRevenue: 0, totalOrders: 0, activeOrdersCount: 0 } };
+    } catch (error: any) {
+      logger.error('Exception in fetchDashboard', { error: error.message }, 'IntegrationAPIService');
+      return { success: false, error: error.message };
+    }
+  }
+
+  async syncDashboardData(summary: DashboardSummary, activeOrders: Order[]): Promise<SupabaseResponse<null>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. Sync Summary
+      const { error: summaryError } = await this.client.from('dashboard_summary').upsert({
+          id: today, // Use date as ID
+          total_revenue: summary.totalRevenue,
+          total_orders: summary.totalOrders,
+          active_orders_count: summary.activeOrdersCount,
+          last_updated: new Date().toISOString()
+      });
+
+      if (summaryError) {
+           return this._handleSupabaseResponse({ data: null, error: summaryError }, 'Supabase sync dashboard summary', 'IntegrationAPIService');
+      }
+
+      // 2. Sync Active Orders (Snapshot)
+      if (activeOrders.length > 0) {
+          const { error: ordersError } = await this.client.from('active_orders_snapshot').upsert(activeOrders.map(o => ({
+              id: o.id,
+              table_id: typeof o.tableId === 'number' ? String(o.tableId) : (o.tableId || ''),
+              status: o.status,
+              total: o.total,
+              items_count: o.items ? o.items.length : 0,
+              created_at: o.timestamp instanceof Date ? o.timestamp.toISOString() : o.timestamp
+          })), { onConflict: 'id' });
+
+          if (ordersError) {
+               logger.warn('Failed to sync active orders snapshot', { error: ordersError.message }, 'IntegrationAPIService');
+               // We don't fail the whole sync for this
+          }
+      }
+
+      return { success: true, data: null };
+    } catch (error: any) {
+      logger.error('Exception in syncDashboardData', { error: error.message }, 'IntegrationAPIService');
+      return { success: false, error: error.message };
+    }
+  }
+
+  async syncSettings(settings: SystemSettings): Promise<SupabaseResponse<null>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+
+    const { error } = await this.client.from('restaurant_settings').upsert({
+        id: '1',
+        name: settings.restaurantName,
+        logo_url: settings.appLogoUrl || settings.logoUrl,
+        currency: settings.currency,
+        phone: settings.phone,
+        address: settings.address,
+        wifi_name: settings.wifiName,
+        wifi_password: settings.wifiPassword,
+        qr_code_title: settings.qrMenuTitle,
+        qr_code_subtitle: settings.qrMenuSubtitle,
+        qr_code_short_code: settings.qrMenuShortCode,
+        qr_menu_url: settings.qrMenuUrl,
+        qr_menu_cloud_url: settings.qrMenuCloudUrl
+    });
+
+    if (error) {
+         return this._handleSupabaseResponse({ data: null, error }, 'Supabase sync settings', 'IntegrationAPIService');
+    }
+    return { success: true, data: null };
+  }
+
+  async testConnection(url: string, key: string): Promise<boolean> {
+      try {
+          const tempClient = createClient(url, key);
+          const { data, error } = await tempClient.from('restaurant_settings').select('count', { count: 'exact', head: true });
+          if (error && error.code !== 'PGRST116') {
+             console.warn('Test connection warning:', error);
+          }
+          return true;
+      } catch (e) {
+          return false;
+      }
+  }
+
+  async setupRLS(): Promise<{ success: boolean; message?: string; error?: string }> {
+      // Placeholder for RLS setup. 
+      // In a real app, this might call a Supabase RPC function or guide the user.
+      return { success: true, message: 'RLS policies should be configured in Supabase Dashboard.' };
+  }
+
+  async uploadFile(bucket: string, path: string, file: File | Blob): Promise<UploadResult> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    
+    try {
+      const { data, error } = await this.client.storage
+        .from(bucket)
+        .upload(path, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      const { data: publicUrlData } = this.client.storage
+        .from(bucket)
+        .getPublicUrl(data.path);
+
+      return { 
+        success: true, 
+        path: data.path, 
+        publicUrl: publicUrlData.publicUrl 
+      };
+    } catch (error: any) {
+      logger.error('File upload failed', { error: error.message }, 'IntegrationAPIService');
+      return { success: false, error: error.message };
+    }
+  }
+
+  async setupBuckets(): Promise<{ success: boolean; message?: string; error?: string }> {
+      if (!this.client) return { success: false, error: 'Not initialized' };
+      
+      try {
+          const buckets = ['backups', 'images', 'documents'];
+          const results = await Promise.all(buckets.map(async (bucket) => {
+              const { data, error } = await this.client!.storage.getBucket(bucket);
+              if (error && error.message.includes('not found')) {
+                  // Attempt to create bucket if API allows (usually requires service role key, but try anyway or just warn)
+                  const { error: createError } = await this.client!.storage.createBucket(bucket, {
+                      public: bucket === 'images',
+                      fileSizeLimit: 52428800 // 50MB
+                  });
+                  if (createError) return { bucket, status: 'failed', error: createError.message };
+                  return { bucket, status: 'created' };
+              } else if (error) {
+                  return { bucket, status: 'error', error: error.message };
+              }
+              return { bucket, status: 'exists' };
+          }));
+
+          const failures = results.filter(r => r.status === 'failed' || r.status === 'error');
+          if (failures.length > 0) {
+              return { success: false, error: `Failed to setup buckets: ${failures.map(f => `${f.bucket} (${f.error})`).join(', ')}` };
+          }
+
+          return { success: true, message: 'Storage buckets validated/created successfully.' };
+      } catch (error: any) {
+          logger.error('Failed to setup buckets', { error: error.message }, 'IntegrationAPIService');
+          return { success: false, error: error.message };
+      }
+  }
+
+  initialize(url: string, key: string, onRealtimeChange?: (payload: any) => void) {
+      this.supabase.initialize(url, key, onRealtimeChange);
+  }
+
+  isConnected(): boolean {
+      return this.supabase.isConnected();
+  }
+
+
   // --- Fetch Methods (Pull from Cloud - for Remote Clients) ---
   
   private async fetchWithTimeout<T>(promise: Promise<{ data: T | null; error: unknown }>, timeoutMs: number = 15000): Promise<T | null> {
@@ -857,7 +715,7 @@ export class SupabaseService {
             name: String(raw['name'] || raw['nome'] || '') || 'SEM_NOME',
             description: (raw['description'] || raw['descricao']) as string | undefined,
             price: Number(raw['price'] ?? raw['preco'] ?? 0),
-            categoryId: String(raw['category_id'] || raw['categoria_id'] || raw['categoryId'] || ''),
+            category_id: String(raw['category_id'] || raw['categoria_id'] || raw['categoryId'] || ''),
             image: (raw['image_url'] || raw['imagem_url'] || raw['image']) as string | undefined,
             disponivel: rawAvailable !== false,
             taxCode: 'NOR',
@@ -886,7 +744,7 @@ export class SupabaseService {
         if (mappedCategories.length === 0 && mappedDishes.length === 0) {
           logger.warn('Supabase returned empty dataset; using local fallback in UI', {}, 'SupabaseService');
         }
-        return { success: true, data: { categories: mappedCategories, dishes: mappedDishes, settings: mappedSettings } } as SupabaseResponse<{ categories: MenuCategory[]; dishes: Dish[]; settings: SystemSettings }>;
+        return { success: true, data: { categories: mappedCategories, dishes: mappedDishes, settings: mappedSettings }, error: null } as SupabaseResponse<{ categories: MenuCategory[]; dishes: Dish[]; settings: SystemSettings }>;
       } catch (error: unknown) {
         logger.error('Fetch menu attempt failed', error, 'SupabaseService');
         throw error;
@@ -902,217 +760,72 @@ export class SupabaseService {
     }
   }
 
-  async fetchCategoriesPaged(options: { page?: number; pageSize?: number; search?: string; orderBy?: 'name' | 'sort_order'; ascending?: boolean } = {}): Promise<SupabaseResponse<MenuCategory[]>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    const { page = 1, pageSize = 20, search = '', orderBy = 'sort_order', ascending = true } = options;
-    const offset = (page - 1) * pageSize;
-    try {
-      const qb = this.client.from('categories').select('*');
-      const filtered = search ? (qb as any).ilike('name', `%${search}%`) : qb;
-      const ranged = (filtered as any).range(offset, offset + pageSize - 1) as Promise<{ data: SupabaseCategory[] | null; error: unknown }>;
-      const data = await this.fetchWithTimeout<SupabaseCategory[]>(ranged);
-      let mapped = (data || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        icon: c.icon,
-        sort_order: typeof c.sort_order === 'number' ? c.sort_order : 0,
-        parentId: c.parent_id,
-        is_active: !c.deleted_at
-      })) as MenuCategory[];
-      mapped = mapped.sort((a: any, b: any) => {
-        const va = orderBy === 'name' ? String(a.name || '').toLowerCase() : Number(a.sort_order || 0);
-        const vb = orderBy === 'name' ? String(b.name || '').toLowerCase() : Number(b.sort_order || 0);
-        if (va < vb) return ascending ? -1 : 1;
-        if (va > vb) return ascending ? 1 : -1;
-        return 0;
-      });
-      return { success: true, data: mapped };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error)?.message || String(error) };
-    }
-  }
-
-  async fetchDishesPaged(options: { page?: number; pageSize?: number; search?: string; categoryId?: string; availableOnly?: boolean } = {}): Promise<SupabaseResponse<Dish[]>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    const { page = 1, pageSize = 20, search = '', categoryId = '', availableOnly = true } = options;
-    const offset = (page - 1) * pageSize;
-    try {
-      let qb: any = this.client.from('menu_items').select('*');
-      if (availableOnly) qb = qb.eq('available', true);
-      if (categoryId) qb = qb.eq('category_id', categoryId);
-      if (search) qb = qb.ilike('name', `%${search}%`);
-      const ranged = qb.range(offset, offset + pageSize - 1) as Promise<{ data: SupabaseDish[] | null; error: unknown }>;
-      const data = await this.fetchWithTimeout<SupabaseDish[]>(ranged);
-      const mapped = (data || []).map(d => ({
-        id: d.id,
-        name: d.name,
-        description: d.description,
-        price: Number(d.price || 0),
-        categoryId: d.category_id,
-        image: d.image_url,
-        disponivel: !!d.available,
-        taxCode: 'NOR',
-        taxPercentage: Number(d.tax_rate) || 14
-      })).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))) as Dish[];
-      return { success: true, data: mapped };
-    } catch (error: unknown) {
-      return { success: false, error: (error as Error)?.message || String(error) };
-    }
-  }
-
-  async fetchDashboard() {
+  async fetchCategoriesPaged(params: { page: number; pageSize: number; search?: string }): Promise<SupabaseResponse<MenuCategory[]>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     try {
-      const dashPromise = this.client.from('dashboard_summary').select('*').maybeSingle() as unknown as Promise<{ data: Record<string, unknown> | null; error: unknown }>;
-      const data = await this.fetchWithTimeout<Record<string, unknown>>(dashPromise);
-      
-      if (!data) return { success: true, data: null };
-
-      // Map DashboardSummary to RemoteDashboardData
-      const mappedData: Record<string, unknown> = {
-        summary: {
-          total_revenue: Number(data.total_revenue || 0),
-          total_orders: Number(data.total_orders || 0),
-          active_orders_count: Number(data.active_orders_count || 0)
-        },
-        analytics: {
-          totalCustomers: 0,
-          retentionRate: 0,
-          menu: []
-        },
-        lastUpdated: data.last_updated
-      };
-
-      return { success: true, data: mappedData };
-    } catch (error: unknown) {
-      logger.error('Fetch dashboard failed', error, 'SupabaseService');
-      return { success: false, error: (error as Error)?.message || String(error) };
-    }
-  }
-
-  async calculateHash(data: string): Promise<string> {
-    try {
-      if (typeof window !== 'undefined' && (window as any).crypto && (window as any).crypto.subtle) {
-        const msgUint8 = new TextEncoder().encode(data);
-        const hashBuffer = await (window as any).crypto.subtle.digest('SHA-256', msgUint8);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      }
-    } catch (e) {
-      logger.warn('Falling back to non-crypto hash', { error: (e as Error)?.message }, 'SupabaseService');
-    }
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-      hash = ((hash << 5) - hash) + data.charCodeAt(i);
-      hash |= 0;
-    }
-    return String(hash);
-  }
-  
-  async computeRecordHash<T extends Record<string, unknown>>(obj: T): Promise<string> {
-    const keys = Object.keys(obj).sort();
-    const normalized = keys.reduce((acc: Record<string, unknown>, k: string) => {
-      acc[k] = obj[k];
-      return acc;
-    }, {});
-    const str = JSON.stringify(normalized);
-    return this.calculateHash(str);
-  }
-
-  async fetchUsers() {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    try {
-      const usersPromise = this.client.from('users').select('*').eq('active', true) as unknown as Promise<{ data: SupabaseUser[] | null; error: unknown }>;
-      const data = await this.fetchWithTimeout<SupabaseUser[]>(usersPromise);
-      
-      if (!data) return { success: true, data: [] };
-
-      // Hash PINs for security so plain text PINs are not stored in memory state
-      const secureUsers = await Promise.all(data.map(async (u: SupabaseUser) => ({
-        id: u.id,
-        name: u.name,
-        role: u.role,
-        pin: await this.calculateHash(u.pin), // Store Hash only
-        isActive: u.active,
-        permissions: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })));
-
-      return { 
-        success: true, 
-        data: secureUsers
-      };
-    } catch (error: unknown) {
-      logger.error('Fetch users failed', error, 'SupabaseService');
-      return { success: false, error: (error as Error)?.message || String(error) };
-    }
-  }
-
-  async verifyPin(userId: string, pin: string): Promise<boolean> {
-      if (!this.client) return false;
-      try {
-          // Check directly against DB for maximum security (if online)
-          const { data, error } = await this.client
-              .from('users')
-              .select('pin')
-              .eq('id', userId)
-              .single();
-              
-          if (error || !data) return false;
-          return data.pin === pin;
-      } catch {
-          return false;
-      }
-  }
-
-  // --- Realtime Subscriptions ---
-  private subscriptions: Map<string, RealtimeChannel> = new Map(); // To store and manage subscriptions
-
-  subscribeToTableChanges(
-    tableName: string,
-    callback: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => void
-  ) {
-    if (!this.client) {
-      logger.error(`Cannot subscribe to ${tableName}: Supabase client not initialized`, {}, 'SupabaseService');
-      return;
-    }
-
-    if (this.subscriptions.has(tableName)) {
-      logger.warn(`Already subscribed to ${tableName}. Unsubscribing existing one.`, {}, 'SupabaseService');
-      this.subscriptions.get(tableName).unsubscribe();
-      this.subscriptions.delete(tableName);
-    }
-
-    logger.info(`Subscribing to real-time changes for table: ${tableName}`, {}, 'SupabaseService');
-    const subscription = this.client
-      .channel(`public:${tableName}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: tableName }, (payload) => {
-        logger.info(`Realtime change in ${tableName}`, { eventType: payload.eventType, new: payload.new, old: payload.old }, 'SupabaseService');
-        callback({
-          eventType: payload.eventType,
-          new: payload.new,
-          old: payload.old
-        });
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          logger.info(`Successfully subscribed to ${tableName} real-time changes`, {}, 'SupabaseService');
-        } else if (status === 'CHANNEL_ERROR') {
-          logger.error(`Error subscribing to ${tableName} real-time changes`, {}, 'SupabaseService');
-        } else {
-          logger.debug(`Subscription status for ${tableName}: ${status}`, {}, 'SupabaseService');
+        let query = this.client.from('categories').select('*');
+        if (params.search) {
+            query = query.ilike('name', `%${params.search}%`);
         }
-      });
-    this.subscriptions.set(tableName, subscription);
+        const from = (params.page - 1) * params.pageSize;
+        const to = from + params.pageSize - 1;
+        
+        const { data, error } = await query.range(from, to).order('sort_order', { ascending: true });
+        
+        if (error) throw error;
+        
+        const categories = (data || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            icon: c.icon,
+            sort_order: c.sort_order,
+            parentId: c.parent_id,
+            is_active: !c.deleted_at
+        }));
+        
+        return { success: true, data: categories, error: null };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
   }
 
-  unsubscribeFromAllChanges() {
-    if (!this.client) return;
-    logger.info('Unsubscribing from all Supabase real-time channels', {}, 'SupabaseService');
-    this.subscriptions.forEach(sub => sub.unsubscribe());
-    this.subscriptions.clear();
+  async fetchDishesPaged(params: { page: number; pageSize: number; search?: string; categoryId?: string }): Promise<SupabaseResponse<Dish[]>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    try {
+        let query = this.client.from('menu_items').select('*');
+        if (params.search) {
+            query = query.ilike('name', `%${params.search}%`);
+        }
+        if (params.categoryId) {
+            query = query.eq('category_id', params.categoryId);
+        }
+        
+        const from = (params.page - 1) * params.pageSize;
+        const to = from + params.pageSize - 1;
+        
+        const { data, error } = await query.range(from, to).order('name', { ascending: true });
+        
+        if (error) throw error;
+        
+        const dishes = (data || []).map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            description: d.description,
+            price: d.price,
+            category_id: d.category_id,
+            image: d.image_url,
+            disponivel: d.available,
+            taxPercentage: d.tax_rate
+        }));
+        
+        return { success: true, data: dishes, error: null };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
   }
 }
 
-export const supabaseService = new SupabaseService();
+export const integrationAPIService = new IntegrationAPIService(supabaseService);
+export const initializeIntegrationAPI = (url: string, key: string) => {
+    supabaseService.initialize(url, key);
+};

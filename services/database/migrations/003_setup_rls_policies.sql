@@ -31,6 +31,31 @@ CREATE POLICY "Public read categories" ON public.categories FOR SELECT TO public
 CREATE POLICY "Public read menu_items" ON public.menu_items FOR SELECT TO public USING (true);
 CREATE POLICY "Public read restaurant_settings" ON public.restaurant_settings FOR SELECT TO public USING (true);
 
+-- Owner read-only policies for Financial and Dashboard tables
+DROP POLICY IF EXISTS "Owner can select revenues" ON public.revenues;
+CREATE POLICY "Owner can select revenues" ON public.revenues FOR SELECT TO authenticated USING (auth.jwt() ->> 'role' = 'owner');
+
+DROP POLICY IF EXISTS "Owner can select expenses" ON public.expenses;
+CREATE POLICY "Owner can select expenses" ON public.expenses FOR SELECT TO authenticated USING (auth.jwt() ->> 'role' = 'owner');
+
+DROP POLICY IF EXISTS "Owner can select payroll_records" ON public.payroll_records;
+CREATE POLICY "Owner can select payroll_records" ON public.payroll_records FOR SELECT TO authenticated USING (auth.jwt() ->> 'role' = 'owner');
+
+DROP POLICY IF EXISTS "Owner can select cash_shifts" ON public.cash_shifts;
+CREATE POLICY "Owner can select cash_shifts" ON public.cash_shifts FOR SELECT TO authenticated USING (auth.jwt() ->> 'role' = 'owner');
+
+DROP POLICY IF EXISTS "Owner can select dashboard_summary" ON public.dashboard_summary;
+CREATE POLICY "Owner can select dashboard_summary" ON public.dashboard_summary FOR SELECT TO authenticated USING (auth.jwt() ->> 'role' = 'owner');
+
+DROP POLICY IF EXISTS "Owner can select active_orders_snapshot" ON public.active_orders_snapshot;
+CREATE POLICY "Owner can select active_orders_snapshot" ON public.active_orders_snapshot FOR SELECT TO authenticated USING (auth.jwt() ->> 'role' = 'owner');
+
+DROP POLICY IF EXISTS "Owner can select analytics" ON public.analytics;
+CREATE POLICY "Owner can select analytics" ON public.analytics FOR SELECT TO authenticated USING (auth.jwt() ->> 'role' = 'owner');
+
+DROP POLICY IF EXISTS "Owner can select audit_logs" ON public.audit_logs;
+CREATE POLICY "Owner can select audit_logs" ON public.audit_logs FOR SELECT TO authenticated USING (auth.jwt() ->> 'role' = 'owner');
+
 -- Restrict audit logs to service role only
 DROP POLICY IF EXISTS "Allow full access to anon for audit_logs" ON public.audit_logs;
 DROP POLICY IF EXISTS "Service role write audit_logs" ON public.audit_logs;

@@ -1,5 +1,5 @@
 
-import { RemoteDashboardData } from '../pages/MobileDashboard';
+import { RemoteDashboardData } from '../types';
 
 export const thesisData: RemoteDashboardData = {
   summary: {
@@ -49,13 +49,18 @@ export const thesisData: RemoteDashboardData = {
     { id: 't-rev-5', amount: 310000, description: 'Serviço de Catering', date: '2026-02-12', category: 'EVENTOS' }
   ],
   menu: [
-    { dishName: 'Francesinha Especial', sold: 142 },
-    { dishName: 'Bacalhau à Brás', sold: 98 },
-    { dishName: 'Picanha na Chapa', sold: 85 }
+    { id: 'thesis-dish-1', name: 'Francesinha Especial', description: 'A nossa especialidade da casa.', price: 1500, category_id: 'cat-thesis-1', image_url: '', available: true, tax_rate: 14, createdAt: new Date(), updatedAt: new Date(), availableOnDigitalMenu: true },
+    { id: 'thesis-dish-2', name: 'Bacalhau à Brás', description: 'Um clássico da cozinha portuguesa.', price: 1200, category_id: 'cat-thesis-1', image_url: '', available: true, tax_rate: 14, createdAt: new Date(), updatedAt: new Date(), availableOnDigitalMenu: true },
+    { id: 'thesis-dish-3', name: 'Picanha na Chapa', description: 'Picanha suculenta servida na chapa.', price: 1800, category_id: 'cat-thesis-1', image_url: '', available: true, tax_rate: 14, createdAt: new Date(), updatedAt: new Date(), availableOnDigitalMenu: true },
+    { id: 'thesis-dish-4', name: 'Mousse de Chocolate', description: 'Deliciosa mousse de chocolate caseira.', price: 500, category_id: 'cat-thesis-2', image_url: '', available: true, tax_rate: 14, createdAt: new Date(), updatedAt: new Date(), availableOnDigitalMenu: true }
   ],
   users: [
     { id: 'thesis-owner', name: 'Owner Thesis', role: 'OWNER', pin: '0000' },
     { id: 'thesis-admin', name: 'Admin Thesis', role: 'ADMIN', pin: '1111' },
     { id: 'thesis-manager', name: 'Gerente Thesis', role: 'GERENTE', pin: '2222' }
+  ],
+  categories: [
+    { id: 'cat-thesis-1', name: 'Pratos Principais (Thesis)', sortOrder: 1, is_active: true, availableOnDigitalMenu: true },
+    { id: 'cat-thesis-2', name: 'Sobremesas (Thesis)', sortOrder: 2, is_active: true, availableOnDigitalMenu: true }
   ]
 };

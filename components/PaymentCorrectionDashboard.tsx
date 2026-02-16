@@ -16,17 +16,8 @@ const PaymentCorrectionDashboard = () => {
     return activeOrders.filter(order => order.status === 'FECHADO' || order.status === 'PAGO');
   }, [activeOrders]);
 
-  const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
-
-  const formatDate = (date: Date | string) => {
-    return new Intl.DateTimeFormat('pt-AO', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(date));
-  };
+import { formatKz } from '../services/utils/currencyFormatter';
+import { formatDate } from '../services/utils/dateUtils';
 
   const handleOpenCorrectionModal = (order: Order) => {
     setSelectedOrder(order);
@@ -53,7 +44,7 @@ const PaymentCorrectionDashboard = () => {
         id: `corr-item-${Date.now()}`,
         method: newPaymentMethod,
         amount: selectedOrder.total,
-        timestamp: new Date()
+        timestamp: new Date().toISOString()
       }];
 
       const success = await correctPayment(selectedOrder.id, newPayments, correctionReason);
