@@ -4246,6 +4246,11 @@ export const useStore = create<StoreState>()(
         }
       },
       partialize: (state): Partial<StoreState> => ({
+        // Auth State (Critical for persistence)
+        currentUser: state.currentUser,
+        isAuthenticated: state.isAuthenticated,
+        
+        // Data State
         tables: state.tables,
         users: state.users,
         employees: state.employees,

@@ -41,7 +41,7 @@ export class SupabaseService {
         if (error) throw error;
         
         return true;
-      }, 3, 1000, 'SupabaseService.initialize');
+      }, 3, 1000);
 
       this.syncStatus.isConnected = true;
       this.syncStatus.status = 'idle';
@@ -126,7 +126,7 @@ export class SupabaseService {
       const { data, error } = await exponentialBackoff(async () => {
         if (!this.client) throw new Error('Supabase client not available during backoff');
         return this.client.from('settings').upsert({ id: 1, ...settings });
-      }, 5, 1000, 'SupabaseService.syncSettings');
+      }, 5, 1000);
 
       if (error) {
         throw error;
@@ -180,7 +180,7 @@ export class SupabaseService {
       const { data, error } = await exponentialBackoff(async () => {
         if (!this.client) throw new Error('Supabase client not available during backoff');
         return this.client.from('settings').select('*').single();
-      }, 5, 1000, 'SupabaseService.fetchSettings');
+      }, 5, 1000);
 
       if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error for initial fetch
         throw error;
@@ -282,7 +282,7 @@ export class SupabaseService {
     };
 
     try {
-        await exponentialBackoff(subscribeAttempt, 5, 2000, `Subscribe:${tableName}`);
+        await exponentialBackoff(subscribeAttempt, 5, 2000);
     } catch (error: any) {
         logger.error(`Failed to subscribe to ${tableName} after retries`, { error: error.message }, 'SupabaseService');
     }
@@ -388,7 +388,7 @@ export class SupabaseService {
            const { data, error } = await this.client!.from('employees').select('*');
            if (error) throw error;
            return data;
-      }, 3, 1000, 'fetchUsers');
+      }, 3, 1000);
 
       const users = usersData.map((user: any) => ({
           id: user.id,
