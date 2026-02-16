@@ -65,7 +65,7 @@ export const executeQuery = async (query: string, params: any[] = []): Promise<a
 export const selectQuery = async <T>(query: string, params: any[] = []): Promise<T[]> => {
   try {
     const database = await getDatabase();
-    return await database.select<T[]>(query, params);
+    return await database.select<T>(query, params);
   } catch (error: any) {
     logger.error('Select query failed', { query, error: error.message }, 'DATABASE');
     throw error;

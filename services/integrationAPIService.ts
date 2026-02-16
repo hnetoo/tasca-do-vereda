@@ -216,7 +216,13 @@ class IntegrationAPIService {
 
     const { error } = await this.client.from('audit_logs').insert(sanitizedLogs);
     
-    return this._handleSupabaseResponse({ data: null, error }, 'Supabase sync audit logs', 'SupabaseService');
+    if (error) {
+        // Prevent infinite loop: do not log this error through the standard logger which might trigger another sync
+        console.warn('Failed to sync audit logs to Supabase (RLS or Network):', error.message);
+        return { success: false, error: error.message };
+    }
+    
+    return { success: true, data: null };
   }
 
   async syncStock(stock: StockItem[]): Promise<SupabaseResponse<null>> {

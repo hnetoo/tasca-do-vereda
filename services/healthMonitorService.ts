@@ -273,6 +273,16 @@ class HealthMonitorService {
 
     // Detect Long Tasks (Potential UI freezes)
     try {
+      // Check if running in a Tauri environment to avoid overhead or incompatibility in Web Mode
+      // Although PerformanceObserver is standard, we want to be safe during critical initialization
+      const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__;
+      
+      // Only run aggressive monitoring if specifically requested or in a robust environment
+      // For now, we allow it in web but wrap in try-catch which is already done.
+      // However, user requested to check for invoke calls. 
+      // If this service uses invoke internally, we should guard it.
+      // It doesn't seem to use invoke.
+      
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           if (entry.duration > 150) { // Tasks longer than 150ms
@@ -290,9 +300,14 @@ class HealthMonitorService {
    * Detects potential memory leaks by monitoring heap growth.
    */
   private detectMemoryLeaks() {
+    if (typeof window === 'undefined') return;
+
     let lastHeap = 0;
     setInterval(() => {
-      const mem = (performance as PerformanceWithMemory).memory;
+      // Guard for non-standard performance.memory API
+      const perf = performance as PerformanceWithMemory;
+      const mem = perf.memory;
+      
       if (mem) {
         const currentHeap = mem.usedJSHeapSize;
         if (lastHeap > 0 && currentHeap > lastHeap * 1.8) {

@@ -3388,34 +3388,48 @@ export const useStore = create<StoreState>()(
       },
 
       initializeStore: async () => {
+        console.log('[Store] Starting initializeStore...');
         const state = get();
-        if (state.isInitialized) return;
+        if (state.isInitialized) {
+           console.log('[Store] Already initialized.');
+           return;
+        }
         
         try {
+          console.log('[Store] Initializing CryptoService...');
           // 0. Inicializar CryptoService com um segredo das configurações ou Admin PIN
           const settings = state.settings;
           const cryptoSecret = settings.adminPin || settings.apiToken || settings.restaurantName || 'TASCA-DEFAULT-SECRET';
           await CryptoService.initialize(cryptoSecret);
+          console.log('[Store] CryptoService initialized.');
           logger.info("Security: CryptoService initialized", { 
             method: settings.adminPin ? 'ADMIN_PIN' : (settings.apiToken ? 'API_TOKEN' : 'DEFAULT')
           }, 'SECURITY');
 
           // --- DETECT ENVIRONMENT ---
           const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+          console.log(`[Store] Environment detection: isTauri=${isTauri}`);
 
           if (!isTauri) {
              // --- WEB MODE (Netlify/Browser) ---
+             console.log('[Store] Web Mode detected. Configuring Supabase...');
              logger.info('Environment: Web Mode detected. Using Supabase as primary data source.', {}, 'STORE');
              
-             const sbUrl = settings.supabaseConfig?.url || "https://ratzyxwpzrqbtpheygch.supabase.co";
-             const sbKey = settings.supabaseConfig?.key || "sb_publishable_brYx8iH2oCK5uVUowtUhTQ_c7X4nrAo"; // Fallback for public demo
+             const sbUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || settings.supabaseConfig?.url || "https://ratzyxwpzrqbtpheygch.supabase.co";
+             const sbKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || settings.supabaseConfig?.key || "sb_publishable_brYx8iH2oCK5uVUowtUhTQ_c7X4nrAo"; // Fallback for public demo
+             console.log(`[Store] Supabase Config: URL=${sbUrl ? 'FOUND' : 'MISSING'}, Key=${sbKey ? 'FOUND' : 'MISSING'}`);
 
              if (sbUrl && sbKey) {
-                 integrationAPIService.initialize(sbUrl, sbKey);
-                 
-                 // 1. Fetch Menu (Categories & Dishes)
-                 logger.info('STORE: Iniciando carga de dados do Supabase...', undefined, 'STORE');
-                 const menuData = await integrationAPIService.fetchMenu();
+                 try {
+                     console.log('[Store] Initializing integrationAPIService...');
+                     integrationAPIService.initialize(sbUrl, sbKey);
+                     
+                     // 1. Fetch Menu (Categories & Dishes)
+                     console.log('[Store] Fetching menu from Supabase...');
+                     logger.info('STORE: Iniciando carga de dados do Supabase...', undefined, 'STORE');
+                     const menuData = await integrationAPIService.fetchMenu();
+                     console.log('[Store] Menu fetch result:', menuData.success ? 'SUCCESS' : 'FAILURE');
+
                  if (menuData.success && menuData.data) {
                      const data = menuData.data as { categories?: any[], dishes?: any[], settings?: any };
                      const hasData = (data.categories?.length && data.categories.length > 0) || (data.dishes?.length && data.dishes.length > 0);
@@ -3449,6 +3463,7 @@ export const useStore = create<StoreState>()(
                      }
                  } else {
                      logger.warn('Web Mode: Failed to load menu from cloud', { error: (menuData as { error?: string }).error || 'Unknown error' }, 'STORE');
+                     console.error('Web Mode: Failed to load menu from cloud', menuData);
                  }
 
                  // 2. Fetch Users (for Mobile App Login)
@@ -3484,8 +3499,13 @@ export const useStore = create<StoreState>()(
                  if (dashData.success && dashData.data) {
                      // Hydrate minimal state if needed
                  }
+             } catch (e) {
+                 console.error('Web Mode: Error initializing Supabase integration', e);
+                 logger.error('Web Mode: Supabase init error', { error: e }, 'STORE');
+             }
              } else {
                  logger.warn('Web Mode: Supabase credentials missing.', {}, 'STORE');
+                 console.error('CRITICAL: Supabase credentials missing in Web Mode. Please check Vercel environment variables (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY).');
              }
 
              set({ isInitialized: true });
@@ -3605,7 +3625,12 @@ export const useStore = create<StoreState>()(
         } catch (e: unknown) {
           const error = e as Error;
           logger.error('Erro na inicialização segura:', { error: error.message }, 'SECURITY');
-          set({ isInitialized: true });
+          // User requested console.error for F12 debugging
+          console.error('CRITICAL INITIALIZATION ERROR:', error);
+          if (typeof window !== 'undefined') {
+             (window as any).__INIT_ERROR__ = error;
+          }
+          set({ isInitialized: true }); // Ensure app doesn't hang forever
         }
       },
 

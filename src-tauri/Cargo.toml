@@ -1,6 +1,6 @@
 [package]
 name = "tasca_do_vereda"
-version = "1.1.72"
+version = "1.1.80"
 description = "Tasca Do VEREDA - Sistema de Gestão Inteligente"
 authors = ["Tasca Do VEREDA Team"]
 license = "MIT"

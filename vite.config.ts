@@ -37,6 +37,7 @@ export default defineConfig(() => {
       tailwindcss(),
     ],
     base,
+    envPrefix: ['VITE_', 'NEXT_PUBLIC_'], // Support both prefixes
     root: findRoot(),
     server: {
       port: 5173,

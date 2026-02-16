@@ -133,7 +133,10 @@ export const disasterRecoveryService = {
     /**
      * Main entry point for automatic protection
      */
-    initialize: () => {
+    initialize: async () => {
+        // Initialize Tauri modules if available
+        await initTauriModules();
+
         let isSystemStable = true; // Track system stability state
 
         // Run backup and stability check every 15 minutes
