@@ -2,7 +2,7 @@ import { StateCreator } from 'zustand';
 import { User, StoreState, Permission } from '../../types';
 import { MOCK_USERS } from '../../constants';
 import { logger } from '../../services/logger';
-import { calculateHash } from '../../utils/crypto';
+import { calculateHash } from '../../src/utils/crypto';
 
 export interface AuthSlice {
   users: User[];

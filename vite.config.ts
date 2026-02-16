@@ -55,7 +55,7 @@ export default defineConfig(() => {
     },
     resolve: {
       alias: {
-        '@': '/src'
+        '@': fileURLToPath(new URL('./src', import.meta.url))
       },
       dedupe: ['react', 'react-dom', 'react-router-dom']
     },
@@ -77,7 +77,7 @@ export default defineConfig(() => {
       setupFiles: './src/setupTests.ts',
       resolve: {
         alias: {
-          '@': '/src'
+          '@': fileURLToPath(new URL('./src', import.meta.url))
         }
       },
       coverage: {

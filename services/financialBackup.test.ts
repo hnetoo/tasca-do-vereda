@@ -60,8 +60,8 @@ describe('Financial Backup and Restore Integrity Tests', () => {
     expect(totals.ordersCount).toBe(2);
   });
 
-  it('Should save and load a full backup with checksum validation', () => {
-    const saveSuccess = backupService.saveFullBackup(
+  it('Should save and load a full backup with checksum validation', async () => {
+    const saveSuccess = await backupService.saveFullBackup(
       mockCategories,
       mockDishes,
       mockFinancialData as FinancialBackupData,
@@ -69,15 +69,15 @@ describe('Financial Backup and Restore Integrity Tests', () => {
     );
     expect(saveSuccess).toBe(true);
 
-    const loadedPackage = backupService.loadFullBackup();
+    const loadedPackage = await backupService.loadFullBackup();
     expect(loadedPackage).not.toBeNull();
     expect(loadedPackage?.metadata.totals.revenue).toBe(9000);
     expect(loadedPackage?.metadata.checksum).toBeDefined();
     expect(loadedPackage?.financial.orders).toHaveLength(2);
   });
 
-  it('Should fail validation if backup data is tampered (checksum mismatch)', () => {
-    backupService.saveFullBackup(
+  it('Should fail validation if backup data is tampered (checksum mismatch)', async () => {
+    await backupService.saveFullBackup(
       mockCategories,
       mockDishes,
       mockFinancialData as FinancialBackupData,
@@ -91,15 +91,15 @@ describe('Financial Backup and Restore Integrity Tests', () => {
     pkg.financial.revenues[0].amount = 999999; 
     localStorage.setItem('tasca_financial_backup_v1', JSON.stringify(pkg));
 
-    const loadedPackage = backupService.loadFullBackup();
+    const loadedPackage = await backupService.loadFullBackup();
     expect(loadedPackage).toBeNull(); // Should fail checksum
   });
 
-  it('Should identify discrepancies during reconciliation if totals dont match metadata', () => {
+  it('Should identify discrepancies during reconciliation if totals dont match metadata', async () => {
     // This tests the warning logic in loadFullBackup
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     
-    backupService.saveFullBackup(
+    await backupService.saveFullBackup(
       mockCategories,
       mockDishes,
       mockFinancialData as FinancialBackupData,
@@ -111,14 +111,14 @@ describe('Financial Backup and Restore Integrity Tests', () => {
     
     // Manually update checksum to pass integrity but keep metadata totals old
     pkg.financial.revenues[0].amount = 2000; // Change from 1000 to 2000
-    pkg.metadata.checksum = backupService.generateChecksum({
+    pkg.metadata.checksum = await backupService.generateChecksum({
       financial: pkg.financial,
       menu: pkg.menu
     });
     
     localStorage.setItem('tasca_financial_backup_v1', JSON.stringify(pkg));
 
-    const loadedPackage = backupService.loadFullBackup();
+    const loadedPackage = await backupService.loadFullBackup();
     expect(loadedPackage).not.toBeNull();
     // Reconciled revenue should be 10000 now (9000 + 1000 diff), but metadata says 9000
     // The loadFullBackup function should log a warning (as implemented in SearchReplace)

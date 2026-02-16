@@ -28,8 +28,8 @@ describe('Backup Service (Category Recovery)', () => {
   });
 
   describe('saveBackup', () => {
-    it('should save categories to localStorage with timestamp', () => {
-      const success = backupService.saveFullBackup(mockCategories, [], {
+    it('should save categories to localStorage with timestamp', async () => {
+      const success = await backupService.saveFullBackup(mockCategories, [], {
         orders: [],
         expenses: [],
         revenues: [],

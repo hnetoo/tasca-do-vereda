@@ -477,6 +477,7 @@ const POS = () => {
     const taxAmount = order.taxTotal;
     const finalTotal = order.total;
     const itemCount = order.items.reduce((acc, item) => acc + item.quantity, 0);
+    const formatNumber = (val: number) => new Intl.NumberFormat('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
     const paymentMethodName = order.paymentMethod === 'NUMERARIO' ? 'Numerário' : 
                               order.paymentMethod === 'TPA' ? 'Multicaixa' : 
@@ -1216,25 +1217,40 @@ const POS = () => {
                     <div key={order.id} className="relative group">
                       <button 
                         onClick={() => setActiveOrder(order.id)}
-                        className={`px-4 py-2 pr-8 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap
+                        className={`px-4 py-2 pr-16 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap
                           ${activeOrderId === order.id ? 'bg-primary border-primary text-black shadow-glow' : 'bg-white/5 border-white/10 text-slate-500'}
                         `}
                       >
                         {order.subAccountName}
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (order.items.length > 0) {
-                            if (!window.confirm('Tem a certeza que deseja remover esta subconta com itens?')) return;
-                          }
-                          removeOrder(order.id);
-                        }}
-                        className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-black/20 transition-colors ${activeOrderId === order.id ? 'text-black/50 hover:text-black' : 'text-slate-500 hover:text-white'}`}
-                        title="Fechar Subconta"
-                      >
-                        <X size={12} />
-                      </button>
+                      <div className="flex items-center gap-1 absolute right-1 top-1/2 -translate-y-1/2">
+                        {order.items.length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveOrder(order.id);
+                              setIsPaymentModalOpen(true);
+                            }}
+                            className={`p-1 rounded-full hover:bg-green-500 hover:text-white transition-colors ${activeOrderId === order.id ? 'text-green-600' : 'text-slate-500'}`}
+                            title="Pagar Subconta"
+                          >
+                            <Check size={12} />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (order.items.length > 0) {
+                              if (!window.confirm('ATENÇÃO: Isto irá APAGAR os itens sem registar pagamento. Deseja continuar?')) return;
+                            }
+                            removeOrder(order.id);
+                          }}
+                          className={`p-1 rounded-full hover:bg-red-500 hover:text-white transition-colors ${activeOrderId === order.id ? 'text-red-400' : 'text-slate-500'}`}
+                          title="Remover Subconta"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     </div>
                  ))}
               </div>

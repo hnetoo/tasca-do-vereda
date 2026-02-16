@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary } from '../../types';
+import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics } from '../../types';
 import { logger } from '../../services/logger';
 import { backupService } from '../../services/backupService';
 import { integrationAPIService } from '../../services/integrationAPIService';
@@ -14,7 +14,11 @@ export interface FinanceSlice {
   revenues: Revenue[];
   payroll: PayrollRecord[];
   activeOrderId: string | null;
+  dashboardSummary: DashboardSummary | null;
+  dashboardAnalytics: Analytics | null;
   setActiveOrder: (id: string | null) => void;
+  setDashboardSummary: (summary: DashboardSummary) => void;
+  setDashboardAnalytics: (analytics: Analytics) => void;
   addOrder: (order: Order) => void;
   updateOrder: (order: Order) => void;
   removeOrder: (id: string) => void;
@@ -42,6 +46,8 @@ export interface FinanceSlice {
   getMenuAnalytics: (days?: number) => MenuAnalytics[];
   getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
   syncFinancialMetricsToDashboard: () => Promise<void>;
+  fetchRemoteDashboard: () => Promise<void>;
+  handleRealtimeUpdate: (payload: any) => void;
 }
 
 export const createFinanceSlice: StateCreator<
@@ -57,10 +63,34 @@ export const createFinanceSlice: StateCreator<
   revenues: [],
   payroll: [],
   activeOrderId: null,
+  dashboardSummary: null,
+  dashboardAnalytics: null,
   
+  handleRealtimeUpdate: (payload) => {
+    // Handle Supabase Realtime payload
+    if (payload.table === 'dashboard_summary') {
+      const newData = payload.new;
+      if (newData) {
+        set({
+          dashboardSummary: {
+            totalRevenue: newData.total_revenue,
+            totalExpenses: newData.total_expenses,
+            totalOrders: newData.total_orders,
+            activeOrdersCount: newData.active_orders_count
+          }
+        });
+        logger.info('Real-time dashboard summary update received', newData, 'FINANCE');
+      }
+    }
+  },
+
   setActiveOrder: (id) => set({ activeOrderId: id }),
+  setDashboardSummary: (summary) => set({ dashboardSummary: summary }),
+  setDashboardAnalytics: (analytics) => set({ dashboardAnalytics: analytics }),
 
   addOrder: (order) => {
+    const exists = get().orders.some(o => o.id === order.id);
+    if (exists) return;
     set((state) => ({ orders: [...state.orders, order], activeOrders: [...state.activeOrders, order] }));
     get().addAuditLog({
       action: 'ORDER_CREATE',
@@ -217,11 +247,13 @@ export const createFinanceSlice: StateCreator<
   syncFinancialMetricsToDashboard: async () => {
     const state = get();
     const totalRevenue = state.revenues.reduce((sum, r) => sum + r.amount, 0) + state.orders.filter(o => o.status === 'FECHADO').reduce((sum, o) => sum + o.total, 0);
+    const totalExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
     const totalOrders = state.orders.length;
     const activeOrdersCount = state.activeOrders.length;
 
     const summary: DashboardSummary = {
       totalRevenue,
+      totalExpenses,
       totalOrders,
       activeOrdersCount,
     };
@@ -241,6 +273,8 @@ export const createFinanceSlice: StateCreator<
   })),
   
   addExpense: (expense) => {
+    const exists = get().expenses.some(e => e.id === expense.id);
+    if (exists) return;
     set((state) => ({ expenses: [...state.expenses, expense] }));
     get().addAuditLog({
       action: 'EXPENSE_ADD',
@@ -276,6 +310,8 @@ export const createFinanceSlice: StateCreator<
   },
 
   addRevenue: (revenue) => {
+    const exists = get().revenues.some(r => r.id === revenue.id);
+    if (exists) return;
     set((state) => ({ revenues: [...state.revenues, revenue] }));
     get().addAuditLog({
       action: 'REVENUE_ADD',
@@ -657,6 +693,47 @@ export const createFinanceSlice: StateCreator<
       // O Zustand persist irá manter o estado anterior se falhar antes do set, 
       // mas como já chamamos updateOrder, em caso de erro de DB real precisaríamos de rollback.
       return false;
+    }
+  },
+
+  fetchRemoteDashboard: async () => {
+    const state = get();
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // 1. Fetch Summary
+      const summaryResult = await integrationAPIService.fetchDashboard(today, today);
+      if (summaryResult.success && summaryResult.data) {
+        state.setDashboardSummary(summaryResult.data);
+      }
+
+      // 2. Fetch Financials (Today)
+      const financialsResult = await integrationAPIService.fetchFinancials(today, today);
+      if (financialsResult.success && financialsResult.data) {
+         state.setExpenses(financialsResult.data.expenses);
+         state.setRevenues(financialsResult.data.revenues);
+      }
+
+      // 3. Fetch Menu (for analytics mapping)
+      const menuResult = await integrationAPIService.fetchMenu();
+      if (menuResult.success && menuResult.data) {
+         // Using 'as any' because these methods belong to other slices but are available in StoreState
+         (state as any).importCloudItems({
+            categories: menuResult.data.categories,
+            dishes: menuResult.data.dishes,
+            preferCloud: true
+         });
+      }
+
+       // 4. Fetch Users
+       const usersResult = await integrationAPIService.fetchUsers();
+       if (usersResult.success && usersResult.data) {
+          (state as any).setUsers(usersResult.data);
+       }
+
+      logger.info('Remote dashboard data fetched successfully', {}, 'FINANCE');
+    } catch (error) {
+      logger.error('Error fetching remote dashboard data', error, 'FINANCE');
     }
   }
 });

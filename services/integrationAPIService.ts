@@ -29,6 +29,7 @@ interface SupabaseCategory {
   sort_order: number;
   parent_id?: string;
   deleted_at?: string | null;
+  updated_at?: string;
 }
 
 interface SupabaseDish {
@@ -40,6 +41,7 @@ interface SupabaseDish {
   image_url?: string;
   available: boolean;
   tax_rate: number;
+  updated_at?: string;
 }
 
 interface SupabaseSettings {
@@ -77,8 +79,12 @@ class IntegrationAPIService {
         return this.supabase.getClient();
     }
 
-    initialize(url: string, key: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
-        this.supabase.initialize(url, key, onRealtimeChange);
+    async initialize(url: string, key: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
+        await this.supabase.initialize(url, key, onRealtimeChange);
+    }
+
+    async reconnect() {
+        await this.supabase.reconnect();
     }
 
     isConnected(): boolean {
@@ -424,6 +430,360 @@ class IntegrationAPIService {
     }
   }
 
+  async fetchFinancials(startDate: string, endDate: string): Promise<SupabaseResponse<{ expenses: Expense[], revenues: Revenue[] }>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    try {
+      const { data: expenses, error: expError } = await this.client
+        .from('expenses')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate);
+      if (expError) throw expError;
+
+      const { data: revenues, error: revError } = await this.client
+        .from('revenues')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate);
+      if (revError) throw revError;
+
+      return {
+        success: true,
+        data: {
+          expenses: (expenses || []).map(e => ({
+            id: e.id,
+            amount: e.amount,
+            date: e.date,
+            category: e.category,
+            description: e.description,
+            status: 'PAID'
+          })) as Expense[],
+          revenues: (revenues || []).map(r => ({
+            id: r.id,
+            amount: r.amount,
+            date: r.date,
+            category: r.category,
+            description: r.description,
+            source: r.payment_method
+          })) as Revenue[]
+        }
+      };
+    } catch (error: any) {
+      logger.error('Failed to fetch financials from Supabase', { error: error.message }, 'IntegrationAPIService');
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Menu CRUD Operations
+  async createCategory(category: MenuCategory): Promise<SupabaseResponse<MenuCategory>> {
+      if (!this.client) return { success: false, error: 'Not initialized' };
+      try {
+          const { data, error } = await this.client.from('categories').insert({
+              id: category.id,
+              name: category.name,
+              icon: category.icon,
+              sort_order: category.sortOrder,
+              parent_id: category.parentId,
+              deleted_at: category.deletedAt
+          }).select().single();
+          
+          if (error) throw error;
+          
+          return { success: true, data: {
+              id: data.id,
+              name: data.name,
+              icon: data.icon,
+              sortOrder: data.sort_order,
+              parentId: data.parent_id,
+              deletedAt: data.deleted_at
+          }};
+      } catch (error: any) {
+          logger.error('Failed to create category', { error: error.message }, 'IntegrationAPIService');
+          return { success: false, error: error.message };
+      }
+  }
+
+  async updateCategory(category: MenuCategory): Promise<SupabaseResponse<MenuCategory>> {
+      if (!this.client) return { success: false, error: 'Not initialized' };
+      try {
+          const { data, error } = await this.client.from('categories').update({
+              name: category.name,
+              icon: category.icon,
+              sort_order: category.sortOrder,
+              parent_id: category.parentId,
+              deleted_at: category.deletedAt
+          }).eq('id', category.id).select().single();
+          
+          if (error) throw error;
+          
+          return { success: true, data: {
+              id: data.id,
+              name: data.name,
+              icon: data.icon,
+              sortOrder: data.sort_order,
+              parentId: data.parent_id,
+              deletedAt: data.deleted_at
+          }};
+      } catch (error: any) {
+          logger.error('Failed to update category', { error: error.message }, 'IntegrationAPIService');
+          return { success: false, error: error.message };
+      }
+  }
+
+  async deleteCategory(id: string): Promise<SupabaseResponse<null>> {
+      if (!this.client) return { success: false, error: 'Not initialized' };
+      try {
+          const { error } = await this.client.from('categories').delete().eq('id', id);
+          if (error) throw error;
+          return { success: true, data: null };
+      } catch (error: any) {
+          logger.error('Failed to delete category', { error: error.message }, 'IntegrationAPIService');
+          return { success: false, error: error.message };
+      }
+  }
+
+  async createDish(dish: Dish): Promise<SupabaseResponse<Dish>> {
+      if (!this.client) return { success: false, error: 'Not initialized' };
+      try {
+          const { data, error } = await this.client.from('menu_items').insert({
+              id: dish.id,
+              name: dish.name,
+              description: dish.description,
+              price: dish.price,
+              category_id: dish.category_id,
+              image_url: dish.image,
+              available: dish.available,
+              tax_rate: dish.taxPercentage,
+              tax_code: dish.taxCode,
+              availableOnDigitalMenu: dish.availableOnDigitalMenu
+          }).select().single();
+          
+          if (error) throw error;
+          
+          return { success: true, data: {
+              id: data.id,
+              name: data.name,
+              description: data.description,
+              price: data.price,
+              category_id: data.category_id,
+              image: data.image_url,
+              available: data.available,
+              taxPercentage: data.tax_rate,
+              taxCode: data.tax_code,
+              availableOnDigitalMenu: data.availableOnDigitalMenu
+          }};
+      } catch (error: any) {
+          logger.error('Failed to create dish', { error: error.message }, 'IntegrationAPIService');
+          return { success: false, error: error.message };
+      }
+  }
+
+  async updateDish(dish: Dish): Promise<SupabaseResponse<Dish>> {
+      if (!this.client) return { success: false, error: 'Not initialized' };
+      try {
+          const { data, error } = await this.client.from('menu_items').update({
+              name: dish.name,
+              description: dish.description,
+              price: dish.price,
+              category_id: dish.category_id,
+              image_url: dish.image,
+              available: dish.available,
+              tax_rate: dish.taxPercentage,
+              tax_code: dish.taxCode,
+              availableOnDigitalMenu: dish.availableOnDigitalMenu
+          }).eq('id', dish.id).select().single();
+          
+          if (error) throw error;
+          
+          return { success: true, data: {
+              id: data.id,
+              name: data.name,
+              description: data.description,
+              price: data.price,
+              category_id: data.category_id,
+              image: data.image_url,
+              available: data.available,
+              taxPercentage: data.tax_rate,
+              taxCode: data.tax_code,
+              availableOnDigitalMenu: data.availableOnDigitalMenu
+          }};
+      } catch (error: any) {
+          logger.error('Failed to update dish', { error: error.message }, 'IntegrationAPIService');
+          return { success: false, error: error.message };
+      }
+  }
+
+  async deleteDish(id: string): Promise<SupabaseResponse<null>> {
+      if (!this.client) return { success: false, error: 'Not initialized' };
+      try {
+          const { error } = await this.client.from('menu_items').delete().eq('id', id);
+          if (error) throw error;
+          return { success: true, data: null };
+      } catch (error: any) {
+          logger.error('Failed to delete dish', { error: error.message }, 'IntegrationAPIService');
+          return { success: false, error: error.message };
+      }
+  }
+
+  async syncCategories(localCategories: MenuCategory[]): Promise<SupabaseResponse<MenuCategory[]>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    try {
+        const { data: remoteData, error } = await this.client
+            .from('categories')
+            .select('*');
+        
+        if (error) throw error;
+
+        const remoteCategories = remoteData as SupabaseCategory[];
+        const remoteMap = new Map(remoteCategories.map(c => [c.id, c]));
+        const localMap = new Map(localCategories.map(c => [c.id, c]));
+        
+        const finalCategories: MenuCategory[] = [];
+        const processedIds = new Set<string>();
+
+        // 1. Process Local Categories
+        for (const local of localCategories) {
+            processedIds.add(local.id);
+            const remote = remoteMap.get(local.id);
+            
+            if (!remote) {
+                // Local exists, remote doesn't. Create remote.
+                await this.createCategory(local);
+                finalCategories.push(local);
+            } else {
+                // Both exist. Compare timestamps.
+                const localTime = new Date(local.updatedAt || local.createdAt || 0).getTime();
+                const remoteTime = new Date(remote.updated_at || 0).getTime();
+
+                if (localTime > remoteTime) {
+                    // Local is newer. Update remote.
+                    await this.updateCategory(local);
+                    finalCategories.push(local);
+                } else if (remoteTime > localTime) {
+                    // Remote is newer. Update local.
+                    finalCategories.push({
+                        id: remote.id,
+                        name: remote.name,
+                        icon: remote.icon,
+                        sortOrder: remote.sort_order,
+                        parentId: remote.parent_id,
+                        deletedAt: remote.deleted_at,
+                        updatedAt: remote.updated_at
+                    });
+                } else {
+                    // In sync
+                    finalCategories.push(local);
+                }
+            }
+        }
+
+        // 2. Process Remote Categories (that are not in local)
+        for (const remote of remoteCategories) {
+            if (!processedIds.has(remote.id)) {
+                // Remote exists, local doesn't. Add to local.
+                finalCategories.push({
+                    id: remote.id,
+                    name: remote.name,
+                    icon: remote.icon,
+                    sortOrder: remote.sort_order,
+                    parentId: remote.parent_id,
+                    deletedAt: remote.deleted_at,
+                    updatedAt: remote.updated_at
+                });
+            }
+        }
+
+        return { success: true, data: finalCategories };
+
+    } catch (error: any) {
+        logger.error('Failed to sync categories', { error: error.message }, 'IntegrationAPIService');
+        return { success: false, error: error.message };
+    }
+  }
+
+  async syncDishes(localDishes: Dish[]): Promise<SupabaseResponse<Dish[]>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    try {
+        const { data: remoteData, error } = await this.client
+            .from('menu_items')
+            .select('*');
+        
+        if (error) throw error;
+
+        const remoteDishes = remoteData as (SupabaseDish & { tax_code?: string; tax_rate?: number; availableOnDigitalMenu?: boolean })[];
+        const remoteMap = new Map(remoteDishes.map(d => [d.id, d]));
+        
+        const finalDishes: Dish[] = [];
+        const processedIds = new Set<string>();
+
+        // 1. Process Local Dishes
+        for (const local of localDishes) {
+            processedIds.add(local.id);
+            const remote = remoteMap.get(local.id);
+            
+            if (!remote) {
+                // Local exists, remote doesn't. Create remote.
+                await this.createDish(local);
+                finalDishes.push(local);
+            } else {
+                // Both exist. Compare timestamps.
+                const localTime = new Date(local.updatedAt || local.createdAt || 0).getTime();
+                const remoteTime = new Date(remote.updated_at || 0).getTime();
+
+                if (localTime > remoteTime) {
+                    // Local is newer. Update remote.
+                    await this.updateDish(local);
+                    finalDishes.push(local);
+                } else if (remoteTime > localTime) {
+                    // Remote is newer. Update local.
+                    finalDishes.push({
+                        id: remote.id,
+                        name: remote.name,
+                        description: remote.description,
+                        price: remote.price,
+                        category_id: remote.category_id,
+                        image: remote.image_url,
+                        available: remote.available,
+                        taxPercentage: remote.tax_rate,
+                        taxCode: remote.tax_code,
+                        availableOnDigitalMenu: remote.availableOnDigitalMenu,
+                        updatedAt: remote.updated_at
+                    });
+                } else {
+                    // In sync
+                    finalDishes.push(local);
+                }
+            }
+        }
+
+        // 2. Process Remote Dishes (that are not in local)
+        for (const remote of remoteDishes) {
+            if (!processedIds.has(remote.id)) {
+                // Remote exists, local doesn't. Add to local.
+                finalDishes.push({
+                    id: remote.id,
+                    name: remote.name,
+                    description: remote.description,
+                    price: remote.price,
+                    category_id: remote.category_id,
+                    image: remote.image_url,
+                    available: remote.available,
+                    taxPercentage: remote.tax_rate,
+                    taxCode: remote.tax_code,
+                    availableOnDigitalMenu: remote.availableOnDigitalMenu,
+                    updatedAt: remote.updated_at
+                });
+            }
+        }
+
+        return { success: true, data: finalDishes };
+
+    } catch (error: any) {
+        logger.error('Failed to sync dishes', { error: error.message }, 'IntegrationAPIService');
+        return { success: false, error: error.message };
+    }
+  }
+
   async fetchDashboard(startDate: string, endDate: string): Promise<SupabaseResponse<DashboardSummary>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
@@ -445,13 +805,14 @@ class IntegrationAPIService {
               success: true,
               data: {
                   totalRevenue: Number(data.total_revenue || 0),
+                  totalExpenses: Number(data.total_expenses || 0),
                   totalOrders: Number(data.total_orders || 0),
                   activeOrdersCount: Number(data.active_orders_count || 0)
               }
           };
       }
 
-      return { success: true, data: { totalRevenue: 0, totalOrders: 0, activeOrdersCount: 0 } };
+      return { success: true, data: { totalRevenue: 0, totalExpenses: 0, totalOrders: 0, activeOrdersCount: 0 } };
     } catch (error: any) {
       logger.error('Exception in fetchDashboard', { error: error.message }, 'IntegrationAPIService');
       return { success: false, error: error.message };
@@ -468,6 +829,7 @@ class IntegrationAPIService {
       const { error: summaryError } = await this.client.from('dashboard_summary').upsert({
           id: today, // Use date as ID
           total_revenue: summary.totalRevenue,
+          total_expenses: summary.totalExpenses,
           total_orders: summary.totalOrders,
           active_orders_count: summary.activeOrdersCount,
           last_updated: new Date().toISOString()
@@ -608,15 +970,6 @@ class IntegrationAPIService {
       }
   }
 
-  initialize(url: string, key: string, onRealtimeChange?: (payload: any) => void) {
-      this.supabase.initialize(url, key, onRealtimeChange);
-  }
-
-  isConnected(): boolean {
-      return this.supabase.isConnected();
-  }
-
-
   // --- Fetch Methods (Pull from Cloud - for Remote Clients) ---
   
   private async fetchWithTimeout<T>(promise: Promise<{ data: T | null; error: unknown }>, timeoutMs: number = 15000): Promise<T | null> {
@@ -638,125 +991,130 @@ class IntegrationAPIService {
     }
   }
 
-  async fetchMenu(): Promise<SupabaseResponse<{ categories: MenuCategory[]; dishes: Dish[]; settings: SystemSettings }>> {
+  async fetchMenu(): Promise<SupabaseResponse<{ categories: MenuCategory[], dishes: Dish[], settings?: SystemSettings }>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     
-    const execute = async () => {
-      try {
-        const categoriesPromisePrimary = this.client!.from('categories').select('*').order('sort_order');
-        const dishesPromisePrimary = this.client!.from('menu_items').select('*').eq('available', true);
-        const settingsPromise = this.client!.from('restaurant_settings').select('*').maybeSingle();
-        
-        let categories: SupabaseCategory[] | null = null;
-        try {
-          categories = await this.fetchWithTimeout<SupabaseCategory[]>(categoriesPromisePrimary as unknown as Promise<{ data: SupabaseCategory[] | null; error: unknown }>);
-        } catch (err: unknown) {
-          try {
-            const categoriesPromiseFallback = this.client!.from('categories').select('*').order('name');
-            categories = await this.fetchWithTimeout<SupabaseCategory[]>(categoriesPromiseFallback as unknown as Promise<{ data: SupabaseCategory[] | null; error: unknown }>);
-            logger.warn('Supabase: categories primary query failed; fell back to name ordering', {}, 'SupabaseService');
-          } catch (fallbackErr: unknown) {
-            try {
-              const categoriesPromiseNoOrder = this.client!.from('categories').select('*');
-              categories = await this.fetchWithTimeout<SupabaseCategory[]>(categoriesPromiseNoOrder as unknown as Promise<{ data: SupabaseCategory[] | null; error: unknown }>);
-              logger.warn('Supabase: categories order failed; fell back to no ordering', {}, 'SupabaseService');
-            } catch (finalErr: unknown) {
-              logger.warn('Supabase: categories not accessible; continuing without categories', {}, 'SupabaseService');
-              categories = [];
-            }
-          }
-        }
-        let dishes: SupabaseDish[] | null = null;
-        try {
-          dishes = await this.fetchWithTimeout<SupabaseDish[]>(dishesPromisePrimary as unknown as Promise<{ data: SupabaseDish[] | null; error: unknown }>);
-        } catch (err: unknown) {
-          try {
-            const dishesPromiseNoFilter = this.client!.from('menu_items').select('*');
-            dishes = await this.fetchWithTimeout<SupabaseDish[]>(dishesPromiseNoFilter as unknown as Promise<{ data: SupabaseDish[] | null; error: unknown }>);
-            logger.warn('Supabase: menu_items available filter failed; fell back to unfiltered query', {}, 'SupabaseService');
-          } catch (fallbackErr: unknown) {
-            try {
-              const dishesPromiseFallback = this.client!.from('menu').select('*');
-              dishes = await this.fetchWithTimeout<SupabaseDish[]>(dishesPromiseFallback as unknown as Promise<{ data: SupabaseDish[] | null; error: unknown }>);
-              logger.warn('Supabase: menu_items query failed; fell back to table public.menu', {}, 'SupabaseService');
-            } catch (finalErr: unknown) {
-              logger.warn('Supabase: dishes not accessible; continuing without dishes', {}, 'SupabaseService');
-              dishes = [];
-            }
-          }
-        }
-        let settings: SupabaseSettings | null = null;
-        try {
-          settings = await this.fetchWithTimeout<SupabaseSettings>(settingsPromise as unknown as Promise<{ data: SupabaseSettings | null; error: unknown }>);
-        } catch (e: unknown) {
-          logger.warn('Restaurant settings not accessible; continuing without header info', {}, 'SupabaseService');
-          settings = null;
-        }
-
-        const mappedCategories = (categories || []).map((c: SupabaseCategory) => {
-          const raw = c as unknown as Record<string, unknown>;
-          const rawId = String(raw.id || raw['uuid'] || '');
-          const rawName = String(raw.name || raw['nome'] || '');
-          const rawSort = typeof raw['sort_order'] === 'number' ? raw['sort_order'] : Number(raw['order'] || 0);
-          return {
-            id: rawId || `cat_${Math.random().toString(36).slice(2)}`,
-            name: rawName || 'SEM_NOME',
-            icon: raw['icon'] as string | undefined,
-            sort_order: Number.isFinite(rawSort) ? Number(rawSort) : 0,
-            parentId: (raw['parent_id'] || raw['parentId']) as string | undefined,
-            is_active: !raw['deleted_at']
-          };
-        });
-        const mappedDishes = (dishes || []).map((d: SupabaseDish) => {
-          const raw = d as unknown as Record<string, unknown>;
-          const rawAvailable = typeof raw['available'] === 'boolean' ? raw['available'] : raw['disponivel'] ?? raw['is_active'];
-          return {
-            id: String(raw['id'] || raw['uuid'] || '') || `dish_${Math.random().toString(36).slice(2)}`,
-            name: String(raw['name'] || raw['nome'] || '') || 'SEM_NOME',
-            description: (raw['description'] || raw['descricao']) as string | undefined,
-            price: Number(raw['price'] ?? raw['preco'] ?? 0),
-            category_id: String(raw['category_id'] || raw['categoria_id'] || raw['categoryId'] || ''),
-            image: (raw['image_url'] || raw['imagem_url'] || raw['image']) as string | undefined,
-            disponivel: rawAvailable !== false,
-            taxCode: 'NOR',
-            taxPercentage: Number(raw['tax_rate'] ?? raw['taxa'] ?? 14) || 14
-          };
-        });
-        const mappedSettings = settings ? {
-          restaurantName: settings.name || (settings as unknown as Record<string, unknown>)['restaurant_name'],
-          logoUrl: settings.logo_url || (settings as unknown as Record<string, unknown>)['logo'],
-          currency: settings.currency || (settings as unknown as Record<string, unknown>)['moeda'],
-          phone: settings.phone || (settings as unknown as Record<string, unknown>)['telefone'],
-          address: settings.address || (settings as unknown as Record<string, unknown>)['endereco'],
-          wifiName: settings.wifi_name || (settings as unknown as Record<string, unknown>)['wifi_nome'],
-          wifiPassword: settings.wifi_password || (settings as unknown as Record<string, unknown>)['wifi_password'],
-          qrMenuTitle: settings.qr_code_title || (settings as unknown as Record<string, unknown>)['qr_menu_title'],
-          qrMenuSubtitle: settings.qr_code_subtitle || (settings as unknown as Record<string, unknown>)['qr_menu_subtitle'],
-          qrMenuShortCode: settings.qr_code_short_code || (settings as unknown as Record<string, unknown>)['qr_menu_short_code'],
-          qrMenuUrl: settings.qr_menu_url || (settings as unknown as Record<string, unknown>)['qr_menu_url'],
-          qrMenuCloudUrl: settings.qr_menu_cloud_url || (settings as unknown as Record<string, unknown>)['qr_menu_cloud_url'],
-          nif: '',
-          taxRate: 14,
-          apiToken: '',
-          webhookEnabled: false
-        } as Settings : null;
-
-        if (mappedCategories.length === 0 && mappedDishes.length === 0) {
-          logger.warn('Supabase returned empty dataset; using local fallback in UI', {}, 'SupabaseService');
-        }
-        return { success: true, data: { categories: mappedCategories, dishes: mappedDishes, settings: mappedSettings }, error: null } as SupabaseResponse<{ categories: MenuCategory[]; dishes: Dish[]; settings: SystemSettings }>;
-      } catch (error: unknown) {
-        logger.error('Fetch menu attempt failed', error, 'SupabaseService');
-        throw error;
-      }
-    };
-
     try {
-      const result = await this.callWithResilience(execute, 'Fetch Menu');
-      return result;
-    } catch (error: unknown) {
-      logger.error('Fetch menu failed', error, 'SupabaseService');
-      return { success: false, error: (error as Error)?.message || String(error) };
+      const { data: catData, error: catError } = await this.client.from('categories').select('*');
+      const { data: dishData, error: dishError } = await this.client.from('menu_items').select('*');
+      const { data: setData, error: setError } = await this.client.from('settings').select('*').single();
+
+      if (catError) throw catError;
+      if (dishError) throw dishError;
+
+      // Map dishes
+      const dishes = (dishData || []).map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        description: d.description,
+        price: d.price,
+        category_id: d.category_id,
+        image: d.image_url,
+        available: d.available,
+        taxPercentage: d.tax_rate
+      }));
+
+      // Map categories
+      const categories = (catData || []).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        icon: c.icon,
+        sortOrder: c.sort_order,
+        parentId: c.parent_id,
+        deletedAt: c.deleted_at
+      }));
+
+      return {
+        success: true,
+        data: {
+          categories,
+          dishes,
+          settings: setData as SystemSettings
+        }
+      };
+    } catch (error: any) {
+      logger.error('Failed to fetch menu from Supabase', { error: error.message }, 'IntegrationAPIService');
+      return { success: false, error: error.message };
+    }
+  }
+
+  async fetchOrders(limit = 100): Promise<SupabaseResponse<Order[]>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    try {
+      const { data, error } = await this.client
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      
+      // Map to Order type (simplified)
+      const orders = data.map((o: any) => ({
+          ...o, // Spread other fields
+          id: o.id,
+          tableId: o.table_id,
+          status: o.status,
+          total: o.total,
+          timestamp: o.created_at,
+          items: o.items || [] // Assuming JSON items are stored or joined
+      }));
+
+      return { success: true, data: orders };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async fetchRevenues(limit = 100): Promise<SupabaseResponse<Revenue[]>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    try {
+      const { data, error } = await this.client
+        .from('revenues')
+        .select('*')
+        .order('date', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      
+      const revenues = data.map((r: any) => ({
+        id: r.id,
+        amount: r.amount,
+        date: r.date,
+        category: r.category,
+        description: r.description,
+        source: r.payment_method // Map payment_method to source
+      }));
+
+      return { success: true, data: revenues };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  async fetchExpenses(limit = 100): Promise<SupabaseResponse<Expense[]>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    try {
+      const { data, error } = await this.client
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      
+      const expenses = data.map((e: any) => ({
+        id: e.id,
+        amount: e.amount,
+        date: e.date,
+        category: e.category,
+        description: e.description,
+        status: e.status // Map status
+      }));
+
+      return { success: true, data: expenses };
+    } catch (error: any) {
+      return { success: false, error: error.message };
     }
   }
 

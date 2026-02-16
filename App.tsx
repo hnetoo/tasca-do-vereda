@@ -84,6 +84,15 @@ const App = () => {
         disasterRecoveryService.initialize();
         // Force health monitor to be referenced so it initializes
         console.log('Swiss Watch Precision active:', !!healthMonitorService);
+
+        // Signal to Tauri to show the window (Fix "Blue Screen" / Loading issues)
+        try {
+            const { emit } = await import('@tauri-apps/api/event');
+            await emit('frontend-ready');
+            console.log('Frontend ready signal sent to Tauri');
+        } catch (e) {
+            // Ignore if not in Tauri or module not found
+        }
       } catch (error) {
         console.error('Failed to initialize app:', error);
       }

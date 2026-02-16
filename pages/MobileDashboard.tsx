@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../store/useStore';
+import { useRestaurantStats } from '../hooks/useRestaurantStats';
 import { supabaseService } from '../services/supabaseService';
-import { SystemSettings, Expense, Revenue, User, RemoteDashboardData, Dish, MenuCategory } from '../types';
+import { SystemSettings, User, RemoteDashboardData } from '../types';
 import {
   TrendingUp, Users, ShoppingBag, Clock, AlertTriangle,
   Smartphone, LogOut, Settings, Bell, BarChart3,
@@ -12,7 +13,6 @@ import {
   BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts';
 import { thesisData } from '../data/thesisData';
-import { SupabaseCategory, SupabaseDish } from '../services/supabaseService';
 
 export type AlertConfig = {
   revenueDropPercent: number;
@@ -74,10 +74,13 @@ export const calculateTodayFinance = (params: { todaySales: number; todayExpense
 const MobileDashboard = () => {
   const {
     activeOrders: localActiveOrders, employees: localEmployees, attendance: localAttendance, customers: localCustomers, expenses: localExpenses, revenues: localRevenues,
-    workShifts: localShifts, reservations: localReservations, tables: localTables, orders: localOrders, menu: localMenu,
+    workShifts: localShifts, reservations: localReservations, tables: localTables, orders: localOrders, menu: localMenu, categories: localCategories,
     logout, currentUser, settings, getMenuAnalytics,
-    getCustomerRetention, users: localUsers, getDailySalesAnalytics
+    getCustomerRetention, users: localUsers, getDailySalesAnalytics,
+    dashboardSummary, dashboardAnalytics, fetchRemoteDashboard, onRealtimeChange
   } = useStore();
+
+  const { stats: realtimeStats, loading: realtimeLoading, formatted: realtimeFormatted, isUpdating: realtimeUpdating } = useRestaurantStats();
   
   type DashboardMetric = 'sales' | 'orders' | 'finance' | 'analytics' | 'shifts' | 'reservations' | 'system';
   
@@ -103,9 +106,7 @@ const MobileDashboard = () => {
   const [lockoutEndTime, setLockoutEndTime] = useState<number | null>(null);
   
   // Remote Data State
-  const [remoteData, setRemoteData] = useState<RemoteDashboardData | null>(null);
   const [isRemote, setIsRemote] = useState(false);
-  const lastRemoteUpdateAt = useRef(0);
   const isDemoMode = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).get('demo') === '1';
@@ -175,6 +176,12 @@ const MobileDashboard = () => {
       ]
     };
   }, [settings]);
+  const isDemoLike = isDemoMode || isThesisMode;
+  const demoSnapshot = useMemo<RemoteDashboardData | null>(() => {
+    if (isThesisMode) return thesisData;
+    if (isDemoMode) return demoData;
+    return null;
+  }, [isDemoMode, isThesisMode, demoData]);
   const [alertConfig, setAlertConfig] = useState<AlertConfig>(() => {
     const defaults = { revenueDropPercent: 30, prepTimeLimit: 30, activeOrdersLimit: 10 };
     if (typeof window === 'undefined') return defaults;
@@ -238,339 +245,25 @@ const MobileDashboard = () => {
   useEffect(() => {
      if (isThesisMode) {
         setIsRemote(true);
-        setRemoteData(thesisData);
         return;
      }
      if (isDemoMode) {
         setIsRemote(true);
-        setRemoteData(demoData);
         return;
      }
      if (settings.supabaseConfig?.enabled && settings.supabaseConfig?.url && settings.supabaseConfig?.key) {
-        const today = new Date().toISOString().split('T')[0];
         setTimeout(() => {
           setIsRemote(true);
           if (!supabaseService.isConnected()) {
-              supabaseService.initialize(settings.supabaseConfig.url, settings.supabaseConfig.key);
+              supabaseService.initialize(settings.supabaseConfig.url, settings.supabaseConfig.key, onRealtimeChange);
           }
           
-          // Fetch data independently so one failure doesn't block the other
-          supabaseService.fetchDashboard(today, today).then(dashRes => {
-              if (dashRes.success && dashRes.data) {
-                  lastRemoteUpdateAt.current = Date.now();
-                  setRemoteData(prev => {
-                    const baseData: RemoteDashboardData = prev || {
-                      summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 },
-                      analytics: { totalCustomers: 0, retentionRate: 0, menu: [] },
-                      settings: {} as SystemSettings,
-                      expenses: [],
-                      revenues: [],
-                      menu: [],
-                      users: [],
-                      categories: [],
-                    };
-                    return {
-                      ...baseData,
-                      summary: dashRes.data.summary || { total_revenue: 0, total_orders: 0, active_orders_count: 0 },
-                      analytics: dashRes.data.analytics,
-                      settings: dashRes.data.settings || {} as SystemSettings,
-                      expenses: dashRes.data.expenses || [],
-                      revenues: dashRes.data.revenues || [],
-                      menu: dashRes.data.menu || [],
-                      users: dashRes.data.users || [],
-                      categories: dashRes.data.categories || [],
-                    };
-                  });
-              }
-          }).catch(console.error);
-
-          supabaseService.fetchUsers().then(usersRes => {
-              if (usersRes.success && usersRes.data) {
-                  lastRemoteUpdateAt.current = Date.now();
-                  setRemoteData(prev => ({
-                    ...(prev || {}),
-                    summary: prev?.summary || { total_revenue: 0, total_orders: 0, active_orders_count: 0 },
-                    analytics: prev?.analytics || { totalCustomers: 0, retentionRate: 0, menu: [] },
-                    settings: prev?.settings || {} as SystemSettings,
-                    expenses: prev?.expenses || [],
-                    revenues: prev?.revenues || [],
-                    menu: prev?.menu || [],
-                    categories: prev?.categories || [],
-                    users: usersRes.data as User[]
-                  }));
-              }
-          }).catch(console.error);
-
-          supabaseService.fetchMenu().then(menuRes => {
-              if (menuRes.success && menuRes.data) {
-                  lastRemoteUpdateAt.current = Date.now();
-                  setRemoteData(prev => {
-                    const baseData: RemoteDashboardData = prev || {
-                      summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 },
-                      analytics: { totalCustomers: 0, retentionRate: 0, menu: [] },
-                      settings: {} as SystemSettings,
-                      expenses: [],
-                      revenues: [],
-                      menu: [],
-                      users: [],
-                      categories: [],
-                    };
-                    return {
-                      ...baseData,
-                      categories: menuRes.data.categories,
-                      menu: menuRes.data.dishes
-                    };
-                  });
-
-                  // Sync to local store to ensure they appear in categories/menu management
-                  if (menuRes.data.categories && menuRes.data.dishes) {
-                    useStore.getState().importCloudItems({
-                      categories: menuRes.data.categories,
-                      dishes: menuRes.data.dishes,
-                      preferCloud: true
-                    });
-                  }
-              }
-          }).catch(console.error);
+          fetchRemoteDashboard().catch(console.error);
         }, 0);
      } else {
          setTimeout(() => setIsRemote(false), 0);
       }
-  }, [demoData, isDemoMode, isThesisMode, thesisData, settings.supabaseConfig]);
-
-  useEffect(() => {
-    if (!isRemote || !settings.supabaseConfig?.enabled || !supabaseService.isConnected()) {
-      return;
-    }
-
-    const handleRevenueChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-      setRemoteData(prev => {
-        lastRemoteUpdateAt.current = Date.now();
-        const previous = prev || { menu: [], categories: [], summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 }, analytics: { totalCustomers: 0, retentionRate: 0, menu: [] }, settings: {} as SystemSettings, expenses: [], revenues: [], users: [] };
-        const currentRevenues = Array.isArray(previous.revenues) ? previous.revenues : [];
-        const mapped: Revenue = {
-          id: String(payload.new?.id || payload.old?.id || crypto.randomUUID()),
-          amount: Number(payload.new?.amount || 0),
-          description: String(payload.new?.description || ''),
-          date: String(payload.new?.date || payload.old?.date || ''),
-          category: String(payload.new?.category || 'VENDAS')
-        };
-        if (payload.eventType === 'INSERT') {
-          return { ...previous, revenues: [...currentRevenues, mapped] };
-        }
-        if (payload.eventType === 'UPDATE') {
-          return { ...previous, revenues: currentRevenues.map(r => r.id === mapped.id ? mapped : r) };
-        }
-        if (payload.eventType === 'DELETE') {
-          return { ...previous, revenues: currentRevenues.filter(r => r.id !== String(payload.old?.id)) };
-        }
-        return previous;
-      });
-    };
-
-    const handleExpenseChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-      setRemoteData(prev => {
-        lastRemoteUpdateAt.current = Date.now();
-        const previous = prev || { menu: [], categories: [], summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 }, analytics: { totalCustomers: 0, retentionRate: 0, menu: [] }, settings: {} as SystemSettings, expenses: [], revenues: [], users: [] };
-        const currentExpenses = Array.isArray(previous.expenses) ? previous.expenses : [];
-        const mapped: Expense = {
-          id: String(payload.new?.id || payload.old?.id || crypto.randomUUID()),
-          amount: Number(payload.new?.amount || 0),
-          description: String(payload.new?.description || ''),
-          date: String(payload.new?.date || payload.old?.date || ''),
-          category: String(payload.new?.category || 'OUTROS')
-        } as Expense;
-        if (payload.eventType === 'INSERT') {
-          return { ...previous, expenses: [...currentExpenses, mapped] };
-        }
-        if (payload.eventType === 'UPDATE') {
-          return { ...previous, expenses: currentExpenses.map(e => e.id === mapped.id ? mapped : e) };
-        }
-        if (payload.eventType === 'DELETE') {
-          return { ...previous, expenses: currentExpenses.filter(e => e.id !== String(payload.old?.id)) };
-        }
-        return previous;
-      });
-    };
-
-    const handleSummaryChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-      if (payload.eventType === 'DELETE') return;
-      lastRemoteUpdateAt.current = Date.now();
-      setRemoteData(prev => ({
-        ...(prev || {}),
-        summary: {
-          total_revenue: Number(payload.new?.total_revenue || 0),
-          total_orders: Number(payload.new?.total_orders || 0),
-          active_orders_count: Number(payload.new?.active_orders_count || 0)
-        }
-      }));
-    };
-
-    const handleCategoryChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-      lastRemoteUpdateAt.current = Date.now();
-      setRemoteData(prev => {
-        const previous = prev || { menu: [], categories: [], summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 }, analytics: { totalCustomers: 0, retentionRate: 0, menu: [] }, settings: {} as SystemSettings, expenses: [], revenues: [], users: [] };
-        const currentCategories = Array.isArray(previous.categories) ? previous.categories : [];
-        const mapped: MenuCategory = {
-          id: String(payload.new?.id || payload.old?.id || crypto.randomUUID()),
-          name: String(payload.new?.name || ''),
-          icon: String(payload.new?.icon || ''),
-          sortOrder: Number(payload.new?.sort_order || 0),
-          sort_order: Number(payload.new?.sort_order || 0),
-          parentId: payload.new?.parent_id ? String(payload.new?.parent_id) : undefined,
-          parent_id: payload.new?.parent_id ? String(payload.new?.parent_id) : undefined,
-          is_active: Boolean(payload.new?.is_active ?? (payload.new?.deleted_at === null || payload.new?.deleted_at === undefined)),
-          deletedAt: payload.new?.deleted_at ? String(payload.new?.deleted_at) : null,
-          deleted_at: payload.new?.deleted_at ? String(payload.new?.deleted_at) : null,
-          availableOnDigitalMenu: Boolean(payload.new?.available_on_digital_menu ?? true),
-        };
-
-        let nextCategories = [...currentCategories];
-
-        if (payload.eventType === 'INSERT') {
-          nextCategories.push(mapped);
-        } else if (payload.eventType === 'UPDATE') {
-          nextCategories = currentCategories.map(cat => cat.id === mapped.id ? mapped : cat);
-        } else if (payload.eventType === 'DELETE') {
-          nextCategories = currentCategories.filter(cat => cat.id !== String(payload.old?.id));
-        }
-        
-        useStore.getState().importCloudItems({
-          categories: nextCategories,
-          dishes: previous.menu || [], // Keep existing dishes
-          preferCloud: true
-        });
-
-        return { ...previous, categories: nextCategories };
-      });
-    };
-
-    const handleDishChange = (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown> }) => {
-      lastRemoteUpdateAt.current = Date.now();
-      setRemoteData(prev => {
-        const previous = prev || { menu: [], categories: [], summary: { total_revenue: 0, total_orders: 0, active_orders_count: 0 }, analytics: { totalCustomers: 0, retentionRate: 0, menu: [] }, settings: {} as SystemSettings, expenses: [], revenues: [], users: [] };
-        const currentDishes = Array.isArray(previous.menu) ? previous.menu : [];
-        const mapped: Dish = {
-          id: String(payload.new?.id || payload.old?.id || crypto.randomUUID()),
-          name: String(payload.new?.name || ''),
-          description: String(payload.new?.description || ''),
-          price: Number(payload.new?.price || 0),
-          category_id: String(payload.new?.category_id || ''),
-          image_url: payload.new?.image_url ? String(payload.new?.image_url) : undefined,
-          image: payload.new?.image_url ? String(payload.new?.image_url) : undefined, // Map image_url to image for local compatibility
-          available: Boolean(payload.new?.available ?? true),
-          disponivel: Boolean(payload.new?.available ?? true), // Map available to disponivel for local compatibility
-          tax_rate: Number(payload.new?.tax_rate || 0),
-          taxPercentage: Number(payload.new?.tax_rate || 0), // Map tax_rate to taxPercentage for local compatibility
-          createdAt: payload.new?.created_at ? new Date(String(payload.new?.created_at)) : new Date(),
-          updatedAt: payload.new?.updated_at ? new Date(String(payload.new?.updated_at)) : new Date(),
-          deletedAt: payload.new?.deleted_at ? String(payload.new?.deleted_at) : null,
-          deleted_at: payload.new?.deleted_at ? String(payload.new?.deleted_at) : null,
-          taxCode: payload.new?.tax_code ? String(payload.new?.tax_code) : undefined,
-          precoCusto: payload.new?.preco_custo ? Number(payload.new?.preco_custo) : undefined,
-          tempo_preparo: payload.new?.tempo_preparo ? String(payload.new?.tempo_preparo) : undefined,
-          availableOnDigitalMenu: Boolean(payload.new?.available_on_digital_menu ?? true),
-          controlaEstoque: Boolean(payload.new?.controla_estoque ?? false),
-          quantidadeEstoque: payload.new?.quantidade_estoque ? Number(payload.new?.quantidade_estoque) : undefined,
-          quantidadeMinima: payload.new?.quantidade_minima ? Number(payload.new?.quantidade_minima) : undefined,
-          quantidadeMaxima: payload.new?.quantidade_maxima ? Number(payload.new?.quantidade_maxima) : undefined,
-          unidadeMedida: payload.new?.unidade_medida ? String(payload.new?.unidade_medida) : undefined,
-          fornecedorPadraoId: payload.new?.fornecedor_padrao_id ? String(payload.new?.fornecedor_padrao_id) : undefined,
-          stockItemId: payload.new?.stock_item_id ? String(payload.new?.stock_item_id) : undefined,
-        };
-
-        let nextDishes = [...currentDishes];
-
-        if (payload.eventType === 'INSERT') {
-          nextDishes.push(mapped);
-        } else if (payload.eventType === 'UPDATE') {
-          nextDishes = currentDishes.map(dish => dish.id === mapped.id ? mapped : dish);
-        } else if (payload.eventType === 'DELETE') {
-          nextDishes = currentDishes.filter(dish => dish.id !== String(payload.old?.id));
-        }
-
-        useStore.getState().importCloudItems({
-          categories: previous.categories || [], // Keep existing categories
-          dishes: nextDishes,
-          preferCloud: true
-        });
-
-        return { ...previous, menu: nextDishes };
-      });
-    };
-
-    const unsubscribeRevenues = supabaseService.subscribeToTableChanges('revenues', handleRevenueChange);
-    const unsubscribeExpenses = supabaseService.subscribeToTableChanges('expenses', handleExpenseChange);
-    const unsubscribeSummary = supabaseService.subscribeToTableChanges('dashboard_summary', handleSummaryChange);
-    const unsubscribeCategories = supabaseService.subscribeToTableChanges('categories', handleCategoryChange);
-    const unsubscribeMenuItems = supabaseService.subscribeToTableChanges('menu_items', handleDishChange);
-
-    return () => {
-      unsubscribeRevenues();
-      unsubscribeExpenses();
-      unsubscribeSummary();
-      unsubscribeCategories();
-      unsubscribeMenuItems();
-    };
-  }, [isRemote, settings.supabaseConfig?.enabled]);
-
-  useEffect(() => {
-    if (isDemoMode) {
-      return;
-    }
-    if (!isRemote || !settings.supabaseConfig?.enabled || !supabaseService.isConnected()) {
-      return;
-    }
-    if (!isRemote || !settings.supabaseConfig?.enabled || !supabaseService.isConnected()) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      if (now - lastRemoteUpdateAt.current < 1800) {
-        return;
-      }
-      const today = new Date().toISOString().split('T')[0];
-      supabaseService.fetchDashboard(today, today).then(dashRes => {
-        if (dashRes.success && dashRes.data) {
-          lastRemoteUpdateAt.current = Date.now();
-          setRemoteData(prev => ({ ...prev, ...dashRes.data }));
-        }
-      }).catch(console.error);
-
-      supabaseService.fetchUsers().then(usersRes => {
-        if (usersRes.success && usersRes.data) {
-          lastRemoteUpdateAt.current = Date.now();
-          setRemoteData(prev => ({
-            ...prev,
-            users: usersRes.data as User[]
-          }));
-        }
-      }).catch(console.error);
-
-      supabaseService.fetchMenu().then(menuRes => {
-        if (menuRes.success && menuRes.data) {
-          lastRemoteUpdateAt.current = Date.now();
-          setRemoteData(prev => ({
-            ...prev,
-            categories: menuRes.data.categories,
-            menu: menuRes.data.dishes
-          }));
-
-          // Sync to local store periodically to keep it fresh
-          if (menuRes.data.categories && menuRes.data.dishes) {
-            useStore.getState().importCloudItems({
-              categories: menuRes.data.categories,
-              dishes: menuRes.data.dishes,
-              preferCloud: true
-            });
-          }
-        }
-      }).catch(console.error);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isDemoMode, isRemote, settings.supabaseConfig?.enabled]);
+  }, [isDemoMode, isThesisMode, settings.supabaseConfig]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -583,7 +276,7 @@ const MobileDashboard = () => {
   }, [widgetConfig]);
 
   // Use remote users if available and not empty, otherwise local users
-  const users = (remoteData?.users && remoteData.users.length > 0) ? remoteData.users : localUsers;
+  const users = (isDemoLike && demoSnapshot?.users && demoSnapshot.users.length > 0) ? demoSnapshot.users : localUsers;
 
   // Filter users who can access this dashboard (ADMIN and OWNER)
   const authorizedUsers = useMemo(() => {
@@ -646,7 +339,7 @@ const MobileDashboard = () => {
 
     // PIN Validation Logic
     const cleanPin = accessPin.trim();
-    const effectiveSettings = (isRemote && remoteData?.settings) ? remoteData.settings : settings;
+    const effectiveSettings = (isDemoLike && demoSnapshot?.settings) ? demoSnapshot.settings : settings;
     
     console.log('MobileDashboard Auth Attempt:', { 
         user: selectedUser.name,
@@ -704,7 +397,7 @@ const MobileDashboard = () => {
       const cleanPin = accessPin.trim();
       if (cleanPin.length < 4) return;
 
-      const effectiveSettings = (isRemote && remoteData?.settings) ? remoteData.settings : settings;
+      const effectiveSettings = (isDemoLike && demoSnapshot?.settings) ? demoSnapshot.settings : settings;
       
       let isCorrectPin = false;
       // Check if stored PIN is Hashed (SHA-256 = 64 chars)
@@ -732,7 +425,7 @@ const MobileDashboard = () => {
 
     checkAndSubmit();
      
-  }, [accessPin, selectedUser, isRemote, remoteData, settings]);
+  }, [accessPin, selectedUser, isRemote, isDemoMode, demoData, settings]);
 
   const handleBiometricAuth = () => {
     if (isLocked) return;
@@ -780,16 +473,38 @@ const MobileDashboard = () => {
 
   // Use local data or remote data
   const data = useMemo(() => {
-    if (isRemote && remoteData) {
-      return {
-        dailySales: remoteData.summary?.total_revenue || 0,
-        ordersToday: remoteData.summary?.total_orders || 0,
-        activeOrdersCount: remoteData.summary?.active_orders_count || 0,
-        topDishes: [],
-        occupancyRate: 0,
-        totalRevenue: remoteData.summary?.total_revenue || 0,
-        activeOrders: remoteData.summary?.active_orders_count || 0,
-      };
+    if (isRemote) {
+      const summary = isDemoLike
+        ? demoSnapshot?.summary
+        : (dashboardSummary ? {
+            total_revenue: dashboardSummary.totalRevenue,
+            total_orders: dashboardSummary.totalOrders,
+            active_orders_count: dashboardSummary.activeOrdersCount,
+            total_expenses: dashboardSummary.totalExpenses || 0
+          } : null);
+      
+      if (summary) {
+        // Calculate derived metrics for remote mode
+        // For gross profit, we might need a more complex backend calculation or approximation
+        // For now, we can use (Revenue - Expenses) as a rough proxy for Cash Flow
+        // Real Net Profit = Revenue - COGS - Expenses. 
+        // If we don't have COGS from backend, we might need to rely on what we have.
+        
+        return {
+          dailySales: summary.total_revenue || 0,
+          ordersToday: summary.total_orders || 0,
+          activeOrdersCount: summary.active_orders_count || 0,
+          topDishes: [],
+          occupancyRate: 0,
+          totalRevenue: summary.total_revenue || 0,
+          activeOrders: summary.active_orders_count || 0,
+          totalExpenses: summary.total_expenses || 0,
+          // If we lack COGS, we can't calculate exact Gross Profit, 
+          // but we can pass 0 or estimate.
+          grossProfitToday: (summary.total_revenue || 0) - (summary.total_expenses || 0), // Simplified for now
+          cashFlow: (summary.total_revenue || 0) - (summary.total_expenses || 0)
+        };
+      }
     }
 
     const safeToISO = (dateStr: string | number | Date) => {
@@ -826,6 +541,13 @@ const MobileDashboard = () => {
     }, 0);
     const grossProfitToday = totalSales - cogsToday;
 
+    const totalExpenses = localExpenses.reduce((acc, e) => {
+      if (safeToISO(e.date) === todayStr) {
+        return acc + e.amount;
+      }
+      return acc;
+    }, 0);
+
     return {
       dailySales: totalSales,
       ordersToday: closedToday.length,
@@ -834,9 +556,11 @@ const MobileDashboard = () => {
       occupancyRate: 0,
       totalRevenue: totalSales,
       activeOrders: activeOrdersCount,
+      totalExpenses,
       grossProfitToday,
+      cashFlow: totalSales - totalExpenses
     };
-  }, [isRemote, remoteData, localActiveOrders, localMenu, localOrders]);
+  }, [isRemote, isDemoLike, demoSnapshot, dashboardSummary, localActiveOrders, localMenu, localOrders]);
 
   const averagePreparationTime = useMemo(() => {
     const completedOrders = localActiveOrders.filter(o =>
@@ -861,10 +585,9 @@ const MobileDashboard = () => {
     return localTables.filter(table => (table.status as string) === 'DISPONIVEL').length;
   }, [localTables]);
 
-  const remoteAnalytics = isRemote && remoteData ? remoteData.analytics : null;
-  const remoteExpenses = isRemote && remoteData ? remoteData.expenses || [] : [];
-  const remoteRevenues = isRemote && remoteData ? remoteData.revenues || [] : [];
-  const dashboardAnalytics = null;
+  const effectiveAnalytics = isDemoLike ? demoSnapshot?.analytics || null : dashboardAnalytics;
+  const effectiveExpenses = isDemoLike ? demoSnapshot?.expenses || [] : localExpenses;
+  const effectiveRevenues = isDemoLike ? demoSnapshot?.revenues || [] : localRevenues;
 
   const liveActiveOrders = data.activeOrdersCount;
   const activeOrders = localActiveOrders;
@@ -916,20 +639,14 @@ const MobileDashboard = () => {
 
   // Auto-refresh a cada 10 segundos
   useEffect(() => {
-    if (isDemoMode || !autoRefresh) return;
+    if (isDemoLike || !autoRefresh) return;
     const interval = setInterval(() => {
-      // Refresh remote data if enabled
       if (isRemote && settings.supabaseConfig?.enabled) {
-          const today = new Date().toISOString().split('T')[0];
-          supabaseService.fetchDashboard(today, today).then(res => {
-            if (res.success && res.data) {
-                setRemoteData(prev => prev ? ({ ...prev, ...res.data }) : res.data);
-            }
-        });
+        fetchRemoteDashboard().catch(console.error);
       }
     }, 10000);
     return () => clearInterval(interval);
-  }, [autoRefresh, isDemoMode, isRemote, settings.supabaseConfig]);
+  }, [autoRefresh, isDemoLike, isRemote, settings.supabaseConfig, fetchRemoteDashboard]);
 
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -977,12 +694,23 @@ const MobileDashboard = () => {
   const formatKz = (val: number) => 
     new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
 
-  // Dados em tempo real (Adaptado para usar dados remotos ou locais)
-  const todayAnalytics = {
-    totalSales: data.dailySales || data.totalRevenue || 0,
-    totalOrders: data.ordersToday || data.activeOrders || 0,
-    avgOrder: (data.ordersToday || data.activeOrders) > 0 ? (data.dailySales || data.totalRevenue || 0) / (data.ordersToday || data.activeOrders) : 0
-  };
+  // Dados em tempo real (Prioridade: Realtime Stats > Remote Data > Local Data)
+  const todayAnalytics = useMemo(() => {
+    if (realtimeStats) {
+      return {
+        totalSales: realtimeStats.totalRevenue,
+        totalOrders: realtimeStats.totalOrders,
+        avgOrder: realtimeStats.totalOrders > 0 ? realtimeStats.totalRevenue / realtimeStats.totalOrders : 0,
+        source: 'realtime'
+      };
+    }
+    return {
+      totalSales: data.dailySales || data.totalRevenue || 0,
+      totalOrders: data.ordersToday || data.activeOrders || 0,
+      avgOrder: (data.ordersToday || data.activeOrders) > 0 ? (data.dailySales || data.totalRevenue || 0) / (data.ordersToday || data.activeOrders) : 0,
+      source: 'local'
+    };
+  }, [realtimeStats, data]);
 
   const last7DaysAnalytics = useMemo(() => {
     if (!getDailySalesAnalytics || typeof getDailySalesAnalytics !== 'function') {
@@ -1014,22 +742,38 @@ const MobileDashboard = () => {
   }, [last7DaysAnalytics]);
 
   const todayKey = useMemo(() => new Date(currentTime).toISOString().split('T')[0], [currentTime]);
+  
   const todayExpenses = useMemo(() => {
-    const source = isRemote ? remoteExpenses : localExpenses;
+    if (realtimeStats) return realtimeStats.totalExpenses;
+    
+    const source = isRemote ? effectiveExpenses : localExpenses;
     return source.reduce((acc, exp) => {
       const expDate = exp.date instanceof Date ? exp.date : new Date(exp.date);
       const key = expDate.toISOString().split('T')[0];
       return key === todayKey ? acc + (exp.amount || 0) : acc;
     }, 0);
-  }, [isRemote, remoteExpenses, localExpenses, todayKey]);
+  }, [realtimeStats, isRemote, effectiveExpenses, localExpenses, todayKey]);
+
   const todayRevenue = useMemo(() => {
-    const source = isRemote ? remoteRevenues : localRevenues;
+    if (realtimeStats) return realtimeStats.totalRevenue;
+
+    const source = isRemote ? effectiveRevenues : localRevenues;
     return source.reduce((acc, rev) => (rev.date === todayKey ? acc + (rev.amount || 0) : acc), 0);
-  }, [isRemote, remoteRevenues, localRevenues, todayKey]);
-  const { cashFlowToday, netProfitToday } = useMemo(
-    () => calculateTodayFinance({ todaySales: todayAnalytics.totalSales || todayRevenue, todayExpenses, grossProfitToday: data.grossProfitToday || 0 }),
-    [todayAnalytics.totalSales, todayRevenue, todayExpenses, data.grossProfitToday]
-  );
+  }, [realtimeStats, isRemote, effectiveRevenues, localRevenues, todayKey]);
+
+  const { cashFlowToday, netProfitToday } = useMemo(() => {
+    if (realtimeStats) {
+      return {
+        cashFlowToday: realtimeStats.totalRevenue - realtimeStats.totalExpenses,
+        netProfitToday: realtimeStats.netProfit
+      };
+    }
+    return calculateTodayFinance({ 
+      todaySales: todayAnalytics.totalSales || todayRevenue, 
+      todayExpenses, 
+      grossProfitToday: data.grossProfitToday || 0 
+    });
+  }, [realtimeStats, todayAnalytics.totalSales, todayRevenue, todayExpenses, data.grossProfitToday]);
   const alerts = useMemo(() => {
     const avg7Days = last7DaysSales.length > 0
       ? last7DaysSales.reduce((acc, d) => acc + d.totalSales, 0) / last7DaysSales.length
@@ -1290,100 +1034,108 @@ const MobileDashboard = () => {
           {/* KPI Cards - Visão Resumida */}
           <div className="p-3 sm:p-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Card 1: Faturamento Hoje */}
-            <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/40 transition-all">
+            <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-primary/60 bg-primary/10' : 'border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/40'}`}>
               <div className="flex items-start justify-between mb-1">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Hoje</span>
-                <TrendingUp size={14} className="text-primary sm:w-3.5 sm:h-3.5" />
+                <TrendingUp size={14} className={`text-primary sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
               </div>
-              <p className="text-lg sm:text-2xl font-black text-white truncate">{formatKz(todayAnalytics.totalSales)}</p>
+              <p className={`text-lg sm:text-2xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
+                {formatKz(todayAnalytics.totalSales)}
+              </p>
               <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">{todayAnalytics.totalOrders} pedidos</p>
             </div>
 
             {/* Card 2: Pedidos Ativos */}
-            <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent">
+            <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-blue-500/60 bg-blue-500/10' : 'border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent hover:border-blue-500/40'}`}>
               <div className="flex items-start justify-between mb-1">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Ativos</span>
-                <ShoppingBag size={14} className="text-blue-400 sm:w-3.5 sm:h-3.5" />
+                <ShoppingBag size={14} className={`text-blue-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
               </div>
-              <p className="text-lg sm:text-2xl font-black text-white animate-pulse">{liveActiveOrders}</p>
+              <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{liveActiveOrders}</p>
               <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">mesas ativas</p>
             </div>
 
             {/* Card 3: Equipa */}
-            <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent">
+            <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-green-500/60 bg-green-500/10' : 'border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent hover:border-green-500/40'}`}>
               <div className="flex items-start justify-between mb-1">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Equipa</span>
-                <Users size={14} className="text-green-400 sm:w-3.5 sm:h-3.5" />
+                <Users size={14} className={`text-green-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
               </div>
-              <p className="text-lg sm:text-2xl font-black text-white">{employeesWorking.length}</p>
+              <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{employeesWorking.length}</p>
               <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">ao serviço</p>
             </div>
 
             {/* Card 4: Retenção */}
             {widgetConfig.showRetention && (
-              <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-transparent">
+              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-purple-500/60 bg-purple-500/10' : 'border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-transparent hover:border-purple-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Loyalty</span>
-                  <TrendingUp size={14} className="text-purple-400 sm:w-3.5 sm:h-3.5" />
+                  <TrendingUp size={14} className={`text-purple-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className="text-lg sm:text-2xl font-black text-white">{(typeof retention === 'number' ? retention : 0).toFixed(0)}%</p>
+                <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{(typeof retention === 'number' ? retention : 0).toFixed(0)}%</p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">retenção</p>
               </div>
             )}
 
             {/* Card 5: Tempo Médio de Preparo */}
             {widgetConfig.showPrepTime && (
-              <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 to-transparent">
+              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-yellow-500/60 bg-yellow-500/10' : 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 to-transparent hover:border-yellow-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Preparo Médio</span>
-                  <Clock size={14} className="text-yellow-400 sm:w-3.5 sm:h-3.5" />
+                  <Clock size={14} className={`text-yellow-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className="text-lg sm:text-2xl font-black text-white">{averagePreparationTime}m</p>
+                <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{averagePreparationTime}m</p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">por pedido</p>
               </div>
             )}
 
             {/* Card 6: Mesas Disponíveis */}
             {widgetConfig.showTables && (
-              <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-transparent">
+              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-transparent hover:border-cyan-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Mesas Livres</span>
-                  <Users size={14} className="text-cyan-400 sm:w-3.5 sm:h-3.5" />
+                  <Users size={14} className={`text-cyan-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className="text-lg sm:text-2xl font-black text-white">{availableTablesCount}</p>
+                <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{availableTablesCount}</p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">disponíveis</p>
               </div>
             )}
 
             {widgetConfig.showExpenses && (
-              <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-red-500/20 bg-gradient-to-br from-red-500/5 to-transparent">
+              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-red-500/60 bg-red-500/10' : 'border-red-500/20 bg-gradient-to-br from-red-500/5 to-transparent hover:border-red-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Despesas Hoje</span>
-                  <TrendingUp size={14} className="text-red-400 sm:w-3.5 sm:h-3.5" />
+                  <TrendingUp size={14} className={`text-red-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className="text-lg sm:text-2xl font-black text-white">{formatKz(todayExpenses)}</p>
+                <p className={`text-lg sm:text-2xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
+                  {formatKz(todayExpenses)}
+                </p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">saídas</p>
               </div>
             )}
 
             {widgetConfig.showCashFlow && (
-              <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
+              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent hover:border-emerald-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Fluxo de Caixa</span>
-                  <TrendingUp size={14} className="text-emerald-400 sm:w-3.5 sm:h-3.5" />
+                  <TrendingUp size={14} className={`text-emerald-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className="text-lg sm:text-2xl font-black text-white">{formatKz(cashFlowToday)}</p>
+                <p className={`text-lg sm:text-2xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
+                  {formatKz(cashFlowToday)}
+                </p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">hoje</p>
               </div>
             )}
 
             {widgetConfig.showNetProfit && (
-              <div className="glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border border-sky-500/20 bg-gradient-to-br from-sky-500/5 to-transparent">
+              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-sky-500/60 bg-sky-500/10' : 'border-sky-500/20 bg-gradient-to-br from-sky-500/5 to-transparent hover:border-sky-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Lucro Líquido</span>
-                  <TrendingUp size={14} className="text-sky-400 sm:w-3.5 sm:h-3.5" />
+                  <TrendingUp size={14} className={`text-sky-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className="text-lg sm:text-2xl font-black text-white">{formatKz(netProfitToday)}</p>
+                <p className={`text-lg sm:text-2xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
+                  {formatKz(netProfitToday)}
+                </p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">hoje</p>
               </div>
             )}
@@ -1621,8 +1373,8 @@ const MobileDashboard = () => {
                 <div className="glass-panel rounded-xl p-2.5 border border-white/5">
                   <h3 className="text-[10px] font-black text-white mb-2 uppercase tracking-wider">Top Pratos Hoje</h3>
                   <div className="space-y-1.5">
-                    {isRemote && (dashboardAnalytics?.menu || remoteData?.menu) ? (
-                      (dashboardAnalytics?.menu || remoteData?.menu || [])
+                    {isRemote && effectiveAnalytics?.menu ? (
+                      (effectiveAnalytics.menu || [])
                         .sort((a, b) => (b?.sold || 0) - (a?.sold || 0))
                         .slice(0, 3)
                         .map((prato, i: number) => (
@@ -1772,10 +1524,10 @@ const MobileDashboard = () => {
                       <span className="text-[10px] font-bold text-slate-400">Lucro Líquido (Hoje)</span>
                       <span className="text-base font-black text-sky-400">{formatKz(netProfitToday)}</span>
                     </div>
-                    {(isRemote ? remoteExpenses : localExpenses).length > 0 && (
+                    {(isRemote ? effectiveExpenses : localExpenses).length > 0 && (
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-white/5">
                         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Despesas</h4>
-                        {Array.isArray(isRemote ? remoteExpenses : localExpenses) ? (isRemote ? remoteExpenses : localExpenses).slice(0, 3).map((exp, i) => (
+                        {Array.isArray(isRemote ? effectiveExpenses : localExpenses) ? (isRemote ? effectiveExpenses : localExpenses).slice(0, 3).map((exp, i) => (
                           <div key={i} className="flex justify-between items-center p-1.5 rounded bg-white/5">
                             <span className="text-[10px] truncate max-w-[120px]">{exp?.description || ''}</span>
                             <span className="text-[10px] font-bold text-red-400">-{formatKz(exp?.amount || 0)}</span>
@@ -1965,13 +1717,13 @@ const MobileDashboard = () => {
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Clientes</span>
                       <span className="text-sm font-black text-primary">
-                        {isRemote && remoteAnalytics ? remoteAnalytics.totalCustomers : customers.length}
+                        {isRemote && effectiveAnalytics ? effectiveAnalytics.totalCustomers : customers.length}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Retenção</span>
                       <span className="text-sm font-black text-green-400">
-                        {isRemote && remoteAnalytics ? Number(remoteAnalytics.retentionRate || 0).toFixed(1) : (typeof retention === 'number' ? retention : 0).toFixed(1)}%
+                        {isRemote && effectiveAnalytics ? Number(effectiveAnalytics.retentionRate || 0).toFixed(1) : (typeof retention === 'number' ? retention : 0).toFixed(1)}%
                       </span>
                     </div>
                   </div>

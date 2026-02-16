@@ -734,6 +734,125 @@ export const databaseOperations = {
     return result.success;
   },
 
+  saveDish: async (dish: Dish): Promise<boolean> => {
+    const result = await databaseOperations._handleDatabaseOperation(async () => {
+        await executeQuery(`
+            CREATE TABLE IF NOT EXISTS dishes (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                price REAL NOT NULL,
+                preco_custo REAL DEFAULT 0,
+                category_id TEXT,
+                image TEXT,
+                tax_code TEXT,
+                tax_percentage DECIMAL(5,2),
+                tempo_preparo INTEGER,
+                is_available BOOLEAN DEFAULT TRUE,
+                is_available_on_digital_menu BOOLEAN DEFAULT TRUE,
+                controla_estoque BOOLEAN DEFAULT FALSE,
+                quantidade_estoque REAL DEFAULT 0,
+                quantidade_minima REAL DEFAULT 0,
+                quantidade_maxima REAL,
+                unidade_medida TEXT DEFAULT 'unidade',
+                fornecedor_padrao_id TEXT,
+                FOREIGN KEY(category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
+                FOREIGN KEY(fornecedor_padrao_id) REFERENCES suppliers(id) ON DELETE SET NULL
+            )
+        `);
+
+        await executeQuery(
+            `INSERT OR REPLACE INTO dishes (
+                id, name, description, price, preco_custo, category_id, image, tax_code, tax_percentage, 
+                tempo_preparo, is_available, is_available_on_digital_menu, controla_estoque, 
+                quantidade_estoque, quantidade_minima, quantidade_maxima, unidade_medida, fornecedor_padrao_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                dish.id,
+                dish.name,
+                dish.description || null,
+                dish.price,
+                (dish as any).costPrice || (dish as any).preco_custo || 0,
+                dish.categoryId || (dish as any).category_id || null,
+                dish.image || null,
+                dish.taxCode || (dish as any).tax_code || 'NOR',
+                dish.taxPercentage || (dish as any).tax_percentage || 13, // Default to 13% if not specified
+                dish.preparationTime || (dish as any).tempo_preparo || 0,
+                (dish.isAvailable !== undefined ? dish.isAvailable : ((dish as any).is_available !== false)) ? 1 : 0,
+                (dish.availableOnDigitalMenu !== undefined ? dish.availableOnDigitalMenu : ((dish as any).is_available_on_digital_menu !== false)) ? 1 : 0,
+                (dish as any).trackStock || (dish as any).controla_estoque ? 1 : 0,
+                (dish as any).stockQuantity || (dish as any).quantidade_estoque || 0,
+                (dish as any).minStock || (dish as any).quantidade_minima || 0,
+                (dish as any).maxStock || (dish as any).quantidade_maxima || null,
+                (dish as any).unit || (dish as any).unidade_medida || 'unidade',
+                (dish as any).supplierId || (dish as any).fornecedor_padrao_id || null
+            ]
+        );
+        return true;
+    }, `save dish ${dish.id}`, 'DATABASE');
+    return result.success;
+  },
+
+  saveExpense: async (expense: Expense): Promise<boolean> => {
+    const result = await databaseOperations._handleDatabaseOperation(async () => {
+        await executeQuery(`
+            CREATE TABLE IF NOT EXISTS expenses (
+                id TEXT PRIMARY KEY,
+                description TEXT,
+                amount REAL,
+                date TEXT,
+                category TEXT,
+                payment_method TEXT,
+                status TEXT
+            )
+        `);
+        await executeQuery(
+            'INSERT OR REPLACE INTO expenses (id, description, amount, date, category, payment_method, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+                expense.id,
+                expense.description,
+                expense.amount,
+                expense.date,
+                expense.category,
+                expense.paymentMethod,
+                expense.status
+            ]
+        );
+        return true;
+    }, `save expense ${expense.id}`, 'DATABASE');
+    return result.success;
+  },
+
+  saveRevenue: async (revenue: Revenue): Promise<boolean> => {
+    const result = await databaseOperations._handleDatabaseOperation(async () => {
+        await executeQuery(`
+            CREATE TABLE IF NOT EXISTS revenues (
+                id TEXT PRIMARY KEY,
+                amount REAL,
+                date TEXT,
+                category TEXT,
+                description TEXT,
+                payment_method TEXT,
+                order_id TEXT
+            )
+        `);
+        await executeQuery(
+            'INSERT OR REPLACE INTO revenues (id, amount, date, category, description, payment_method, order_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+                revenue.id,
+                revenue.amount,
+                revenue.date,
+                revenue.category,
+                revenue.description,
+                revenue.paymentMethod,
+                revenue.orderId || null
+            ]
+        );
+        return true;
+    }, `save revenue ${revenue.id}`, 'DATABASE');
+    return result.success;
+  },
+
   /**
    * Save multiple categories to SQL (for restoration/sync)
    */
@@ -819,64 +938,7 @@ export const databaseOperations = {
     return result.success ? (result.data || []) : [];
   },
 
-  /**
-   * Save a single dish to SQL
-   */
-  saveDish: async (dish: Dish): Promise<boolean> => {
-    const result = await databaseOperations._handleDatabaseOperation(async () => {
-      // Ensure dishes table exists with correct schema
-      await executeQuery(`
-        CREATE TABLE IF NOT EXISTS dishes (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            description TEXT,
-            price REAL NOT NULL,
-            preco_custo REAL DEFAULT 0,
-            category_id TEXT,
-            image TEXT,
-            tax_code TEXT,
-            tax_percentage DECIMAL(5,2),
-            tempo_preparo INTEGER,
-            is_available BOOLEAN DEFAULT TRUE,
-            is_available_on_digital_menu BOOLEAN DEFAULT TRUE,
-            controla_estoque BOOLEAN DEFAULT FALSE,
-            quantidade_estoque REAL DEFAULT 0,
-            quantidade_minima REAL DEFAULT 0,
-            quantidade_maxima REAL,
-            unidade_medida TEXT DEFAULT 'unidade',
-            fornecedor_padrao_id TEXT,
-            FOREIGN KEY(category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
-            FOREIGN KEY(fornecedor_padrao_id) REFERENCES suppliers(id) ON DELETE SET NULL
-        )
-      `);
 
-      await executeQuery(
-        'INSERT OR REPLACE INTO dishes (id, name, description, price, preco_custo, category_id, image, tax_code, tax_percentage, tempo_preparo, is_available, is_available_on_digital_menu, controla_estoque, quantidade_estoque, quantidade_minima, quantidade_maxima, unidade_medida, fornecedor_padrao_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          dish.id,
-          dish.name,
-          dish.description || null,
-          dish.price,
-          dish.precoCusto || (dish as any).preco_custo || 0,
-          dish.category_id,
-          dish.image || null,
-          dish.taxCode || (dish as any).tax_code || 'NOR',
-          dish.taxPercentage || (dish as any).tax_percentage || 14.00,
-          dish.tempo_preparo || (dish as any).tempo_preparo || null,
-          dish.disponivel !== undefined ? dish.disponivel : (dish as any).is_available !== false,
-          dish.availableOnDigitalMenu !== undefined ? dish.availableOnDigitalMenu : (dish as any).available_on_digital_menu !== false,
-          (dish.controlaEstoque || (dish as any).controla_estoque) ? 1 : 0,
-          dish.quantidadeEstoque || (dish as any).quantidade_estoque || 0,
-          dish.quantidadeMinima || (dish as any).quantidade_minima || 0,
-          dish.quantidadeMaxima || (dish as any).quantidade_maxima || null,
-          dish.unidadeMedida || (dish as any).unidade_medida || 'unidade',
-          dish.fornecedorPadraoId || (dish as any).fornecedor_padrao_id || null
-        ]
-      );
-      return true;
-    }, `save dish ${dish.id}`, 'DATABASE');
-    return result.success;
-  },
 
   /**
    * Save multiple dishes to SQL
@@ -1322,31 +1384,7 @@ export const databaseOperations = {
     return result.success;
   },
 
-  saveExpense: async (expense: Expense): Promise<boolean> => {
-    const result = await databaseOperations._handleDatabaseOperation(async () => {
-      await executeQuery(`
-        CREATE TABLE IF NOT EXISTS expenses (
-          id TEXT PRIMARY KEY, 
-          description TEXT, 
-          amount REAL, 
-          date TEXT, 
-          category TEXT
-        )
-      `);
-      await executeQuery(
-        'INSERT OR REPLACE INTO expenses (id, description, amount, date, category) VALUES (?, ?, ?, ?, ?)',
-        [
-          expense.id, 
-          expense.description || (expense as any).descricao || 'Despesa', 
-          expense.amount || (expense as any).valor || 0, 
-          expense.date instanceof Date ? expense.date.toISOString() : (expense.date || (expense as any).data || new Date().toISOString()), 
-          expense.category || (expense as any).categoria || 'Geral'
-        ]
-      );
-      return true;
-    }, `save expense ${expense.id}`, 'DATABASE');
-    return result.success;
-  },
+
 
   deleteExpense: async (id: string): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
@@ -1356,25 +1394,7 @@ export const databaseOperations = {
     return result.success;
   },
 
-  saveRevenue: async (revenue: Revenue): Promise<boolean> => {
-    const result = await databaseOperations._handleDatabaseOperation(async () => {
-      await executeQuery(`
-        CREATE TABLE IF NOT EXISTS revenues (
-          id TEXT PRIMARY KEY, 
-          description TEXT, 
-          amount REAL, 
-          date TEXT, 
-          category TEXT
-        )
-      `);
-      await executeQuery(
-        'INSERT OR REPLACE INTO revenues (id, description, amount, date, category) VALUES (?, ?, ?, ?, ?)',
-        [revenue.id, revenue.description || (revenue as any).source || null, revenue.amount, revenue.date instanceof Date ? revenue.date.toISOString() : (revenue.date || new Date().toISOString()), revenue.category || null]
-      );
-      return true;
-    }, `save revenue ${revenue.id}`, 'DATABASE');
-    return result.success;
-  },
+
 
   saveRevenues: async (revenues: Revenue[]): Promise<boolean> => {
     try {

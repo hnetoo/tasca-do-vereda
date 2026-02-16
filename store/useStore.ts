@@ -5,6 +5,8 @@ import { logger } from '../services/logger';
 import { validationService } from '../services/validationService';
 import { disasterRecoveryService } from '../services/disasterRecoveryService';
 import { integrationAPIService } from '../services/integrationAPIService';
+import { supabaseService } from '../services/supabaseService';
+import { exponentialBackoff } from "../src/utils/retry";
 
 const customStorage: StateStorage = {
   getItem: (name: string): string | null => {
@@ -193,12 +195,12 @@ export const useStore = create<StoreState>()(
         const state = get();
         switch (payload.tableName) {
           case 'menu_items':
-            if (payload.eventType === 'INSERT') state.addDish(payload.new as Dish);
-            if (payload.eventType === 'UPDATE') state.updateDish(payload.new as Dish);
+            if (payload.eventType === 'INSERT') state.addDish(payload.new as unknown as Dish);
+            if (payload.eventType === 'UPDATE') state.updateDish(payload.new as unknown as Dish);
             if (payload.eventType === 'DELETE') state.removeDish(payload.old.id as string);
             break;
           case 'categories':
-            if (payload.eventType === 'INSERT') state.addCategory(payload.new as MenuCategory);
+            if (payload.eventType === 'INSERT') state.addCategory(payload.new as unknown as MenuCategory);
             if (payload.eventType === 'UPDATE') state.updateCategory(payload.new as unknown as MenuCategory);
             if (payload.eventType === 'DELETE') state.removeCategory(payload.old.id as string);
             break;
@@ -218,8 +220,14 @@ export const useStore = create<StoreState>()(
             if (payload.eventType === 'DELETE') state.removePayrollRecord(payload.old.id as string);
             break;
           case 'revenues':
-            if (payload.eventType === 'INSERT') state.addRevenue(payload.new as Revenue);
-            if (payload.eventType === 'UPDATE') state.updateRevenue(payload.new as Revenue);
+            if (payload.eventType === 'INSERT') {
+              const newRevenue = payload.new as any;
+              state.addRevenue({ ...newRevenue, source: newRevenue.payment_method || newRevenue.source } as Revenue);
+            }
+            if (payload.eventType === 'UPDATE') {
+              const updatedRevenue = payload.new as any;
+              state.updateRevenue({ ...updatedRevenue, source: updatedRevenue.payment_method || updatedRevenue.source } as Revenue);
+            }
             if (payload.eventType === 'DELETE') state.removeRevenue(payload.old.id as string);
             break;
           case 'expenses':
@@ -228,8 +236,21 @@ export const useStore = create<StoreState>()(
             if (payload.eventType === 'DELETE') state.removeExpense(payload.old.id as string);
             break;
           case 'dashboard_summary':
-            // Dashboard summary is typically updated, not inserted/deleted directly via real-time
-            if (payload.eventType === 'UPDATE') state.setDashboardSummary(payload.new as unknown as DashboardSummary);
+            if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+              const summaryData = payload.new as Record<string, unknown>;
+              const summary: DashboardSummary = {
+                totalRevenue: Number(summaryData.total_revenue ?? summaryData.totalRevenue ?? 0),
+                totalExpenses: Number(summaryData.total_expenses ?? summaryData.totalExpenses ?? 0),
+                totalOrders: Number(summaryData.total_orders ?? summaryData.totalOrders ?? 0),
+                activeOrdersCount: Number(summaryData.active_orders_count ?? summaryData.activeOrdersCount ?? 0)
+              };
+              state.setDashboardSummary(summary);
+            }
+            break;
+          case 'orders':
+            if (payload.eventType === 'INSERT') state.addOrder(payload.new as unknown as Order);
+            if (payload.eventType === 'UPDATE') state.updateOrder(payload.new as unknown as Order);
+            if (payload.eventType === 'DELETE') state.removeOrder(payload.old.id as string);
             break;
           default:
             logger.warn(`Unhandled real-time change for table: ${payload.tableName}`, payload, 'STORE');
@@ -2925,9 +2946,28 @@ export const useStore = create<StoreState>()(
                   await integrationAPIService.syncSuppliers(action.payload.suppliers);
                   break;
                 case 'SYNC_FINANCIALS':
-                  await integrationAPIService.syncFinancials(action.payload.revenues, action.payload.expenses);
-                  break;
-                default:
+                                await integrationAPIService.syncFinancials(action.payload.revenues, action.payload.expenses);
+                                break;
+                            // Granular Menu Operations
+                            case 'CREATE_CATEGORY':
+                                await integrationAPIService.createCategory(action.payload);
+                                break;
+                            case 'UPDATE_CATEGORY':
+                                await integrationAPIService.updateCategory(action.payload);
+                                break;
+                            case 'DELETE_CATEGORY':
+                                await integrationAPIService.deleteCategory(action.payload.id);
+                                break;
+                            case 'CREATE_DISH':
+                                await integrationAPIService.createDish(action.payload);
+                                break;
+                            case 'UPDATE_DISH':
+                                await integrationAPIService.updateDish(action.payload);
+                                break;
+                            case 'DELETE_DISH':
+                                await integrationAPIService.deleteDish(action.payload.id);
+                                break;
+                            default:
                   logger.warn(`Tipo de ação offline desconhecido ou não implementado: ${action.type}`, undefined, 'OFFLINE_QUEUE');
               }
               successfulActions.push(action.id);
@@ -3252,8 +3292,26 @@ export const useStore = create<StoreState>()(
       },
 
       // Subscription methods for Realtime Sync
-      startRealtimeSync: () => {
-        // Legacy Sync removed
+      startRealtimeSync: async () => {
+        const state = get();
+        const config = state.settings?.supabaseConfig;
+        if (!config?.enabled) return;
+        if (!config.url || !config.key) return;
+
+        const result = await exponentialBackoff(async () => {
+          if (!supabaseService.isConnected()) {
+            supabaseService.initialize(config.url, config.key, state.onRealtimeChange);
+          }
+          if (!supabaseService.isConnected()) {
+            throw new Error('Supabase connection failed');
+          }
+          return true;
+        }, 5, 1000, 'RealtimeSync');
+
+        if (result.error) {
+          logger.error('Realtime sync connection failed', { error: result.error }, 'STORE');
+          state.addNotification('error', 'Falha ao conectar sincronização em tempo real.');
+        }
       },
 
       hardResetMenu: async () => {
@@ -3593,6 +3651,7 @@ export const useStore = create<StoreState>()(
                       taxCode: String(payload.new.tax_rate || 'NOR'),
                     };
                     if (payload.eventType === 'INSERT') {
+                      if (state.menu.some(d => d.id === newDish.id)) return {};
                       return { menu: [...state.menu, newDish] } as Partial<StoreState>;
                     } else if (payload.eventType === 'UPDATE') {
                       return { menu: state.menu.map(d => d.id === newDish.id ? { ...d, ...newDish } : d) } as Partial<StoreState>;
@@ -3613,6 +3672,7 @@ export const useStore = create<StoreState>()(
                         deletedAt: payload.new.deleted_at,
                       };
                     if (payload.eventType === 'INSERT') {
+                      if (state.categories.some(c => c.id === newCategory.id)) return {};
                       return { categories: [...state.categories, newCategory] } as Partial<StoreState>;
                     } else if (payload.eventType === 'UPDATE') {
                       return { categories: state.categories.map(c => c.id === newCategory.id ? newCategory : c) } as Partial<StoreState>;
@@ -3791,8 +3851,10 @@ export const useStore = create<StoreState>()(
                      }
 
                      // Sync Dashboard (Revenue, Orders, etc.)
+                     const totalExpenses = expenses.reduce((acc, e) => acc + e.amount, 0);
                      const summary: DashboardSummary = {
                         totalRevenue: revenues.reduce((acc, r) => acc + r.amount, 0),
+                        totalExpenses,
                         totalOrders: activeOrders.length,
                         activeOrdersCount: activeOrders.length
                      };

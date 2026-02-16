@@ -6,6 +6,7 @@ import { buildFeed, downloadFeed } from '../services/qrFeedService';
 import { publishFeedHybrid } from '../services/feedPublisher';
 import { Dish, MenuCategory, StockItem } from '../types';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Link as LinkIcon, AlertCircle, Check, Tag, Box, Utensils, Grid3X3, Coffee, Pizza, Beer, IceCream, Copy, RefreshCw } from 'lucide-react';
+import { formatKz } from '../services/utils/currencyFormatter';
 
 import { AVAILABLE_ICONS } from './Categories';
 

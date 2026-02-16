@@ -21,6 +21,34 @@ Object.defineProperty(global, 'localStorage', {
   value: localStorageMock
 });
 
+// Mock Supabase Service
+vi.mock('../services/supabaseService', () => ({
+  supabaseService: {
+    syncAuditLogs: vi.fn().mockResolvedValue({ success: true }),
+    syncDashboardSummary: vi.fn().mockResolvedValue({ success: true }),
+    syncMenu: vi.fn().mockResolvedValue({ success: true }),
+    isConnected: vi.fn().mockResolvedValue(true),
+    getClient: vi.fn().mockReturnValue({}),
+    client: {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+    }
+  }
+}));
+
+// Mock Integration API Service
+vi.mock('../services/integrationAPIService', () => ({
+  integrationAPIService: {
+    syncDashboardSummary: vi.fn().mockResolvedValue({ success: true }),
+    syncAuditLogs: vi.fn().mockResolvedValue({ success: true }),
+    client: {}
+  }
+}));
+
 // Import store
 import { useStore } from './useStore';
 

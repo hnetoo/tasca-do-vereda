@@ -5,6 +5,10 @@ vi.mock('@supabase/supabase-js', () => {
   let attempts = 0;
   const makeResponse = (data: any, error: any = null) => Promise.resolve({ data, error });
   const client = {
+    auth: {
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    },
     from: (table: string) => {
       if (table === 'categories') {
         const builder: any = {
@@ -19,15 +23,19 @@ vi.mock('@supabase/supabase-js', () => {
         };
         return builder;
       }
-      if (table === 'menu_items') {
+      if (table === 'menu_items' || table === 'products') {
         const builder: any = {
           select: () => builder,
           eq: () => builder,
           ilike: () => builder,
           order: () => builder,
           range: () => makeResponse([
-            { id: 'd1', name: 'Cerveja', price: 1000, category_id: 'cat1', available: true, image_url: '', tax_rate: 14 }
-          ], null)
+            { id: 'd1', name: 'Cerveja', price: 1000, category_id: 'cat1', available: true, image_url: '', tax_rate: 14, tax_code: 'NOR' }
+          ], null),
+          then: (resolve: any) => resolve({ 
+              data: [{ id: 'd1', name: 'Cerveja', price: 1000, category_id: 'cat1', available: true, image_url: '', tax_rate: 14, tax_code: 'NOR' }], 
+              error: null 
+          })
         };
         return builder;
       }

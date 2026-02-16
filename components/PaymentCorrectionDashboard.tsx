@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { Order, PaymentMethod, AuditLog } from '../types';
 import { CheckCircle, Edit, History, XCircle, ChevronDown } from 'lucide-react';
+import { formatKz } from '../services/utils/currencyFormatter';
+import { formatDate } from '../services/utils/dateUtils';
 
 const PaymentCorrectionDashboard = () => {
   const { activeOrders, correctPayment, auditLogs, addNotification } = useStore();
@@ -15,9 +17,6 @@ const PaymentCorrectionDashboard = () => {
   const ordersNeedingCorrection = useMemo(() => {
     return activeOrders.filter(order => order.status === 'FECHADO' || order.status === 'PAGO');
   }, [activeOrders]);
-
-import { formatKz } from '../services/utils/currencyFormatter';
-import { formatDate } from '../services/utils/dateUtils';
 
   const handleOpenCorrectionModal = (order: Order) => {
     setSelectedOrder(order);

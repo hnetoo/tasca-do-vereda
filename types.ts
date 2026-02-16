@@ -93,6 +93,16 @@ export type Table = AnyRecord;
 export type AuditLog = AnyRecord;
 export type OfflineQueue = AnyRecord;
 
+export interface DailyAnalytics {
+  date: string;
+  totalRevenue: number;
+  totalExpenses: number;
+  totalProductCost: number;
+  totalOrders: number;
+  netProfit: number;
+  lastUpdated: string;
+}
+
 export interface MenuCategory {
   id: string;
   name: string;
@@ -105,6 +115,8 @@ export interface MenuCategory {
   deletedAt?: string | null;
   deleted_at?: string | null; // For Supabase compatibility
   availableOnDigitalMenu?: boolean;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface Dish {
@@ -294,6 +306,7 @@ export type IntegrityIssue = AnyRecord;
 
 export interface DashboardSummary {
   totalRevenue: number;
+  totalExpenses: number;
   totalOrders: number;
   activeOrdersCount: number;
 }

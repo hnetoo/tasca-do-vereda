@@ -1,10 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { QrCode, RefreshCw, ExternalLink, Globe, Wifi, Search, Eye, EyeOff, Edit2, Trash2, Plus, Image as ImageIcon, Cloud, Monitor, X, Save, Book, AlertCircle, UtensilsCrossed, Coffee, Wine, IceCream, Sandwich, Fish, Beef, Pizza, Soup, Beer, Cake, Wheat } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Dish } from '../types';
 import { downloadManual } from '../services/manualService';
+import { formatKz } from '../services/utils/currencyFormatter';
+import { integrationAPIService } from '../services/integrationAPIService';
 
 interface QRMenuConfigProps {
   isOpen: boolean;
@@ -36,8 +38,6 @@ const ensureMenuPath = (url: string) => {
   const cleanBase = base.replace(/\/$/, '');
   return `${cleanBase}/#/menu/public`;
 };
-
-import { formatKz } from '../services/utils/currencyFormatter';
 
 const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
   const { settings, updateSettings, addNotification, menu, categories, updateDish, removeDish, addDish } = useStore();
@@ -146,12 +146,11 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
 
       // Force a manual sync if supabase is enabled
       if (settings.supabaseConfig?.enabled) {
-        const { supabaseService } = await import('../services/supabaseService');
-        if (supabaseService.isConnected()) {
+        if (integrationAPIService.isConnected()) {
           addNotification('info', 'Sincronizando com a nuvem...');
-          const result = await supabaseService.syncSettings(updatedSettings);
+          const result = await integrationAPIService.syncSettings(updatedSettings);
           if (!result.success) {
-            console.error('Cloud sync failed:', (result as { error?: string }).error || 'Unknown error');
+            console.error('Cloud sync failed:', result.error || 'Unknown error');
             addNotification('warning', 'Salvo localmente, mas falhou ao sincronizar com a nuvem.');
           } else {
             addNotification('success', 'Configuração salva e sincronizada!');
@@ -288,7 +287,7 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
       setEditingId(null);
       setDishForm({
         name: '', price: 0, category_id: categories[0]?.id || '',
-        description: '', image: '', taxCode: 'NOR', isAvailableOnDigitalMenu: true
+        description: '', image: '', taxCode: 'NOR', availableOnDigitalMenu: true
       });
     }
     setIsDishModalOpen(true);
@@ -333,11 +332,10 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
 
     // Check if Supabase is enabled and connected
     if (settings.supabaseConfig?.enabled) {
-      const { supabaseService } = await import('../services/supabaseService');
-      if (supabaseService.isConnected()) {
+      if (integrationAPIService.isConnected()) {
         addNotification('info', 'Fazendo upload da imagem para a nuvem...');
         const fileName = `dish-${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-        const result = await supabaseService.uploadFile('menu-images', fileName, file);
+        const result = await integrationAPIService.uploadFile('menu-images', fileName, file);
         
         if (result.success) {
           setDishForm(prev => ({ ...prev, image: (result as { publicUrl?: string }).publicUrl }));
@@ -498,7 +496,7 @@ const QRMenuConfig: React.FC<QRMenuConfigProps> = ({ isOpen, onClose }) => {
                           
                           <div className="flex items-center justify-between w-full md:w-auto gap-6 shrink-0 md:pl-4 border-t border-white/5 md:border-0 pt-3 md:pt-0">
                             <span className="font-mono font-bold text-primary text-sm">
-import { formatKz } from '../services/utils/currencyFormatter';
+                              {formatKz(dish.price)}
                             </span>
                             
                             <div className="flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/5">
