@@ -22,7 +22,6 @@
     "build:scripts": "tsc -p tsconfig.script.json",
     "supabase:preview:create": "npm run build:scripts && cross-env SUPABASE_PREVIEW_ACTION=create VERCEL_GIT_COMMIT_REF=test-branch VERCEL_ENV=preview node dist/scripts/supabase-preview-manager.js",
     "supabase:preview:delete": "npm run build:scripts && cross-env SUPABASE_PREVIEW_ACTION=delete VERCEL_GIT_COMMIT_REF=test-branch VERCEL_ENV=preview node dist/scripts/supabase-preview-manager.js",
-    "temp-vercel-trigger": "echo 'Triggering Vercel deployment'",
     "prepare": "husky"
   },
   "dependencies": {
