@@ -1,0 +1,19 @@
+[package]
+name = "tasca-do-vereda-app"
+version = "1.1.80"
+description = "REST AI - Sistema de Gestão Inteligente"
+authors = ["Helder Neto"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["wry"] }
+tauri-plugin-shell = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

@@ -252,6 +252,13 @@ export const useStore = create<StoreState>()(
             if (payload.eventType === 'UPDATE') state.updateOrder(payload.new as unknown as Order);
             if (payload.eventType === 'DELETE') state.removeOrder(payload.old.id as string);
             break;
+          case 'settings':
+            if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+                const newSettings = payload.new as Partial<SystemSettings>;
+                state.updateSettings(newSettings);
+                logger.info('Settings updated via Realtime Sync', { settings: newSettings }, 'STORE');
+            }
+            break;
           default:
             logger.warn(`Unhandled real-time change for table: ${payload.tableName}`, payload, 'STORE');
             break;
@@ -3457,6 +3464,13 @@ export const useStore = create<StoreState>()(
                          if (data.settings) {
                             set({ settings: { ...get().settings, ...data.settings } });
                          }
+                         
+                         // Re-initialize CryptoService with potentially new settings
+                         const updatedSettings = get().settings;
+                         const newCryptoSecret = updatedSettings.adminPin || updatedSettings.apiToken || updatedSettings.restaurantName || 'TASCA-DEFAULT-SECRET';
+                         await CryptoService.initialize(newCryptoSecret);
+                         logger.info("Security: CryptoService re-initialized after cloud sync", undefined, 'SECURITY');
+
                          logger.info(`Web Mode: Loaded ${data.dishes?.length || 0} dishes from cloud.`, {}, 'STORE');
                          logger.info(`STORE: Supabase carregou ${data.dishes?.length || 0} pratos e ${data.categories?.length || 0} categorias.`, undefined, 'STORE');
                      } else {
