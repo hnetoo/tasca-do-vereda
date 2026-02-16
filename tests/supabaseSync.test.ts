@@ -39,6 +39,23 @@ vi.mock('@supabase/supabase-js', () => {
         };
         return builder;
       }
+      if (table === 'daily_analytics') {
+        return {
+          select: () => ({
+            eq: (col: string, val: string) => ({
+              single: () => makeResponse({ 
+                date: val, 
+                total_revenue: 1000, 
+                total_expenses: 500, 
+                total_product_cost: 300, 
+                total_orders: 10, 
+                net_profit: 200, 
+                updated_at: '2023-01-01T00:00:00Z' 
+              }, null)
+            })
+          })
+        };
+      }
       if (table === 'restaurant_settings') {
         return {
           select: () => ({
@@ -83,5 +100,21 @@ describe('Supabase sync with retry/backoff', () => {
     expect(res.success).toBe(true);
     expect(Array.isArray(res.data!)).toBe(true);
     expect(res.data![0].taxCode).toBe('NOR');
+  });
+
+  it('getDailyAnalytics returns mapped data', async () => {
+    supabaseService.initialize('http://dummy', 'sb_dummy_key');
+    const res = await supabaseService.getDailyAnalytics('2023-01-01');
+    
+    expect(res.success).toBe(true);
+    expect(res.data).toEqual({
+      date: '2023-01-01',
+      totalRevenue: 1000,
+      totalExpenses: 500,
+      totalProductCost: 300,
+      totalOrders: 10,
+      netProfit: 200,
+      lastUpdated: '2023-01-01T00:00:00Z'
+    });
   });
 });

@@ -11,37 +11,21 @@ export const useRestaurantStats = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = async () => {
-    const client = supabaseService.getClient();
-    if (!client) {
-        // If not connected, we might want to return null or load from local cache if available
-        // For now, just stop loading
+    if (!supabaseService.isConnected()) {
         setLoading(false);
         return;
     }
 
     try {
       const today = new Date().toISOString().split('T')[0];
-      
-      const { data, error } = await client
-        .from('daily_analytics')
-        .select('*')
-        .eq('date', today)
-        .single();
+      const result = await supabaseService.getDailyAnalytics(today);
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "Row not found"
-        throw error;
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      if (data) {
-        setStats({
-          date: data.date,
-          totalRevenue: data.total_revenue,
-          totalExpenses: data.total_expenses,
-          totalProductCost: data.total_product_cost,
-          totalOrders: data.total_orders,
-          netProfit: data.net_profit,
-          lastUpdated: data.last_updated
-        });
+      if (result.data) {
+        setStats(result.data as DailyAnalytics);
       } else {
         // Initialize with zeros if no data for today
         setStats({

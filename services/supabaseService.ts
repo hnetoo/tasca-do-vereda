@@ -395,6 +395,36 @@ export class SupabaseService {
       return { success: false, error: error.message };
     }
   }
+
+  async getDailyAnalytics(date: string) {
+    if (!this.client) return { success: false, error: 'Client not initialized' };
+    try {
+      const { data, error } = await this.client
+        .from('daily_analytics')
+        .select('*')
+        .eq('date', date)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (!data) return { success: true, data: null };
+
+      return { 
+        success: true, 
+        data: {
+          date: data.date,
+          totalRevenue: Number(data.total_revenue || 0),
+          totalExpenses: Number(data.total_expenses || 0),
+          totalProductCost: Number(data.total_product_cost || 0),
+          totalOrders: Number(data.total_orders || 0),
+          netProfit: Number(data.net_profit || 0),
+          lastUpdated: data.last_updated || data.updated_at || new Date().toISOString()
+        }
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 export const supabaseService = new SupabaseService();
