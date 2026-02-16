@@ -284,7 +284,7 @@ const Dashboard = () => {
       </header>
 
       {/* Bento Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6 auto-rows-[minmax(140px,auto)]">
+      <div className="flex flex-col md:grid md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6 auto-rows-[minmax(140px,auto)]">
         
         {/* Total Revenue - Large Card */}
         <div className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 bg-slate-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-3xl relative overflow-hidden group hover:border-primary/20 transition-colors">

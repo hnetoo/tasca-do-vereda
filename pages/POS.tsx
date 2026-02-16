@@ -1742,46 +1742,37 @@ const POS = () => {
               </div>
               
               <div className="flex-1 overflow-y-auto custom-scrollbar">
-                 <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-slate-900/90 backdrop-blur-sm z-10">
-                       <tr className="border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-500">
-                          <th className="p-4 font-black">Data/Hora</th>
-                          <th className="p-4 font-black">Operador</th>
-                          <th className="p-4 font-black">Detalhes</th>
-                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
+                 <ul className="divide-y divide-white/10">
                        {auditLogs
                           .filter(log => log.action === 'TABLE_TRANSFER')
                           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                           .map(log => (
-                             <tr key={log.id} className="hover:bg-white/5 transition-colors">
-                                <td className="p-4 text-xs text-slate-300">
-                                   {new Date(log.timestamp).toLocaleString('pt-AO', {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                   })}
-                                </td>
-                                <td className="p-4 text-xs font-bold text-white">
-                                   {String(log.metadata?.operator || 'N/A')}
-                                </td>
-                                <td className="p-4 text-xs text-slate-400 leading-relaxed">
+                             <li key={log.id} className="py-3 px-2">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-400">
+                                       {new Date(log.timestamp).toLocaleString('pt-AO', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                       })}
+                                    </span>
+                                    <span className="font-medium text-white">
+                                       {String(log.metadata?.operator || 'N/A')}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">
                                    {log.details}
-                                </td>
-                             </tr>
+                                </p>
+                             </li>
                           ))}
                        {auditLogs.filter(log => log.action === 'TABLE_TRANSFER').length === 0 && (
-                          <tr>
-                             <td colSpan={3} className="p-10 text-center text-slate-500 opacity-50">
-                                <Move size={48} className="mx-auto mb-4 opacity-50" />
-                                <p className="uppercase text-xs tracking-widest font-bold">Nenhuma transferência registada</p>
-                             </td>
-                          </tr>
+                          <div className="p-10 text-center text-slate-500 opacity-50 rounded-xl bg-white/[0.03] border border-white/5">
+                             <Move size={48} className="mx-auto mb-4 opacity-50" />
+                             <p className="uppercase text-xs tracking-widest font-bold">Nenhuma transferência registada</p>
+                          </div>
                        )}
-                    </tbody>
-                 </table>
+                 </ul>
               </div>
            </div>
         </div>

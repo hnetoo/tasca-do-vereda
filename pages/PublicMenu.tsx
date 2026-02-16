@@ -595,7 +595,7 @@ const PublicMenu = () => {
   const activeCategoryName = selectedCatId === 'TODOS' ? 'Todos os Pratos' : sortedCategories.find(c => c.id === selectedCatId)?.name || 'Categoria';
 
   return (
-    <div className="min-h-[100dvh] w-full bg-slate-950 flex flex-col lg:flex-row font-sans overflow-hidden text-white selection:bg-primary/30">
+    <div className="min-h-[100dvh] w-full bg-slate-950 flex flex-col lg:flex-row font-sans overflow-x-hidden max-w-full text-white selection:bg-primary/30">
       {/* Success Overlay */}
       {isOrderSuccess && (
         <div className="fixed inset-0 z-[100] bg-primary flex flex-col items-center justify-center animate-in fade-in duration-500 backdrop-blur-md">
@@ -770,7 +770,7 @@ const PublicMenu = () => {
               selectedCatId={selectedCatId}
              onSelectCategory={handleCategorySelect}
               categoryCounts={categoryCounts}
-              isSidebarOpen={true}
+              isSidebarOpen={isMobileMenuOpen}
            />
          </div>
 

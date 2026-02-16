@@ -15,10 +15,7 @@ const POSAccessManagement = () => {
           <Shield size={16} />
           <span>Segurança Ativa</span>
         </div>
-        <p className="text-slate-500">
-          As regras de acesso atuais continuam ativas.
-          A interface de gestão visual está em manutenção.
-        </p>
+
       </div>
     </div>
   );

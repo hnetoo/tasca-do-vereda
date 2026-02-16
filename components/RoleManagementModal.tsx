@@ -20,7 +20,7 @@ const RoleManagementModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <button onClick={onClose}><X size={20} /></button>
         </div>
         <div className="space-y-4">
-          <p className="text-slate-400">A interface de gestão de cargos e permissões está em manutenção.</p>
+
           <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded text-blue-200 text-sm">
             As permissões atuais continuam ativas.
           </div>

@@ -939,7 +939,7 @@ const MobileDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="min-h-[100dvh] bg-gradient-to-br from-slate-900 via-background to-slate-900 text-white">
+        <div className="min-h-[100dvh] bg-gradient-to-br from-slate-900 via-background to-slate-900 text-white overflow-x-hidden max-w-full">
           {/* Header Mobile */}
           <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-white/5 p-5">
             <div className="flex items-center justify-between mb-4">

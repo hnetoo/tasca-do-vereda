@@ -136,8 +136,8 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
             <div className={`
               relative overflow-hidden bg-white/[0.02] shrink-0
               ${viewMode === 'grid' 
-                ? 'w-24 h-24 sm:w-full sm:h-64' 
-                : 'w-24 h-24 sm:w-48 sm:h-auto'
+                ? 'w-20 h-20 aspect-square sm:w-full sm:h-64' 
+                : 'w-20 h-20 aspect-square sm:w-48 sm:h-auto'
               }
             `}>
               {hasImage ? (
