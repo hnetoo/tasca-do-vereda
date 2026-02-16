@@ -81,7 +81,7 @@ export const CategoryMenu: React.FC<CategoryMenuProps> = React.memo(({
         className={`
           flex items-center gap-4 rounded-2xl transition-all duration-500 group shrink-0 border relative overflow-hidden
           ${selectedCatId === 'TODOS' 
-            ? 'bg-primary/20 border-primary/50 text-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.15)]' 
+            ? 'bg-primary/20 border-primary/50 text-primary shadow-sm shadow-primary/20' 
             : 'bg-white/[0.03] border-white/5 text-slate-400 hover:bg-white/[0.08] hover:border-white/20 hover:text-white'
           }
           ${isSidebarOpen ? 'w-full px-5 py-4' : 'min-w-[160px] px-5 py-4 snap-start'}
@@ -92,7 +92,7 @@ export const CategoryMenu: React.FC<CategoryMenuProps> = React.memo(({
         )}
         <div className={`
           w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-500 relative z-10
-          ${selectedCatId === 'TODOS' ? 'bg-primary text-white scale-110 shadow-lg' : 'bg-white/5 text-slate-500 group-hover:scale-110'}
+          ${selectedCatId === 'TODOS' ? 'bg-primary text-white scale-110 shadow-sm' : 'bg-white/5 text-slate-500 group-hover:scale-110'}
         `}>
           <LayoutGrid size={22} strokeWidth={2.5} />
         </div>
@@ -129,7 +129,7 @@ export const CategoryMenu: React.FC<CategoryMenuProps> = React.memo(({
             )}
             <div className={`
               w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-500 relative z-10
-              ${isActive ? 'bg-primary text-white scale-110 shadow-lg' : 'bg-white/5 text-slate-500 group-hover:scale-110'}
+              ${isActive ? 'bg-primary text-white scale-110 shadow-sm' : 'bg-white/5 text-slate-500 group-hover:scale-110'}
             `}>
               {React.cloneElement(getCategoryIcon(cat.name || '') as React.ReactElement<{ size?: number; strokeWidth?: number }>, { 
                 size: 22,

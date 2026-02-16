@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
+import { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../src/lib/supabase';
 import { logger } from './logger';
 import { exponentialBackoff } from '../src/utils/retry';
 import { calculateHash } from '../src/utils/crypto';
@@ -11,21 +12,37 @@ export class SupabaseService {
   private subscriptions: Map<string, RealtimeChannel> = new Map();
   private realtimeHandlers: Map<string, (payload: any) => void> = new Map();
 
-  async initialize(url: string, key: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
+  async initialize(url?: string, key?: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
     if (this.client) {
       logger.info('Supabase client already initialized. Skipping re-initialization.', {}, 'SupabaseService');
       return;
     }
-    if (!url || !key) return;
+    
+    // Use the robust client from src/lib/supabase
+    this.client = supabase;
+    
+    // Fallback to arguments if provided, otherwise use exported constants from lib
+    const targetUrl = url || supabaseUrl;
+    const targetKey = key || supabaseAnonKey;
+    
+    if (targetUrl && targetKey) {
+        this.config = { url: targetUrl, key: targetKey };
+    } else {
+        logger.warn('Supabase URL/Key not found in env or arguments. Client might be in mock mode.', {}, 'SupabaseService');
+    }
+
     try {
-      this.client = createClient(url, key, {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: false
-        }
-      });
-      this.config = { url, key };
+      // Fase 4: Global Connection Check with Exponential Backoff
+      await exponentialBackoff(async () => {
+        if (!this.client) throw new Error('Supabase client not initialized');
+        
+        // Simple connectivity check
+        const { error } = await this.client.from('settings').select('count', { count: 'exact', head: true });
+        if (error) throw error;
+        
+        return true;
+      }, 3, 1000, 'SupabaseService.initialize');
+
       this.syncStatus.isConnected = true;
       this.syncStatus.status = 'idle';
       
@@ -40,7 +57,7 @@ export class SupabaseService {
           }
       });
 
-      logger.info('Supabase client initialized', {}, 'SupabaseService');
+      logger.info('Supabase client initialized via src/lib/supabase', {}, 'SupabaseService');
       if (onRealtimeChange) {
         this.realtimeHandlers.set('default', onRealtimeChange);
         await this.setupSubscriptions(onRealtimeChange);
@@ -334,21 +351,17 @@ export class SupabaseService {
   async fetchMenu() {
     if (!this.client) return { success: false, error: 'Client not initialized' };
     try {
-      const catRes = await exponentialBackoff(async () => {
+      const categories = await exponentialBackoff(async () => {
            const { data, error } = await this.client!.from('categories').select('*').order('sort_order');
            if (error) throw error;
            return data;
       }, 3, 1000, 'fetchMenu:categories');
 
-      if (catRes.error) throw catRes.error;
-
-      const dishRes = await exponentialBackoff(async () => {
+      const dishes = await exponentialBackoff(async () => {
            const { data, error } = await this.client!.from('products').select('*');
            if (error) throw error;
            return data;
       }, 3, 1000, 'fetchMenu:products');
-
-      if (dishRes.error) throw dishRes.error;
 
       this.syncStatus.status = 'success';
       this.syncStatus.lastSuccessAt = Date.now();
@@ -357,8 +370,8 @@ export class SupabaseService {
       return { 
           success: true, 
           data: { 
-              categories: catRes.data, 
-              dishes: dishRes.data 
+              categories: categories, 
+              dishes: dishes 
           } 
       };
     } catch (error: any) {
@@ -371,15 +384,13 @@ export class SupabaseService {
   async fetchUsers() {
     if (!this.client) return { success: false, error: 'Client not initialized' };
     try {
-      const { data, error } = await exponentialBackoff(async () => {
+      const usersData = await exponentialBackoff(async () => {
            const { data, error } = await this.client!.from('employees').select('*');
            if (error) throw error;
            return data;
       }, 3, 1000, 'fetchUsers');
 
-      if (error) throw error;
-
-      const users = data.map((user: any) => ({
+      const users = usersData.map((user: any) => ({
           id: user.id,
           name: user.name,
           pin: user.pin_code || user.pin, // Handle mapping

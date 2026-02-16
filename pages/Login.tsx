@@ -14,6 +14,26 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(!isInitialized);
 
   useEffect(() => {
+    // Fallback de segurança: Se a loja não inicializar em 8s, forçar a exibição do login
+    const timer = setTimeout(() => {
+      if (isLoading) {
+        console.warn('⚠️ Login: Timeout de inicialização atingido (8s). Forçando exibição.');
+        setIsLoading(false);
+      }
+    }, 8000);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (isInitialized) {
+        // Use a timeout to avoid synchronous state update within effect
+        const t = setTimeout(() => setIsLoading(false), 0);
+        return () => clearTimeout(t);
+    }
+  }, [isInitialized]);
+
+  useEffect(() => {
     const initSecurity = async () => {
         // Initialize CryptoService with a derived secret from settings or a default
         // In a real app, this should be a stable unique ID for the installation

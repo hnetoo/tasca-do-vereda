@@ -3,6 +3,7 @@ import { FileObject } from '@supabase/storage-js';
 import { SystemSettings, Dish, MenuCategory, Order, DashboardSummary, StockItem, Fornecedor, User, AuditLog, Revenue, Expense, Settings, Employee, AttendanceRecord, PayrollRecord, CashShift, Table } from '../types';
 import { logger, LogEntry } from './logger';
 import { supabaseService, SupabaseService } from './supabaseService';
+import { getAngolaToday } from '../src/utils/date';
 
 export interface BackupMetadata {
   id: string;
@@ -79,7 +80,7 @@ class IntegrationAPIService {
         return this.supabase.getClient();
     }
 
-    async initialize(url: string, key: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
+    async initialize(url?: string, key?: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
         await this.supabase.initialize(url, key, onRealtimeChange);
     }
 
@@ -829,7 +830,7 @@ class IntegrationAPIService {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getAngolaToday().split('T')[0];
 
       // 1. Sync Summary
       const { error: summaryError } = await this.client.from('dashboard_summary').upsert({

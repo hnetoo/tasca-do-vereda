@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { useRestaurantStats } from '../hooks/useRestaurantStats';
 import { supabaseService } from '../services/supabaseService';
+import { isTauri } from '../src/lib/supabase';
+import { formatAOA } from '../src/utils/format';
+import { getAngolaToday } from '../src/utils/date';
 import { SystemSettings, User, RemoteDashboardData } from '../types';
 import {
   TrendingUp, Users, ShoppingBag, Clock, AlertTriangle,
@@ -107,6 +110,7 @@ const MobileDashboard = () => {
   
   // Remote Data State
   const [isRemote, setIsRemote] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const isDemoMode = useMemo(() => {
     if (typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).get('demo') === '1';
@@ -259,7 +263,10 @@ const MobileDashboard = () => {
               supabaseService.initialize(settings.supabaseConfig.url, settings.supabaseConfig.key, onRealtimeChange);
           }
           
-          fetchRemoteDashboard().catch(console.error);
+          setIsRefreshing(true);
+          fetchRemoteDashboard()
+            .catch(console.error)
+            .finally(() => setIsRefreshing(false));
         }, 0);
      } else {
          setTimeout(() => setIsRemote(false), 0);
@@ -692,9 +699,6 @@ const MobileDashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const formatKz = (val: number) => 
-    new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
-
   // Dados em tempo real (Prioridade: Realtime Stats > Remote Data > Local Data)
   const todayAnalytics = useMemo(() => {
     if (realtimeStats) {
@@ -742,7 +746,7 @@ const MobileDashboard = () => {
     }));
   }, [last7DaysAnalytics]);
 
-  const todayKey = useMemo(() => new Date(currentTime).toISOString().split('T')[0], [currentTime]);
+  const todayKey = useMemo(() => getAngolaToday().split('T')[0], [currentTime]);
   
   const todayExpenses = useMemo(() => {
     if (realtimeStats) return realtimeStats.totalExpenses;
@@ -801,10 +805,10 @@ const MobileDashboard = () => {
           <div className="w-full max-w-sm relative z-10">
             {/* Header */}
             <div className="text-center mb-10">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 mb-5 shadow-lg shadow-primary/10">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 mb-5 shadow-sm shadow-primary/10">
                 <Smartphone size={36} className="text-primary" />
               </div>
-              <h1 className="text-3xl font-black text-white uppercase tracking-wider mb-2">
+              <h1 className="text-xl md:text-3xl font-black text-white uppercase tracking-wider mb-2">
                 {settings.restaurantName || 'Tasca do Vereda'}
               </h1>
               <p className="text-[13px] font-bold text-slate-500 uppercase tracking-[0.2em]">Mobile Dashboard</p>
@@ -872,7 +876,7 @@ const MobileDashboard = () => {
                       key={i}
                       className={`w-5 h-5 rounded-full transition-all duration-200 ${
                         i < accessPin.length 
-                          ? 'bg-primary scale-110 shadow-[0_0_10px_rgba(var(--primary),0.5)]' 
+                          ? 'bg-primary scale-110 shadow-sm shadow-primary/30' 
                           : 'bg-white/10'
                       }`}
                     />
@@ -963,7 +967,7 @@ const MobileDashboard = () => {
                 )}
                 <button
                   onClick={() => setAutoRefresh(!autoRefresh)}
-                  className={`p-2 rounded-lg transition-all ${
+                  className={`min-w-[44px] min-h-[44px] p-2 rounded-lg flex items-center justify-center transition-all ${
                     autoRefresh ? 'bg-primary text-black' : 'bg-slate-800 text-slate-400'
                   }`}
                 >
@@ -971,7 +975,7 @@ const MobileDashboard = () => {
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="p-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30"
+                  className="min-w-[44px] min-h-[44px] p-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 flex items-center justify-center"
                 >
                   <LogOut size={16} />
                 </button>
@@ -987,11 +991,22 @@ const MobileDashboard = () => {
               <div className="text-right">
                 <p className="text-sm text-slate-400">{new Date().toLocaleTimeString('pt-AO')}</p>
                 <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                  <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-red-500 animate-pulse'}`} />
-                  <p className={`text-[11px] font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>
-                    {isOnline ? 'Online' : 'Offline'}
-                  </p>
-                  {isOnline && (
+                  {(realtimeUpdating || isRefreshing) ? (
+                    <>
+                       <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                       <p className="text-[11px] font-bold text-primary animate-pulse">
+                         A atualizar...
+                       </p>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-red-500 animate-pulse'}`} />
+                      <p className={`text-[11px] font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>
+                        {isOnline ? 'Online' : 'Offline'}
+                      </p>
+                    </>
+                  )}
+                  {isOnline && !realtimeUpdating && (
                     <button 
                       onClick={handleManualSync}
                       disabled={syncing}
@@ -1033,109 +1048,109 @@ const MobileDashboard = () => {
           )}
 
           {/* KPI Cards - Visão Resumida */}
-          <div className="p-3 sm:p-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="px-4 py-3 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Card 1: Faturamento Hoje */}
-            <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-primary/60 bg-primary/10' : 'border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/40'}`}>
+            <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-primary/60 bg-primary/10' : 'border-primary/20 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/40'}`}>
               <div className="flex items-start justify-between mb-1">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Hoje</span>
                 <TrendingUp size={14} className={`text-primary sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
               </div>
-              <p className={`text-lg sm:text-2xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
-                {formatKz(todayAnalytics.totalSales)}
+              <p className={`text-2xl md:text-4xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
+                {realtimeLoading ? 'A carregar...' : formatAOA(todayAnalytics.totalSales)}
               </p>
               <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">{todayAnalytics.totalOrders} pedidos</p>
             </div>
 
             {/* Card 2: Pedidos Ativos */}
-            <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-blue-500/60 bg-blue-500/10' : 'border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent hover:border-blue-500/40'}`}>
+            <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-blue-500/60 bg-blue-500/10' : 'border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-transparent hover:border-blue-500/40'}`}>
               <div className="flex items-start justify-between mb-1">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Ativos</span>
                 <ShoppingBag size={14} className={`text-blue-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
               </div>
-              <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{liveActiveOrders}</p>
+              <p className={`text-2xl md:text-4xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{liveActiveOrders}</p>
               <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">mesas ativas</p>
             </div>
 
             {/* Card 3: Equipa */}
-            <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-green-500/60 bg-green-500/10' : 'border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent hover:border-green-500/40'}`}>
+            <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-green-500/60 bg-green-500/10' : 'border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent hover:border-green-500/40'}`}>
               <div className="flex items-start justify-between mb-1">
                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Equipa</span>
                 <Users size={14} className={`text-green-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
               </div>
-              <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{employeesWorking.length}</p>
+              <p className={`text-2xl md:text-4xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{employeesWorking.length}</p>
               <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">ao serviço</p>
             </div>
 
             {/* Card 4: Retenção */}
             {widgetConfig.showRetention && (
-              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-purple-500/60 bg-purple-500/10' : 'border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-transparent hover:border-purple-500/40'}`}>
+              <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-purple-500/60 bg-purple-500/10' : 'border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-transparent hover:border-purple-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Loyalty</span>
                   <TrendingUp size={14} className={`text-purple-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{(typeof retention === 'number' ? retention : 0).toFixed(0)}%</p>
+                <p className={`text-2xl md:text-4xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{(typeof retention === 'number' ? retention : 0).toFixed(0)}%</p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">retenção</p>
               </div>
             )}
 
             {/* Card 5: Tempo Médio de Preparo */}
             {widgetConfig.showPrepTime && (
-              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-yellow-500/60 bg-yellow-500/10' : 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 to-transparent hover:border-yellow-500/40'}`}>
+              <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-yellow-500/60 bg-yellow-500/10' : 'border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 to-transparent hover:border-yellow-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Preparo Médio</span>
                   <Clock size={14} className={`text-yellow-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{averagePreparationTime}m</p>
+                <p className={`text-2xl md:text-4xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{averagePreparationTime}m</p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">por pedido</p>
               </div>
             )}
 
             {/* Card 6: Mesas Disponíveis */}
             {widgetConfig.showTables && (
-              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-transparent hover:border-cyan-500/40'}`}>
+              <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-cyan-500/60 bg-cyan-500/10' : 'border-cyan-500/20 bg-gradient-to-br from-cyan-500/5 to-transparent hover:border-cyan-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Mesas Livres</span>
                   <Users size={14} className={`text-cyan-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className={`text-lg sm:text-2xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{availableTablesCount}</p>
+                <p className={`text-2xl md:text-4xl font-black text-white ${realtimeUpdating ? 'animate-pulse' : ''}`}>{availableTablesCount}</p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">disponíveis</p>
               </div>
             )}
 
             {widgetConfig.showExpenses && (
-              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-red-500/60 bg-red-500/10' : 'border-red-500/20 bg-gradient-to-br from-red-500/5 to-transparent hover:border-red-500/40'}`}>
+              <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-red-500/60 bg-red-500/10' : 'border-red-500/20 bg-gradient-to-br from-red-500/5 to-transparent hover:border-red-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Despesas Hoje</span>
                   <TrendingUp size={14} className={`text-red-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className={`text-lg sm:text-2xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
-                  {formatKz(todayExpenses)}
+                <p className={`text-2xl md:text-4xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
+                  {realtimeLoading ? 'A carregar...' : formatAOA(todayExpenses)}
                 </p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">saídas</p>
               </div>
             )}
 
             {widgetConfig.showCashFlow && (
-              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent hover:border-emerald-500/40'}`}>
+              <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent hover:border-emerald-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Fluxo de Caixa</span>
                   <TrendingUp size={14} className={`text-emerald-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className={`text-lg sm:text-2xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
-                  {formatKz(cashFlowToday)}
+                <p className={`text-2xl md:text-4xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
+                  {realtimeLoading ? 'A carregar...' : formatAOA(cashFlowToday)}
                 </p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">hoje</p>
               </div>
             )}
 
             {widgetConfig.showNetProfit && (
-              <div className={`glass-panel rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all ${realtimeUpdating ? 'border-sky-500/60 bg-sky-500/10' : 'border-sky-500/20 bg-gradient-to-br from-sky-500/5 to-transparent hover:border-sky-500/40'}`}>
+              <div className={`glass-panel rounded-xl p-4 border transition-all ${realtimeUpdating ? 'border-sky-500/60 bg-sky-500/10' : 'border-sky-500/20 bg-gradient-to-br from-sky-500/5 to-transparent hover:border-sky-500/40'}`}>
                 <div className="flex items-start justify-between mb-1">
                   <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Lucro Líquido</span>
                   <TrendingUp size={14} className={`text-sky-400 sm:w-3.5 sm:h-3.5 ${realtimeUpdating ? 'animate-bounce' : ''}`} />
                 </div>
-                <p className={`text-lg sm:text-2xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
-                  {formatKz(netProfitToday)}
+                <p className={`text-2xl md:text-4xl font-black text-white truncate ${realtimeUpdating ? 'animate-pulse' : ''}`}>
+                  {realtimeLoading ? 'A carregar...' : formatAOA(netProfitToday)}
                 </p>
                 <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5">hoje</p>
               </div>
@@ -1157,9 +1172,9 @@ const MobileDashboard = () => {
                 <button
                   key={tab.id}
                   onClick={() => setSelectedMetric(tab.id as DashboardMetric)}
-                  className={`px-4 py-2 rounded-lg font-bold text-[11px] uppercase tracking-widest whitespace-nowrap transition-all
+                  className={`px-4 h-11 rounded-lg font-bold text-[11px] uppercase tracking-widest whitespace-nowrap transition-all flex items-center
                     ${selectedMetric === tab.id
-                      ? 'bg-primary text-black shadow-glow'
+                      ? 'bg-primary text-black shadow-sm'
                       : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                     }`}
                 >
@@ -1202,7 +1217,7 @@ const MobileDashboard = () => {
                             borderRadius: '8px',
                             fontSize: '10px'
                           }}
-                          formatter={(value: number) => [formatKz(value), 'Receita']}
+                          formatter={(value: number) => [formatAOA(value), 'Receita']}
                         />
                         <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
                           {menuAnalytics.slice(0, 5).map((_entry, index) => (
@@ -1228,7 +1243,7 @@ const MobileDashboard = () => {
                                 </span>
                                 <span className="text-[11px] font-bold text-white truncate max-w-[150px]">{item?.dishName || 'N/A'}</span>
                               </div>
-                              <span className="text-[10px] font-black text-primary">{formatKz(item?.revenue || 0)}</span>
+                              <span className="text-[10px] font-black text-primary">{formatAOA(item?.revenue || 0)}</span>
                             </div>
                             
                             <div className="grid grid-cols-3 gap-2 mt-1">
@@ -1273,7 +1288,7 @@ const MobileDashboard = () => {
                     </div>
                     <div className="p-2 rounded-lg bg-white/5 border border-white/5">
                       <span className="text-[8px] text-slate-500 uppercase font-bold block mb-1">Ticket Médio (30d)</span>
-                      <p className="text-lg font-black text-green-400">{formatKz(todayAnalytics.avgOrder)}</p>
+                      <p className="text-lg font-black text-green-400">{formatAOA(todayAnalytics.avgOrder)}</p>
                     </div>
                   </div>
                 </div>
@@ -1306,7 +1321,7 @@ const MobileDashboard = () => {
                             borderRadius: '8px',
                             fontSize: '10px'
                           }}
-                          formatter={(value: number) => formatKz(value)}
+                          formatter={(value: number) => formatAOA(value)}
                         />
                         <Bar dataKey="totalSales" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Receita" />
                         <Bar dataKey="totalProfit" fill="#10b981" radius={[4, 4, 0, 0]} name="Lucro" />
@@ -1331,7 +1346,7 @@ const MobileDashboard = () => {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Total Vendido</span>
-                      <span className="text-sm font-black text-primary">{formatKz(todayAnalytics.totalSales)}</span>
+                      <span className="text-sm font-black text-primary">{formatAOA(todayAnalytics.totalSales)}</span>
                     </div>
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Pedidos</span>
@@ -1339,7 +1354,7 @@ const MobileDashboard = () => {
                     </div>
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Ticket Médio</span>
-                      <span className="text-sm font-black text-green-400">{formatKz(todayAnalytics.avgOrder)}</span>
+                      <span className="text-sm font-black text-green-400">{formatAOA(todayAnalytics.avgOrder)}</span>
                     </div>
                   </div>
                   <div className="mt-3">
@@ -1446,7 +1461,7 @@ const MobileDashboard = () => {
                             borderRadius: '8px',
                             fontSize: '10px'
                           }}
-                          formatter={(value: number) => [formatKz(value), 'Vendas']}
+                          formatter={(value: number) => [formatAOA(value), 'Vendas']}
                         />
                         <Area 
                           type="monotone" 
@@ -1464,7 +1479,7 @@ const MobileDashboard = () => {
                     {last7DaysSales.slice().reverse().map((day, i) => (
                       <div key={i} className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                         <span className="text-[10px] font-bold text-slate-400">{day.date}</span>
-                        <span className="text-sm font-black text-primary">{formatKz(day.totalSales)}</span>
+                        <span className="text-sm font-black text-primary">{formatAOA(day.totalSales)}</span>
                       </div>
                     ))}
                   </div>
@@ -1491,7 +1506,7 @@ const MobileDashboard = () => {
                             <p className="text-[9px] text-slate-400">{order.items.length} itens</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-[10px] font-black text-primary">{formatKz(order.total)}</p>
+                            <p className="text-[10px] font-black text-primary">{formatAOA(order.total)}</p>
                             <p className="text-[9px] text-slate-400">
                               {Math.round((currentTime - new Date(order.timestamp).getTime()) / 60000)}m
                             </p>
@@ -1511,19 +1526,19 @@ const MobileDashboard = () => {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Total Vendas (Hoje)</span>
-                      <span className="text-base font-black text-green-400">{formatKz(todayAnalytics.totalSales)}</span>
+                      <span className="text-base font-black text-green-400">{formatAOA(todayAnalytics.totalSales)}</span>
                     </div>
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Lucro Bruto (Hoje)</span>
-                      <span className="text-base font-black text-primary">{formatKz(data.grossProfitToday || 0)}</span>
+                      <span className="text-base font-black text-primary">{formatAOA(data.grossProfitToday || 0)}</span>
                     </div>
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Fluxo de Caixa (Hoje)</span>
-                      <span className="text-base font-black text-emerald-400">{formatKz(cashFlowToday)}</span>
+                      <span className="text-base font-black text-emerald-400">{formatAOA(cashFlowToday)}</span>
                     </div>
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Lucro Líquido (Hoje)</span>
-                      <span className="text-base font-black text-sky-400">{formatKz(netProfitToday)}</span>
+                      <span className="text-base font-black text-sky-400">{formatAOA(netProfitToday)}</span>
                     </div>
                     {(isRemote ? effectiveExpenses : localExpenses).length > 0 && (
                       <div className="space-y-1.5 mt-2 pt-2 border-t border-white/5">
@@ -1531,7 +1546,7 @@ const MobileDashboard = () => {
                         {Array.isArray(isRemote ? effectiveExpenses : localExpenses) ? (isRemote ? effectiveExpenses : localExpenses).slice(0, 3).map((exp, i) => (
                           <div key={i} className="flex justify-between items-center p-1.5 rounded bg-white/5">
                             <span className="text-[10px] truncate max-w-[120px]">{exp?.description || ''}</span>
-                            <span className="text-[10px] font-bold text-red-400">-{formatKz(exp?.amount || 0)}</span>
+                            <span className="text-[10px] font-bold text-red-400">-{formatAOA(exp?.amount || 0)}</span>
                           </div>
                         )) : null}
                       </div>
@@ -1543,15 +1558,15 @@ const MobileDashboard = () => {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Vendas (Todo o período)</span>
-                      <span className="text-base font-black text-green-400">{formatKz(profitMetrics.totalSalesAllTime)}</span>
+                      <span className="text-base font-black text-green-400">{formatAOA(profitMetrics.totalSalesAllTime)}</span>
                     </div>
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Lucro Bruto (Todas as vendas)</span>
-                      <span className="text-base font-black text-primary">{formatKz(profitMetrics.grossProfitAllTime)}</span>
+                      <span className="text-base font-black text-primary">{formatAOA(profitMetrics.grossProfitAllTime)}</span>
                     </div>
                     <div className="flex justify-between items-center p-1.5 rounded-lg bg-white/5">
                       <span className="text-[10px] font-bold text-slate-400">Lucro Geral (Todas as vendas)</span>
-                      <span className="text-base font-black text-white">{formatKz(profitMetrics.netProfitAllTime)}</span>
+                      <span className="text-base font-black text-white">{formatAOA(profitMetrics.netProfitAllTime)}</span>
                     </div>
                   </div>
                 </div>
@@ -1599,19 +1614,19 @@ const MobileDashboard = () => {
                     <Settings size={12} className="text-slate-500" />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <button className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center gap-1">
+                    <button className="h-11 px-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center gap-0.5">
                       <span className="text-[8px] font-black text-slate-500 uppercase">KDS</span>
                       <span className={`text-[10px] font-black ${settings.kdsEnabled ? 'text-green-400' : 'text-red-400'}`}>
                         {settings.kdsEnabled ? 'ATIVO' : 'OFF'}
                       </span>
                     </button>
-                    <button className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center gap-1">
+                    <button className="h-11 px-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center gap-0.5">
                       <span className="text-[8px] font-black text-slate-500 uppercase">Sincronização</span>
                       <span className={`text-[10px] font-black ${isRemote ? 'text-green-400' : 'text-slate-400'}`}>
                         {isRemote ? 'ONLINE' : 'LOCAL'}
                       </span>
                     </button>
-                    <button className="p-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center gap-1">
+                    <button className="h-11 px-2 rounded-lg bg-white/5 border border-white/5 flex flex-col items-center justify-center gap-0.5">
                       <span className="text-[8px] font-black text-slate-500 uppercase">Menu QR</span>
                       <span className={`text-[10px] font-black ${(settings as any).qrMenuReadOnly ? 'text-red-400' : 'text-green-400'}`}>
                         {(settings as any).qrMenuReadOnly ? 'READ-ONLY' : 'EDITABLE'}
@@ -1670,37 +1685,37 @@ const MobileDashboard = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => setWidgetConfig(prev => ({ ...prev, showRetention: !prev.showRetention }))}
-                      className={`p-2 rounded-lg border ${widgetConfig.showRetention ? 'bg-purple-500/10 border-purple-500/30 text-purple-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
+                      className={`h-11 px-2 rounded-lg border flex items-center justify-center ${widgetConfig.showRetention ? 'bg-purple-500/10 border-purple-500/30 text-purple-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
                     >
                       Retenção
                     </button>
                     <button
                       onClick={() => setWidgetConfig(prev => ({ ...prev, showPrepTime: !prev.showPrepTime }))}
-                      className={`p-2 rounded-lg border ${widgetConfig.showPrepTime ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
+                      className={`h-11 px-2 rounded-lg border flex items-center justify-center ${widgetConfig.showPrepTime ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
                     >
                       Preparo
                     </button>
                     <button
                       onClick={() => setWidgetConfig(prev => ({ ...prev, showTables: !prev.showTables }))}
-                      className={`p-2 rounded-lg border ${widgetConfig.showTables ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
+                      className={`h-11 px-2 rounded-lg border flex items-center justify-center ${widgetConfig.showTables ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
                     >
                       Mesas
                     </button>
                     <button
                       onClick={() => setWidgetConfig(prev => ({ ...prev, showExpenses: !prev.showExpenses }))}
-                      className={`p-2 rounded-lg border ${widgetConfig.showExpenses ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
+                      className={`h-11 px-2 rounded-lg border flex items-center justify-center ${widgetConfig.showExpenses ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
                     >
                       Despesas
                     </button>
                     <button
                       onClick={() => setWidgetConfig(prev => ({ ...prev, showCashFlow: !prev.showCashFlow }))}
-                      className={`p-2 rounded-lg border ${widgetConfig.showCashFlow ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
+                      className={`h-11 px-2 rounded-lg border flex items-center justify-center ${widgetConfig.showCashFlow ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
                     >
                       Fluxo
                     </button>
                     <button
                       onClick={() => setWidgetConfig(prev => ({ ...prev, showNetProfit: !prev.showNetProfit }))}
-                      className={`p-2 rounded-lg border ${widgetConfig.showNetProfit ? 'bg-sky-500/10 border-sky-500/30 text-sky-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
+                      className={`h-11 px-2 rounded-lg border flex items-center justify-center ${widgetConfig.showNetProfit ? 'bg-sky-500/10 border-sky-500/30 text-sky-300' : 'bg-white/5 border-white/5 text-slate-400'} text-[9px] font-black uppercase`}
                     >
                       Lucro
                     </button>
@@ -1814,7 +1829,7 @@ const MobileDashboard = () => {
           {/* Floating Action Button */}
           <div className="fixed bottom-6 right-4 flex flex-col gap-2">
             <button
-              className="w-14 h-14 rounded-full bg-primary text-black shadow-glow hover:scale-110 transition-all flex items-center justify-center font-black"
+              className="w-14 h-14 rounded-full bg-primary text-black shadow-lg hover:scale-110 transition-all flex items-center justify-center font-black"
               title="Notificações"
             >
               <Bell size={20} />

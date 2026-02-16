@@ -94,7 +94,7 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
 
   return (
     <div className={`
-      grid pb-28 px-4 py-5 sm:px-5 md:px-6 lg:px-8 gap-6 sm:gap-8
+      grid pb-28 px-4 py-5 sm:px-5 md:px-6 lg:px-8 gap-4 sm:gap-8
       ${viewMode === 'grid' 
         ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
         : 'grid-cols-1'
@@ -115,17 +115,18 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
           <div 
             key={dish.id}
             onClick={() => onProductClick(dish)}
-            className="
-              group bg-white/[0.03] border border-white/5 rounded-[2rem] overflow-hidden 
+            className={`
+              group bg-white/[0.03] border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden 
               hover:bg-white/[0.06] hover:border-primary/40 transition-all duration-500
-              flex flex-col relative active:scale-[0.98] shadow-xl hover:shadow-primary/10
-            "
+              relative active:scale-[0.98] shadow-sm hover:shadow-primary/10
+              ${viewMode === 'grid' ? 'flex flex-row sm:flex-col' : 'flex flex-row'}
+            `}
             style={{ animationDelay: `${index * 50}ms` }}
           >
             {/* Price Badge */}
-            <div className="absolute top-4 right-4 z-20">
-              <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-lg">
-                <span className="text-primary font-black text-sm tracking-tight">
+            <div className={`absolute z-20 ${viewMode === 'grid' ? 'top-2 right-2 sm:top-4 sm:right-4' : 'top-2 right-2'}`}>
+              <div className="bg-black/60 backdrop-blur-md border border-white/10 px-2 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-lg">
+                <span className="text-primary font-black text-xs sm:text-sm tracking-tight">
                   {formatPrice(dish.price)}
                 </span>
               </div>
@@ -133,8 +134,11 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
 
             {/* Image Container */}
             <div className={`
-              relative overflow-hidden bg-white/[0.02]
-              ${viewMode === 'grid' ? 'h-56 sm:h-64' : 'h-32 w-full'}
+              relative overflow-hidden bg-white/[0.02] shrink-0
+              ${viewMode === 'grid' 
+                ? 'w-24 h-24 sm:w-full sm:h-64' 
+                : 'w-24 h-24 sm:w-48 sm:h-auto'
+              }
             `}>
               {hasImage ? (
                 <>
@@ -151,14 +155,14 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
                 </>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 bg-white/[0.01]">
-                  <ShoppingBasket size={40} strokeWidth={1.5} className="mb-2 opacity-20" />
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-30">Sem imagem</span>
+                  <ShoppingBasket size={24} strokeWidth={1.5} className="mb-1 opacity-20 sm:w-10 sm:h-10 sm:mb-2" />
+                  <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest opacity-30">Sem imagem</span>
                 </div>
               )}
 
               {quantity > 0 && (
-                <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
-                  <div className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center font-black shadow-xl border-2 border-black/20 animate-in zoom-in duration-300">
+                <div className={`absolute z-20 flex items-center gap-2 ${viewMode === 'grid' ? 'bottom-2 right-2 sm:bottom-4 sm:right-4' : 'bottom-2 right-2'}`}>
+                  <div className="bg-primary text-white w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black shadow-xl border-2 border-black/20 animate-in zoom-in duration-300 text-xs sm:text-base">
                     {quantity}
                   </div>
                 </div>
@@ -166,44 +170,45 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
             </div>
 
             {/* Content */}
-            <div className="p-6 flex flex-col flex-1 relative">
-              <div className="flex flex-col gap-1 mb-3">
-                <h3 className="font-black text-lg sm:text-xl text-white group-hover:text-primary transition-colors leading-tight uppercase tracking-wide">
+            <div className="p-3 sm:p-6 flex flex-col flex-1 relative justify-between">
+              <div className="flex flex-col gap-1 mb-1 sm:mb-3">
+                <h3 className="font-black text-sm sm:text-xl text-white group-hover:text-primary transition-colors leading-tight uppercase tracking-wide line-clamp-2 sm:line-clamp-none">
                   {dish.name}
                 </h3>
                 {dish.categoryName && (
-                  <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-primary/60 uppercase tracking-widest">
                     {dish.categoryName}
                   </span>
                 )}
               </div>
               
               {dish.description && (
-                <p className="text-sm text-slate-400 line-clamp-2 font-medium leading-relaxed mb-4 group-hover:text-slate-300 transition-colors">
+                <p className="text-xs sm:text-sm text-slate-400 line-clamp-2 font-medium leading-relaxed mb-2 sm:mb-4 group-hover:text-slate-300 transition-colors">
                   {dish.description}
                 </p>
               )}
 
-              <div className="mt-auto pt-4 flex items-center justify-between border-t border-white/5">
+              <div className="mt-auto pt-2 sm:pt-4 flex items-center justify-between border-t border-white/5">
                 <button 
-                  className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors"
+                  className="flex items-center gap-1 sm:gap-2 text-[9px] sm:text-[11px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors"
                 >
-                  Ver Detalhes
-                  <Plus size={14} strokeWidth={3} />
+                  <span className="hidden sm:inline">Ver Detalhes</span>
+                  <span className="sm:hidden">Detalhes</span>
+                  <Plus size={12} strokeWidth={3} className="sm:w-3.5 sm:h-3.5" />
                 </button>
                 
                 {quantity > 0 ? (
-                  <div className="flex items-center gap-3 bg-white/5 rounded-full p-1 border border-white/10" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 sm:gap-3 bg-white/5 rounded-full p-0.5 sm:p-1 border border-white/10" onClick={(e) => e.stopPropagation()}>
                     <button 
                       onClick={() => onUpdateCart(dish.id, -1)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-all"
+                      className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-all"
                     >
                       <Minus size={16} strokeWidth={3} />
                     </button>
                     <span className="text-sm font-black text-white w-4 text-center">{quantity}</span>
                     <button 
                       onClick={() => onUpdateCart(dish.id, 1)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-green-500/20 text-slate-400 hover:text-green-400 transition-all"
+                      className="w-11 h-11 rounded-full flex items-center justify-center hover:bg-green-500/20 text-slate-400 hover:text-green-400 transition-all"
                     >
                       <Plus size={16} strokeWidth={3} />
                     </button>
@@ -211,7 +216,7 @@ export const ProductMenu: React.FC<ProductMenuProps> = React.memo(({
                 ) : (
                   <button 
                     onClick={(e) => { e.stopPropagation(); onAddToCart(dish.id, 1, ''); }}
-                    className="bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/40 text-white p-2 rounded-full transition-all duration-300"
+                    className="bg-white/5 hover:bg-primary/20 border border-white/10 hover:border-primary/40 text-white w-11 h-11 flex items-center justify-center rounded-full transition-all duration-300"
                   >
                     <Plus size={18} strokeWidth={3} />
                   </button>

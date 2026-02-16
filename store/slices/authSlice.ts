@@ -3,6 +3,7 @@ import { User, StoreState, Permission } from '../../types';
 import { MOCK_USERS } from '../../constants';
 import { logger } from '../../services/logger';
 import { calculateHash } from '../../src/utils/crypto';
+import { CryptoService } from '../../services/cryptoService';
 
 export interface AuthSlice {
   users: User[];
@@ -102,7 +103,6 @@ export const createAuthSlice: StateCreator<
         // Handle persistence
         if (rememberMe) {
           try {
-            const { CryptoService } = await import('../../services/cryptoService');
             // Ensure initialized if not already
             if (!CryptoService.isReady()) {
                 const settings = get().settings;

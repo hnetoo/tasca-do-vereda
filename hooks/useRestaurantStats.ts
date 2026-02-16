@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabaseService } from '../services/supabaseService';
 import { logger } from '../services/logger';
 import { DailyAnalytics } from '../types';
-import { formatKz } from '../services/utils/currencyFormatter';
+import { formatAOA } from '../src/utils/format';
+import { getAngolaToday } from '../src/utils/date';
 
 export const useRestaurantStats = () => {
   const [stats, setStats] = useState<DailyAnalytics | null>(null);
@@ -17,8 +18,10 @@ export const useRestaurantStats = () => {
     }
 
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getAngolaToday().split('T')[0];
       const result = await supabaseService.getDailyAnalytics(today);
+      
+      console.log('Dados Financeiros:', result.data);
 
       if (!result.success) {
         throw new Error(result.error);
@@ -78,7 +81,7 @@ export const useRestaurantStats = () => {
               event: '*',
               schema: 'public',
               table: 'daily_analytics',
-              filter: `date=eq.${new Date().toISOString().split('T')[0]}`
+              filter: `date=eq.${getAngolaToday().split('T')[0]}`
             },
             (payload) => {
               logger.info('Real-time update for daily_analytics', payload, 'useRestaurantStats');
@@ -127,9 +130,9 @@ export const useRestaurantStats = () => {
     isUpdating,
     error,
     formatted: stats ? {
-      revenue: formatKz(stats.totalRevenue),
-      expenses: formatKz(stats.totalExpenses),
-      profit: formatKz(stats.netProfit),
+      revenue: formatAOA(stats.totalRevenue),
+      expenses: formatAOA(stats.totalExpenses),
+      profit: formatAOA(stats.netProfit),
       orders: stats.totalOrders.toString()
     } : null
   };

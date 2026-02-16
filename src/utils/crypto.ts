@@ -1,26 +1,19 @@
-// src/utils/crypto.ts
-
-/**
- * Gera um hash SHA-256 de uma string para verificar a integridade dos dados
- * Útil para comparar se um produto ou venda mudou antes de sincronizar.
- */
 export const calculateHash = async (data: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const dataBuffer = encoder.encode(data);
-  
-  // Usa a API Web Crypto (disponível no Tauri e Vercel)
-  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
-  
-  // Converte o buffer para uma string hexadecimal
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-  
-  return hashHex;
-};
-
-/**
- * Gera um ID único para transações locais antes de subirem para a Cloud
- */
-export const generateId = () => {
-  return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+      const msgBuffer = new TextEncoder().encode(data);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+  } else {
+      // Fallback for non-browser environments (like older Node.js tests)
+      try {
+          // Dynamic import to avoid bundling issues in browser
+          const { createHash } = await import('node:crypto');
+          return createHash('sha256').update(data).digest('hex');
+      } catch (e) {
+          console.error("Crypto API not available", e);
+          return "";
+      }
+  }
 };

@@ -3415,8 +3415,14 @@ export const useStore = create<StoreState>()(
              console.log('[Store] Web Mode detected. Configuring Supabase...');
              logger.info('Environment: Web Mode detected. Using Supabase as primary data source.', {}, 'STORE');
              
-             const sbUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || settings.supabaseConfig?.url || "https://ratzyxwpzrqbtpheygch.supabase.co";
-             const sbKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || settings.supabaseConfig?.key || "sb_publishable_brYx8iH2oCK5uVUowtUhTQ_c7X4nrAo"; // Fallback for public demo
+             const envUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+             const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+             
+             if (!envUrl) console.error('❌ ERRO CRÍTICO: NEXT_PUBLIC_SUPABASE_URL não encontrada!');
+             if (!envKey) console.error('❌ ERRO CRÍTICO: NEXT_PUBLIC_SUPABASE_ANON_KEY não encontrada!');
+
+             const sbUrl = envUrl || settings.supabaseConfig?.url || "https://ratzyxwpzrqbtpheygch.supabase.co";
+             const sbKey = envKey || settings.supabaseConfig?.key || "sb_publishable_brYx8iH2oCK5uVUowtUhTQ_c7X4nrAo"; // Fallback for public demo
              console.log(`[Store] Supabase Config: URL=${sbUrl ? 'FOUND' : 'MISSING'}, Key=${sbKey ? 'FOUND' : 'MISSING'}`);
 
              if (sbUrl && sbKey) {

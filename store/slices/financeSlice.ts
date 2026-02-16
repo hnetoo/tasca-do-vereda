@@ -3,8 +3,10 @@ import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, St
 import { logger } from '../../services/logger';
 import { backupService } from '../../services/backupService';
 import { integrationAPIService } from '../../services/integrationAPIService';
+import { getAngolaToday } from '../../src/utils/date';
 
 import { executeQuery } from '../../services/database/connection';
+import { databaseOperations } from '../../services/database/operations';
 
 export interface FinanceSlice {
   orders: Order[];
@@ -119,7 +121,7 @@ export const createFinanceSlice: StateCreator<
 
   getDailySalesAnalytics: (days = 7) => {
     const state = get();
-    const today = new Date();
+    const today = new Date(getAngolaToday());
     today.setHours(0, 0, 0, 0);
 
     const startDate = new Date(today);
@@ -166,7 +168,7 @@ export const createFinanceSlice: StateCreator<
 
   getMenuAnalytics: (days = 7) => {
     const state = get();
-    const today = new Date();
+    const today = new Date(getAngolaToday());
     today.setHours(0, 0, 0, 0);
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - (days - 1));
@@ -213,7 +215,7 @@ export const createFinanceSlice: StateCreator<
 
   getRevenueHistory: (days = 7) => {
     const state = get();
-    const today = new Date();
+    const today = new Date(getAngolaToday());
     today.setHours(0, 0, 0, 0);
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - (days - 1));
@@ -647,7 +649,6 @@ export const createFinanceSlice: StateCreator<
           set({ shifts });
           
           // Persistir turno atualizado
-          const { databaseOperations } = await import('../../services/database/operations');
           databaseOperations.saveShifts([shift]).catch((e: Error) => 
             logger.error('Falha ao atualizar breakdown do turno após correção', { shiftId: shift.id, error: e.message }, 'FINANCE')
           );
@@ -699,7 +700,7 @@ export const createFinanceSlice: StateCreator<
   fetchRemoteDashboard: async () => {
     const state = get();
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getAngolaToday().split('T')[0];
       
       // 1. Fetch Summary
       const summaryResult = await integrationAPIService.fetchDashboard(today, today);

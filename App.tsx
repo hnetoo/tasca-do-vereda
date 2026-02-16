@@ -144,6 +144,7 @@ const App = () => {
                   {window.location.pathname !== '/owner' && <Sidebar />}
                   <main className="flex-1 h-full overflow-hidden relative">
                     <Routes>
+                      <Route path="/owner" element={<MobileDashboard />} />
                       <Route path="/manual" element={<SystemManual />} />
                       {currentUser.role === 'ADMIN' && (
                         <>

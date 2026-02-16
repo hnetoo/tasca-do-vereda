@@ -6,12 +6,13 @@ import { integrationAPIService } from '../services/integrationAPIService';
 import { logger } from '../services/logger';
 import { 
   ShoppingBasket, Plus, Minus, Search, ChevronRight, X, Menu, 
-  AlertCircle, ChefHat, CheckCircle2
+  AlertCircle, ChefHat, CheckCircle2, Receipt
 } from 'lucide-react';
 import { Dish, MenuCategory, SystemSettings } from '../types';
 import { orderService, OrderStatus } from '../services/orderService';
 import { CategoryMenu, getCategoryIcon } from '../components/public-menu/CategoryMenu';
 import { ProductMenu } from '../components/public-menu/ProductMenu';
+import { BottomNav } from '../components/public-menu/BottomNav';
 import { isValidImageUrl } from '../services/qrMenuService';
 import { fetchMenuFromFeed } from '../services/feedFetch';
 import { formatKz } from '../services/utils/currencyFormatter';
@@ -284,6 +285,26 @@ const PublicMenu = () => {
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
   const [imageErrorMap, setImageErrorMap] = useState<Record<string, boolean>>({});
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+
+  const activeTab = useMemo(() => {
+    if (isAccountOpen) return 'account';
+    if (isCartOpen) return 'cart';
+    return 'menu';
+  }, [isCartOpen, isAccountOpen]);
+
+  const handleTabChange = (tab: 'menu' | 'cart' | 'account') => {
+    if (tab === 'menu') {
+      setIsCartOpen(false);
+      setIsAccountOpen(false);
+    } else if (tab === 'cart') {
+      setIsCartOpen(true);
+      setIsAccountOpen(false);
+    } else if (tab === 'account') {
+      setIsCartOpen(false);
+      setIsAccountOpen(true);
+    }
+  };
   
   const safeCategories = useMemo(() => {
     const seenIds = new Set<string>();
@@ -587,13 +608,13 @@ const PublicMenu = () => {
       )}
 
       {/* Mobile Header (always visible) */}
-      <header className="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 z-30">
+      <header className="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 z-30 shadow-md">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all"
+            className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all"
           >
-            <Menu size={18} />
+            <Menu size={20} />
           </button>
           {logoUrl ? (
             <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white/5" />
@@ -609,9 +630,9 @@ const PublicMenu = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="relative p-2 rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-black transition-all"
+            className="relative w-11 h-11 flex items-center justify-center rounded-full bg-primary/20 text-primary hover:bg-primary hover:text-black transition-all"
           >
-            <ShoppingBasket size={20} />
+            <ShoppingBasket size={22} />
             {cartItemsCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
                 {cartItemsCount}
@@ -799,9 +820,9 @@ const PublicMenu = () => {
                     {!isReadOnly && cartItemsCount > 0 && (
                       <button 
                         onClick={() => setIsCartOpen(true)}
-                        className="relative w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(0,209,255,0.4)] animate-in zoom-in-95"
+                        className="relative w-11 h-11 bg-primary rounded-xl flex items-center justify-center text-black shadow-sm shadow-primary/30 animate-in zoom-in-95"
                       >
-                        <ShoppingBasket size={18} />
+                        <ShoppingBasket size={20} />
                         <span className="absolute -top-1 -right-1 w-5 h-5 bg-white text-black text-[10px] font-black rounded-full flex items-center justify-center border-2 border-primary">
                           {cartItemsCount}
                         </span>
@@ -841,7 +862,7 @@ const PublicMenu = () => {
          </header>
 
          {/* Mobile Category Strip & Search */}
-         <div className="lg:hidden shrink-0 border-b border-slate-800 bg-slate-900 backdrop-blur-md rounded-2xl shadow-2xl border-white/10">
+         <div className="lg:hidden shrink-0 border-b border-slate-800 bg-slate-900 backdrop-blur-md rounded-2xl shadow-md border-white/10">
             <div className="px-4 pt-4">
               <div className="relative group">
                   <input 
@@ -913,7 +934,7 @@ const PublicMenu = () => {
 
       {/* Minimal Floating Cart - Swiss/NASA Fusion */}
       {cartItemsCount > 0 && !isReadOnly && (
-         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md animate-in slide-in-from-bottom-8 duration-500">
+         <div className="hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md animate-in slide-in-from-bottom-8 duration-500">
              <button 
                onClick={() => setIsCartOpen(true)}
                className="w-full bg-primary text-black p-4 rounded-2xl flex items-center justify-between shadow-[0_20px_50px_rgba(0,209,255,0.3)] hover:scale-[1.02] active:scale-[0.98] transition-all group overflow-hidden relative"
@@ -1184,6 +1205,55 @@ const PublicMenu = () => {
            </div>
         </div>
       )}
+
+      {/* Account Modal */}
+      {isAccountOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-[#05070A]/95 backdrop-blur-xl animate-in fade-in duration-300 md:hidden">
+           <div className="w-full h-full bg-[#0D1117] p-6 flex flex-col relative animate-in slide-in-from-bottom-12 overflow-y-auto">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-black text-white uppercase tracking-tight">Minha Conta</h2>
+                <button 
+                  onClick={() => setIsAccountOpen(false)} 
+                  className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-white hover:bg-white/10 transition-all"
+                >
+                    <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex-1">
+                 {trackedOrderId ? (
+                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                       <div className="flex items-center gap-3 mb-4">
+                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                         <span className="text-xs font-mono text-green-500 uppercase tracking-widest">Pedido Ativo</span>
+                       </div>
+                       <div className="space-y-4">
+                          <div>
+                            <span className="block text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">ID do Pedido</span>
+                            <span className="text-lg font-mono font-black text-white">{trackedOrderId}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Status da Cozinha</span>
+                            <span className="text-lg font-black text-primary uppercase">{orderStatus?.kitchenStatus || 'Processando'}</span>
+                          </div>
+                       </div>
+                    </div>
+                 ) : (
+                    <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                       <Receipt size={48} className="text-slate-500 mb-4" />
+                       <p className="text-sm font-mono text-slate-500 uppercase tracking-widest text-center">Nenhum pedido ativo</p>
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
+
+      <BottomNav 
+        activeTab={activeTab} 
+        onTabChange={handleTabChange} 
+        cartItemsCount={cartItemsCount} 
+      />
     </div>
   );
 };
