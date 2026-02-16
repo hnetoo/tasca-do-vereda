@@ -27,3 +27,8 @@ dist-ssr
 
 .vercel
 .env*.local
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+src-tauri/.DS_Store
