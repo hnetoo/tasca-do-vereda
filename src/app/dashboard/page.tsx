@@ -41,6 +41,12 @@ const Dashboard = () => {
   const router = useRouter();
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  useEffect(() => {
     if (realtimeActivity) {
       const timer = setTimeout(() => setRealtimeActivity(false), 1000);
       return () => clearTimeout(timer);
