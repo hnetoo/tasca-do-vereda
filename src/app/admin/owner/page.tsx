@@ -203,7 +203,8 @@ export default function OwnerDashboard() {
           <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Ticket Médio</p>
           <h3 className="text-3xl font-black text-white mb-1">{formatCurrency(metrics.avgTicket)}</h3>
           <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
-            <span>{metrics.orderCount} pedidos hoje</span>
+            <TrendingUp size={14} />
+            <span>Estável</span>
           </div>
         </div>
 
@@ -211,52 +212,60 @@ export default function OwnerDashboard() {
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Activity size={64} />
           </div>
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Transações</p>
-          <h3 className="text-3xl font-black text-white mb-1">{transactions.length}</h3>
-          <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
-            <span>Última há 5 min</span>
+          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Pedidos Hoje</p>
+          <h3 className="text-3xl font-black text-white mb-1">{metrics.orderCount}</h3>
+          <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold">
+            <TrendingUp size={14} />
+            <span>+5% vs ontem</span>
           </div>
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-        {/* Hourly Sales */}
-        <div className="lg:col-span-2 bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-sm">
-          <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
-            <Activity size={20} className="text-emerald-500" />
-            Vendas por Hora
-          </h3>
-          <div className="h-64">
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Sales Chart */}
+        <div className="bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <h3 className="text-lg font-black uppercase tracking-wider text-white">Vendas por Hora</h3>
+            <button className="text-xs bg-white/10 px-3 py-1 rounded-full text-slate-400 font-bold hover:bg-white/20 transition-colors">
+              Hoje
+            </button>
+          </div>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={hourlyData}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                <XAxis dataKey="hour" stroke="#64748b" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
-                <YAxis stroke="#64748b" tick={{fontSize: 12}} axisLine={false} tickLine={false} tickFormatter={(val) => `${val/1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff' }}
-                  itemStyle={{ color: '#10B981' }}
-                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }}
+                  itemStyle={{ color: '#10b981' }}
                 />
-                <Area type="monotone" dataKey="total" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                <Area 
+                  type="monotone" 
+                  dataKey="total" 
+                  stroke="#10b981" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorSales)" 
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Payment Methods */}
-        <div className="bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-sm">
-          <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
-            <CreditCard size={20} className="text-emerald-500" />
-            Métodos de Pagamento
-          </h3>
-          <div className="h-64 relative">
+        <div className="bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm">
+          <div className="mb-6">
+            <h3 className="text-lg font-black uppercase tracking-wider text-white">Métodos de Pagamento</h3>
+          </div>
+          <div className="h-64 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -269,21 +278,22 @@ export default function OwnerDashboard() {
                   dataKey="value"
                 >
                   {paymentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0.2)" />
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
                   ))}
                 </Pie>
                 <Tooltip 
-                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff' }}
-                   formatter={(value: number) => formatCurrency(value)}
+                   contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }}
                 />
               </PieChart>
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">Total</span>
-                <p className="text-xl font-black text-white">{formatCurrency(metrics.totalSales)}</p>
+          </div>
+          <div className="flex justify-center gap-4 mt-4 flex-wrap">
+            {paymentData.map((entry, index) => (
+              <div key={entry.name} className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wide">{entry.name}</span>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
