@@ -25,7 +25,7 @@ interface Category {
   sort_order?: number;
 }
 
-export default function MenuPage() {
+export default function MenuClient() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -61,9 +61,26 @@ export default function MenuPage() {
       .channel('public:products')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setProducts(prev => [...prev, payload.new as Product]);
+          // Only add if available
+          const newProduct = payload.new as Product;
+          if (newProduct.available) {
+            setProducts(prev => [...prev, newProduct]);
+          }
         } else if (payload.eventType === 'UPDATE') {
-          setProducts(prev => prev.map(p => p.id === payload.new.id ? payload.new as Product : p));
+          const updatedProduct = payload.new as Product;
+          if (updatedProduct.available) {
+            setProducts(prev => {
+              const exists = prev.some(p => p.id === updatedProduct.id);
+              if (exists) {
+                return prev.map(p => p.id === updatedProduct.id ? updatedProduct : p);
+              } else {
+                return [...prev, updatedProduct];
+              }
+            });
+          } else {
+            // Remove if updated to unavailable
+            setProducts(prev => prev.filter(p => p.id !== updatedProduct.id));
+          }
         } else if (payload.eventType === 'DELETE') {
           setProducts(prev => prev.filter(p => p.id !== payload.old.id));
         }
