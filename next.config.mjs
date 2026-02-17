@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuração para compatibilidade com Tauri e Next.js 15
-  // output: 'export', // Removido para permitir build padrão da Vercel
+  output: process.env.TAURI_BUILD === 'true' ? 'export' : undefined,
+  distDir: process.env.TAURI_BUILD === 'true' ? 'dist' : '.next',
 
   // Isso permite que o Tauri use a app como arquivos estáticos se necessário
   // mas mantém a funcionalidade total na Vercel

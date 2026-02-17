@@ -8,9 +8,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:tauri": "set TAURI_BUILD=true&& next build",
     "start": "next start",
     "lint": "next lint",
-    "tauri": "tauri",
+    "tauri": "set TAURI_BUILD=true && tauri",
     "check-branch": "echo 'Checking branch skipped'"
   },
   "lint-staged": {
