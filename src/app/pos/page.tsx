@@ -244,7 +244,7 @@ const POS = () => {
       const existingWin = await WebviewWindow.getByLabel(label);
       if (existingWin) {
         await existingWin.setFocus();
-        await emitRouteUpdateWithBackoff(label, `/customer-display/${activeTableId}`);
+        await emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
         return;
       }
 
@@ -272,7 +272,7 @@ const POS = () => {
           }
       }
 
-      const url = `/customer-display/${activeTableId}`;
+      const url = `/customer-display?tableId=${activeTableId}`;
       new WebviewWindow(label, {
         url,
         title: 'Tasca Vereda - Cliente',
@@ -285,11 +285,11 @@ const POS = () => {
         alwaysOnTop: false
       });
       setTimeout(() => {
-        emitRouteUpdateWithBackoff(label, `/customer-display/${activeTableId}`);
+        emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
       }, 500);
     } catch (error) {
       console.error('Failed to open customer display with Tauri API, falling back to window.open', error);
-      const url = `${window.location.origin}/customer-display/${activeTableId}`;
+      const url = `${window.location.origin}/customer-display?tableId=${activeTableId}`;
       window.open(url, 'CustomerDisplay', 'width=1024,height=768');
     }
   };
