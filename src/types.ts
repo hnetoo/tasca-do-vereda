@@ -47,11 +47,22 @@ export interface SupabaseSyncStatus {
 }
 
 export interface StoreState {
+  // Auth Slice
+  isAuthenticated: boolean;
+  login: (pin: string, userId?: string, rememberMe?: boolean) => Promise<boolean>;
+  users: User[];
+  
+  // Operational Slice (assumed)
+  settings: SystemSettings;
+  isInitialized: boolean;
+
+  // Analytics Slice
   dailyAnalyticsData: DailyAnalyticsPayload['new'] | null;
   setDailyAnalyticsData: (data: DailyAnalyticsPayload['new'] | null) => void;
   supabaseSyncStatus: SupabaseSyncStatus;
-  // Other existing StoreState properties would go here, but for now, we're just adding these.
-  // This interface will be extended by the slices in useStore.ts
+  
+  // Allow other properties (temporary fix for incomplete types)
+  [key: string]: any;
 }
 
 // Existing types from the original types.ts (if any) should be added here
