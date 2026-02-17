@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import "../styles/globals.css"; // Importar o CSS global do Tailwind
+import "../styles/globals.css";
+import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "Tasca do Vereda",
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <AppShell>{children}</AppShell>
+      </body>
     </html>
   );
 }
