@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ShoppingBasket, ChevronRight, Star, Clock, Flame } from 'lucide-react';
+import { ShoppingBasket, ChevronRight, Star, Flame } from 'lucide-react';
 import { normalizeDishImage } from '@/utils/imageUtils';
 
 interface Product {
@@ -25,7 +25,7 @@ interface Category {
   sort_order?: number;
 }
 
-export default function MobileMenu({ params }: { params: { slug: string } }) {
+export default function MenuPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
