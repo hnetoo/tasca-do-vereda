@@ -21,8 +21,8 @@ describe('Supabase Client Initialization', () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'some-key');
     
-    // We expect the module to throw an error at top level import
-    await expect(import('./supabase')).rejects.toThrow(/Missing Env Vars: NEXT_PUBLIC_SUPABASE_URL/);
+    // We expect the module to throw an error at top level import because createClient requires URL
+    await expect(import('./supabase')).rejects.toThrow(/supabaseUrl is required/i);
   });
 
   it('should throw error if Supabase Key is missing', async () => {
@@ -30,8 +30,8 @@ describe('Supabase Client Initialization', () => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '');
 
-    // We expect the module to throw an error at top level import
-    await expect(import('./supabase')).rejects.toThrow(/Missing Env Vars: NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+    // We expect the module to throw an error at top level import because createClient requires Key
+    await expect(import('./supabase')).rejects.toThrow(/supabaseKey is required/i);
   });
 
   it('should identify Tauri environment correctly', async () => {
