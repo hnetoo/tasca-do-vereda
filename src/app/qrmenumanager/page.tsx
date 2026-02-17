@@ -1,8 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useStore } from '@/store/useStore';
-import { QRCodeCanvas } from 'qrcode.react';
+// Removido import estático para evitar erro de window/document no SSR
+// import { QRCodeCanvas } from 'qrcode.react';
+
+const QRCodeCanvas = dynamic(
+  () => import('qrcode.react').then((mod) => mod.QRCodeCanvas),
+  { ssr: false }
+);
 import {
   QrCode, Copy, Download, Eye, Share2, Settings,
   MessageCircle, Mail, Facebook, CheckCircle, Globe, RefreshCw, AlertCircle
