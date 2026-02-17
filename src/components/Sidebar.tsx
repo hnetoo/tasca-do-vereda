@@ -28,23 +28,48 @@ import {
   Smartphone,
   Code,
   Activity,
-  BookOpen
+  BookOpen,
+  Shield,
+  Lock,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { SystemSettings } from '@/types';
+
+interface MenuItem {
+  path: string;
+  icon: React.ReactNode;
+  label: string;
+  subItems?: MenuItem[];
+}
 
 const Sidebar = () => {
   const pathname = usePathname();
   const { logout, settings } = useStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['/system']); // Auto-expand system for visibility
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
   };
 
-  const isActive = (path: string) => pathname === path;
+  const toggleMenu = (path: string) => {
+    if (isCollapsed) setIsCollapsed(false);
+    setExpandedMenus(prev => 
+      prev.includes(path) 
+        ? prev.filter(p => p !== path) 
+        : [...prev, path]
+    );
+  };
 
-  const menuItems = [
+  const isActive = (path: string) => pathname === path;
+  const isParentActive = (item: MenuItem) => {
+    if (item.path === pathname) return true;
+    return item.subItems?.some(sub => sub.path === pathname);
+  };
+
+  const menuItems: MenuItem[] = [
     { path: '/dashboard', icon: <Home size={20} />, label: 'Dashboard' },
     { path: '/pos', icon: <ShoppingBag size={20} />, label: 'POS' },
     { path: '/kitchen', icon: <ChefHat size={20} />, label: 'Cozinha' },
@@ -60,12 +85,21 @@ const Sidebar = () => {
     { path: '/employees', icon: <UserCog size={20} />, label: 'Funcionários' },
     { path: '/reports', icon: <FileText size={20} />, label: 'Relatórios' },
     { path: '/analytics', icon: <BarChart2 size={20} />, label: 'Analítica' },
-    { path: '/qrmenumanager', icon: <QrCode size={20} />, label: 'QR Menu' },
-    { path: '/qrcodeanalytics', icon: <BarChart3 size={20} />, label: 'QR Analytics' },
-    { path: '/qrscanner', icon: <ScanLine size={20} />, label: 'QR Scanner' },
-    { path: '/mobiledashboard', icon: <Smartphone size={20} />, label: 'Mobile' },
-    { path: '/developersettings', icon: <Code size={20} />, label: 'Desenvolvedor' },
-    { path: '/systemhealth', icon: <Activity size={20} />, label: 'Saúde' },
+    { 
+      path: '/system', 
+      icon: <Settings size={20} />, 
+      label: 'Sistema',
+      subItems: [
+        { path: '/pos-access', icon: <Lock size={20} />, label: 'Acesso POS' },
+        { path: '/roles', icon: <Shield size={20} />, label: 'Cargos' },
+        { path: '/qrmenumanager', icon: <QrCode size={20} />, label: 'QR Menu' },
+        { path: '/qrscanner', icon: <ScanLine size={20} />, label: 'QR Scanner' },
+        { path: '/mobiledashboard', icon: <Smartphone size={20} />, label: 'Mobile' },
+        { path: '/developersettings', icon: <Code size={20} />, label: 'Desenvolvedor' },
+        { path: '/systemhealth', icon: <Activity size={20} />, label: 'Saúde' },
+      ]
+    },
+    { path: '/qrcodeanalytics', icon: <BarChart3 size={20} />, label: 'QR Analytics' }, // Keeping separate as requested? User didn't say move this one specifically, but "qr menu" might imply it. I'll leave it unless asked.
     { path: '/systemmanual', icon: <BookOpen size={20} />, label: 'Manual' },
     { path: '/settings', icon: <Settings size={20} />, label: 'Definições' },
   ];
@@ -88,21 +122,68 @@ const Sidebar = () => {
       
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1 px-2">
-          {menuItems.map((item) => (
-            <li key={item.path}>
-              <Link 
-                href={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive(item.path) 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                {item.icon}
-                {!isCollapsed && <span>{item.label}</span>}
-              </Link>
-            </li>
-          ))}
+          {menuItems.map((item) => {
+            const hasSubItems = item.subItems && item.subItems.length > 0;
+            const expanded = expandedMenus.includes(item.path);
+            const active = isActive(item.path) || (hasSubItems && isParentActive(item));
+
+            return (
+              <li key={item.path}>
+                {hasSubItems ? (
+                  <>
+                    <button 
+                      onClick={() => toggleMenu(item.path)}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                        active 
+                          ? 'bg-slate-800 text-white' 
+                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {item.icon}
+                        {!isCollapsed && <span>{item.label}</span>}
+                      </div>
+                      {!isCollapsed && (
+                        expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+                      )}
+                    </button>
+                    
+                    {!isCollapsed && expanded && (
+                      <ul className="mt-1 ml-4 space-y-1 border-l border-slate-700 pl-2">
+                        {item.subItems!.map(sub => (
+                          <li key={sub.path}>
+                            <Link 
+                              href={sub.path}
+                              className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm ${
+                                isActive(sub.path) 
+                                  ? 'bg-blue-600/20 text-blue-400' 
+                                  : 'text-slate-500 hover:text-white'
+                              }`}
+                            >
+                              {sub.icon}
+                              <span>{sub.label}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                ) : (
+                  <Link 
+                    href={item.path}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive(item.path) 
+                        ? 'bg-blue-600 text-white' 
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    }`}
+                  >
+                    {item.icon}
+                    {!isCollapsed && <span>{item.label}</span>}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

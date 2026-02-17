@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
+import SmartAlertsPanel from '@/components/SmartAlertsPanel';
 import { useStore } from '@/store/useStore';
 
 const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard'];
@@ -34,7 +35,12 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
   }, [isPublicRoute, isInitialized, isAuthenticated, router]);
 
   if (isPublicRoute) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <SmartAlertsPanel />
+      </>
+    );
   }
 
   if (!isInitialized) {
@@ -50,13 +56,19 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!showSidebar) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <SmartAlertsPanel />
+      </>
+    );
   }
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-white flex">
       <Sidebar />
       <main className="flex-1 min-w-0">{children}</main>
+      <SmartAlertsPanel />
     </div>
   );
 };

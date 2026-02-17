@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useStore } from '../store/useStore';
-import { AlertCircle, CheckCircle, X } from 'lucide-react';
+import { CircleAlert, CircleCheck, X } from 'lucide-react';
 
 const SmartAlertsPanel = () => {
   const { notifications, removeNotification } = useStore();
@@ -26,10 +26,10 @@ const SmartAlertsPanel = () => {
           `}
         >
           <div className="mt-0.5 shrink-0">
-            {alert.type === 'error' && <AlertCircle size={18} />}
-            {alert.type === 'success' && <CheckCircle size={18} />}
-            {alert.type === 'warning' && <AlertCircle size={18} />}
-            {alert.type === 'info' && <AlertCircle size={18} />}
+            {alert.type === 'error' && <CircleAlert size={18} />}
+            {alert.type === 'success' && <CircleCheck size={18} />}
+            {alert.type === 'warning' && <CircleAlert size={18} />}
+            {alert.type === 'info' && <CircleAlert size={18} />}
           </div>
           <div className="flex-1 text-sm">
             <p className="font-medium">{alert.message}</p>
