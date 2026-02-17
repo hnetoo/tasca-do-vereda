@@ -1,27 +1,39 @@
 'use client';
 
-
-import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { listen } from '@tauri-apps/api/event';
 import { useStore } from '@/store/useStore';
 import { ChefHat, ShoppingBasket, Sparkles, CheckCircle2 } from 'lucide-react';
 import { CustomerDisplayEvent, Order } from '@/types';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
-const CustomerDisplay = () => {
-  const { tableId } = useParams();
+const CustomerDisplayContent = () => {
+  const searchParams = useSearchParams();
+  const tableId = searchParams.get('tableId');
   const { activeOrders, menu, settings, tables, addNotification, currentUser } = useStore();
   const [imageErrorMap, setImageErrorMap] = useState<Record<string, boolean>>({});
   const [logoError, setLogoError] = useState(false);
   const [promoIndex, setPromoIndex] = useState(0);
 
+  // Derived state for promos (assuming menu items can be promos, or just showing all items)
+  // Filtering for items with images as "promos" to display
+  const promoItems = menu.filter(item => item.image && item.available);
+  const currentPromo = promoItems[promoIndex] || {};
+
+  // Rotate promos
+  useEffect(() => {
+    if (promoItems.length <= 1) return;
+    const interval = setInterval(() => {
+      setPromoIndex(prev => (prev + 1) % promoItems.length);
+    }, 10000); // 10 seconds per slide
+    return () => clearInterval(interval);
+  }, [promoItems.length]);
+
   const handleOrderRealtimeUpdate = useCallback((payload: any) => {
     if (payload.eventType === 'UPDATE' && payload.new && payload.new.tableId === Number(tableId)) {
       const updatedOrder = payload.new as Order;
       addNotification('info', `O estado do seu pedido foi atualizado para: ${updatedOrder.status}`);
-      // Optionally, you might want to re-fetch active orders or update them directly in the store
-      // For now, relying on useStore's onRealtimeChange to update activeOrders
     }
   }, [tableId, addNotification]);
 
@@ -32,7 +44,20 @@ const CustomerDisplay = () => {
     (tableId && currentUser?.id) ? { column: 'userId', value: currentUser.id } : undefined
   );
 
-
+  const renderLogo = (className: string, size: number) => (
+    <div className={`${className} bg-gradient-to-br from-primary to-blue-600 rounded-3xl flex items-center justify-center shadow-glow border border-white/10 shrink-0`}>
+        {settings.logo && !logoError ? (
+            <img 
+                src={settings.logo} 
+                alt="Logo" 
+                className="w-full h-full object-contain p-2"
+                onError={() => setLogoError(true)}
+            />
+        ) : (
+            <ChefHat size={size} className="text-white" />
+        )}
+    </div>
+  );
 
   const table = tables.find(t => t.id === Number(tableId));
   const tableOrders = activeOrders.filter(o => o.tableId === Number(tableId) && o.status === 'ABERTO');
@@ -81,9 +106,7 @@ const CustomerDisplay = () => {
     <div className="h-screen w-full bg-background overflow-hidden flex flex-col font-sans p-10 text-slate-200">
       <div className="flex justify-between items-center mb-10 shrink-0 gap-8">
         <div className="flex items-center gap-6 min-w-0 flex-1">
-          <div className="w-20 h-20 bg-gradient-to-br from-primary to-blue-600 rounded-3xl flex items-center justify-center shadow-glow border border-white/10 shrink-0">
-            <ChefHat size={40} className="text-white" />
-          </div>
+          {renderLogo("w-20 h-20", 40)}
           <div className="min-w-0">
             <h1 className="text-5xl font-black text-white italic uppercase tracking-tighter leading-none break-words">
               {settings.restaurantName}
@@ -185,7 +208,7 @@ const CustomerDisplay = () => {
                    {currentPromo.description || `Sabores autênticos e ingredientes selecionados especialmente para si.`}
                  </p>
                  {promoItems.length > 0 && (
-                    <p className="mt-4 text-xl font-mono font-bold text-primary">{formatKz(currentPromo.price)}</p>
+                    <p className="mt-4 text-xl font-mono font-bold text-primary">{formatKz(currentPromo.price || 0)}</p>
                  )}
               </div>
            </div>
@@ -199,5 +222,10 @@ const CustomerDisplay = () => {
   );
 };
 
-export default CustomerDisplay;
-
+export default function CustomerDisplay() {
+  return (
+    <Suspense fallback={<div className="h-screen w-full bg-background flex items-center justify-center text-white">Carregando...</div>}>
+      <CustomerDisplayContent />
+    </Suspense>
+  );
+}
