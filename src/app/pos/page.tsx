@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { 
   Search, Minus, Plus, CreditCard, LayoutGrid, Printer, 
   Banknote, X, Lock, Utensils, MonitorPlay, UserPlus, 
-  Maximize2, Minimize2, ChevronRight, DoorOpen, Move, AlertCircle,
+  Maximize2, Minimize2, ChevronRight, DoorOpen, Move, CircleAlert,
   Coffee, Pizza, Beer, IceCream, Grid3X3, Tag,
   ShoppingBasket, FileText, History, Trash2, Home, Sun,
   Wine, Sandwich, Soup, Salad, Cake, Fish, Beef, Croissant, 
@@ -18,6 +18,7 @@ import { availableMonitors, primaryMonitor } from '@tauri-apps/api/window';
 import ExportButton from '@/components/ExportButton';
 import { logger } from '@/services/logger';
 import { formatKz, formatKzDetailed } from '@/services/utils/currencyFormatter';
+import { normalizeDishImage } from '@/utils/imageUtils';
 
 const AVAILABLE_ICONS = [
   { name: 'Utensils', icon: Utensils, label: 'Geral' },
@@ -1177,7 +1178,7 @@ const POS = () => {
                               className={`group relative bg-slate-800/20 rounded-[2rem] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 overflow-hidden flex flex-col active:scale-95 cursor-pointer shadow-lg text-left w-full`}
                           >
                               <div className="aspect-square w-full overflow-hidden relative">
-                                  <img src={dish.image} alt={dish.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                  <img src={normalizeDishImage(dish.image)} alt={dish.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
                                   <div className="absolute bottom-3 left-4 right-4">
                                       <h4 className="font-bold text-[11px] text-white truncate uppercase tracking-tighter">{dish.name}</h4>
@@ -1264,7 +1265,7 @@ const POS = () => {
                     if (!dish) return null; 
                     return (
                         <div key={idx} className="flex gap-4 items-center p-3 bg-white/5 rounded-2xl border border-white/5 group animate-in slide-in-from-right-4">
-                            <img src={dish.image} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                            <img src={normalizeDishImage(dish.image)} className="w-12 h-12 rounded-xl object-cover" alt="" />
                             <div className="flex-1 min-w-0">
                                 <h4 className="font-bold text-white text-[10px] truncate uppercase tracking-tighter">{dish.name}</h4>
                                 <div className="flex justify-between items-center mt-1">

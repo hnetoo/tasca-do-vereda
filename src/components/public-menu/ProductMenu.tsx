@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus, Minus, Search, AlertCircle, ShoppingBasket } from 'lucide-react';
+import { Plus, Minus, Search, CircleAlert, ShoppingBasket } from 'lucide-react';
 import { Dish, CartEntry } from '../../types';
 
 export const ProductMenu = () => {
