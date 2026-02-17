@@ -5,6 +5,7 @@ const nextConfig = {
 
   // Isso permite que o Tauri use a app como arquivos estáticos se necessário
   // mas mantém a funcionalidade total na Vercel
+  trailingSlash: true,
   images: { 
     unoptimized: true 
   },
