@@ -7,6 +7,17 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        primary: 'hsl(var(--primary))',
+        'primary-foreground': 'hsl(var(--primary-foreground))',
+      },
+      boxShadow: {
+        glow: '0 0 30px hsl(var(--primary) / 0.35)',
+        'glow-yellow': '0 0 30px rgb(234 179 8 / 0.5)',
+        'glow-emerald': '0 0 30px rgb(16 185 129 / 0.45)',
+      },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':

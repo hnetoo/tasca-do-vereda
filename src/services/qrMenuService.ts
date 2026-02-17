@@ -113,6 +113,18 @@ export function generateShareableMenuLink(
   }
 }
 
+export const normalizeImageSrc = (src?: string | null): string => {
+  if (!src) return '';
+  const trimmed = String(src).trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('data:image/')) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith('/')) return trimmed;
+  if (trimmed.startsWith('./')) return `/${trimmed.slice(2)}`;
+  if (trimmed.startsWith('../')) return `/${trimmed.replace(/^(\.\.\/)+/, '')}`;
+  return `/${trimmed}`;
+};
+
 /**
  * Valida se uma string é uma URL de imagem válida para o menu
  */
