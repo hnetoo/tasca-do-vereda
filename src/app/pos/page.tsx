@@ -113,11 +113,29 @@ const POS = () => {
     }
   }, [activeTableId, activeTable, tables.length, setActiveTable]);
 
+  // Sync activeOrderId with activeTableId
+  useEffect(() => {
+    if (activeTableId) {
+      const tableOrders = activeOrders.filter(o => o.tableId === activeTableId && o.status === 'ABERTO');
+      if (tableOrders.length > 0) {
+        // If the current activeOrderId is not one of this table's orders, switch to the first one
+        if (!activeOrderId || !tableOrders.find(o => o.id === activeOrderId)) {
+          setActiveOrder(tableOrders[0].id);
+        }
+      } else {
+        setActiveOrder(null);
+      }
+    } else {
+      setActiveOrder(null);
+    }
+  }, [activeTableId, activeOrders, activeOrderId, setActiveOrder]);
+
   // Handle Product Click (Auto-select Balcão if no table active)
   const handleProductClick = (dish: Dish) => {
-    if (activeTableId) {
-      addToOrder(activeTableId, dish);
-    } else {
+    let targetTableId = activeTableId;
+    
+    // Auto-select Balcão logic
+    if (!targetTableId) {
       // Find or create Balcão table
       let balcao = tables.find(t => t.name.toLowerCase().includes('balcão') || t.id === 999);
       
@@ -139,12 +157,34 @@ const POS = () => {
       
       if (balcao) {
         setActiveTable(balcao.id);
-        // We need to wait for state update or pass ID directly? 
-        // addToOrder usually uses current state, but here we pass tableId explicitly.
-        // However, we just called setActiveTable. The store might update synchronously or not.
-        // Safe bet: pass ID explicitly.
-        addToOrder(balcao.id, dish);
+        targetTableId = balcao.id;
       }
+    }
+
+    if (targetTableId) {
+       // Check for active order or create one
+       let targetOrderId = activeOrderId;
+       const tableOrders = activeOrders.filter(o => o.tableId === targetTableId && o.status === 'ABERTO');
+       
+       if (tableOrders.length > 0) {
+          // If we have an active order but it's not for this table (shouldn't happen due to effect, but safety check)
+          // or if activeOrderId is null
+          if (!targetOrderId || !tableOrders.find(o => o.id === targetOrderId)) {
+             targetOrderId = tableOrders[0].id;
+             setActiveOrder(targetOrderId);
+          }
+       } else {
+          // Create new order
+          const tableName = tables.find(t => t.id === targetTableId)?.name || 'Mesa';
+          targetOrderId = createNewOrder(targetTableId, tableName);
+          setActiveOrder(targetOrderId);
+       }
+       
+       // Now add to order
+       // Pass specificOrderId to avoid race conditions
+       if (targetOrderId) {
+         addToOrder(targetTableId, dish, 1, '', targetOrderId);
+       }
     }
   };
 
@@ -1906,7 +1946,7 @@ const POS = () => {
 
               <div className="bg-yellow-500/10 border border-yellow-500/20 p-6 rounded-2xl flex items-start gap-4">
                 <div className="p-2 bg-yellow-500/20 rounded-lg text-yellow-500">
-                  <AlertCircle size={20} />
+                  <CircleAlert size={20} />
                 </div>
                 <div className="flex-1">
                   <p className="text-yellow-500 text-xs font-bold uppercase tracking-widest mb-1">Aviso de Fecho</p>
