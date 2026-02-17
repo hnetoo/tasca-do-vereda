@@ -19,6 +19,7 @@ const Login = () => {
   const [lastStoredUserId, setLastStoredUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Auth check: redirect to dashboard if already authenticated
     if (isAuthenticated) {
       router.push('/dashboard');
     }
