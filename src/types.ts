@@ -1,4 +1,103 @@
+export type AnyRecord = any;
 
+export type Profile = AnyRecord;
+export type Product = AnyRecord;
+export type Category = AnyRecord;
+export type Customer = AnyRecord;
+export interface Order {
+  id: string;
+  tableId?: number;
+  table_id?: number; // For Supabase compatibility
+  status: string;
+  timestamp: Date | string; // ISO date string
+  total: number;
+  subtotal?: number; // New property
+  taxTotal?: number;
+  tax_total?: number; // For Supabase compatibility
+  paymentMethod?: PaymentMethod;
+  payment_method?: PaymentMethod; // For Supabase compatibility
+  customerId?: string;
+  customer_id?: string; // For Supabase compatibility
+  shiftId?: string;
+  shift_id?: string; // For Supabase compatibility
+  subAccountName?: string;
+  sub_account_name?: string; // For Supabase compatibility
+  invoiceNumber?: string;
+  invoice_number?: string; // For Supabase compatibility
+  orderNumber?: number | string;
+  order_number?: number | string; // For Supabase compatibility
+  hash?: string;
+  previous_hash?: string;
+  signature?: string;
+  jws_payload?: string;
+  isSyncedAgt?: boolean;
+  is_synced_agt?: boolean; // For Supabase compatibility
+  agtSubmissionUuid?: string;
+  agt_submission_uuid?: string; // For Supabase compatibility
+  userId?: string;
+  user_id?: string; // For Supabase compatibility
+  userName?: string;
+  user_name?: string; // For Supabase compatibility
+  customerName?: string; // New property
+  customer_name?: string; // For Supabase compatibility
+  employeeId?: string; // New property
+  employee_id?: string; // For Supabase compatibility
+  customerNif?: string; // New property for customer tax ID
+  customer_nif?: string; // For Supabase compatibility
+  isPaid?: boolean; // New property for payment status
+  createdAt?: Date | string; // New property for creation timestamp
+  created_at?: string; // For Supabase compatibility
+  updatedAt?: Date | string; // New property for update timestamp
+  type?: string; // New property
+  items?: OrderItem[];
+}
+export interface OrderItem {
+  id?: string; // Optional, as it might be auto-generated
+  orderId?: string; // Optional, set when part of an order
+  order_id?: string; // For Supabase compatibility
+  dishId: string;
+  dish_id?: string; // For Supabase compatibility
+  quantity: number;
+  unitPrice: number;
+  unit_price?: number; // For Supabase compatibility
+  taxAmount?: number;
+  tax_amount?: number; // For Supabase compatibility
+  taxPercentage?: number;
+  tax_percentage?: number; // For Supabase compatibility
+  taxCode?: string;
+  tax_code?: string; // For Supabase compatibility
+  notes?: string;
+  status?: string;
+}
+export type Payment = AnyRecord;
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  date: Date | string; // ISO date string
+  category: string;
+  paymentMethod?: PaymentMethod; // New property
+  payment_method?: PaymentMethod; // For Supabase compatibility
+  notes?: string; // New property
+  supplierId?: string; // New property
+  supplier_id?: string; // For Supabase compatibility
+  status?: string;
+  createdAt?: Date | string; // New property
+  created_at?: string; // For Supabase compatibility
+  updatedAt?: Date | string;
+}
+export type FixedExpense = AnyRecord;
+export type Supplier = AnyRecord;
+export type Table = AnyRecord;
+export type AuditLog = AnyRecord;
+export type OfflineQueue = AnyRecord;
+
+export interface DailyAnalytics {
+  date: string;
+  totalRevenue: number;
+  totalExpenses: number;
+  totalProductCost: number;
+}
 
 export interface PedidoPayload {
   eventType: 'INSERT' | 'UPDATE';
@@ -120,4 +219,68 @@ export interface User {
   permissions?: string[];
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export interface IntegrationLog {
+  id: string;
+  integrationName: string;
+  eventType: string;
+  status: 'SUCCESS' | 'FAILED' | 'PENDING';
+  timestamp: Date | string;
+  request?: unknown;
+  response?: unknown;
+  duration?: number;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export interface APIKey {
+  id: string;
+  name: string;
+  key: string;
+  secret: string;
+  createdAt: Date;
+  status: 'ACTIVE' | 'REVOKED';
+  scopes: string[];
+}
+
+export interface WebhookConfig {
+  id: string;
+  url: string;
+  events: string[];
+  secret?: string;
+  isActive: boolean;
+  failureCount: number;
+  lastTriggered?: Date;
+}
+
+export interface BiometricDevice {
+  id: string;
+  name: string;
+  ip: string;
+  port: number;
+  type: 'FINGERPRINT' | 'FACIAL' | 'CARD';
+  status: 'CONNECTED' | 'DISCONNECTED';
+  lastSync?: Date;
+  syncInterval?: number;
+}
+
+export interface MobileSession {
+  id: string;
+  userId: string;
+  deviceId: string;
+  deviceName: string;
+  ipAddress: string;
+  token: string;
+  createdAt: Date;
+  expiresAt: Date;
+  lastActive: Date;
+}
+
+export interface BiometricClockEvent {
+  externalBioId: string;
+  type: string;
+  clockTime: string | Date;
+  temperature?: number;
+  deviceId?: string;
 }
