@@ -98,160 +98,118 @@ export default function OwnerDashboard() {
   const metrics = useMemo(() => {
     const totalSales = orders
       .filter(o => o.status === 'FECHADO' || o.status === 'PAID') // Adjust based on actual status values
-      .reduce((sum, o) => sum + (o.total || 0), 0);
+      .reduce((acc, o) => acc + (o.total || 0), 0);
 
-    const totalTransactions = transactions.reduce((sum, t) => {
-      return t.type === 'income' ? sum + t.amount : sum - t.amount;
-    }, 0);
+    const totalOrders = orders.length;
+    const averageTicket = totalOrders > 0 ? totalSales / totalOrders : 0;
+    
+    // Group by hour for chart
+    const hourlyData = orders.reduce((acc: any[], order) => {
+      const hour = new Date(order.created_at).getHours();
+      const existingHour = acc.find(h => h.hour === hour);
+      if (existingHour) {
+        existingHour.sales += order.total;
+      } else {
+        acc.push({ hour, sales: order.total });
+      }
+      return acc;
+    }, []).sort((a, b) => a.hour - b.hour);
 
-    // If transactions table is empty/not used, rely on orders for profit estimate
-    const profit = totalSales * 0.4; // Mock profit margin if no expense data
-
-    return {
-      totalSales,
-      profit,
-      orderCount: orders.length,
-      avgTicket: orders.length > 0 ? totalSales / orders.length : 0
-    };
-  }, [orders, transactions]);
-
-  // Chart Data Preparation
-  const hourlyData = useMemo(() => {
-    const hours: Record<string, number> = {};
-    orders.forEach(o => {
-      const hour = new Date(o.created_at).getHours();
-      hours[hour] = (hours[hour] || 0) + o.total;
-    });
-    return Object.entries(hours).map(([hour, total]) => ({
-      hour: `${hour}h`,
-      total
-    })).sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
+    return { totalSales, totalOrders, averageTicket, hourlyData };
   }, [orders]);
-
-  const paymentData = useMemo(() => {
-    const methods: Record<string, number> = {};
-    orders.forEach(o => {
-      const method = o.payment_method || 'Outros';
-      methods[method] = (methods[method] || 0) + o.total;
-    });
-    return Object.entries(methods).map(([name, value]) => ({ name, value }));
-  }, [orders]);
-
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
-
-  const COLORS = ['#00C49F', '#FFBB28', '#FF8042', '#0088FE'];
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
-      <header className="mb-10 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 space-y-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">
-            Owner <span className="text-emerald-500">Dashboard</span>
-          </h1>
-          <p className="text-slate-400 font-medium flex items-center gap-2">
-            <Activity size={18} className="text-emerald-500 animate-pulse" />
-            Monitorização Financeira em Tempo Real
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard Owner</h1>
+          <p className="text-sm text-slate-400">Visão geral em tempo real</p>
         </div>
-        <div className="bg-white/5 px-6 py-3 rounded-2xl border border-white/10 flex items-center gap-3">
-          <Calendar size={20} className="text-slate-400" />
-          <span className="font-bold text-white uppercase tracking-widest">
-            {format(new Date(), "d 'de' MMMM, yyyy", { locale: pt })}
+        <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800 w-fit">
+          <Calendar size={16} className="text-primary" />
+          <span className="text-sm font-medium">
+            {format(new Date(), "EEEE, d 'de' MMMM", { locale: pt })}
           </span>
         </div>
       </header>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <div className="bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-sm relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <DollarSign size={64} />
+      {/* KPI Cards Grid - Responsive: 1 col mobile, 3 cols desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-slate-400 text-sm font-medium">Faturação Hoje</h3>
+            <div className="p-2 bg-emerald-500/10 rounded-lg">
+              <DollarSign size={20} className="text-emerald-500" />
+            </div>
           </div>
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Faturação Hoje</p>
-          <h3 className="text-3xl font-black text-white mb-1">{formatCurrency(metrics.totalSales)}</h3>
-          <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold">
-            <TrendingUp size={14} />
-            <span>+12% vs ontem</span>
-          </div>
-        </div>
-
-        <div className="bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-sm relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <ArrowUpRight size={64} />
-          </div>
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Lucro Estimado</p>
-          <h3 className="text-3xl font-black text-white mb-1">{formatCurrency(metrics.profit)}</h3>
-          <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold">
-            <TrendingUp size={14} />
-            <span>Margem ~40%</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-white">€{metrics.totalSales.toFixed(2)}</span>
+            <span className="text-xs text-emerald-500 flex items-center">
+              <ArrowUpRight size={12} className="mr-1" />
+              +12.5%
+            </span>
           </div>
         </div>
 
-        <div className="bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-sm relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <CreditCard size={64} />
+        <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-slate-400 text-sm font-medium">Total Pedidos</h3>
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <CreditCard size={20} className="text-blue-500" />
+            </div>
           </div>
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Ticket Médio</p>
-          <h3 className="text-3xl font-black text-white mb-1">{formatCurrency(metrics.avgTicket)}</h3>
-          <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
-            <TrendingUp size={14} />
-            <span>Estável</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-white">{metrics.totalOrders}</span>
+            <span className="text-xs text-slate-500">Hoje</span>
           </div>
         </div>
 
-        <div className="bg-white/5 p-6 rounded-3xl border border-white/10 backdrop-blur-sm relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Activity size={64} />
+        <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-slate-400 text-sm font-medium">Ticket Médio</h3>
+            <div className="p-2 bg-purple-500/10 rounded-lg">
+              <Activity size={20} className="text-purple-500" />
+            </div>
           </div>
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Pedidos Hoje</p>
-          <h3 className="text-3xl font-black text-white mb-1">{metrics.orderCount}</h3>
-          <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold">
-            <TrendingUp size={14} />
-            <span>+5% vs ontem</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-white">€{metrics.averageTicket.toFixed(2)}</span>
           </div>
         </div>
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Sales Chart */}
-        <div className="bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-black uppercase tracking-wider text-white">Vendas por Hora</h3>
-            <button className="text-xs bg-white/10 px-3 py-1 rounded-full text-slate-400 font-bold hover:bg-white/20 transition-colors">
-              Hoje
-            </button>
-          </div>
-          <div className="h-64 w-full">
+      {/* Charts Section - Responsive: Stacked on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm min-h-[300px]">
+          <h3 className="text-lg font-semibold mb-6">Vendas por Hora</h3>
+          <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={hourlyData}>
+              <AreaChart data={metrics.hourlyData}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis 
+                  dataKey="hour" 
+                  stroke="#64748b" 
+                  fontSize={12}
+                  tickFormatter={(value) => `${value}h`}
+                />
+                <YAxis 
+                  stroke="#64748b" 
+                  fontSize={12}
+                  tickFormatter={(value) => `€${value}`}
+                />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }}
-                  itemStyle={{ color: '#10b981' }}
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }}
+                  itemStyle={{ color: '#e2e8f0' }}
                 />
                 <Area 
                   type="monotone" 
-                  dataKey="total" 
+                  dataKey="sales" 
                   stroke="#10b981" 
-                  strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorSales)" 
                 />
@@ -260,43 +218,37 @@ export default function OwnerDashboard() {
           </div>
         </div>
 
-        {/* Payment Methods */}
-        <div className="bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm">
-          <div className="mb-6">
-            <h3 className="text-lg font-black uppercase tracking-wider text-white">Métodos de Pagamento</h3>
-          </div>
-          <div className="h-64 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={paymentData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {paymentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                   contentStyle={{ backgroundColor: '#020617', borderColor: '#1e293b', borderRadius: '12px', color: '#fff' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-center gap-4 mt-4 flex-wrap">
-            {paymentData.map((entry, index) => (
-              <div key={entry.name} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                <span className="text-xs text-slate-400 font-bold uppercase tracking-wide">{entry.name}</span>
+        {/* Recent Transactions List */}
+        <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm">
+          <h3 className="text-lg font-semibold mb-6">Últimos Pedidos</h3>
+          <div className="space-y-4 max-h-[300px] overflow-y-auto custom-scrollbar">
+            {orders.slice(0, 5).map((order) => (
+              <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-white">Pedido #{order.id.slice(0, 8)}</span>
+                  <span className="text-xs text-slate-400">
+                    {format(new Date(order.created_at), 'HH:mm')} • {order.payment_method || 'Dinheiro'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase
+                    ${order.status === 'FECHADO' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}
+                  `}>
+                    {order.status}
+                  </span>
+                  <span className="font-bold text-white">€{order.total?.toFixed(2)}</span>
+                </div>
               </div>
             ))}
+            {orders.length === 0 && (
+              <div className="text-center py-8 text-slate-500 text-sm">
+                Sem pedidos hoje
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
+
