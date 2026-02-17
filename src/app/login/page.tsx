@@ -20,6 +20,7 @@ const Login = () => {
 
   useEffect(() => {
     // Auth check: redirect to dashboard if already authenticated
+    // Fix: Ensure isAuthenticated is properly checked from store
     if (isAuthenticated) {
       router.push('/dashboard');
     }
