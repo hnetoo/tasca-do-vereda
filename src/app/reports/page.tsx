@@ -549,7 +549,7 @@ const Reports = () => {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 z-10 overflow-y-auto no-scrollbar">
                <div className="bg-slate-800/50 p-6 rounded-3xl border-l-4 border-primary">
                   <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-3">Diagnóstico Operacional</p>
-                  <p className="text-sm text-slate-200 leading-relaxed italic">"{report.strategicAdvice}"</p>
+                  <p className="text-sm text-slate-200 leading-relaxed italic">&quot;{report.strategicAdvice}&quot;</p>
                </div>
 
                <div className="grid grid-cols-2 gap-4">

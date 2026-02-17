@@ -1,1 +1,1 @@
-ESLint found too many warnings (maximum: 0).
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

@@ -169,8 +169,8 @@ const DeveloperSettings = () => {
               <div>
                 <p className="text-slate-400 text-xs mb-2">cURL</p>
                 <code className="text-slate-300">
-                  curl -H "Authorization: Bearer sk_live_...xyz123" \<br/>
-                  &nbsp;&nbsp;-H "X-API-Secret: secret_...abc" \<br/>
+                  curl -H &quot;Authorization: Bearer sk_live_...xyz123&quot; \<br/>
+                  &nbsp;&nbsp;-H &quot;X-API-Secret: secret_...abc&quot; \<br/>
                   &nbsp;&nbsp;https://api.tascadovereda.com/api/dashboard/summary
                 </code>
               </div>
