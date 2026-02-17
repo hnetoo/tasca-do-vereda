@@ -56,6 +56,33 @@ import { createFinanceSlice } from './slices/financeSlice';
 import { createAuthSlice } from './slices/authSlice';
 import { createOperationalSlice } from './slices/operationalSlice';
 
+const normalizeDishImage = (imagePath?: string): string | undefined => {
+  if (!imagePath || imagePath.trim() === '') return undefined;
+  
+  // Keep Data URLs, HTTP URLs, and Blob URLs
+  if (imagePath.startsWith('data:') || imagePath.startsWith('http') || imagePath.startsWith('blob:')) {
+    return imagePath;
+  }
+
+  // Handle Windows paths
+  if (imagePath.includes('\\')) {
+     const filename = imagePath.split('\\').pop();
+     return filename ? `/images/${filename}` : imagePath;
+  }
+  
+  // Handle simple filenames or existing relative paths
+  if (!imagePath.includes('/')) {
+     return `/images/${imagePath}`;
+  }
+
+  // Ensure starts with / if it looks like a relative path
+  if (!imagePath.startsWith('/')) {
+     return `/${imagePath}`;
+  }
+  
+  return imagePath;
+};
+
 
 
 /* Redundant interface removed, imported from ../types */
@@ -649,7 +676,8 @@ export const useStore = create<StoreState>()(
             ...dish, 
             id: dish.id || `dish_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             categoryId: resolvedId!,
-            categoryName: categories.find(c => c.id === resolvedId)?.name || dish.categoryName 
+            categoryName: categories.find(c => c.id === resolvedId)?.name || dish.categoryName,
+            image: normalizeDishImage(dish.image)
         };
 
         // 3. Real-time integrity check
@@ -708,7 +736,8 @@ export const useStore = create<StoreState>()(
         const finalDish: Dish = { 
             ...dish, 
             categoryId: resolvedId!,
-            categoryName: resolvedCategory ? resolvedCategory.name : dish.categoryName
+            categoryName: resolvedCategory ? resolvedCategory.name : dish.categoryName,
+            image: normalizeDishImage(dish.image)
         };
 
         // 3. Real-time integrity check
@@ -1231,8 +1260,7 @@ export const useStore = create<StoreState>()(
           if (existingOrders.length > 0) {
             set({ activeOrderId: existingOrders[0].id });
           } else {
-            const newId = get().createNewOrder(id, 'Principal');
-            set({ activeOrderId: newId });
+            get().createNewOrder(id, 'Principal');
           }
         } else {
           set({ activeOrderId: null });
@@ -3609,24 +3637,31 @@ export const useStore = create<StoreState>()(
             };
 
             const repairedDishes = currentDishes.map(d => {
-              logger.debug('Processing dish for integrity repair', { dishId: d.id, currentCategoryId: d.categoryId, currentCategoryName: d.categoryName });
-              const cid = String(d.categoryId || '').trim();
-              if (cid && validCatIds.has(cid)) return d;
-              logger.debug('Invalid categoryId found, attempting to repair by name', { dishId: d.id, categoryId: cid, categoryName: d.categoryName });
-              const byName = findByName(d.categoryName);
+              let dish = { ...d };
+              const normalized = normalizeDishImage(d.image);
+              if (normalized !== d.image) {
+                  dish.image = normalized;
+                  fixedCount++;
+              }
+
+              logger.debug('Processing dish for integrity repair', { dishId: dish.id, currentCategoryId: dish.categoryId, currentCategoryName: dish.categoryName });
+              const cid = String(dish.categoryId || '').trim();
+              if (cid && validCatIds.has(cid)) return dish;
+              logger.debug('Invalid categoryId found, attempting to repair by name', { dishId: dish.id, categoryId: cid, categoryName: dish.categoryName });
+              const byName = findByName(dish.categoryName);
               if (byName) { 
-                logger.debug('Category found by name, repairing dish', { dishId: d.id, oldCategoryId: cid, newCategoryId: byName.id });
-                fixedCount++; return { ...d, categoryId: byName.id }; 
+                logger.debug('Category found by name, repairing dish', { dishId: dish.id, oldCategoryId: cid, newCategoryId: byName.id });
+                fixedCount++; return { ...dish, categoryId: byName.id }; 
               }
               const slugMatch = findByName(cid.replace(/_/g, ' '));
               if (slugMatch) { 
-                logger.debug('Category found by slug match, repairing dish', { dishId: d.id, oldCategoryId: cid, newCategoryId: slugMatch.id });
-                fixedCount++; return { ...d, categoryId: slugMatch.id }; 
+                logger.debug('Category found by slug match, repairing dish', { dishId: dish.id, oldCategoryId: cid, newCategoryId: slugMatch.id });
+                fixedCount++; return { ...dish, categoryId: slugMatch.id }; 
               }
               const def = ensureDefaultCategory();
-              logger.debug('No category found by name or slug, assigning default category', { dishId: d.id, defaultCategoryId: def.id });
+              logger.debug('No category found by name or slug, assigning default category', { dishId: dish.id, defaultCategoryId: def.id });
               fixedCount++;
-              return { ...d, categoryId: def.id };
+              return { ...dish, categoryId: def.id };
             });
 
             if (fixedCount > 0) {
