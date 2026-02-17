@@ -9,7 +9,8 @@ import { CryptoService } from '@/services/cryptoService';
 import { logger } from '@/services/logger';
 
 const Login = () => {
-  const { login, users, settings, isInitialized } = useStore();
+  const router = useRouter();
+  const { login, users, settings, isInitialized, isAuthenticated } = useStore();
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
