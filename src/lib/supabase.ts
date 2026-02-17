@@ -8,26 +8,25 @@ export const isTauri = () => typeof window !== 'undefined' && !!(window as unkno
 const getEnv = (key: string): string | undefined => {
   // Tenta process.env (Next.js / Node / Vercel legacy)
   if (typeof process !== 'undefined' && process.env) {
-    const val = process.env[key] || process.env[`NEXT_PUBLIC_${key.replace('VITE_', '')}`];
-    if (val) return val;
+    return process.env[key];
   }
   return undefined;
 };
 
 // Recupera as credenciais
-export const supabaseUrl = getEnv('VITE_SUPABASE_URL') || getEnv('NEXT_PUBLIC_SUPABASE_URL');
-export const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+export const supabaseUrl = getEnv('NEXT_PUBLIC_SUPABASE_URL');
+export const supabaseAnonKey = getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
 console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Anon Key:', supabaseAnonKey);
+// console.log('Supabase Anon Key:', supabaseAnonKey); // Security: Don't log keys
 
 // Validação Estrita (Fase 1 Requirement)
 if (!supabaseUrl) {
-  throw new Error('Missing Env Vars: NEXT_PUBLIC_SUPABASE_URL (or VITE_SUPABASE_URL)');
+  throw new Error('Missing Env Vars: NEXT_PUBLIC_SUPABASE_URL');
 }
 
 if (!supabaseAnonKey) {
-  throw new Error('Missing Env Vars: NEXT_PUBLIC_SUPABASE_ANON_KEY (or VITE_SUPABASE_ANON_KEY)');
+  throw new Error('Missing Env Vars: NEXT_PUBLIC_SUPABASE_ANON_KEY');
 }
 
 // Inicialização do cliente

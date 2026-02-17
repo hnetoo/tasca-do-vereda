@@ -9,10 +9,10 @@ O cliente Supabase (`src/lib/supabase.ts`) requer as seguintes variáveis de amb
 
 | Variável | Descrição | Exemplo |
 | :--- | :--- | :--- |
-| `VITE_SUPABASE_URL` | URL do projeto Supabase (deve começar com `https://`) | `https://xyz.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | Chave pública anônima (mínimo 40 caracteres) | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase (deve começar com `https://`) | `https://xyz.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública anônima (mínimo 40 caracteres) | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` |
 
-> **Nota:** O sistema também aceita `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` para compatibilidade com deployments Vercel legados.
+> **Nota:** As variáveis devem começar com `NEXT_PUBLIC_` para serem expostas ao browser no Next.js. O suporte a `VITE_` foi removido para garantir compatibilidade total.
 
 ## Comportamento Híbrido
 
