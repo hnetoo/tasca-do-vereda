@@ -8,7 +8,7 @@ import { UserRole, Permission, CustomRole } from '../types';
 /**
  * Roles padrão do sistema
  */
-const DEFAULT_ROLES: Record<string, Permission[]> = {
+export const DEFAULT_ROLES: Record<string, Permission[]> = {
   ADMIN: [
     'CREATE_ORDER',
     'EDIT_ORDER',
