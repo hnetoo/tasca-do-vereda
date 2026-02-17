@@ -10,7 +10,7 @@ import {
   Coffee, Pizza, Beer, IceCream, Grid3X3, Tag,
   ShoppingBasket, FileText, History, Trash2, Home, Sun,
   Wine, Sandwich, Soup, Salad, Cake, Fish, Beef, Croissant, 
-  Donut, Martini, Grape, Carrot, Apple, Cherry, RotateCcw, Check
+  Donut, Martini, Grape, Carrot, Apple, Cherry, RotateCcw, Check, Menu
 } from 'lucide-react';
 import { PaymentMethod, Order, TableZone, Table, OrderPayment, Dish } from '@/types';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
@@ -76,6 +76,7 @@ const POS = () => {
   const [selectedPrinter, setSelectedPrinter] = useState<string>('THERMAL');
   const [pendingOrderForPrint, setPendingOrderForPrint] = useState<Order | null>(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isCorrecting, setIsCorrecting] = useState(false);
   const [activeZone, setActiveZone] = useState<TableZone>('INTERIOR');
   const [showMap, setShowMap] = useState(false);
 
@@ -281,57 +282,72 @@ const POS = () => {
 
   const handleOpenCustomerDisplay = async () => {
     try {
-      const label = 'customer-display';
-      const existingWin = await WebviewWindow.getByLabel(label);
-      if (existingWin) {
-        await existingWin.setFocus();
-        await emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
-        return;
+      if (typeof window !== 'undefined' && '__TAURI__' in window) {
+        const label = 'customer-display';
+        let existingWin = null;
+        try {
+          existingWin = await WebviewWindow.getByLabel(label);
+        } catch (e) {
+          console.warn('Could not get existing window:', e);
+        }
+
+        if (existingWin) {
+          await existingWin.setFocus();
+          await emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
+          return;
+        }
+
+        // Logic to find the second monitor
+        const monitors = await availableMonitors();
+        let x = 0;
+        let y = 0;
+        const width = 1280;
+        const height = 720;
+        let fullscreen = false;
+
+        // If more than one monitor, try to use the secondary one
+        if (monitors.length > 1) {
+            const primary = await primaryMonitor();
+            // Find a monitor that is not the primary one
+            const secondary = monitors.find(m => m.name !== primary?.name) || monitors[1];
+            
+            if (secondary) {
+                x = secondary.position.x;
+                y = secondary.position.y;
+                // Ideally use the monitor size, but WebviewWindow options don't enforce it strictly if fullscreen
+                // width = secondary.size.width; 
+                // height = secondary.size.height;
+                fullscreen = true; // Auto fullscreen on secondary monitor
+            }
+        }
+
+        const url = `/customer-display?tableId=${activeTableId}`;
+        new WebviewWindow(label, {
+          url,
+          title: 'Tasca Vereda - Cliente',
+          x,
+          y,
+          width,
+          height,
+          resizable: true,
+          fullscreen,
+          alwaysOnTop: false
+        });
+        setTimeout(() => {
+          emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
+        }, 500);
+      } else {
+        throw new Error('Not in Tauri environment');
       }
-
-      // Logic to find the second monitor
-      const monitors = await availableMonitors();
-      let x = 0;
-      let y = 0;
-      const width = 1280;
-      const height = 720;
-      let fullscreen = false;
-
-      // If more than one monitor, try to use the secondary one
-      if (monitors.length > 1) {
-          const primary = await primaryMonitor();
-          // Find a monitor that is not the primary one
-          const secondary = monitors.find(m => m.name !== primary?.name) || monitors[1];
-          
-          if (secondary) {
-              x = secondary.position.x;
-              y = secondary.position.y;
-              // Ideally use the monitor size, but WebviewWindow options don't enforce it strictly if fullscreen
-              // width = secondary.size.width; 
-              // height = secondary.size.height;
-              fullscreen = true; // Auto fullscreen on secondary monitor
-          }
-      }
-
-      const url = `/customer-display?tableId=${activeTableId}`;
-      new WebviewWindow(label, {
-        url,
-        title: 'Tasca Vereda - Cliente',
-        x,
-        y,
-        width,
-        height,
-        resizable: true,
-        fullscreen,
-        alwaysOnTop: false
-      });
-      setTimeout(() => {
-        emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
-      }, 500);
     } catch (error) {
       console.error('Failed to open customer display with Tauri API, falling back to window.open', error);
       const url = `${window.location.origin}/customer-display?tableId=${activeTableId}`;
-      window.open(url, 'CustomerDisplay', 'width=1024,height=768');
+      const win = window.open(url, 'CustomerDisplay', 'width=1024,height=768');
+      if (win) {
+        win.focus();
+      } else {
+        addNotification('error', 'Por favor permita pop-ups para abrir a tela do cliente');
+      }
     }
   };
 
@@ -806,6 +822,19 @@ const POS = () => {
   };
 
   const addPayment = (method: PaymentMethod, amount: number) => {
+    // Se já existe um pagamento que cobre o total e estamos adicionando outro,
+    // verificar se é uma substituição de método (apenas se houver 1 pagamento e valor igual ao total)
+    if (currentPayments.length === 1 && Math.abs(currentPayments[0].amount - totalWithTax) < 0.01) {
+       const newPayment: OrderPayment = {
+        id: `pay-${Date.now()}`,
+        method,
+        amount: totalWithTax, // Garante que o valor é exato
+        timestamp: new Date().toISOString()
+      };
+      setCurrentPayments([newPayment]);
+      return;
+    }
+
     const newPayment: OrderPayment = {
       id: `pay-${Date.now()}`,
       method,
@@ -864,13 +893,21 @@ const POS = () => {
         if (!confirmed) return;
       }
 
-      const success = await useStore.getState().correctPayment(correctionOrderId, currentPayments, correctionReason);
-      if (success) {
-        setIsCorrectionModalOpen(false);
-        setCorrectionOrderId(null);
-        setCorrectionReason('');
-        setCurrentPayments([]);
-        addNotification('success', isPostPrint ? 'Correção pós-impressão realizada com sucesso.' : 'Pagamento corrigido com sucesso.');
+      setIsCorrecting(true);
+      try {
+        const success = await useStore.getState().correctPayment(correctionOrderId, currentPayments, correctionReason);
+        if (success) {
+          setIsCorrectionModalOpen(false);
+          setCorrectionOrderId(null);
+          setCorrectionReason('');
+          setCurrentPayments([]);
+          addNotification('success', isPostPrint ? 'Correção pós-impressão realizada com sucesso.' : 'Pagamento corrigido com sucesso.');
+        }
+      } catch (error) {
+        console.error('Erro na correção:', error);
+        addNotification('error', 'Falha ao processar correção.');
+      } finally {
+        setIsCorrecting(false);
       }
     } else if (!correctionReason) {
       addNotification('warning', 'Por favor, indique o motivo da correção.');
@@ -975,12 +1012,34 @@ const POS = () => {
       
       {/* POS Internal Command Bar */}
       <div className="w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full">
-         <button onClick={toggleSidebar} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex flex-col items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-4" title={isImmersive ? "Ver Menu Principal" : "Expandir POS"}>
-            {isImmersive ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-            <span className="text-[7px] font-black uppercase mt-1">{isImmersive ? 'Reduzir' : 'Expandir'}</span>
+         <button onClick={toggleSidebar} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" title="Menu Principal">
+            <Menu size={24} />
          </button>
          
-         <div className="w-10 h-px bg-white/10 shrink-0 mb-4"></div>
+         {/* Fixed Action Buttons - Moved to Top */}
+         <div className="flex flex-col gap-3 shrink-0 mb-4">
+            <button onClick={() => setIsHistoryModalOpen(true)} className="w-12 h-12 rounded-2xl bg-slate-800 text-purple-400 flex items-center justify-center hover:bg-purple-400 hover:text-black transition-all" title="Histórico de Pedidos">
+              <History size={20} />
+            </button>
+            <button onClick={handlePrintShiftReport} className="w-12 h-12 rounded-2xl bg-slate-800 text-green-400 flex items-center justify-center hover:bg-green-400 hover:text-black transition-all" title="Relatório de Fecho">
+              <FileText size={20} />
+            </button>
+            <button onClick={handleOpenDrawer} className="w-12 h-12 rounded-2xl bg-slate-800 text-yellow-500 flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all" title="Abrir Gaveta">
+              <Banknote size={20} />
+            </button>
+            <button onClick={handleCloseShift} className="w-12 h-12 rounded-2xl bg-red-900/30 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20" title="Fechar Caixa">
+              <DoorOpen size={20} />
+            </button>
+            <button onClick={handleOpenCustomerDisplay} 
+              disabled={!activeTableId}
+              className="w-12 h-12 rounded-2xl bg-slate-800 text-blue-400 flex items-center justify-center hover:bg-blue-400 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
+              title="Visor Cliente"
+            >
+              <MonitorPlay size={20} />
+            </button>
+         </div>
+
+         <div className="w-12 h-[2px] bg-white/20 shrink-0 mb-4 rounded-full"></div>
 
          {/* Scrollable Categories Area */}
          <div className="flex-1 w-full flex flex-col items-center gap-4 overflow-y-auto no-scrollbar px-2 pb-4">
@@ -1007,31 +1066,6 @@ const POS = () => {
                  <span className="text-[7px] font-black uppercase mt-1 truncate w-full px-1 text-center">{cat.name.split(' ')[0]}</span>
                </button>
              ))}
-         </div>
-
-         <div className="w-10 h-px bg-white/10 shrink-0 my-4"></div>
-
-         {/* Fixed Action Buttons */}
-         <div className="flex flex-col gap-4 shrink-0 mb-2">
-            <button onClick={() => setIsHistoryModalOpen(true)} className="w-12 h-12 rounded-2xl bg-slate-800 text-purple-400 flex items-center justify-center hover:bg-purple-400 hover:text-black transition-all" title="Histórico de Pedidos">
-              <History size={20} />
-            </button>
-            <button onClick={handlePrintShiftReport} className="w-12 h-12 rounded-2xl bg-slate-800 text-green-400 flex items-center justify-center hover:bg-green-400 hover:text-black transition-all" title="Relatório de Fecho">
-              <FileText size={20} />
-            </button>
-            <button onClick={handleOpenDrawer} className="w-12 h-12 rounded-2xl bg-slate-800 text-yellow-500 flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all" title="Abrir Gaveta">
-              <Banknote size={20} />
-            </button>
-            <button onClick={handleCloseShift} className="w-12 h-12 rounded-2xl bg-red-900/30 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all border border-red-500/20" title="Fechar Caixa">
-              <DoorOpen size={20} />
-            </button>
-            <button onClick={handleOpenCustomerDisplay} 
-              disabled={!activeTableId}
-              className="w-12 h-12 rounded-2xl bg-slate-800 text-blue-400 flex items-center justify-center hover:bg-blue-400 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
-              title="Visor Cliente"
-            >
-              <MonitorPlay size={20} />
-            </button>
          </div>
       </div>
 
@@ -1546,16 +1580,19 @@ const POS = () => {
               <div className="grid grid-cols-2 gap-4 mb-10">
                  {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
                    const remaining = totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0);
+                   const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
+                   const isDisabled = remaining <= 0.01 && !canSubstitute;
+
                    return (
                      <button key={method} 
                       onClick={() => {
-                        if (remaining > 0) {
-                          addPayment(method, remaining);
+                        if (remaining > 0.01 || canSubstitute) {
+                          addPayment(method, remaining > 0 ? remaining : totalWithTax);
                         }
                       }}
-                      disabled={remaining <= 0}
+                      disabled={isDisabled}
                       className={`py-5 rounded-2xl border-2 font-black text-[10px] tracking-widest uppercase transition-all flex flex-col items-center justify-center gap-2
-                        ${remaining <= 0 ? 'opacity-30 grayscale cursor-not-allowed' : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:border-primary/50'}`}
+                        ${isDisabled ? 'opacity-30 grayscale cursor-not-allowed' : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:border-primary/50'}`}
                      >
                        {method.replace('_', ' ')}
                      </button>
@@ -1631,11 +1668,18 @@ const POS = () => {
                     const order = activeOrders.find(o => o.id === correctionOrderId);
                     const total = order?.total || 0;
                     const remaining = total - currentPayments.reduce((sum, p) => sum + p.amount, 0);
+                    const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
+                    const isDisabled = remaining <= 0.01 && !canSubstitute;
+
                     return (
                       <button 
                         key={method}
-                        onClick={() => remaining > 0 && addPayment(method, remaining)}
-                        disabled={remaining <= 0}
+                        onClick={() => {
+                          if (remaining > 0.01 || canSubstitute) {
+                            addPayment(method, remaining > 0 ? remaining : total);
+                          }
+                        }}
+                        disabled={isDisabled}
                         className="py-3 rounded-xl border border-white/10 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:bg-white/5 hover:text-white disabled:opacity-20"
                       >
                         {method.split('_')[0]}
@@ -1646,11 +1690,11 @@ const POS = () => {
               </div>
 
               <button 
-                disabled={!correctionReason || Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - (activeOrders.find(o => o.id === correctionOrderId)?.total || 0)) > 0.01}
+                disabled={isCorrecting || !correctionReason || Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - (activeOrders.find(o => o.id === correctionOrderId)?.total || 0)) > 0.01}
                 onClick={handleCorrection}
-                className="w-full py-5 bg-yellow-500 text-black rounded-2xl font-black uppercase tracking-widest shadow-glow-yellow hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className={`w-full py-5 bg-yellow-500 text-black rounded-2xl font-black uppercase tracking-widest shadow-glow-yellow hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 ${isCorrecting ? 'opacity-50 cursor-wait' : ''}`}
               >
-                CONFIRMAR CORREÇÃO <Check size={20} />
+                {isCorrecting ? 'PROCESSANDO...' : 'CONFIRMAR CORREÇÃO'} <Check size={20} />
               </button>
            </div>
         </div>
