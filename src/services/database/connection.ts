@@ -33,8 +33,11 @@ export const getDatabase = async (): Promise<IDatabase> => {
   
   try {
     if (isTauri()) {
-      db = await Database.load('sqlite:tasca.db');
-      logger.info('Connected to SQLite database (Tauri)', null, 'DATABASE');
+      const storedUrl = localStorage.getItem('db_url');
+      const dbUrl = storedUrl || 'sqlite:tasca.db';
+      
+      db = await Database.load(dbUrl);
+      logger.info(`Connected to database (${dbUrl})`, null, 'DATABASE');
     } else {
       logger.info('Using Mock Database (Web Environment)', null, 'DATABASE');
       db = new MockDatabase();
