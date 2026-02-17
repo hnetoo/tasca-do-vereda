@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "@/tailwind.css"; // Importar o CSS global do Tailwind
+import "@/styles/globals.css"; // Importar o CSS global do Tailwind
 
 export const metadata: Metadata = {
   title: "Tasca do Vereda",
