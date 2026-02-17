@@ -18,9 +18,8 @@ describe('Supabase Client Initialization', () => {
 
   it('should throw error if Supabase URL is missing', async () => {
     // Ensure env vars are missing
-    vi.stubEnv('VITE_SUPABASE_URL', '');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '');
-    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'some-key');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'some-key');
     
     // We expect the module to throw an error at top level import
     await expect(import('./supabase')).rejects.toThrow(/Missing Env Vars: NEXT_PUBLIC_SUPABASE_URL/);
@@ -28,9 +27,7 @@ describe('Supabase Client Initialization', () => {
 
   it('should throw error if Supabase Key is missing', async () => {
     // Ensure URL is present but Key is missing
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
-    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '');
 
     // We expect the module to throw an error at top level import
@@ -38,8 +35,8 @@ describe('Supabase Client Initialization', () => {
   });
 
   it('should identify Tauri environment correctly', async () => {
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
-    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'some-key');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'some-key');
     
     // Mock window with __TAURI__
     vi.stubGlobal('window', { __TAURI__: {} });
@@ -49,8 +46,8 @@ describe('Supabase Client Initialization', () => {
   });
 
   it('should identify Web environment correctly', async () => {
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co');
-    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'some-key');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'some-key');
     
     // Mock window without __TAURI__
     vi.stubGlobal('window', {});
