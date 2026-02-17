@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { ChefHat, Delete, User, Shield, Wallet, Utensils, ArrowLeft, ChevronRight, Lock, Save, Key } from 'lucide-react';
 import { User as UserType } from '@/types';
@@ -15,6 +16,12 @@ const Login = () => {
   const [pin, setPin] = useState('');
   const [isLoading, setIsLoading] = useState(!isInitialized);
   const [lastStoredUserId, setLastStoredUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
 
   useEffect(() => {
     // Fallback de segurança: Se a loja não inicializar em 8s, forçar a exibição do login
