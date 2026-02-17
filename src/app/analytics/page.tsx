@@ -376,8 +376,8 @@ const Analytics = () => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                 <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 12 }} />
-                <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} />
-                <Tooltip 
+                <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} tickFormatter={(value) => formatKz(value)} />
+                <Tooltip  
                   contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem' }}
                   formatter={(value) => formatKz(value as number)}
                   labelStyle={{ color: '#fff' }}

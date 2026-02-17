@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { formatKz } from '@/services/utils/currencyFormatter';
 
 interface Order {
   id: string;
@@ -143,7 +144,7 @@ export default function OwnerDashboard() {
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-white">€{metrics.totalSales.toFixed(2)}</span>
+            <span className="text-3xl font-bold text-white">{formatKz(metrics.totalSales)}</span>
             <span className="text-xs text-emerald-500 flex items-center">
               <ArrowUpRight size={12} className="mr-1" />
               +12.5%
@@ -172,7 +173,7 @@ export default function OwnerDashboard() {
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-white">€{metrics.averageTicket.toFixed(2)}</span>
+            <span className="text-3xl font-bold text-white">{formatKz(metrics.averageTicket)}</span>
           </div>
         </div>
       </div>
@@ -200,11 +201,12 @@ export default function OwnerDashboard() {
                 <YAxis 
                   stroke="#64748b" 
                   fontSize={12}
-                  tickFormatter={(value) => `€${value}`}
+                  tickFormatter={(value) => formatKz(value)}
                 />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }}
                   itemStyle={{ color: '#e2e8f0' }}
+                  formatter={(value) => formatKz(value as number)}
                 />
                 <Area 
                   type="monotone" 
@@ -236,7 +238,7 @@ export default function OwnerDashboard() {
                   `}>
                     {order.status}
                   </span>
-                  <span className="font-bold text-white">€{order.total?.toFixed(2)}</span>
+                  <span className="font-bold text-white">{formatKz(order.total || 0)}</span>
                 </div>
               </div>
             ))}

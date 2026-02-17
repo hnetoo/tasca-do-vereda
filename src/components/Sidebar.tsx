@@ -94,11 +94,22 @@ const Sidebar = () => {
     <div className={`h-full bg-slate-900 text-white flex flex-col border-r border-slate-800 transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
       <div className="p-4 border-b border-slate-800 flex items-center justify-between">
         {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            {settings?.appLogoUrl && (
-              <img src={settings.appLogoUrl} alt="App Logo" className="h-8 w-8" />
+          <div className="flex items-center gap-3">
+            {settings?.appLogoUrl ? (
+              <img src={settings.appLogoUrl} alt="App Logo" className="h-10 w-10 object-contain" />
+            ) : (
+              <div className="h-10 w-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                 <ChefHat className="text-emerald-500" size={24} />
+              </div>
             )}
-            <h1 className="font-bold text-xl text-yellow-500">Tasca do Vereda</h1>
+            <div className="flex flex-col">
+              <h1 className="font-bold text-base text-white leading-none tracking-wide">
+                Tasca Do <span className="font-black">VEREDA</span>
+              </h1>
+              <span className="text-[10px] font-bold text-emerald-500 tracking-[0.2em] mt-1">
+                RESTAURANTE
+              </span>
+            </div>
           </div>
         )}
         <button onClick={toggleSidebar} className="p-2 rounded-full hover:bg-slate-800">
