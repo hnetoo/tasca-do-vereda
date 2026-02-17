@@ -6,8 +6,8 @@ import Sidebar from '@/components/Sidebar';
 import SmartAlertsPanel from '@/components/SmartAlertsPanel';
 import { useStore } from '@/store/useStore';
 
-const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard'];
-const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos'];
+const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu'];
+const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu'];
 
 const AppShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
