@@ -123,7 +123,7 @@ export default function MenuClient() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-20">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-20 overflow-x-hidden w-full m-0 p-0">
       {/* Header Mobile */}
       <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex items-center justify-between">
         <div>
