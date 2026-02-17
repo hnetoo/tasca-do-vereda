@@ -1,9 +1,13 @@
+'use client';
+
 import { useEffect } from 'react'; 
  import { supabase } from '@/lib/supabase'; // Ajuste o caminho conforme seu projeto 
+ import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+ import { RealtimePayload } from '@/types';
  
  export const useRealtimeSync = (
   table: string,
-  callback: (payload: any) => void,
+  callback: (payload: RealtimePostgresChangesPayload<RealtimePayload>) => void,
   filter?: { column: string; value: string | number }
 ) => {
   useEffect(() => {

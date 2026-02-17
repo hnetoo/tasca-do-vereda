@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { webcrypto } from 'node:crypto';
-import { useStore } from '../store/useStore';
-import { CryptoService } from '../services/cryptoService';
-import { MOCK_USERS } from '../constants';
+import { useStore } from '@/store/useStore';
+import { CryptoService } from '@/services/cryptoService';
+import { MOCK_USERS } from '@/constants';
 
 // Mock localStorage and crypto
 const localStorageMock = (() => {

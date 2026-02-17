@@ -1,4 +1,4 @@
-import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+
 
 export interface PedidoPayload {
   eventType: 'INSERT' | 'UPDATE';
@@ -11,9 +11,9 @@ export interface PedidoPayload {
     table_id: number; 
     created_at: string; 
     updated_at: string; 
-    [key: string]: any 
+    [key: string]: unknown 
   };
-  old: { id: string; status: string; [key: string]: any };
+  old: { id: string; status: string; [key: string]: unknown };
   schema: 'public';
   table: 'pedidos';
   commit_timestamp: string;
@@ -28,9 +28,9 @@ export interface DailyAnalyticsPayload {
     total_product_cost: number; 
     total_orders: number; 
     net_profit: number; 
-    [key: string]: any 
+    [key: string]: unknown 
   };
-  old: { date: string; total_revenue: number; total_expenses: number; total_product_cost: number; total_orders: number; net_profit: number; [key: string]: any };
+  old: { date: string; total_revenue: number; total_expenses: number; total_product_cost: number; total_orders: number; net_profit: number; [key: string]: unknown };
   schema: 'public';
   table: 'daily_analytics';
   commit_timestamp: string;
@@ -97,7 +97,7 @@ export interface SystemSettings {
     url: string;
     key: string;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface User {
