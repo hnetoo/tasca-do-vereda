@@ -16,7 +16,7 @@ import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 const Dashboard = () => {
   const { 
     activeOrders, orders, customers, menu, settings, expenses, revenues,
-    getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange 
+    getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange, isAuthenticated
   } = useStore();
 
   const [realtimeActivity, setRealtimeActivity] = useState(false);
