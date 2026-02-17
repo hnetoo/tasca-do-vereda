@@ -2,7 +2,7 @@
 const nextConfig = {
   // Configuração para compatibilidade com Tauri e Next.js 15
   // Ativa 'export' apenas quando a variável de ambiente TAURI_BUILD estiver definida
-  output: process.env.TAURI_BUILD ? 'export' : undefined,
+  output: process.env.TAURI_BUILD ? 'export' : 'standalone',
   
   // Ignorar erros de linting e typescript durante o build para debug
   eslint: {
