@@ -42,10 +42,10 @@ const Finance = () => {
     addExpense, updateExpense, removeExpense,
     removeFixedExpense,
     addNotification, processPayroll, markPayrollAsPaid,
-    getDailySalesAnalytics
+    getSalesForDate
   } = useStore();
 
-  const dailyAnalytics = getDailySalesAnalytics(new Date());
+  const dailyAnalytics = getSalesForDate(new Date());
   const todayProfit = dailyAnalytics ? dailyAnalytics.totalProfit : 0;
 
   const [activeTab, setActiveTab] = useState<FinanceTab>('OVERVIEW');
