@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatAOA } from '@/utils/format';
 import { useStore } from '@/store/useStore';
+import KPICard from '@/components/KPICard';
 
 interface Order {
   id: string;
@@ -393,32 +394,3 @@ export default function OwnerDashboard() {
   );
 }
 
-function KPICard({ title, value, subtitle, icon, trend, color = "text-white" }: {
-  title: string;
-  value: string;
-  subtitle: string;
-  icon?: React.ReactNode;
-  trend?: 'up' | 'down';
-  color?: string;
-}) {
-  return (
-    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 relative overflow-hidden group hover:border-slate-700 transition-colors">
-      <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
-        {trend === 'up' && <ArrowUpRight size={16} className="text-emerald-500" />}
-        {trend === 'down' && <ArrowDownRight size={16} className="text-red-500" />}
-      </div>
-      
-      <div className="flex flex-col h-full justify-between gap-4">
-        <div className="flex justify-between items-start">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{title}</span>
-          {icon && <div className="p-1.5 bg-slate-800 rounded-lg">{icon}</div>}
-        </div>
-        
-        <div>
-          <h3 className={`text-2xl font-bold tracking-tight ${color}`}>{value}</h3>
-          <p className="text-xs text-slate-500 font-medium mt-1">{subtitle}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
