@@ -31,7 +31,8 @@ export default function MenuDigital() {
     max_stock_quantity: row.max_stock_quantity ?? row.quantidade_maxima ?? 0,
     unit: row.unit || row.unidade_medida || 'un',
     supplier_id: row.supplier_id || row.fornecedor_padrao_id
-  });
+  };
+  };
 
   // Initial Data Fetch
   useEffect(() => {
@@ -110,6 +111,8 @@ export default function MenuDigital() {
       .channel('menu-geral-categories')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, (payload) => {
         console.log('Category change received:', payload);
+        if (!payload.new && payload.eventType !== 'DELETE') return;
+
         if (payload.eventType === 'INSERT') {
           setCategories(prev => [...prev, payload.new as MenuCategory].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
         } else if (payload.eventType === 'UPDATE') {

@@ -28,6 +28,7 @@ export class SupabaseService {
     if (targetUrl && targetKey) {
         this.config = { url: targetUrl, key: targetKey };
     } else {
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL) console.error('Supabase URL missing! Check NEXT_PUBLIC_SUPABASE_URL');
         logger.warn('Supabase URL/Key not found in env or arguments. Client might be in mock mode.', {}, 'SupabaseService');
     }
 

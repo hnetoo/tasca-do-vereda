@@ -1,10 +1,9 @@
 'use client';
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle } from 'lucide-react';
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface State {
@@ -15,7 +14,7 @@ interface State {
 class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null
+    error: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -29,27 +28,20 @@ class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4">
-          <div className="bg-slate-800 p-8 rounded-lg border border-red-500/50 shadow-2xl max-w-md w-full">
-            <div className="flex items-center gap-3 text-red-500 mb-4">
-              <AlertTriangle size={32} />
-              <h1 className="text-xl font-bold">Algo correu mal</h1>
-            </div>
-            <p className="text-slate-300 mb-4">
-              Ocorreu um erro inesperado na aplicação. Por favor, recarregue a página.
-            </p>
-            {this.state.error && (
-              <div className="bg-slate-950 p-4 rounded text-xs font-mono text-red-400 overflow-auto max-h-40 mb-6">
-                {this.state.error.toString()}
-              </div>
-            )}
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-            >
-              Recarregar Aplicação
-            </button>
-          </div>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4 text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Oops! Algo correu mal.</h1>
+          <p className="text-gray-700 mb-4">Pedimos desculpa pelo inconveniente. Por favor, tente recarregar a página.</p>
+          <button
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+            onClick={() => window.location.reload()}
+          >
+            Recarregar Página
+          </button>
+          {process.env.NODE_ENV === 'development' && this.state.error && (
+            <pre className="mt-8 p-4 bg-gray-200 rounded text-left overflow-auto max-w-full text-xs text-black">
+              {this.state.error.toString()}
+            </pre>
+          )}
         </div>
       );
     }
