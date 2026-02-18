@@ -1,1 +1,0 @@
-src/store/slices/uiSlice.ts(79,31): error TS2339: Property 'syncMenu' does not exist on type 'SupabaseService'.

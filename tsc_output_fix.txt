@@ -1,1 +1,0 @@
-src/store/slices/staffSlice.ts(114,26): error TS2339: Property 'saveAttendance' does not exist on type '{ _handleDatabaseOperation: <T>(operation: () => Promise<T>, context: string, functionName?: string) => Promise<{ success: boolean; data?: T | undefined; error?: string | undefined; }>; ... 46 more ...; getSettings: () => Promise<...>; }'.
