@@ -1,1 +1,0 @@
-src/store/slices/uiSlice.ts(24,3): error TS2741: Property 'id' is missing in type '{ restaurantName: string; appLogoUrl: string; currency: string; taxRate: number; phone: string; address: string; nif: string; commercialReg: string; agtCertificate: string; invoiceSeries: string; ... 12 more ...; qrMenuLogo: string; }' but required in type 'SystemSettings'.
