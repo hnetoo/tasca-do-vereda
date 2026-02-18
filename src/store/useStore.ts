@@ -80,7 +80,10 @@ export const useStore = create<StoreState>()(
       },
 
       // Legacy/Root State
-      isInitialized: true,
+      isInitialized: false,
+      initializeStore: async () => {
+        set({ isInitialized: true });
+      },
       isMobileMenuOpen: false,
       toggleMobileMenu: () => set((state) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
       users: MOCK_USERS,
