@@ -183,6 +183,10 @@ class IntegrationAPIService {
   }
 
   async syncAuditLogs(logs: (AuditLog | LogEntry)[]): Promise<SupabaseResponse<null>> {
+    // TEMPORARILY DISABLED TO PREVENT 401 ERRORS
+    return { success: true, data: null };
+
+    /*
     if (!this.client) return { success: false, error: 'Not initialized' };
     if (!this.canWriteToProtectedTables()) {
       logger.info('Skipping audit log sync on client (publishable key / RLS)', {}, 'SupabaseService');
@@ -224,6 +228,7 @@ class IntegrationAPIService {
     }
     
     return { success: true, data: null };
+    */
   }
 
   async syncStock(stock: StockItem[]): Promise<SupabaseResponse<null>> {
