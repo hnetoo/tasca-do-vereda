@@ -144,7 +144,7 @@ const Sidebar = () => {
     // plus the Owner Dashboard itself to maintain context.
     if (pathname?.startsWith('/admin/owner')) {
       return menuItems.filter(item => 
-        ['/admin/owner', '/finance', '/reports', '/analytics', '/settings'].includes(item.path)
+        ['/admin/owner', '/dashboard', '/finance', '/reports', '/analytics'].includes(item.path)
       );
     }
 
