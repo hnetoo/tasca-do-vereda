@@ -53,10 +53,15 @@ const Sidebar = () => {
   const pathname = usePathname();
   const { logout, settings, user } = useStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['/system', '/menu-management', '/staff', '/room']);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
+  };
+
+  const toggleMobileSidebar = () => {
+    setIsMobileOpen(!isMobileOpen);
   };
 
   const toggleMenu = (path: string) => {
