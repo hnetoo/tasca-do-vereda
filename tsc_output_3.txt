@@ -1,0 +1,1 @@
+src/store/useStore.ts(52,24): error TS2739: Type '{ updateSettings: (newSettings: Partial<SystemSettings>) => void; isInitialized: true; isMobileMenuOpen: false; toggleMobileMenu: () => void; users: User[]; ... 153 more ...; performSafeCleanup: () => Promise<...>; }' is missing the following properties from type 'StoreState': setShifts, addAuditLog, importCloudItems

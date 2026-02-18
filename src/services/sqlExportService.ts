@@ -1,10 +1,10 @@
 
-import { MenuCategory, Dish, SystemSettings } from '../types';
+import { MenuCategory, Product, SystemSettings } from '../types';
 import { logger } from './logger';
 
 export const generateSQLSchema = (
   categories: MenuCategory[], 
-  dishes: Dish[], 
+  products: Product[], 
   settings: SystemSettings
 ): string => {
   try {
@@ -12,6 +12,8 @@ export const generateSQLSchema = (
   
   let sql = `-- Database Schema Export for ${settings.restaurantName}\n`;
   sql += `-- Generated at: ${timestamp}\n\n`;
+
+  const escapeSQL = (str: string) => str.replace(/'/g, "''");
 
   // 1. Create Tables
   sql += `-- Table: settings\n`;
@@ -37,8 +39,8 @@ export const generateSQLSchema = (
   sql += `  is_active BOOLEAN DEFAULT TRUE\n`;
   sql += `);\n\n`;
 
-  sql += `-- Table: dishes\n`;
-  sql += `CREATE TABLE IF NOT EXISTS dishes (\n`;
+  sql += `-- Table: products\n`;
+  sql += `CREATE TABLE IF NOT EXISTS products (\n`;
   sql += `  id VARCHAR(36) PRIMARY KEY,\n`;
   sql += `  category_id VARCHAR(36),\n`;
   sql += `  name VARCHAR(255) NOT NULL,\n`;
@@ -46,7 +48,7 @@ export const generateSQLSchema = (
   sql += `  description TEXT,\n`;
   sql += `  image_url TEXT,\n`;
   sql += `  is_available BOOLEAN DEFAULT TRUE,\n`;
-  sql += `  available_on_digital_menu BOOLEAN DEFAULT TRUE,\n`;
+  sql += `  is_available_on_digital_menu BOOLEAN DEFAULT TRUE,\n`;
   sql += `  tax_percentage DECIMAL(5,2),\n`;
   sql += `  FOREIGN KEY (category_id) REFERENCES menu_categories(id) ON DELETE SET NULL\n`;
   sql += `);\n\n`;
@@ -56,13 +58,13 @@ export const generateSQLSchema = (
   // Settings
   sql += `-- Data: settings\n`;
   sql += `INSERT INTO settings (restaurant_name, nif, address, phone, email, currency, tax_rate, kds_enabled) VALUES (\n`;
-  sql += `  '${escapeSQL(settings.restaurantName)}',\n`;
-  sql += `  '${escapeSQL(settings.nif || '')}',\n`;
-  sql += `  '${escapeSQL(settings.address || '')}',\n`;
-  sql += `  '${escapeSQL(settings.phone || '')}',\n`;
-  sql += `  '${escapeSQL(settings.email || '')}',\n`;
-  sql += `  '${escapeSQL(settings.currency || 'Kz')}',\n`;
-  sql += `  ${settings.taxRate || 14},\n`;
+  sql += `  '${escapeSQL(settings.restaurantName || '')}',\n`;
+  sql += `  '${escapeSQL((settings.nif as string) || '')}',\n`;
+  sql += `  '${escapeSQL((settings.address as string) || '')}',\n`;
+  sql += `  '${escapeSQL((settings.phone as string) || '')}',\n`;
+  sql += `  '${escapeSQL((settings.email as string) || '')}',\n`;
+  sql += `  '${escapeSQL((settings.currency as string) || 'Kz')}',\n`;
+  sql += `  ${(settings.taxRate as number) || 14},\n`;
   sql += `  ${settings.kdsEnabled ? 1 : 0}\n`;
   sql += `);\n\n`;
 
@@ -76,19 +78,19 @@ export const generateSQLSchema = (
     sql += catValues.join(',\n') + ';\n\n';
   }
 
-  // Dishes
-  if (dishes.length > 0) {
-    sql += `-- Data: dishes\n`;
-    sql += `INSERT INTO dishes (id, category_id, name, price, description, image_url, is_available, available_on_digital_menu, tax_percentage) VALUES\n`;
-    const dishValues = dishes.map(dish => {
-      return `  ('${dish.id}', '${dish.category_id}', '${escapeSQL(dish.name)}', ${dish.price}, '${escapeSQL(dish.description || '')}', '${escapeSQL(dish.image || '')}', 1, ${dish.availableOnDigitalMenu !== false ? 1 : 0}, ${settings.taxRate || 0})`;
+  // Products
+  if (products.length > 0) {
+    sql += `-- Data: products\n`;
+    sql += `INSERT INTO products (id, category_id, name, price, description, image_url, is_available, is_available_on_digital_menu, tax_percentage) VALUES\n`;
+    const productValues = products.map(product => {
+      return `  ('${product.id}', '${product.category_id}', '${escapeSQL(product.name)}', ${product.price}, '${escapeSQL(product.description || '')}', '${escapeSQL(product.image_url || '')}', 1, ${product.is_available_on_digital_menu !== false ? 1 : 0}, ${product.tax_percentage || settings.taxRate || 0})`;
     });
-    sql += dishValues.join(',\n') + ';\n\n';
+    sql += productValues.join(',\n') + ';\n\n';
   }
 
   logger.info('SQL Schema generated successfully', { 
     categoryCount: categories.length, 
-    dishCount: dishes.length 
+    productCount: products.length 
   }, 'SQL_EXPORT');
 
   return sql;
@@ -97,8 +99,4 @@ export const generateSQLSchema = (
   logger.error('Error generating SQL Schema', { error: error.message }, 'SQL_EXPORT');
   throw error;
 }
-};
-
-const escapeSQL = (str: string): string => {
-  return str.replace(/'/g, "''").replace(/\\/g, '\\\\');
 };

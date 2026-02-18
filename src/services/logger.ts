@@ -125,7 +125,7 @@ class LoggerService {
 
   debug(message: string, data?: unknown, context?: string) {
     const isDev = typeof process !== 'undefined' && process.env && (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test');
-    const isViteDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+    const isViteDev = typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.DEV;
     
     if (isDev || isViteDev) {
       this.addLog('debug', message, data, context);
@@ -155,10 +155,11 @@ class LoggerService {
       .reverse()
       .map(logEntry => ({
         id: logEntry.id,
-        type: (logEntry.level === 'error' ? 'CRITICAL' : logEntry.level === 'warn' ? 'WARNING' : 'INFO'),
+        type: 'system_error',
+        severity: (logEntry.level === 'error' ? 'critical' : logEntry.level === 'warn' ? 'medium' : 'low'),
         message: logEntry.message,
-        timestamp: new Date(logEntry.timestamp),
-        resolved: false, // Default to false as LogEntry doesn't track resolution status
+        timestamp: new Date(logEntry.timestamp).toISOString(),
+        resolved: false,
         details: (logEntry.data as Record<string, unknown>) || {},
       }));
   }

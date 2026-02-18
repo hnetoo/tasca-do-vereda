@@ -79,6 +79,7 @@ const InventoryContent = () => {
     category_id: '',
     image_url: '',
     is_available_on_digital_menu: true,
+    is_active: true,
     tax_code: 'NOR',
     supplier_id: '',
     track_stock: false,
@@ -90,8 +91,8 @@ const InventoryContent = () => {
   const [catForm, setCatForm] = useState<Partial<MenuCategory>>({
     name: '',
     icon: 'Grid3X3',
-    parentId: '',
-    availableOnDigitalMenu: true
+    parent_id: '',
+    is_available_on_digital_menu: true
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -159,12 +160,12 @@ const InventoryContent = () => {
       setEditingId(cat.id);
       setCatForm({
         ...cat,
-        parentId: cat.parentId || '',
-        availableOnDigitalMenu: cat.availableOnDigitalMenu !== false
+        parent_id: cat.parent_id || '',
+        is_available_on_digital_menu: cat.is_available_on_digital_menu !== false
       });
     } else {
       setEditingId(null);
-      setCatForm({ name: '', icon: 'Grid3X3', parentId: '', availableOnDigitalMenu: true });
+      setCatForm({ name: '', icon: 'Grid3X3', parent_id: '', is_available_on_digital_menu: true });
     }
     setIsCatModalOpen(true);
   };
@@ -244,12 +245,12 @@ const InventoryContent = () => {
 
     const catData = {
       ...catForm,
-      parentId: catForm.parentId === '' ? undefined : catForm.parentId
+      parent_id: catForm.parent_id === '' ? undefined : catForm.parent_id
     } as Record<string, any>;
 
     if (editingId) {
       updateCategory({ ...catData, id: editingId } as MenuCategory);
-      logger.info('Categoria atualizada', { id: editingId, name: catData.name, parentId: catData.parentId }, 'Inventory');
+      logger.info('Categoria atualizada', { id: editingId, name: catData.name, parent_id: catData.parent_id }, 'Inventory');
     } else {
       // Ensure ID generation for new categories
       const newCategory = {
@@ -257,7 +258,7 @@ const InventoryContent = () => {
         id: Math.random().toString(36).substring(2, 11)
       } as MenuCategory;
       addCategory(newCategory);
-      logger.info('Nova categoria adicionada', { name: newCategory.name, parentId: newCategory.parentId }, 'Inventory');
+      logger.info('Nova categoria adicionada', { name: newCategory.name, parent_id: newCategory.parent_id }, 'Inventory');
     }
     setIsCatModalOpen(false);
   };

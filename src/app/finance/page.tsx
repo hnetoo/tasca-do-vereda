@@ -45,8 +45,8 @@ const Finance = () => {
     getDailySalesAnalytics
   } = useStore();
 
-  const dailyAnalytics = getDailySalesAnalytics(1);
-  const todayProfit = dailyAnalytics.length > 0 ? dailyAnalytics[0].totalProfit : 0;
+  const dailyAnalytics = getDailySalesAnalytics(new Date());
+  const todayProfit = dailyAnalytics ? dailyAnalytics.totalProfit : 0;
 
   const [activeTab, setActiveTab] = useState<FinanceTab>('OVERVIEW');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -79,19 +79,19 @@ const Finance = () => {
     QR_CODE: 'QR Code',
     CONTA_CORRENTE: 'Conta Corrente',
     MBWAY: 'MBWay',
-    OUTROS: 'Outros',
-    Cash: 'Dinheiro',
-    Card: 'Cartão',
-    MBWay: 'MBWay',
-    Other: 'Outros'
+    OUTRO: 'Outros',
+    CASH: 'Dinheiro',
+    CARD: 'Cartão',
+    MULTIBANCO: 'Multibanco',
+    TRANSFER: 'Transferência'
   };
 
-  const extractPayments = (order: typeof activeOrders[number]) => {
+  const extractPayments = (order: any) => {
     if (order.splitPayments && order.splitPayments.length > 0) {
-      return order.splitPayments.map(p => ({ method: p.method, amount: p.amount }));
+      return order.splitPayments.map((p: any) => ({ method: p.method, amount: p.amount }));
     }
     if (order.payments && order.payments.length > 0) {
-      return order.payments.map(p => ({ method: p.method, amount: p.amount }));
+      return order.payments.map((p: any) => ({ method: p.method, amount: p.amount }));
     }
     if (order.paymentMethod) {
       return [{ method: order.paymentMethod, amount: order.total }];
@@ -150,11 +150,11 @@ const Finance = () => {
         QR_CODE: 0,
         CONTA_CORRENTE: 0,
         MBWAY: 0,
-        OUTROS: 0,
-        Cash: 0,
-        Card: 0,
-        MBWay: 0,
-        Other: 0
+        OUTRO: 0,
+        CASH: 0,
+        CARD: 0,
+        MULTIBANCO: 0,
+        TRANSFER: 0
       };
       closedOrders.forEach(order => {
         const orderDate = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));

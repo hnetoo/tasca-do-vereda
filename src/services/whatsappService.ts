@@ -1,4 +1,4 @@
-import { Dish } from '../types';
+import { Product } from '../types';
 import { logger } from './logger';
 
 export interface WhatsAppMessage {
@@ -10,7 +10,7 @@ export interface WhatsAppMessage {
 }
 
 export interface ParsedOrder {
-  items: Array<{ dish: Dish; quantity: number; notes?: string }>;
+  items: Array<{ dish: Product; quantity: number; notes?: string }>;
   confidence: number; // 0-1
   originalText: string;
 }
@@ -19,10 +19,10 @@ export interface ParsedOrder {
  * Parses a natural language text to extract order items based on the menu.
  * Example: "Quero 2 Hamburgueres da casa e uma coca cola zero"
  */
-export const parseWhatsAppOrder = (text: string, menu: Dish[]): ParsedOrder => {
+export const parseWhatsAppOrder = (text: string, menu: Product[]): ParsedOrder => {
   try {
     const normalizedText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const foundItems: Array<{ dish: Dish; quantity: number; notes?: string; index: number }> = [];
+  const foundItems: Array<{ dish: Product; quantity: number; notes?: string; index: number }> = [];
 
   // Sort menu by name length (descending) to match "Hamburguer da Casa" before "Hamburguer"
   const sortedMenu = [...menu].sort((a, b) => b.name.length - a.name.length);

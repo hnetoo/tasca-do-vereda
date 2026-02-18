@@ -1,0 +1,1 @@
+src/store/slices/uiSlice.ts(59,56): error TS2339: Property 'id' does not exist on type 'Notification'.

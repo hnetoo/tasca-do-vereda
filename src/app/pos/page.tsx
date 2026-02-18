@@ -45,7 +45,7 @@ const AVAILABLE_ICONS = [
 const POS = () => {
   const { 
     tables, activeTableId, setActiveTable, 
-    menu, categories, activeOrders, activeOrderId, setActiveOrder, 
+    products: menu, categories, activeOrders, activeOrderId, setActiveOrder, 
     createNewOrder, addToOrder, removeFromOrder, 
     checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
     settings, addNotification,
@@ -66,7 +66,7 @@ const POS = () => {
   const [isClosingShiftModalOpen, setIsClosingShiftModalOpen] = useState(false);
   const [closingAmount, setClosingAmount] = useState<string>('');
   const [isTransferHistoryOpen, setIsTransferHistoryOpen] = useState(false);
-  const [transferTargetId, setTransferTargetId] = useState<number | null>(null);
+  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [subAccountName, setSubAccountName] = useState('');
   const [customerNif, setCustomerNif] = useState('');
@@ -205,7 +205,7 @@ const POS = () => {
   );
 
   const filteredMenu = menu.filter(item => {
-    const matchesCategory = selectedCategoryId === 'TODOS' || item.categoryId === selectedCategoryId;
+    const matchesCategory = selectedCategoryId === 'TODOS' || item.category_id === selectedCategoryId;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   }).sort((a, b) => a.name.localeCompare(b.name));

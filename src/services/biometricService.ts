@@ -195,19 +195,19 @@ export class BiometricIntegrationService {
         // Atualizar com novo horário
         const updatedAttendance = {
           ...existingAttendance,
-          clockOut: event.type === 'CLOCK_OUT' ? event.clockTime.toISOString() : existingAttendance.clockOut,
-          clockIn: event.type === 'CLOCK_IN' ? event.clockTime.toISOString() : existingAttendance.clockIn
+          clockOut: event.type === 'CLOCK_OUT' ? new Date(event.clockTime).toISOString() : existingAttendance.clockOut,
+          clockIn: event.type === 'CLOCK_IN' ? new Date(event.clockTime).toISOString() : existingAttendance.clockIn
         };
 
         // Calcular horas e atrasos
         this.calculateAttendanceMetrics(updatedAttendance);
 
         // Adicionar à store
-        store.attendance = store.attendance.map(a =>
+        store.setAttendance(store.attendance.map(a =>
           a.id === existingAttendance.id ? updatedAttendance : a
-        );
+        ));
       } else if (event.type === 'CLOCK_IN') {
-        store.attendance = [...store.attendance, attendanceRecord];
+        store.setAttendance([...store.attendance, attendanceRecord]);
       }
 
       // 3. Marcar evento como processado
@@ -216,18 +216,19 @@ export class BiometricIntegrationService {
       event.linkedAttendanceId = attendanceRecord.id;
 
       // 4. Log de integração
-      store.addIntegrationLog({
-        type: 'BIOMETRIC_SYNC',
-        message: `Evento biométrico processado: ${employee.name} - ${event.type}`,
-        details: {
+      if (store.addIntegrationLog) {
+        store.addIntegrationLog({
+          id: `log-${Date.now()}`,
           integrationName: 'BiometricDevice',
           eventType: `attendance.${event.type.toLowerCase()}`,
           status: 'SUCCESS',
+          timestamp: new Date(),
+          message: `Evento biométrico processado: ${employee.name} - ${event.type}`,
           request: event,
           response: attendanceRecord,
           duration: 0
-        }
-      });
+        });
+      }
 
       logger.info(`Evento biométrico processado: ${employee.name} - ${event.type}`, { employee: employee.name, type: event.type }, 'BIOMETRICS');
 
@@ -237,19 +238,19 @@ export class BiometricIntegrationService {
 
       // Log de erro
       const store = useStore.getState();
-      store.addIntegrationLog({
-        type: 'BIOMETRIC_ERROR',
-        message: `Erro ao processar evento biométrico: ${(error as Error).message}`,
-        details: {
+      if (store.addIntegrationLog) {
+        store.addIntegrationLog({
+          id: `err-${Date.now()}`,
           integrationName: 'BiometricDevice',
           eventType: 'attendance.error',
           status: 'FAILED',
+          timestamp: new Date(),
+          message: `Erro ao processar evento biométrico: ${(error as Error).message}`,
           request: event,
-          response: null,
           error: (error as Error).message,
           duration: 0
-        }
-      });
+        });
+      }
     }
   }
 

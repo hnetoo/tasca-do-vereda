@@ -1,5 +1,5 @@
 import { BiometricIntegrationService } from '../services/biometricService';
-import { IntegrationAPIService, initializeIntegrationAPI } from '../services/integrationAPIService';
+import { IntegrationAPIService } from '../services/integrationAPIService';
 import { APIKey, WebhookConfig, BiometricDevice, IntegrationLog, MobileSession, BiometricClockEvent } from '../types';
 
 /**
@@ -242,7 +242,7 @@ export function setupIntegrationsModule() {
         ipAddress: deviceInfo.ipAddress,
         createdAt: new Date(),
         expiresAt,
-        lastActivity: new Date(),
+        lastActive: new Date(),
         status: 'ACTIVE'
       };
 
@@ -262,7 +262,7 @@ export function setupIntegrationsModule() {
       }
       if (session.status !== 'ACTIVE') return null;
 
-      session.lastActivity = new Date();
+      session.lastActive = new Date();
       return session;
     },
 

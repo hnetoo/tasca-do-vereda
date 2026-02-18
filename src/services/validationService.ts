@@ -1,4 +1,4 @@
-import { MenuCategory, Dish, Order, SystemSettings, Employee, FullApplicationState } from "../types";
+import { MenuCategory, Product, Order, SystemSettings, Employee, FullApplicationState } from "../types";
 
 
 export interface ValidationResult {
@@ -37,7 +37,7 @@ export const validationService = {
         };
     },
 
-    validateMenu: async (menu: Dish[]): Promise<ValidationResult> => {
+    validateMenu: async (menu: Product[]): Promise<ValidationResult> => {
         const errors: string[] = [];
         const warnings: string[] = [];
 
@@ -141,7 +141,7 @@ export const validationService = {
         return { isValid: errors.length === 0, errors, warnings: [] };
     },
 
-    validateFullState: async (state: Partial<FullApplicationState>): Promise<ValidationResult> => {
+    validateFullState: async (state: any): Promise<ValidationResult> => {
         const catRes = await validationService.validateCategories(state.categories || []);
         await validationService.yield();
         

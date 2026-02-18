@@ -75,7 +75,7 @@ export class SupabaseService {
         return;
     }
 
-    this.client.realtime.onOpen(() => {
+    (this.client.realtime as any).onOpen(() => {
         logger.info('Supabase Realtime connection opened.', {}, 'SupabaseService');
         this.syncStatus.isConnected = true;
         this.syncStatus.status = 'success';
@@ -86,7 +86,7 @@ export class SupabaseService {
         this.reconnect();
     });
 
-    this.client.realtime.onClose(() => {
+    (this.client.realtime as any).onClose(() => {
         logger.warn('Supabase Realtime connection closed. Attempting to reconnect...', {}, 'SupabaseService');
         this.syncStatus.isConnected = false;
         this.syncStatus.status = 'retrying';
@@ -95,7 +95,7 @@ export class SupabaseService {
         setTimeout(() => this.reconnect(), 3000);
     });
 
-    this.client.realtime.onError((event: ErrorEvent) => {
+    (this.client.realtime as any).onError((event: any) => {
         logger.error('Supabase Realtime connection error.', { error: event.message || event }, 'SupabaseService');
         this.syncStatus.isConnected = false;
         this.syncStatus.status = 'error';
@@ -164,7 +164,7 @@ export class SupabaseService {
     try {
       const { data, error } = await exponentialBackoff(async () => {
         if (!this.client) throw new Error('Supabase client not available during backoff');
-        return this.client.from('settings').upsert({ id: 1, ...settings });
+        return this.client.from('settings').upsert({ id: '1', ...settings });
       }, 5, 1000);
 
       if (error) {
@@ -349,15 +349,21 @@ export class SupabaseService {
     this.realtimeHandlers.clear();
   }
 
-  async fetchCategoriesPaged({ page, pageSize }: { page: number; pageSize: number }) {
+  async fetchCategoriesPaged({ page, pageSize, search }: { page: number; pageSize: number; search?: string }) {
     if (!this.client) return { success: false, error: 'Client not initialized' };
     try {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      const { data, error, count } = await this.client
+      let query = this.client
         .from('categories')
         .select('*', { count: 'exact' })
         .range(from, to);
+      
+      if (search) {
+        query = query.ilike('name', `%${search}%`);
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
       return { success: true, data, count };
     } catch (error: any) {
@@ -365,15 +371,25 @@ export class SupabaseService {
     }
   }
 
-  async fetchProductsPaged({ page, pageSize }: { page: number; pageSize: number }) {
+  async fetchProductsPaged({ page, pageSize, search, categoryId }: { page: number; pageSize: number; search?: string; categoryId?: string }) {
     if (!this.client) return { success: false, error: 'Client not initialized' };
     try {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      const { data, error, count } = await this.client
+      let query = this.client
         .from('products')
         .select('*', { count: 'exact' })
         .range(from, to);
+
+      if (search) {
+        query = query.ilike('name', `%${search}%`);
+      }
+      
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
       
       const mappedData = data.map((item: any) => ({
@@ -394,13 +410,13 @@ export class SupabaseService {
            const { data, error } = await this.client!.from('categories').select('*').order('sort_order');
            if (error) throw error;
            return data;
-      }, 3, 1000, 'fetchMenu:categories');
+      }, 3, 1000);
 
       const products = await exponentialBackoff(async () => {
            const { data, error } = await this.client!.from('products').select('*');
            if (error) throw error;
            return data;
-      }, 3, 1000, 'fetchMenu:products');
+      }, 3, 1000);
 
       this.syncStatus.status = 'success';
       this.syncStatus.lastSuccessAt = Date.now();
