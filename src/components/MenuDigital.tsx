@@ -13,7 +13,9 @@ export default function MenuDigital() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper to map DB row to Product interface
-  const mapToProduct = (row: any): Product => ({
+  const mapToProduct = (row: any): Product => {
+    if (!row) return {} as Product;
+    return {
     id: row.id,
     name: row.name,
     description: row.description,
@@ -31,7 +33,7 @@ export default function MenuDigital() {
     max_stock_quantity: row.max_stock_quantity ?? row.quantidade_maxima ?? 0,
     unit: row.unit || row.unidade_medida || 'un',
     supplier_id: row.supplier_id || row.fornecedor_padrao_id
-  };
+    };
   };
 
   // Initial Data Fetch
