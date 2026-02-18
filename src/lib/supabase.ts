@@ -7,8 +7,13 @@ export const isTauri = () => typeof window !== 'undefined' && !!(window as unkno
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-console.log('[SUPABASE CONFIG] URL:', supabaseUrl);
-console.log('[SUPABASE CONFIG] Key:', supabaseAnonKey ? '***DEFINED***' : 'UNDEFINED');
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('[SUPABASE ERROR] Missing environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  console.error('[SUPABASE ERROR] Please check your .env.local file or Vercel environment variables (ensure no quotes or extra spaces).');
+} else {
+  console.log('[SUPABASE CONFIG] URL:', supabaseUrl);
+  console.log('[SUPABASE CONFIG] Key:', supabaseAnonKey ? '***DEFINED***' : 'UNDEFINED');
+}
 
 // Inicialização do cliente
 // Mantemos as configurações de persistência para garantir funcionamento correto em Web vs Tauri
