@@ -136,7 +136,7 @@ const Sidebar = () => {
   ];
 
   // Define allowed roles for sensitive modules
-  const isAdminOrOwner = currentUser?.role === 'ADMIN' || currentUser?.role === 'OWNER';
+  const isAdminOrOwner = user?.role === 'ADMIN' || user?.role === 'OWNER';
   
   // Filter menu items based on Page Context AND User Role
   const getFilteredItems = () => {
