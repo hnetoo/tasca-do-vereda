@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Employee, WorkShift, AttendanceRecord, StoreState } from '../../types';
+import { Employee, WorkShift, AttendanceRecord, StoreState, UUID } from '../../types';
 import { databaseOperations } from '../../services/database/operations';
 import { logger } from '../../services/logger';
 
@@ -9,13 +9,13 @@ export interface StaffSlice {
   attendance: AttendanceRecord[];
   addEmployee: (emp: Employee) => void;
   updateEmployee: (emp: Employee) => void;
-  removeEmployee: (id: string) => void;
+  removeEmployee: (id: UUID) => void;
   addWorkShift: (shift: WorkShift) => void;
-  removeWorkShift: (id: string) => void;
-  clockIn: (employeeId: string, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => void;
-  clockOut: (employeeId: string, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => void;
-  getEmployeeById: (id: string) => Employee | undefined;
-  getAttendanceByEmployeeId: (employeeId: string) => AttendanceRecord[];
+  removeWorkShift: (id: UUID) => void;
+  clockIn: (employeeId: UUID, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => void;
+  clockOut: (employeeId: UUID, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => void;
+  getEmployeeById: (id: UUID) => Employee | undefined;
+  getAttendanceByEmployeeId: (employeeId: UUID) => AttendanceRecord[];
   setEmployees: (employees: Employee[]) => void;
   setAttendance: (attendance: AttendanceRecord[]) => void;
   updateAttendance: (record: AttendanceRecord) => void;
@@ -34,46 +34,46 @@ export const createStaffSlice: StateCreator<
   workShifts: [],
   attendance: [],
   
-  addEmployee: (emp) => {
+  addEmployee: (emp: Employee) => {
     set((state) => ({ employees: [...state.employees, emp] }));
     databaseOperations.saveEmployees([emp]).catch(e => 
       logger.error('Failed to persist new employee to SQL', { id: emp.id, error: e.message }, 'DATABASE')
     );
   },
   
-  updateEmployee: (emp) => {
+  updateEmployee: (emp: Employee) => {
     set((state) => ({
-      employees: state.employees.map((e) => e.id === emp.id ? emp : e)
+      employees: state.employees.map((e: Employee) => e.id === emp.id ? emp : e)
     }));
     databaseOperations.saveEmployees([emp]).catch(e => 
       logger.error('Failed to persist updated employee to SQL', { id: emp.id, error: e.message }, 'DATABASE')
     );
   },
   
-  removeEmployee: (id) => {
+  removeEmployee: (id: UUID) => {
     set((state) => ({
-      employees: state.employees.filter((e) => e.id !== id),
-      workShifts: state.workShifts.filter((s) => s.employeeId !== id),
-      attendance: state.attendance.filter((a) => a.employeeId !== id)
+      employees: state.employees.filter((e: Employee) => e.id !== id),
+      workShifts: state.workShifts.filter((s: WorkShift) => s.employeeId !== id),
+      attendance: state.attendance.filter((a: AttendanceRecord) => a.employeeId !== id)
     }));
-    databaseOperations.deleteEmployee(id).catch(e => 
+    databaseOperations.deleteEmployee(id).catch((e: any) => 
       logger.error('Failed to delete employee from SQL', { id, error: e.message }, 'DATABASE')
     );
   },
   
-  addWorkShift: (shift) => set((state) => ({ workShifts: [...state.workShifts, shift] })),
+  addWorkShift: (shift: WorkShift) => set((state) => ({ workShifts: [...state.workShifts, shift] })),
   
-  removeWorkShift: (id) => set((state) => ({ workShifts: state.workShifts.filter((s) => s.id !== id) })),
+  removeWorkShift: (id: UUID) => set((state) => ({ workShifts: state.workShifts.filter((s: WorkShift) => s.id !== id) })),
   
-  getEmployeeById: (id) => get().employees.find(e => e.id === id),
-  getAttendanceByEmployeeId: (employeeId) => get().attendance.filter(a => a.employeeId === employeeId),
-  setEmployees: (employees) => set({ employees }),
-  setAttendance: (attendance) => set({ attendance }),
-  updateAttendance: (record) => set((state) => ({
-    attendance: state.attendance.map(a => a.id === record.id ? record : a)
+  getEmployeeById: (id: UUID) => get().employees.find((e: Employee) => e.id === id),
+  getAttendanceByEmployeeId: (employeeId: UUID) => get().attendance.filter((a: AttendanceRecord) => a.employeeId === employeeId),
+  setEmployees: (employees: Employee[]) => set({ employees }),
+  setAttendance: (attendance: AttendanceRecord[]) => set({ attendance }),
+  updateAttendance: (record: AttendanceRecord) => set((state) => ({
+    attendance: state.attendance.map((a: AttendanceRecord) => a.id === record.id ? record : a)
   })),
 
-  clockIn: (employeeId, method) => {
+  clockIn: (employeeId: UUID, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const newRecord: AttendanceRecord = {
@@ -91,17 +91,17 @@ export const createStaffSlice: StateCreator<
       status: 'PRESENT'
     };
     set((state) => ({ attendance: [...state.attendance, newRecord] }));
-    databaseOperations.saveAttendance([newRecord]).catch(e => 
+    databaseOperations.saveAttendance([newRecord]).catch((e: any) => 
       logger.error('Failed to persist clock-in to SQL', { employeeId, error: e.message }, 'DATABASE')
     );
     get().addNotification?.('success', `Entrada registada para funcionário ${employeeId}`);
   },
   
-  clockOut: (employeeId, method) => {
+  clockOut: (employeeId: UUID, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => {
     // Clock out logic
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
-    const record = get().attendance.find(a => a.employeeId === employeeId && a.date === dateStr && !a.clockOut);
+    const record = get().attendance.find((a: AttendanceRecord) => a.employeeId === employeeId && a.date === dateStr && !a.clockOut);
     if (record) {
       const updated: AttendanceRecord = {
         ...record,
@@ -109,9 +109,9 @@ export const createStaffSlice: StateCreator<
         clockOutMethod: method
       };
       set((state) => ({
-        attendance: state.attendance.map(a => a.id === updated.id ? updated : a)
+        attendance: state.attendance.map((a: AttendanceRecord) => a.id === updated.id ? updated : a)
       }));
-      databaseOperations.saveAttendance([updated]).catch(e =>
+      databaseOperations.saveAttendance([updated]).catch((e: any) =>
         logger.error('Failed to persist clock-out to SQL', { employeeId, error: e.message }, 'DATABASE')
       );
     }

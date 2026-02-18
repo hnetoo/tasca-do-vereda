@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { SystemSettings, Notification, StoreState } from '../../types';
 import { databaseOperations } from '../../services/database/operations';
 import { logger } from '../../services/logger';
+import { supabaseService } from '../../services/supabaseService';
 
 export interface UISlice {
   settings: SystemSettings;
@@ -71,18 +72,18 @@ export const createUISlice: StateCreator<
   })),
 
   triggerSync: async () => {
-    const { categories, menu, settings, addOfflineAction } = get();
-    if (settings.supabaseConfig?.enabled && settings.supabaseConfig?.url && settings.supabaseConfig?.key) {
-      logger.info('Sincronização manual acionada...', null, 'CLOUD');
+    const { syncMenuWithCloud, settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      logger.info('Sincronização manual acionada...', undefined, 'CLOUD');
       try {
-        await supabaseService.syncMenu(categories, menu, settings);
-        logger.info('Sincronização manual concluída com sucesso.', null, 'CLOUD');
+        await syncMenuWithCloud();
+        logger.info('Sincronização manual concluída com sucesso.', undefined, 'CLOUD');
       } catch (e: unknown) {
-        logger.error('Falha na sincronização manual com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
-        addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_MENU', payload: { categories, menu, settings }, timestamp: Date.now() });
+        logger.error('Falha na sincronização manual com Supabase.', { error: (e as Error).message }, 'CLOUD');
+        // offline action queueing handled inside syncMenuWithCloud or ignored for manual trigger
       }
     } else {
-      logger.warn('Sincronização manual ignorada: Supabase não configurado ou desativado.', null, 'CLOUD');
+      logger.warn('Sincronização manual ignorada: Supabase não configurado ou desativado.', undefined, 'CLOUD');
     }
   }
 });

@@ -1,5 +1,5 @@
 
-import { Order, Customer, Dish, SystemSettings } from '../types';
+import { Order, Customer, Product, SystemSettings } from '../types';
 import { logger } from './logger';
 import { validationService } from './validationService';
 
@@ -9,12 +9,15 @@ import { validationService } from './validationService';
 export const generateSAFT = async (
   orders: Order[],
   customers: Customer[],
-  menu: Dish[],
+  menu: Product[],
   settings: SystemSettings,
   period: { month: number; year: number }
 ) => {
   try {
-    if (!settings?.nif || !settings?.restaurantName) {
+    const nif = settings.nif as string;
+    const restaurantName = settings.restaurantName as string;
+    
+    if (!nif || !restaurantName) {
       throw new Error('Definições fiscais incompletas: NIF e Nome da Empresa são obrigatórios');
     }
     if (!settings?.agtCertificate) {
@@ -77,14 +80,16 @@ export const generateSAFT = async (
       const invoiceTime = new Date(o.timestamp).toISOString();
       
       let linesXml = '';
-      for (let j = 0; j < o.items.length; j++) {
-        const item = o.items[j];
-        const dish = menu.find(m => m.id === item.dishId);
-        const taxCode = dish?.taxCode || 'NOR';
+      const items = o.items || [];
+      for (let j = 0; j < items.length; j++) {
+        const item = items[j];
+        const dish = menu.find(m => m.id === item.productId);
+        const taxCode = dish?.tax_code || 'NOR';
+        const taxRate = (settings.taxRate as number) || 14;
         linesXml += `
         <Line>
           <LineNumber>${j + 1}</LineNumber>
-          <ProductCode>${item.dishId}</ProductCode>
+          <ProductCode>${item.productId}</ProductCode>
           <ProductDescription>${dish?.name || 'Item Desconhecido'}</ProductDescription>
           <Quantity>${item.quantity}</Quantity>
           <UnitOfMeasure>Un</UnitOfMeasure>
@@ -97,7 +102,7 @@ export const generateSAFT = async (
             <TaxType>IVA</TaxType>
             <TaxCountryRegion>AO</TaxCountryRegion>
             <TaxCode>${taxCode}</TaxCode>
-            <TaxPercentage>${taxCode === 'ISE' ? '0.00' : settings.taxRate.toFixed(2)}</TaxPercentage>
+            <TaxPercentage>${taxCode === 'ISE' ? '0.00' : taxRate.toFixed(2)}</TaxPercentage>
           </Tax>
         </Line>`;
       }
@@ -121,8 +126,8 @@ export const generateSAFT = async (
         <CustomerID>${o.customerId || 'CONSUMIDOR_FINAL'}</CustomerID>
          ${linesXml}
          <DocumentTotals>
-           <TaxPayable>${o.taxTotal.toFixed(2)}</TaxPayable>
-           <NetTotal>${(o.total - o.taxTotal).toFixed(2)}</NetTotal>
+           <TaxPayable>${(o.taxTotal || 0).toFixed(2)}</TaxPayable>
+           <NetTotal>${(o.total - (o.taxTotal || 0)).toFixed(2)}</NetTotal>
            <GrossTotal>${o.total.toFixed(2)}</GrossTotal>
          </DocumentTotals>
        </Invoice>`;

@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { User, StoreState, Permission } from '@/types';
+import { User, StoreState, Permission, UUID } from '@/types';
 import { MOCK_USERS } from '@/constants';
 import { logger } from '@/services/logger';
 import { calculateHash } from '@/utils/crypto';
@@ -12,8 +12,8 @@ export interface AuthSlice {
   setUsers: (users: User[]) => void;
   registerUser: (user: User) => void;
   updateUser: (user: User) => void;
-  removeUser: (id: string) => void;
-  login: (pin: string, userId?: string, rememberMe?: boolean) => Promise<boolean>;
+  removeUser: (id: UUID) => void;
+  login: (pin: string, userId?: UUID, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
 }
@@ -106,7 +106,7 @@ export const createAuthSlice: StateCreator<
             // Ensure initialized if not already
             if (!CryptoService.isReady()) {
                 const settings = get().settings;
-                const secret = settings.adminPin || settings.apiToken || settings.restaurantName || 'TASCA-SECURE-KEY-V1';
+                const secret = (settings.adminPin as string) || (settings.apiToken as string) || settings.restaurantName || 'TASCA-SECURE-KEY-V1';
                 await CryptoService.initialize(secret);
             }
             

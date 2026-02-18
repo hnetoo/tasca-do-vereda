@@ -54,11 +54,11 @@ const Analytics = () => {
     QR_CODE: 'QR Code',
     CONTA_CORRENTE: 'Conta Corrente',
     MBWAY: 'MBWay',
-    OUTROS: 'Outros',
-    Cash: 'Dinheiro',
-    Card: 'Cartão',
-    MBWay: 'MBWay',
-    Other: 'Outros'
+    OUTRO: 'Outros',
+    CASH: 'Dinheiro',
+    CARD: 'Cartão',
+    MULTIBANCO: 'Multibanco',
+    TRANSFER: 'Transferência'
   };
 
   const extractPayments = (order: typeof activeOrders[number]) => {
@@ -125,11 +125,11 @@ const Analytics = () => {
         QR_CODE: 0,
         CONTA_CORRENTE: 0,
         MBWAY: 0,
-        OUTROS: 0,
-        Cash: 0,
-        Card: 0,
-        MBWay: 0,
-        Other: 0
+        OUTRO: 0,
+        CASH: 0,
+        CARD: 0,
+        MULTIBANCO: 0,
+        TRANSFER: 0
       };
       closedOrders.forEach(order => {
         const orderDate = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));

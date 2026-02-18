@@ -1,14 +1,14 @@
-import { Dish, MenuCategory, SystemSettings } from "../types";
+import { Product, MenuCategory, SystemSettings } from "../types";
 import { logger } from "./logger";
 
-export const buildFeed = (categories: MenuCategory[], dishes: Dish[], settings: SystemSettings) => {
+export const buildFeed = (categories: MenuCategory[], dishes: Product[], settings: SystemSettings) => {
   try {
     const safeCats = categories.filter(c => c.id && c.name);
     const validCatIds = new Set(safeCats.map(c => c.id));
     const safeDishes = dishes.filter(d => d.id && d.name && validCatIds.has(d.category_id));
     
     const feed = {
-      restaurant: { name: settings.restaurantName, logo: settings.qrMenuLogo || settings.appLogoUrl || "" },
+      restaurant: { name: settings.restaurantName, logo: (settings.qrMenuLogo as string) || (settings.appLogoUrl as string) || "" },
       categories: safeCats,
       dishes: safeDishes,
       updatedAt: new Date().toISOString()

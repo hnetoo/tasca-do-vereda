@@ -78,7 +78,7 @@ class OrderService {
         const product = store.products.find(d => d.id === item.productId);
         if (product) {
             // Add to order
-            store.addToOrder(data.tableId, product, item.quantity, item.notes, orderId);
+            store.addToOrder(data.tableId, product, item.quantity, item.notes || '', orderId || '');
             
             // Deduct stock if tracked
             if (product.track_stock) {
@@ -159,8 +159,8 @@ class OrderService {
       if (!order) return null;
       
       // Simple logic to determine aggregate status
-      const allReady = order.items.every(i => i.status === 'PRONTO' || i.status === 'ENTREGUE');
-      const anyPreparing = order.items.some(i => i.status === 'PREPARANDO');
+      const allReady = (order.items || []).every(i => i.status === 'PRONTO' || i.status === 'ENTREGUE');
+      const anyPreparing = (order.items || []).some(i => i.status === 'PREPARANDO');
       
       return {
           id: order.id,

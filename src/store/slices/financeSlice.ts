@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics } from '@/types';
+import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Product } from '@/types';
 import { logger } from '@/services/logger';
 import { backupService } from '@/services/backupService';
 import { integrationAPIService } from '@/services/integrationAPIService';
@@ -15,41 +15,45 @@ export interface FinanceSlice {
   fixedExpenses: FixedExpense[];
   revenues: Revenue[];
   payroll: PayrollRecord[];
-  activeOrderId: string | null;
+  activeOrderId: UUID | null;
   dashboardSummary: DashboardSummary | null;
   dashboardAnalytics: Analytics | null;
-  setActiveOrder: (id: string | null) => void;
+  setActiveOrder: (id: UUID | null) => void;
   setDashboardSummary: (summary: DashboardSummary) => void;
   setDashboardAnalytics: (analytics: Analytics) => void;
   addOrder: (order: Order) => void;
   updateOrder: (order: Order) => void;
-  removeOrder: (id: string) => void;
+  removeOrder: (id: UUID) => void;
   addExpense: (expense: Expense) => void;
   updateExpense: (expense: Expense) => void;
-  removeExpense: (id: string) => void;
+  removeExpense: (id: UUID) => void;
   addRevenue: (revenue: Revenue) => void;
-  removeRevenue: (id: string) => void;
+  removeRevenue: (id: UUID) => void;
   addFixedExpense: (expense: FixedExpense) => void;
   updateFixedExpense: (expense: FixedExpense) => void;
-  removeFixedExpense: (id: string) => void;
+  removeFixedExpense: (id: UUID) => void;
   addPayrollRecord: (record: PayrollRecord) => void;
   updatePayrollRecord: (record: PayrollRecord) => void;
-  removePayrollRecord: (id: string) => void;
+  removePayrollRecord: (id: UUID) => void;
   setOrders: (orders: Order[]) => void;
   setExpenses: (expenses: Expense[]) => void;
   setPayroll: (payroll: PayrollRecord[]) => void;
-  getLoyaltyTier: (customerId: string) => string;
-  processPayroll: (employeeId: string, month: number, year: number, paymentMethod: PaymentMethod) => Promise<void>;
+  getLoyaltyTier: (customerId: UUID) => string;
+  processPayroll: (employeeId: UUID, month: number, year: number, paymentMethod: PaymentMethod) => Promise<void>;
   createFullFinancialBackup: () => Promise<boolean>;
   restoreFullFinancialBackup: () => Promise<boolean>;
-  clearFinancialData: (reason: string, userId: string) => Promise<{ success: boolean; report: FinancialClearanceReport }>;
-  correctPayment: (orderId: string, newPayments: OrderPayment[], reason: string) => Promise<boolean>;
-  getDailySalesAnalytics: (days?: number) => DailySalesAnalytics[];
-  getMenuAnalytics: (days?: number) => MenuAnalytics[];
+  clearFinancialData: (reason: string, userId: UUID) => Promise<{ success: boolean; report: FinancialClearanceReport }>;
+  correctPayment: (orderId: UUID, newPayments: OrderPayment[], reason: string) => Promise<boolean>;
+  getDailySalesAnalytics: (date: Date) => DailySalesAnalytics;
+  getMenuAnalytics: (period: 'day' | 'week' | 'month') => MenuAnalytics[];
   getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
   syncFinancialMetricsToDashboard: () => Promise<void>;
   fetchRemoteDashboard: () => Promise<void>;
   handleRealtimeUpdate: (payload: any) => void;
+  
+  addToOrder: (tableId: number, product: Product, quantity: number, notes: string, orderId: UUID) => void;
+  removeFromOrder: (orderId: UUID, itemIndex: number) => void;
+  checkoutTable: (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string) => Promise<void>;
 }
 
 export const createFinanceSlice: StateCreator<
@@ -68,7 +72,7 @@ export const createFinanceSlice: StateCreator<
   dashboardSummary: null,
   dashboardAnalytics: null,
   
-  handleRealtimeUpdate: (payload) => {
+  handleRealtimeUpdate: (payload: any) => {
     // Handle Supabase Realtime payload
     if (payload.table === 'dashboard_summary') {
       const newData = payload.new;
@@ -78,19 +82,91 @@ export const createFinanceSlice: StateCreator<
             totalRevenue: newData.total_revenue,
             totalExpenses: newData.total_expenses,
             totalOrders: newData.total_orders,
-            activeOrdersCount: newData.active_orders_count
+            activeOrders: newData.active_orders_count
           }
         });
         logger.info('Real-time dashboard summary update received', newData, 'FINANCE');
       }
     }
   },
+  
+  addToOrder: (tableId: number, product: Product, quantity: number, notes: string, orderId: UUID) => {
+    const state = get();
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    // Logic to add item
+     const newItem: any = {
+       id: `temp-${Date.now()}`, // Generate temp ID
+       productId: product.id,
+       product_id: product.id,
+       quantity,
+       unitPrice: product.price,
+       unit_price: product.price,
+       notes,
+       taxPercentage: product.tax_percentage,
+       tax_percentage: product.tax_percentage,
+       taxCode: product.tax_code,
+       tax_code: product.tax_code
+     };
+     
+     // This is a simplified implementation. Real one would handle merging similar items, etc.
+     const updatedItems = [...(order.items || []), newItem];
+     const newTotal = updatedItems.reduce((sum: number, item: any) => sum + ((item.unitPrice || item.unit_price || 0) * item.quantity), 0);
+    
+    const updatedOrder = { ...order, items: updatedItems, total: newTotal, updatedAt: new Date().toISOString() };
+    
+    set((state) => ({
+      orders: state.orders.map(o => o.id === orderId ? updatedOrder : o),
+      activeOrders: state.activeOrders.map(o => o.id === orderId ? updatedOrder : o)
+    }));
+  },
+  
+  removeFromOrder: (orderId: UUID, itemIndex: number) => {
+    const state = get();
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order || !order.items) return;
+    
+    const updatedItems = order.items.filter((_, idx) => idx !== itemIndex);
+     const newTotal = updatedItems.reduce((sum: number, item: any) => sum + ((item.unitPrice || item.unit_price || 0) * item.quantity), 0);
+     
+     const updatedOrder = { ...order, items: updatedItems, total: newTotal, updatedAt: new Date().toISOString() };
+    
+    set((state) => ({
+      orders: state.orders.map(o => o.id === orderId ? updatedOrder : o),
+      activeOrders: state.activeOrders.map(o => o.id === orderId ? updatedOrder : o)
+    }));
+  },
 
-  setActiveOrder: (id) => set({ activeOrderId: id }),
-  setDashboardSummary: (summary) => set({ dashboardSummary: summary }),
-  setDashboardAnalytics: (analytics) => set({ dashboardAnalytics: analytics }),
+  checkoutTable: async (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string) => {
+     const state = get();
+     const order = state.orders.find(o => o.id === orderId);
+     if (!order) return;
+     
+     const updatedOrder = {
+       ...order,
+       status: 'FECHADO' as const,
+       payments: payments, // Assuming payments property exists on Order or added via Any
+       paymentMethod: payments[0]?.method, // Primary method
+       subAccountName,
+       customerNif,
+       updatedAt: new Date().toISOString()
+     };
+     
+     set((state) => ({
+       orders: state.orders.map(o => o.id === orderId ? updatedOrder : o),
+       activeOrders: state.activeOrders.filter(o => o.id !== orderId) // Remove from active
+     }));
+     
+     // Log checkout
+     logger.info('Checkout complete', { orderId, total: order.total }, 'FINANCE');
+  },
 
-  addOrder: (order) => {
+  setActiveOrder: (id: UUID | null) => set({ activeOrderId: id }),
+  setDashboardSummary: (summary: DashboardSummary) => set({ dashboardSummary: summary }),
+  setDashboardAnalytics: (analytics: Analytics) => set({ dashboardAnalytics: analytics }),
+
+  addOrder: (order: Order) => {
     const exists = get().orders.some(o => o.id === order.id);
     if (exists) return;
     set((state) => ({ orders: [...state.orders, order], activeOrders: [...state.activeOrders, order] }));
@@ -102,7 +178,7 @@ export const createFinanceSlice: StateCreator<
     });
   },
 
-  updateOrder: (order) => {
+  updateOrder: (order: Order) => {
     set((state) => ({
       orders: state.orders.map((o) => o.id === order.id ? order : o),
       activeOrders: state.activeOrders.map((o) => o.id === order.id ? order : o)
@@ -128,7 +204,7 @@ export const createFinanceSlice: StateCreator<
         endOfDay.setHours(23, 59, 59, 999);
 
         const dailyOrders = state.orders.filter(order => {
-            const orderDate = new Date(order.createdAt);
+            const orderDate = new Date(order.createdAt || new Date());
             return orderDate >= startOfDay && orderDate <= endOfDay && order.status !== 'cancelled';
         });
 
@@ -141,18 +217,11 @@ export const createFinanceSlice: StateCreator<
             totalRevenue += order.total;
             let orderProfit = 0;
             
-            order.items.forEach(item => {
-                const product = state.products.find(p => p.id === item.product_id);
-                // If product has cost, use it. Otherwise assume 0 for profit calc
-                // Assuming Product interface might have 'cost' or similar if extended, 
-                // but standard interface doesn't show it. If it's not there, profit = price.
-                // However, let's check if 'cost' exists on Product in this context or if we should ignore it.
-                // The original code had: const costPrice = dish?.precoCusto || dish?.cost || 0;
-                // 'precoCusto' suggests legacy Portuguese field.
-                // We will assume 0 cost if not found for now to avoid compilation errors, 
-                // or check if we can map it.
-                const costPrice = 0; // TODO: Add cost field to Product interface if needed
-                orderProfit += (item.unit_price - costPrice) * item.quantity;
+            (order.items || []).forEach((item: any) => {
+                const product = state.products?.find(p => p.id === item.product_id);
+                const costPrice = 0; 
+                const unitPrice = item.unitPrice || item.unit_price || 0;
+                orderProfit += (unitPrice - costPrice) * item.quantity;
             });
 
             totalProfit += orderProfit;
@@ -186,7 +255,7 @@ export const createFinanceSlice: StateCreator<
         }
 
         const periodOrders = state.orders.filter(order => {
-            const orderDate = new Date(order.createdAt);
+            const orderDate = new Date(order.createdAt || new Date());
             return orderDate >= startDate && order.status !== 'cancelled';
         });
 
@@ -198,8 +267,8 @@ export const createFinanceSlice: StateCreator<
         }>();
 
         periodOrders.forEach(order => {
-            order.items.forEach(item => {
-                const product = state.products.find(p => p.id === item.product_id);
+            (order.items || []).forEach((item: any) => {
+                const product = state.products?.find(p => p.id === item.product_id);
                 if (!product) return;
 
                 const current = productPerformance.get(product.id) || {
@@ -210,10 +279,11 @@ export const createFinanceSlice: StateCreator<
                 };
 
                 const costPrice = 0; // TODO: Implement cost tracking
+                const unitPrice = item.unitPrice || item.unit_price || 0;
                 
                 current.quantity += item.quantity;
-                current.revenue += item.unit_price * item.quantity;
-                current.profit += (item.unit_price - costPrice) * item.quantity;
+                current.revenue += unitPrice * item.quantity;
+                current.profit += (unitPrice - costPrice) * item.quantity;
 
                 productPerformance.set(product.id, current);
             });
@@ -266,7 +336,7 @@ export const createFinanceSlice: StateCreator<
       totalRevenue,
       totalExpenses,
       totalOrders,
-      activeOrdersCount,
+      activeOrders: activeOrdersCount,
     };
 
     try {
@@ -278,12 +348,12 @@ export const createFinanceSlice: StateCreator<
     }
   },
 
-  removeOrder: (id) => set((state) => ({
+  removeOrder: (id: UUID) => set((state) => ({
     orders: state.orders.filter((o) => o.id !== id),
     activeOrders: state.activeOrders.filter((o) => o.id !== id)
   })),
   
-  addExpense: (expense) => {
+  addExpense: (expense: Expense) => {
     const exists = get().expenses.some(e => e.id === expense.id);
     if (exists) return;
     set((state) => ({ expenses: [...state.expenses, expense] }));
@@ -295,7 +365,7 @@ export const createFinanceSlice: StateCreator<
     });
   },
   
-  updateExpense: (expense) => {
+  updateExpense: (expense: Expense) => {
     set((state) => ({
       expenses: state.expenses.map((e) => (e.id === expense.id ? expense : e)),
     }));
@@ -307,7 +377,7 @@ export const createFinanceSlice: StateCreator<
     });
   },
   
-  removeExpense: (id) => {
+  removeExpense: (id: UUID) => {
     const expense = get().expenses.find(e => e.id === id);
     set((state) => ({
       expenses: state.expenses.filter((e) => e.id !== id),
@@ -320,7 +390,7 @@ export const createFinanceSlice: StateCreator<
     });
   },
 
-  addRevenue: (revenue) => {
+  addRevenue: (revenue: Revenue) => {
     const exists = get().revenues.some(r => r.id === revenue.id);
     if (exists) return;
     set((state) => ({ revenues: [...state.revenues, revenue] }));
@@ -332,7 +402,7 @@ export const createFinanceSlice: StateCreator<
     });
   },
   
-  removeRevenue: (id) => {
+  removeRevenue: (id: UUID) => {
     const revenue = get().revenues.find(r => r.id === id);
     set((state) => ({
       revenues: state.revenues.filter((r) => r.id !== id),
@@ -345,30 +415,30 @@ export const createFinanceSlice: StateCreator<
     });
   },
 
-  addFixedExpense: (expense) => set((state) => ({ fixedExpenses: [...state.fixedExpenses, expense] })),
+  addFixedExpense: (expense: FixedExpense) => set((state) => ({ fixedExpenses: [...state.fixedExpenses, expense] })),
   
-  updateFixedExpense: (expense) => set((state) => ({
+  updateFixedExpense: (expense: FixedExpense) => set((state) => ({
     fixedExpenses: state.fixedExpenses.map((e) => (e.id === expense.id ? expense : e)),
   })),
   
-  removeFixedExpense: (id) => set((state) => ({
+  removeFixedExpense: (id: UUID) => set((state) => ({
     fixedExpenses: state.fixedExpenses.filter((e) => e.id !== id),
   })),
 
-  addPayrollRecord: (record) => set((state) => ({ payroll: [...state.payroll, record] })),
+  addPayrollRecord: (record: PayrollRecord) => set((state) => ({ payroll: [...state.payroll, record] })),
   
-  updatePayrollRecord: (record) => set((state) => ({
+  updatePayrollRecord: (record: PayrollRecord) => set((state) => ({
     payroll: state.payroll.map((r) => (r.id === record.id ? record : r)),
   })),
   
-  removePayrollRecord: (id) => set((state) => ({
+  removePayrollRecord: (id: UUID) => set((state) => ({
     payroll: state.payroll.filter((r) => r.id !== id),
   })),
 
-  setOrders: (orders) => set({ activeOrders: orders }),
-  setExpenses: (expenses) => set({ expenses }),
-  setPayroll: (payroll) => set({ payroll }),
-  getLoyaltyTier: (customerId) => {
+  setOrders: (orders: Order[]) => set({ activeOrders: orders }),
+  setExpenses: (expenses: Expense[]) => set({ expenses }),
+  setPayroll: (payroll: PayrollRecord[]) => set({ payroll }),
+  getLoyaltyTier: (customerId: UUID) => {
     // Basic logic for loyalty tier
     const state = get();
     const customerOrders = state.orders?.filter(o => o.customerId === customerId) || [];
@@ -404,6 +474,7 @@ export const createFinanceSlice: StateCreator<
         payroll: state.payroll,
         shifts: state.shifts,
         settings: state.settings,
+        timestamp: new Date().toISOString(),
       };
       const success = await backupService.saveFinancialBackup(financialData);
       if (success) {
@@ -467,6 +538,11 @@ export const createFinanceSlice: StateCreator<
         timestamp: new Date().toISOString(),
         user: userId,
         reason,
+        authorizedBy: userId,
+        clearedOrders: 0,
+        clearedExpenses: 0,
+        clearedRevenues: 0,
+        clearedPayroll: 0,
         summary: {
           ordersCount: 0,
           expensesCount: 0,
@@ -488,6 +564,11 @@ export const createFinanceSlice: StateCreator<
         timestamp: new Date().toISOString(),
         user: userId,
         reason,
+        authorizedBy: userId,
+        clearedOrders: state.activeOrders.length,
+        clearedExpenses: state.expenses.length,
+        clearedRevenues: state.revenues.length,
+        clearedPayroll: state.payroll.length,
         summary: {
           ordersCount: state.activeOrders.length,
           expensesCount: state.expenses.length,
@@ -501,6 +582,7 @@ export const createFinanceSlice: StateCreator<
 
       // 2. AUTO-BACKUP (AGT Requirement)
       const financialData: FinancialBackupData = {
+        timestamp: new Date().toISOString(),
         orders: state.activeOrders,
         expenses: state.expenses,
         revenues: state.revenues,
@@ -527,6 +609,7 @@ export const createFinanceSlice: StateCreator<
 
       // 4. Clear Database (Destructive operation)
       await executeQuery('DELETE FROM order_items');
+
       await executeQuery('DELETE FROM orders');
       await executeQuery('DELETE FROM expenses');
       await executeQuery('DELETE FROM revenues');
@@ -557,6 +640,11 @@ export const createFinanceSlice: StateCreator<
         timestamp: new Date().toISOString(),
         user: userId,
         reason,
+        authorizedBy: userId,
+        clearedOrders: 0,
+        clearedExpenses: 0,
+        clearedRevenues: 0,
+        clearedPayroll: 0,
         summary: {
           ordersCount: 0,
           expensesCount: 0,
@@ -606,15 +694,18 @@ export const createFinanceSlice: StateCreator<
         id: `legacy-${order.id}`,
         method: order.paymentMethod,
         amount: order.total,
-        timestamp: order.timestamp
+        timestamp: String(order.timestamp)
       }] : []);
 
       const correction: PaymentCorrection = {
         id: `corr-${Date.now()}`,
+        orderId: order.id,
         timestamp: new Date(),
         userId: currentUser.id,
         userName: currentUser.name,
         reason,
+        originalPayments: previousPayments,
+        correctedPayments: newPayments,
         previousPayments,
         newPayments,
         type: isPostPrint ? 'POST_PRINT' : 'PRE_PRINT'
@@ -725,12 +816,12 @@ export const createFinanceSlice: StateCreator<
       }
 
       // 3. Fetch Menu (for analytics mapping)
-      const menuResult = await integrationAPIService.fetchMenu();
+      // const menuResult = await integrationAPIService.fetchMenu();
       if (menuResult.success && menuResult.data) {
          // Using 'as any' because these methods belong to other slices but are available in StoreState
          (state as any).importCloudItems({
             categories: menuResult.data.categories,
-            dishes: menuResult.data.dishes,
+            dishes: menuResult.data.products,
             preferCloud: true
          });
       }

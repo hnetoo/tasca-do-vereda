@@ -1,0 +1,1 @@
+src/store/slices/uiSlice.ts(59,48): error TS7006: Parameter 'n' implicitly has an 'any' type.

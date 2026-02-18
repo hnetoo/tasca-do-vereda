@@ -1,0 +1,1 @@
+src/store/slices/uiSlice.ts(78,15): error TS2304: Cannot find name 'supabaseService'.
