@@ -148,15 +148,7 @@ const Sidebar = () => {
       );
     }
 
-    // 2. General Role-Based Access Control
-    // If NOT Admin/Owner, hide sensitive modules (Settings, Finance, Reports, Analytics, Staff, Inventory, Menu Management)
-    if (!isAdminOrOwner) {
-      return menuItems.filter(item => 
-        ['/pos', '/kitchen', '/encomendas', '/room', '/customers', '/dashboard'].includes(item.path)
-      );
-    }
-
-    // 3. Default: Show all items for Admin/Owner on other pages
+    // 2. Default: Show all items for Admin/Owner on other pages
     return menuItems;
   };
 
