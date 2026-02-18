@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
@@ -17,29 +18,27 @@ import { pt } from 'date-fns/locale';
 import { formatAOA } from '@/utils/format';
 import { useStore } from '@/store/useStore';
 import KPICard from '@/components/KPICard';
-
-interface Order {
-  id: string;
-  total: number;
-  status: string;
-  created_at: string;
-  payment_method: string;
-  items?: any[];
-}
-
-interface Transaction {
-  id: string;
-  amount: number;
-  type: 'income' | 'expense';
-  description: string;
-  created_at: string;
-}
+import { Order, Transaction } from '@/types';
 
 export default function OwnerDashboard() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { employees, tables } = useStore(); // Access store for staff and tables
+  const { employees, tables, currentUser } = useStore(); 
+
+  // Admin Verification
+  useEffect(() => {
+    // If we have a currentUser but they are not admin/owner/manager, redirect
+    // We wait for currentUser to be populated (it might be null initially)
+    if (currentUser) {
+       if (currentUser.role !== 'ADMIN' && currentUser.role !== 'OWNER' && currentUser.role !== 'MANAGER') {
+          router.push('/pos'); 
+       }
+    }
+    // Note: If currentUser is null, we might be loading or not logged in. 
+    // Ideally we should have a loading state for auth.
+  }, [currentUser, router]);
 
   // Initial Fetch
   useEffect(() => {
@@ -125,7 +124,9 @@ export default function OwnerDashboard() {
     // Hourly Data for Chart
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({ hour: i, sales: 0, profit: 0 }));
     orders.forEach(order => {
-      const hour = new Date(order.created_at).getHours();
+      const dateStr = order.created_at || (order.timestamp instanceof Date ? order.timestamp.toISOString() : order.timestamp);
+      if (!dateStr) return;
+      const hour = new Date(dateStr).getHours();
       if (hourlyData[hour]) {
         hourlyData[hour].sales += order.total;
         // Assume 30% profit margin for simplicity if no expense data per order
@@ -296,26 +297,23 @@ export default function OwnerDashboard() {
                     tickLine={false}
                   />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                    itemStyle={{ color: '#e2e8f0', fontSize: '12px' }}
-                    formatter={(value) => formatAOA(value as number)}
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  <Legend />
                   <Area 
-                    name="Receita"
                     type="monotone" 
                     dataKey="sales" 
+                    name="Vendas"
                     stroke="#3b82f6" 
-                    strokeWidth={2}
                     fillOpacity={1} 
                     fill="url(#colorRevenue)" 
                   />
                   <Area 
-                    name="Lucro"
                     type="monotone" 
                     dataKey="profit" 
+                    name="Lucro"
                     stroke="#10b981" 
-                    strokeWidth={2}
                     fillOpacity={1} 
                     fill="url(#colorProfit)" 
                   />
@@ -324,73 +322,16 @@ export default function OwnerDashboard() {
             </div>
           </div>
 
-          {/* Side Panel - Summary */}
-          <div className="space-y-4">
-            {/* Last 24h Summary */}
-            <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Últimas 24 Horas</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
-                  <span className="text-sm text-slate-400">Total Vendido</span>
-                  <span className="text-sm font-bold text-blue-400">{formatAOA(metrics.totalSales)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
-                  <span className="text-sm text-slate-400">Pedidos</span>
-                  <span className="text-sm font-bold text-white">{metrics.totalOrders}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
-                  <span className="text-sm text-slate-400">Ticket Médio</span>
-                  <span className="text-sm font-bold text-emerald-400">
-                    {formatAOA(metrics.totalOrders > 0 ? metrics.totalSales / metrics.totalOrders : 0)}
-                  </span>
-                </div>
-                
-                <div className="w-full bg-slate-800 h-1 mt-4 rounded-full overflow-hidden">
-                  <div className="bg-blue-500 h-full w-[70%]"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Top Dishes Placeholder */}
-            <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm flex-1">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Top Pratos Hoje</h3>
-              <div className="space-y-3">
-                {[1, 2, 3].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1">
-                      <div className="h-2 bg-slate-800 rounded w-full"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* Payment Methods Chart */}
+          <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm">
+             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Métodos de Pagamento</h3>
+             {/* Simple Bar Chart for payment methods */}
+             <div className="h-[300px] w-full flex items-center justify-center text-slate-500 text-sm">
+                <p>Gráfico de métodos em breve...</p>
+             </div>
           </div>
-        </div>
-        
-        {/* Trend Chart */}
-        <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm">
-           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Tendência de Vendas (7 Dias)</h3>
-           <div className="h-[200px] w-full flex items-end justify-between gap-2">
-              {/* Mock Bars */}
-              {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className="w-full bg-slate-800/50 rounded-t-lg relative group hover:bg-blue-500/20 transition-colors cursor-pointer" style={{ height: `${Math.random() * 80 + 20}%` }}>
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-yellow-500/50"></div>
-                </div>
-              ))}
-           </div>
-           <div className="flex justify-between mt-2 text-[10px] text-slate-500 uppercase font-bold">
-              {Array.from({ length: 7 }).map((_, i) => {
-                const d = new Date();
-                d.setDate(d.getDate() - (6 - i));
-                return <span key={i}>{format(d, 'dd/MM')}</span>
-              })}
-           </div>
         </div>
       </div>
     </div>
   );
 }
-
