@@ -117,10 +117,10 @@ export default function OwnerDashboard() {
     const cashFlow = totalSales - totalExpenses; // Simplified for now
 
     // Staff active (Mock logic or use store)
-    const activeStaff = employees?.filter(e => e.status === 'ATIVO').length || 0;
+    const activeStaff = employees?.filter((e: any) => e.status === 'ATIVO').length || 0;
 
     // Free tables
-    const freeTables = tables?.filter(t => t.status === 'LIVRE').length || 0;
+    const freeTables = tables?.filter((t: any) => t.status === 'LIVRE').length || 0;
 
     // Hourly Data for Chart
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({ hour: i, sales: 0, profit: 0 }));
