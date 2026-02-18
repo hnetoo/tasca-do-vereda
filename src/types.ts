@@ -3,6 +3,16 @@ export type AnyRecord = any;
 export type Profile = AnyRecord;
 export type Category = AnyRecord;
 export type Customer = AnyRecord;
+export interface Transaction {
+  id: string;
+  amount: number;
+  type: 'income' | 'expense';
+  description: string;
+  created_at: string;
+  category?: string;
+  payment_method?: string;
+}
+
 export interface Order {
   id: string;
   tableId?: number;

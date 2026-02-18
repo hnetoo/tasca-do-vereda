@@ -3538,9 +3538,10 @@ export const useStore = create<StoreState>()(
                         totalOrders: activeOrders.length,
                         activeOrdersCount: activeOrders.length
                      };
-                     logger.info('Sincronizando resumo do painel...', null, 'CLOUD');
+                     logger.info('Sincronizando resumo do painel e ordens...', null, 'CLOUD');
                      try {
                          await integrationAPIService.syncDashboardData(summary, activeOrders);
+                         await integrationAPIService.syncOrders(activeOrders);
                      } catch (e: unknown) {
                          logger.error('Falha ao sincronizar dados do painel com Supabase, adicionando à fila offline.', { error: (e as Error).message }, 'CLOUD');
                          get().addOfflineAction({ id: crypto.randomUUID(), type: 'SYNC_DASHBOARD_DATA', payload: { summary, activeOrders }, timestamp: Date.now() });

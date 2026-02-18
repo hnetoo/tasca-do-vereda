@@ -167,6 +167,64 @@ class IntegrationAPIService {
     return { success: true, data: null };
   }
 
+  async syncOrders(orders: Order[]): Promise<SupabaseResponse<null>> {
+    if (!this.client) return { success: false, error: 'Not initialized' };
+    if (orders.length === 0) return { success: true, data: null };
+
+    try {
+        // 1. Sync Orders
+        const { error: ordersError } = await this.client.from('orders').upsert(orders.map(o => ({
+            id: o.id,
+            table_id: typeof o.tableId === 'number' ? o.tableId : (o.table_id || null),
+            status: o.status,
+            total: o.total,
+            tax_total: o.taxTotal || o.tax_total || 0,
+            payment_method: o.paymentMethod || o.payment_method,
+            customer_id: o.customerId || o.customer_id,
+            created_at: o.timestamp instanceof Date ? o.timestamp.toISOString() : o.timestamp,
+            user_id: o.userId || o.user_id,
+            user_name: o.userName || o.user_name,
+            invoice_number: o.invoiceNumber || o.invoice_number
+        })), { onConflict: 'id' });
+
+        if (ordersError) {
+             return this._handleSupabaseResponse({ data: null, error: ordersError }, 'Supabase sync orders', 'IntegrationAPIService');
+        }
+
+        // 2. Sync Order Items
+        const allItems: any[] = [];
+        orders.forEach(o => {
+            if (o.items && o.items.length > 0) {
+                o.items.forEach(item => {
+                    allItems.push({
+                        id: item.id || crypto.randomUUID(),
+                        order_id: o.id,
+                        product_id: item.productId || item.product_id,
+                        quantity: item.quantity,
+                        unit_price: item.unitPrice || item.unit_price,
+                        tax_amount: item.taxAmount || item.tax_amount || 0,
+                        tax_percentage: item.taxPercentage || item.tax_percentage || 14,
+                        notes: item.notes,
+                        status: item.status || 'PENDENTE'
+                    });
+                });
+            }
+        });
+
+        if (allItems.length > 0) {
+            const { error: itemsError } = await this.client.from('order_items').upsert(allItems, { onConflict: 'id' });
+            if (itemsError) {
+                // Log but don't fail completely if items fail (though it's bad)
+                logger.error('Failed to sync order items', { error: itemsError.message }, 'IntegrationAPIService');
+            }
+        }
+
+        return { success: true, data: null };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+  }
+
   async syncUsers(users: User[]): Promise<SupabaseResponse<null>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
