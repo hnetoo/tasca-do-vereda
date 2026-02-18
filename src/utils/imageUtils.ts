@@ -1,6 +1,6 @@
 
-export const normalizeDishImage = (imagePath?: string): string => {
-  if (!imagePath || imagePath.trim() === '') return '/images/default-dish.png'; // Return a default image if none provided
+export const normalizeProductImage = (imagePath?: string): string => {
+  if (!imagePath || imagePath.trim() === '') return '/images/default-product.png'; // Return a default image if none provided
   
   // Keep Data URLs, HTTP URLs, and Blob URLs
   if (imagePath.startsWith('data:') || imagePath.startsWith('http') || imagePath.startsWith('blob:')) {

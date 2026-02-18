@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Plus, Minus, Search, CircleAlert, ShoppingBasket } from 'lucide-react';
-import { Dish, CartEntry } from '../../types';
+import { CartEntry } from '../../types';
 
 export const ProductMenu = () => {
   return (

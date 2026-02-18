@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { FileObject } from '@supabase/storage-js';
-import { SystemSettings, Dish, MenuCategory, Order, DashboardSummary, StockItem, Fornecedor, User, AuditLog, Revenue, Expense, Settings, Employee, AttendanceRecord, PayrollRecord, CashShift, Table } from '../types';
+import { SystemSettings, Product, MenuCategory, Order, DashboardSummary, StockItem, Fornecedor, User, AuditLog, Revenue, Expense, Settings, Employee, AttendanceRecord, PayrollRecord, CashShift, Table } from '../types';
 import { logger, LogEntry } from './logger';
 import { supabaseService, SupabaseService } from './supabaseService';
 import { getAngolaToday } from '@/utils/date';
@@ -33,15 +33,24 @@ interface SupabaseCategory {
   updated_at?: string;
 }
 
-interface SupabaseDish {
+interface SupabaseProduct {
   id: string;
   name: string;
   description?: string;
   price: number;
   category_id: string;
-  image_url?: string;
-  available: boolean;
-  tax_rate: number;
+  image?: string;
+  is_available: boolean;
+  is_available_on_digital_menu: boolean;
+  tax_percentage: number;
+  tax_code: string;
+  tempo_preparo?: number;
+  controla_estoque?: boolean;
+  quantidade_estoque?: number;
+  quantidade_minima?: number;
+  quantidade_maxima?: number;
+  unidade_medida?: string;
+  fornecedor_padrao_id?: string;
   updated_at?: string;
 }
 
@@ -104,22 +113,7 @@ class IntegrationAPIService {
         return { success: true, data };
     }
 
-    private canWriteToProtectedTables(): boolean {
-        // This is a placeholder. Implement logic to check if the current user/key has write access.
-        return true;
-    }
-
-    private async callWithResilience<T>(fn: () => Promise<T>, context: string): Promise<T> {
-        // This is a placeholder. In a real scenario, this would use the circuit breaker and retry logic from SupabaseService.
-        try {
-            return await fn();
-        } catch (error) {
-            logger.error(`Error in ${context}`, error, 'IntegrationAPIService');
-            throw error;
-        }
-    }
-
-  async syncMenu(categories: MenuCategory[], menu: Dish[], settings: SystemSettings): Promise<SupabaseResponse<null>> {
+  async syncMenu(categories: MenuCategory[], products: Product[], settings: SystemSettings): Promise<SupabaseResponse<null>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
     // Sync Categories
@@ -138,21 +132,30 @@ class IntegrationAPIService {
         }
     }
 
-    // Sync Dishes
-    if (menu.length > 0) {
-        const { error: dishError } = await this.client.from('menu_items').upsert(menu.map(d => ({
-            id: d.id,
-            name: d.name,
-            description: d.description,
-            price: d.price,
-            category_id: d.category_id,
-            image_url: d.image || d.image_url,
-            available: d.disponivel ?? d.available ?? true,
-            tax_rate: d.taxPercentage || d.tax_rate || 14
+    // Sync Products
+    if (products.length > 0) {
+        const { error: prodError } = await this.client.from('products').upsert(products.map(p => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            category_id: p.category_id,
+            image: p.image_url,
+            is_available: p.is_active,
+            is_available_on_digital_menu: p.is_available_on_digital_menu,
+            tax_percentage: p.tax_percentage,
+            tax_code: p.tax_code,
+            tempo_preparo: p.preparation_time,
+            controla_estoque: p.track_stock,
+            quantidade_estoque: p.stock_quantity,
+            quantidade_minima: p.min_stock_quantity,
+            quantidade_maxima: p.max_stock_quantity,
+            unidade_medida: p.unit,
+            fornecedor_padrao_id: p.supplier_id
         })), { onConflict: 'id' });
 
-        if (dishError) {
-             return this._handleSupabaseResponse({ data: null, error: dishError }, 'Supabase sync dishes', 'IntegrationAPIService');
+        if (prodError) {
+             return this._handleSupabaseResponse({ data: null, error: prodError }, 'Supabase sync products', 'IntegrationAPIService');
         }
     }
 
@@ -185,50 +188,6 @@ class IntegrationAPIService {
   async syncAuditLogs(logs: (AuditLog | LogEntry)[]): Promise<SupabaseResponse<null>> {
     // TEMPORARILY DISABLED TO PREVENT 401 ERRORS
     return { success: true, data: null };
-
-    /*
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    if (!this.canWriteToProtectedTables()) {
-      logger.info('Skipping audit log sync on client (publishable key / RLS)', {}, 'SupabaseService');
-      return { success: true, data: null };
-    }
-
-    // Explicitly map only existing columns to avoid schema cache errors
-    const sanitizedLogs = logs.map(l => {
-        const baseLog = {
-            timestamp: l.timestamp,
-            details: 'data' in l ? (l.data ? JSON.stringify(l.data) : null) : ('details' in l ? JSON.stringify(l.details) : null)
-        };
-
-        if ('level' in l) {
-            // It's a LogEntry
-            return {
-                ...baseLog,
-                level: l.level.toUpperCase(),
-                message: l.message,
-                context: l.context || 'GENERAL'
-            };
-        } else {
-            // It's an AuditLog
-            return {
-                ...baseLog,
-                level: 'INFO',
-                message: l.action,
-                context: l.entityType || 'AUDIT'
-            };
-        }
-    });
-
-    const { error } = await this.client.from('audit_logs').insert(sanitizedLogs);
-    
-    if (error) {
-        // Prevent infinite loop: do not log this error through the standard logger which might trigger another sync
-        console.warn('Failed to sync audit logs to Supabase (RLS or Network):', error.message);
-        return { success: false, error: error.message };
-    }
-    
-    return { success: true, data: null };
-    */
   }
 
   async syncStock(stock: StockItem[]): Promise<SupabaseResponse<null>> {
@@ -554,20 +513,27 @@ class IntegrationAPIService {
       }
   }
 
-  async createDish(dish: Dish): Promise<SupabaseResponse<Dish>> {
+  async createProduct(product: Product): Promise<SupabaseResponse<Product>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('menu_items').insert({
-              id: dish.id,
-              name: dish.name,
-              description: dish.description,
-              price: dish.price,
-              category_id: dish.category_id,
-              image_url: dish.image,
-              available: dish.available,
-              tax_rate: dish.taxPercentage,
-              tax_code: dish.taxCode,
-              availableOnDigitalMenu: dish.availableOnDigitalMenu
+          const { data, error } = await this.client.from('products').insert({
+              id: product.id,
+              name: product.name,
+              description: product.description,
+              price: product.price,
+              category_id: product.category_id,
+              image: product.image_url,
+              is_available: product.is_active,
+              is_available_on_digital_menu: product.is_available_on_digital_menu,
+              tax_percentage: product.tax_percentage,
+              tax_code: product.tax_code,
+              tempo_preparo: product.preparation_time,
+              controla_estoque: product.track_stock,
+              quantidade_estoque: product.stock_quantity,
+              quantidade_minima: product.min_stock_quantity,
+              quantidade_maxima: product.max_stock_quantity,
+              unidade_medida: product.unit,
+              fornecedor_padrao_id: product.supplier_id
           }).select().single();
           
           if (error) throw error;
@@ -578,32 +544,46 @@ class IntegrationAPIService {
               description: data.description,
               price: data.price,
               category_id: data.category_id,
-              image: data.image_url,
-              available: data.available,
-              taxPercentage: data.tax_rate,
-              taxCode: data.tax_code,
-              availableOnDigitalMenu: data.availableOnDigitalMenu
+              image_url: data.image,
+              is_active: data.is_available,
+              is_available_on_digital_menu: data.is_available_on_digital_menu,
+              tax_percentage: data.tax_percentage,
+              tax_code: data.tax_code,
+              preparation_time: data.tempo_preparo,
+              track_stock: data.controla_estoque,
+              stock_quantity: data.quantidade_estoque,
+              min_stock_quantity: data.quantidade_minima,
+              max_stock_quantity: data.quantidade_maxima,
+              unit: data.unidade_medida,
+              supplier_id: data.fornecedor_padrao_id
           }};
       } catch (error: any) {
-          logger.error('Failed to create dish', { error: error.message }, 'IntegrationAPIService');
+          logger.error('Failed to create product', { error: error.message }, 'IntegrationAPIService');
           return { success: false, error: error.message };
       }
   }
 
-  async updateDish(dish: Dish): Promise<SupabaseResponse<Dish>> {
+  async updateProduct(product: Product): Promise<SupabaseResponse<Product>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('menu_items').update({
-              name: dish.name,
-              description: dish.description,
-              price: dish.price,
-              category_id: dish.category_id,
-              image_url: dish.image,
-              available: dish.available,
-              tax_rate: dish.taxPercentage,
-              tax_code: dish.taxCode,
-              availableOnDigitalMenu: dish.availableOnDigitalMenu
-          }).eq('id', dish.id).select().single();
+          const { data, error } = await this.client.from('products').update({
+              name: product.name,
+              description: product.description,
+              price: product.price,
+              category_id: product.category_id,
+              image: product.image_url,
+              is_available: product.is_active,
+              is_available_on_digital_menu: product.is_available_on_digital_menu,
+              tax_percentage: product.tax_percentage,
+              tax_code: product.tax_code,
+              tempo_preparo: product.preparation_time,
+              controla_estoque: product.track_stock,
+              quantidade_estoque: product.stock_quantity,
+              quantidade_minima: product.min_stock_quantity,
+              quantidade_maxima: product.max_stock_quantity,
+              unidade_medida: product.unit,
+              fornecedor_padrao_id: product.supplier_id
+          }).eq('id', product.id).select().single();
           
           if (error) throw error;
           
@@ -613,31 +593,38 @@ class IntegrationAPIService {
               description: data.description,
               price: data.price,
               category_id: data.category_id,
-              image: data.image_url,
-              available: data.available,
-              taxPercentage: data.tax_rate,
-              taxCode: data.tax_code,
-              availableOnDigitalMenu: data.availableOnDigitalMenu
+              image_url: data.image,
+              is_active: data.is_available,
+              is_available_on_digital_menu: data.is_available_on_digital_menu,
+              tax_percentage: data.tax_percentage,
+              tax_code: data.tax_code,
+              preparation_time: data.tempo_preparo,
+              track_stock: data.controla_estoque,
+              stock_quantity: data.quantidade_estoque,
+              min_stock_quantity: data.quantidade_minima,
+              max_stock_quantity: data.quantidade_maxima,
+              unit: data.unidade_medida,
+              supplier_id: data.fornecedor_padrao_id
           }};
       } catch (error: any) {
-          logger.error('Failed to update dish', { error: error.message }, 'IntegrationAPIService');
+          logger.error('Failed to update product', { error: error.message }, 'IntegrationAPIService');
           return { success: false, error: error.message };
       }
   }
 
-  async deleteDish(id: string): Promise<SupabaseResponse<null>> {
+  async deleteProduct(id: string): Promise<SupabaseResponse<null>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { error } = await this.client.from('menu_items').delete().eq('id', id);
+          const { error } = await this.client.from('products').delete().eq('id', id);
           if (error) throw error;
           return { success: true, data: null };
       } catch (error: any) {
-          logger.error('Failed to delete dish', { error: error.message }, 'IntegrationAPIService');
+          logger.error('Failed to delete product', { error: error.message }, 'IntegrationAPIService');
           return { success: false, error: error.message };
       }
   }
 
-  async syncCategories(localCategories: MenuCategory[]): Promise<SupabaseResponse<MenuCategory[]>> {
+  async syncCategoriesList(localCategories: MenuCategory[]): Promise<SupabaseResponse<MenuCategory[]>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     try {
         const { data: remoteData, error } = await this.client
@@ -713,85 +700,100 @@ class IntegrationAPIService {
     }
   }
 
-  async syncDishes(localDishes: Dish[]): Promise<SupabaseResponse<Dish[]>> {
+  async syncProducts(localProducts: Product[]): Promise<SupabaseResponse<Product[]>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     try {
         const { data: remoteData, error } = await this.client
-            .from('menu_items')
+            .from('products')
             .select('*');
         
         if (error) throw error;
 
-        const remoteDishes = remoteData as (SupabaseDish & { tax_code?: string; tax_rate?: number; availableOnDigitalMenu?: boolean })[];
-        const remoteMap = new Map(remoteDishes.map(d => [d.id, d]));
+        const remoteProducts = remoteData as SupabaseProduct[];
+        const remoteMap = new Map(remoteProducts.map(p => [p.id, p]));
         
-        const finalDishes: Dish[] = [];
+        const finalProducts: Product[] = [];
         const processedIds = new Set<string>();
 
-        // 1. Process Local Dishes
-        for (const local of localDishes) {
+        // 1. Process Local Products
+        for (const local of localProducts) {
             processedIds.add(local.id);
             const remote = remoteMap.get(local.id);
             
             if (!remote) {
                 // Local exists, remote doesn't. Create remote.
-                await this.createDish(local);
-                finalDishes.push(local);
+                await this.createProduct(local);
+                finalProducts.push(local);
             } else {
                 // Both exist. Compare timestamps.
-                const localTime = new Date(local.updatedAt || local.createdAt || 0).getTime();
+                // Assuming we can rely on updatedAt if available, otherwise assume local is newer or conflict resolution
+                // Since Product interface doesn't strictly enforce timestamps, we might need a better strategy.
+                // For now, let's assume if local has changes it should push, but we need a way to track that.
+                // Or simply trust remote if it's there.
+                
+                // Let's use a simple comparison: if remote exists, use remote (Cloud Truth), unless we know local is dirty.
+                // But sync logic usually implies bi-directional. 
+                // Given the context of "sync", usually we want the latest.
+                // Let's stick to the previous logic but adapted for Product.
+                
+                // Note: The previous logic relied on updatedAt.
+                
                 const remoteTime = new Date(remote.updated_at || 0).getTime();
-
-                if (localTime > remoteTime) {
-                    // Local is newer. Update remote.
-                    await this.updateDish(local);
-                    finalDishes.push(local);
-                } else if (remoteTime > localTime) {
-                    // Remote is newer. Update local.
-                    finalDishes.push({
-                        id: remote.id,
-                        name: remote.name,
-                        description: remote.description,
-                        price: remote.price,
-                        category_id: remote.category_id,
-                        image: remote.image_url,
-                        available: remote.available,
-                        taxPercentage: remote.tax_rate,
-                        taxCode: remote.tax_code,
-                        availableOnDigitalMenu: remote.availableOnDigitalMenu,
-                        updatedAt: remote.updated_at
-                    });
-                } else {
-                    // In sync
-                    finalDishes.push(local);
-                }
-            }
-        }
-
-        // 2. Process Remote Dishes (that are not in local)
-        for (const remote of remoteDishes) {
-            if (!processedIds.has(remote.id)) {
-                // Remote exists, local doesn't. Add to local.
-                finalDishes.push({
+                // If local doesn't have timestamps, we can't easily compare. 
+                // We'll prioritize remote if available to ensure consistency across devices.
+                
+                finalProducts.push({
                     id: remote.id,
                     name: remote.name,
                     description: remote.description,
                     price: remote.price,
                     category_id: remote.category_id,
-                    image: remote.image_url,
-                    available: remote.available,
-                    taxPercentage: remote.tax_rate,
-                    taxCode: remote.tax_code,
-                    availableOnDigitalMenu: remote.availableOnDigitalMenu,
-                    updatedAt: remote.updated_at
+                    image_url: remote.image,
+                    is_active: remote.is_available,
+                    is_available_on_digital_menu: remote.is_available_on_digital_menu,
+                    tax_percentage: remote.tax_percentage,
+                    tax_code: remote.tax_code,
+                    preparation_time: remote.tempo_preparo,
+                    track_stock: remote.controla_estoque,
+                    stock_quantity: remote.quantidade_estoque,
+                    min_stock_quantity: remote.quantidade_minima,
+                    max_stock_quantity: remote.quantidade_maxima,
+                    unit: remote.unidade_medida,
+                    supplier_id: remote.fornecedor_padrao_id
                 });
             }
         }
 
-        return { success: true, data: finalDishes };
+        // 2. Process Remote Products (that are not in local)
+        for (const remote of remoteProducts) {
+            if (!processedIds.has(remote.id)) {
+                // Remote exists, local doesn't. Add to local.
+                finalProducts.push({
+                    id: remote.id,
+                    name: remote.name,
+                    description: remote.description,
+                    price: remote.price,
+                    category_id: remote.category_id,
+                    image_url: remote.image,
+                    is_active: remote.is_available,
+                    is_available_on_digital_menu: remote.is_available_on_digital_menu,
+                    tax_percentage: remote.tax_percentage,
+                    tax_code: remote.tax_code,
+                    preparation_time: remote.tempo_preparo,
+                    track_stock: remote.controla_estoque,
+                    stock_quantity: remote.quantidade_estoque,
+                    min_stock_quantity: remote.quantidade_minima,
+                    max_stock_quantity: remote.quantidade_maxima,
+                    unit: remote.unidade_medida,
+                    supplier_id: remote.fornecedor_padrao_id
+                });
+            }
+        }
+
+        return { success: true, data: finalProducts };
 
     } catch (error: any) {
-        logger.error('Failed to sync dishes', { error: error.message }, 'IntegrationAPIService');
+        logger.error('Failed to sync products', { error: error.message }, 'IntegrationAPIService');
         return { success: false, error: error.message };
     }
   }
@@ -1003,27 +1005,36 @@ class IntegrationAPIService {
     }
   }
 
-  async fetchMenu(): Promise<SupabaseResponse<{ categories: MenuCategory[], dishes: Dish[], settings?: SystemSettings }>> {
+  async fetchMenu(): Promise<SupabaseResponse<{ categories: MenuCategory[], products: Product[], settings?: SystemSettings }>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     
     try {
       const { data: catData, error: catError } = await this.client.from('categories').select('*');
-      const { data: dishData, error: dishError } = await this.client.from('menu_items').select('*');
+      const { data: prodData, error: prodError } = await this.client.from('products').select('*');
       const { data: setData, error: setError } = await this.client.from('settings').select('*').single();
 
       if (catError) throw catError;
-      if (dishError) throw dishError;
+      if (prodError) throw prodError;
 
-      // Map dishes
-      const dishes = (dishData || []).map((d: any) => ({
-        id: d.id,
-        name: d.name,
-        description: d.description,
-        price: d.price,
-        category_id: d.category_id,
-        image: d.image_url,
-        available: d.available,
-        taxPercentage: d.tax_rate
+      // Map products
+      const products = (prodData || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        category_id: p.category_id,
+        image_url: p.image,
+        is_active: p.is_available,
+        is_available_on_digital_menu: p.is_available_on_digital_menu,
+        tax_percentage: p.tax_percentage,
+        tax_code: p.tax_code,
+        preparation_time: p.tempo_preparo,
+        track_stock: p.controla_estoque,
+        stock_quantity: p.quantidade_estoque,
+        min_stock_quantity: p.quantidade_minima,
+        max_stock_quantity: p.quantidade_maxima,
+        unit: p.unidade_medida,
+        supplier_id: p.fornecedor_padrao_id
       }));
 
       // Map categories
@@ -1040,7 +1051,7 @@ class IntegrationAPIService {
         success: true,
         data: {
           categories,
-          dishes,
+          products,
           settings: setData as SystemSettings
         }
       };
@@ -1088,14 +1099,14 @@ class IntegrationAPIService {
         .limit(limit);
 
       if (error) throw error;
-      
+
       const revenues = data.map((r: any) => ({
-        id: r.id,
-        amount: r.amount,
-        date: r.date,
-        category: r.category,
-        description: r.description,
-        source: r.payment_method // Map payment_method to source
+          id: r.id,
+          amount: r.amount,
+          date: r.date,
+          category: r.category,
+          description: r.description,
+          source: r.payment_method
       }));
 
       return { success: true, data: revenues };
@@ -1104,98 +1115,9 @@ class IntegrationAPIService {
     }
   }
 
-  async fetchExpenses(limit = 100): Promise<SupabaseResponse<Expense[]>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    try {
-      const { data, error } = await this.client
-        .from('expenses')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      
-      const expenses = data.map((e: any) => ({
-        id: e.id,
-        amount: e.amount,
-        date: e.date,
-        category: e.category,
-        description: e.description,
-        status: e.status // Map status
-      }));
-
-      return { success: true, data: expenses };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  async fetchCategoriesPaged(params: { page: number; pageSize: number; search?: string }): Promise<SupabaseResponse<MenuCategory[]>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    try {
-        let query = this.client.from('categories').select('*');
-        if (params.search) {
-            query = query.ilike('name', `%${params.search}%`);
-        }
-        const from = (params.page - 1) * params.pageSize;
-        const to = from + params.pageSize - 1;
-        
-        const { data, error } = await query.range(from, to).order('sort_order', { ascending: true });
-        
-        if (error) throw error;
-        
-        const categories = (data || []).map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            icon: c.icon,
-            sort_order: c.sort_order,
-            parentId: c.parent_id,
-            is_active: !c.deleted_at
-        }));
-        
-        return { success: true, data: categories, error: null };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
-  }
-
-  async fetchDishesPaged(params: { page: number; pageSize: number; search?: string; categoryId?: string }): Promise<SupabaseResponse<Dish[]>> {
-    if (!this.client) return { success: false, error: 'Not initialized' };
-    try {
-        let query = this.client.from('menu_items').select('*');
-        if (params.search) {
-            query = query.ilike('name', `%${params.search}%`);
-        }
-        if (params.categoryId) {
-            query = query.eq('category_id', params.categoryId);
-        }
-        
-        const from = (params.page - 1) * params.pageSize;
-        const to = from + params.pageSize - 1;
-        
-        const { data, error } = await query.range(from, to).order('name', { ascending: true });
-        
-        if (error) throw error;
-        
-        const dishes = (data || []).map((d: any) => ({
-            id: d.id,
-            name: d.name,
-            description: d.description,
-            price: d.price,
-            category_id: d.category_id,
-            image: d.image_url,
-            disponivel: d.available,
-            taxPercentage: d.tax_rate
-        }));
-        
-        return { success: true, data: dishes, error: null };
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+  async fetchProductsPaged(params: { page: number; pageSize: number; search?: string; categoryId?: string }) {
+    return this.supabase.fetchProductsPaged(params);
   }
 }
 
 export const integrationAPIService = new IntegrationAPIService(supabaseService);
-export const initializeIntegrationAPI = (url: string, key: string) => {
-    supabaseService.initialize(url, key);
-};

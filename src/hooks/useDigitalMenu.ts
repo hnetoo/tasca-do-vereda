@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { supabaseService } from '../services/supabaseService';
-import { Category, Dish } from '../types';
+import { MenuCategory, Product } from '../types';
 
 export interface MenuData {
-  categories: Category[];
-  dishes: Dish[];
+  categories: MenuCategory[];
+  products: Product[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 }
 
 export const useDigitalMenu = (): MenuData => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,12 +25,6 @@ export const useDigitalMenu = (): MenuData => {
       
       const client = supabaseService.getClient();
       if (!client) {
-        // If not connected to Supabase, we might want to fallback to local storage or API
-        // For now, just return empty or error
-        // But since this is "Digital Menu", it likely relies on cloud data.
-        // However, if we are in the "MSI" (Desktop App), we might be the source of truth?
-        // The prompt says "Menu Digital (página pública acessível via QR Code) deve atualizar instantaneamente".
-        // This implies this hook is used in the Public Page (Next.js), so it connects to Supabase.
         console.warn('Supabase client not initialized in useDigitalMenu');
         setLoading(false);
         return;
@@ -45,16 +39,35 @@ export const useDigitalMenu = (): MenuData => {
       if (catsError) throw catsError;
 
       const { data: menuItems, error: itemsError } = await client
-        .from('menu_items')
+        .from('products')
         .select('*')
-        .eq('available', true);
+        .eq('is_available', true)
+        .eq('is_available_on_digital_menu', true);
 
       if (itemsError) throw itemsError;
 
-      // Map Supabase fields to local types if necessary
-      // Assuming Supabase columns match the types
+      const mappedProducts: Product[] = (menuItems || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        category_id: p.category_id,
+        image_url: p.image,
+        tax_code: p.tax_code,
+        tax_percentage: p.tax_percentage,
+        is_active: p.is_available,
+        is_available_on_digital_menu: p.is_available_on_digital_menu,
+        preparation_time: p.tempo_preparo,
+        track_stock: p.controla_estoque,
+        stock_quantity: p.quantidade_estoque,
+        min_stock_quantity: p.quantidade_minima,
+        max_stock_quantity: p.quantidade_maxima,
+        unit: p.unidade_medida,
+        supplier_id: p.fornecedor_padrao_id
+      }));
+
       setCategories(cats || []);
-      setDishes(menuItems || []);
+      setProducts(mappedProducts);
       setError(null);
     } catch (err: any) {
       console.error('Error fetching digital menu:', err);
@@ -82,9 +95,9 @@ export const useDigitalMenu = (): MenuData => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'menu_items' },
+        { event: '*', schema: 'public', table: 'products' },
         (payload) => {
-            console.log('Menu item change detected:', payload);
+            console.log('Product change detected:', payload);
             fetchData();
         }
       )
@@ -97,7 +110,7 @@ export const useDigitalMenu = (): MenuData => {
 
   return {
     categories,
-    dishes,
+    products,
     loading,
     error,
     refresh: fetchData

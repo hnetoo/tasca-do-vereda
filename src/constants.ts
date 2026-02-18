@@ -1,4 +1,4 @@
-import { Dish, Table, Customer, Reservation, StockItem, User, MenuCategory } from '@/types';
+import { Product, Table, Customer, Reservation, StockItem, User, MenuCategory } from '@/types';
 import { Grid3X3, Coffee, Pizza, Beer, IceCream, Utensils } from 'lucide-react';
 
 // Icons available for categories
@@ -23,7 +23,7 @@ export const MOCK_USERS: User[] = [
 export const MOCK_CATEGORIES: MenuCategory[] = [];
 
 // Cardápio Autêntico Angolano
-export const MOCK_MENU: Dish[] = [];
+export const MOCK_MENU: Product[] = [];
 
 // Estoque Inicial
 export const MOCK_STOCK: StockItem[] = [

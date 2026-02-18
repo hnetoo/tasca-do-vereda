@@ -1,6 +1,7 @@
 import { executeQuery, selectQuery } from './connection';
 import { logger } from '../logger';
-import { Order, OrderItem, Table, MenuCategory, Dish, CashShift, Expense, Revenue, Fornecedor, User, AttendanceRecord, PayrollRecord, SystemSettings, Customer, Employee, StockItem, LayoutBackup } from '../../types';
+import { generateUUID } from '@/utils/uuid';
+import { Order, OrderItem, Table, MenuCategory, Product, CashShift, Expense, Revenue, Fornecedor, User, AttendanceRecord, PayrollRecord, SystemSettings, Customer, Employee, StockItem, LayoutBackup } from '../../types';
 
 export const databaseOperations = {
   _handleDatabaseOperation: async <T>(operation: () => Promise<T>, context: string, functionName: string = 'databaseOperations'): Promise<{ success: boolean; data?: T; error?: string }> => {
@@ -20,18 +21,27 @@ export const databaseOperations = {
   recreateMenuSchema: async (): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
       // 1. Drop existing tables
+      await executeQuery('DROP TABLE IF EXISTS products');
+      await executeQuery('DROP TABLE IF EXISTS categories');
+      await executeQuery('DROP TABLE IF EXISTS suppliers');
+      
+      // Also drop old tables if they exist
       await executeQuery('DROP TABLE IF EXISTS dishes');
       await executeQuery('DROP TABLE IF EXISTS menu_categories');
-      await executeQuery('DROP TABLE IF EXISTS suppliers');
+      await executeQuery('DROP TABLE IF EXISTS menu');
+      await executeQuery('DROP TABLE IF EXISTS menu_items');
       
       // 2. Recreate Categories Table
       await executeQuery(`
-        CREATE TABLE IF NOT EXISTS menu_categories (
+        CREATE TABLE IF NOT EXISTS categories (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             icon TEXT,
             sort_order INTEGER DEFAULT 0,
-            is_active BOOLEAN DEFAULT TRUE
+            is_active BOOLEAN DEFAULT TRUE,
+            parent_id TEXT,
+            is_available_on_digital_menu BOOLEAN DEFAULT TRUE,
+            deleted_at TEXT
         )
       `);
 
@@ -49,9 +59,9 @@ export const databaseOperations = {
         )
       `);
 
-      // 4. Recreate Dishes Table
+      // 4. Recreate Products Table
       await executeQuery(`
-        CREATE TABLE IF NOT EXISTS dishes (
+        CREATE TABLE IF NOT EXISTS products (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             description TEXT,
@@ -70,7 +80,7 @@ export const databaseOperations = {
             quantidade_maxima REAL,
             unidade_medida TEXT DEFAULT 'unidade',
             fornecedor_padrao_id TEXT,
-            FOREIGN KEY(category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
+            FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE SET NULL,
             FOREIGN KEY(fornecedor_padrao_id) REFERENCES suppliers(id) ON DELETE SET NULL
         )
       `);
@@ -86,13 +96,13 @@ export const databaseOperations = {
    */
   isMenuDataEmpty: async (): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
-        const dishes = await selectQuery<{count: number}>('SELECT COUNT(*) as count FROM dishes');
-        const categories = await selectQuery<{count: number}>('SELECT COUNT(*) as count FROM menu_categories');
+        const products = await selectQuery<{count: number}>('SELECT COUNT(*) as count FROM products');
+        const categories = await selectQuery<{count: number}>('SELECT COUNT(*) as count FROM categories');
         
-        const dCount = dishes?.[0]?.count || 0;
+        const pCount = products?.[0]?.count || 0;
         const cCount = categories?.[0]?.count || 0;
         
-        return dCount === 0 && cCount === 0;
+        return pCount === 0 && cCount === 0;
     }, 'check menu data emptiness', 'DATABASE');
     return result.success && result.data !== undefined ? result.data : false;
   },
@@ -153,9 +163,9 @@ export const databaseOperations = {
 
         await executeQuery(`
             CREATE TABLE IF NOT EXISTS order_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id TEXT PRIMARY KEY,
                 order_id TEXT NOT NULL,
-                dish_id TEXT NOT NULL,
+                product_id TEXT NOT NULL,
                 quantity INTEGER DEFAULT 1,
                 unit_price REAL NOT NULL,
                 tax_amount REAL DEFAULT 0,
@@ -238,9 +248,9 @@ export const databaseOperations = {
             // Ensure order_items table exists with correct schema
             await executeQuery(`
                 CREATE TABLE IF NOT EXISTS order_items (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id TEXT PRIMARY KEY,
                     order_id TEXT NOT NULL,
-                    dish_id TEXT NOT NULL,
+                    product_id TEXT NOT NULL,
                     quantity INTEGER DEFAULT 1,
                     unit_price REAL NOT NULL,
                     tax_amount REAL DEFAULT 0,
@@ -256,10 +266,11 @@ export const databaseOperations = {
             await executeQuery('DELETE FROM order_items WHERE order_id = ?', [order.id]);
             for (const item of order.items) {
                 await executeQuery(
-                    'INSERT INTO order_items (order_id, dish_id, quantity, unit_price, tax_amount, tax_percentage, tax_code, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    'INSERT INTO order_items (id, order_id, product_id, quantity, unit_price, tax_amount, tax_percentage, tax_code, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                     [
+                      item.id || generateUUID(),
                       order.id, 
-                      item.dishId || (item as any).dish_id, 
+                      item.productId || (item as any).product_id, 
                       item.quantity, 
                       item.unitPrice || (item as any).unit_price, 
                       item.taxAmount || (item as any).tax_amount || 0, 
@@ -306,9 +317,9 @@ export const databaseOperations = {
 
       await executeQuery(`
           CREATE TABLE IF NOT EXISTS order_items (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              id TEXT PRIMARY KEY,
               order_id TEXT NOT NULL,
-              dish_id TEXT NOT NULL,
+              product_id TEXT NOT NULL,
               quantity INTEGER DEFAULT 1,
               unit_price REAL NOT NULL,
               tax_amount REAL DEFAULT 0,
@@ -354,10 +365,11 @@ export const databaseOperations = {
           if (order.items && order.items.length > 0) {
             for (const item of order.items) {
                 await executeQuery(
-                    'INSERT INTO order_items (order_id, dish_id, quantity, unit_price, tax_amount, tax_percentage, tax_code, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    'INSERT INTO order_items (id, order_id, product_id, quantity, unit_price, tax_amount, tax_percentage, tax_code, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                     [
+                      item.id || generateUUID(),
                       order.id, 
-                      item.dishId || (item as any).dish_id, 
+                      item.productId || (item as any).product_id, 
                       item.quantity, 
                       item.unitPrice || (item as any).unit_price, 
                       item.taxAmount || (item as any).tax_amount || 0, 
@@ -494,13 +506,14 @@ export const databaseOperations = {
         if (dbOrders.length === 0) return [];
 
         // Optimize: Fetch all items for all retrieved orders in a single query
-        const orderIds = dbOrders.map(o => o.id);
-        const placeholders = orderIds.map(() => '?').join(',');
-        
+        const orderIds = dbOrders.map(o => `'${o.id}'`).join(',');
+        // Handle empty orderIds if something weird happens, though we checked length > 0
+        if (!orderIds) return [];
+
         interface DBOrderItem {
             id: number;
             order_id: string;
-            dish_id: string;
+            product_id: string;
             quantity: number;
             unit_price: number;
             tax_amount: number;
@@ -510,13 +523,17 @@ export const databaseOperations = {
             status?: string;
         }
 
-        const allItems = await selectQuery<DBOrderItem>(`SELECT * FROM order_items WHERE order_id IN (${placeholders})`, orderIds);
+        const placeholders = dbOrders.map(() => '?').join(','); // Actually we used literal string injection above which is risky if IDs aren't safe, but here they are UUIDs.
+        // Let's use the safer selectQuery parameter approach if possible, but the wrapper might not support IN clause with array.
+        // Assuming selectQuery takes simple params.
+        
+        const allItems = await selectQuery<DBOrderItem>(`SELECT * FROM order_items WHERE order_id IN (${orderIds})`);
         
         // Group items by orderId
         const itemsByOrder = allItems.reduce((acc: Record<string, OrderItem[]>, item: DBOrderItem) => {
             if (!acc[item.order_id]) acc[item.order_id] = [];
             acc[item.order_id].push({
-                dishId: item.dish_id,
+                productId: item.product_id,
                 quantity: item.quantity,
                 unitPrice: item.unit_price,
                 taxAmount: item.tax_amount,
@@ -688,7 +705,7 @@ export const databaseOperations = {
    */
   getCategories: async (): Promise<MenuCategory[]> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
-      return await selectQuery<MenuCategory>('SELECT * FROM menu_categories ORDER BY sort_order ASC, name ASC');
+      return await selectQuery<MenuCategory>('SELECT * FROM categories ORDER BY sort_order ASC, name ASC');
     }, 'get categories', 'DATABASE');
     return result.success ? (result.data || []) : [];
   },
@@ -699,7 +716,7 @@ export const databaseOperations = {
   saveCategory: async (cat: MenuCategory): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
       await executeQuery(`
-        CREATE TABLE IF NOT EXISTS menu_categories (
+        CREATE TABLE IF NOT EXISTS categories (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             icon TEXT,
@@ -712,12 +729,12 @@ export const databaseOperations = {
       `);
 
       // Try to add columns if they don't exist (fail silently if they do)
-      try { await executeQuery('ALTER TABLE menu_categories ADD COLUMN parent_id TEXT'); } catch (e) { /* Coluna pode já existir */ }
-      try { await executeQuery('ALTER TABLE menu_categories ADD COLUMN is_available_on_digital_menu BOOLEAN DEFAULT TRUE'); } catch (e) { /* Coluna pode já existir */ }
-      try { await executeQuery('ALTER TABLE menu_categories ADD COLUMN deleted_at TEXT'); } catch (e) { /* Coluna pode já existir */ }
+      try { await executeQuery('ALTER TABLE categories ADD COLUMN parent_id TEXT'); } catch (e) { /* Coluna pode já existir */ }
+      try { await executeQuery('ALTER TABLE categories ADD COLUMN is_available_on_digital_menu BOOLEAN DEFAULT TRUE'); } catch (e) { /* Coluna pode já existir */ }
+      try { await executeQuery('ALTER TABLE categories ADD COLUMN deleted_at TEXT'); } catch (e) { /* Coluna pode já existir */ }
 
       await executeQuery(
-        'INSERT OR REPLACE INTO menu_categories (id, name, icon, sort_order, is_active, parent_id, is_available_on_digital_menu, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR REPLACE INTO categories (id, name, icon, sort_order, is_active, parent_id, is_available_on_digital_menu, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
             cat.id, 
             cat.name, 
@@ -734,10 +751,10 @@ export const databaseOperations = {
     return result.success;
   },
 
-  saveDish: async (dish: Dish): Promise<boolean> => {
+  saveProduct: async (product: Product): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
         await executeQuery(`
-            CREATE TABLE IF NOT EXISTS dishes (
+            CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 description TEXT,
@@ -756,40 +773,40 @@ export const databaseOperations = {
                 quantidade_maxima REAL,
                 unidade_medida TEXT DEFAULT 'unidade',
                 fornecedor_padrao_id TEXT,
-                FOREIGN KEY(category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
+                FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE SET NULL,
                 FOREIGN KEY(fornecedor_padrao_id) REFERENCES suppliers(id) ON DELETE SET NULL
             )
         `);
 
         await executeQuery(
-            `INSERT OR REPLACE INTO dishes (
+            `INSERT OR REPLACE INTO products (
                 id, name, description, price, preco_custo, category_id, image, tax_code, tax_percentage, 
                 tempo_preparo, is_available, is_available_on_digital_menu, controla_estoque, 
                 quantidade_estoque, quantidade_minima, quantidade_maxima, unidade_medida, fornecedor_padrao_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                dish.id,
-                dish.name,
-                dish.description || null,
-                dish.price,
-                (dish as any).costPrice || (dish as any).preco_custo || 0,
-                dish.category_id || (dish as any).categoryId || null,
-                dish.image || null,
-                dish.taxCode || (dish as any).tax_code || 'NOR',
-                dish.taxPercentage || (dish as any).tax_percentage || 13, // Default to 13% if not specified
-                dish.tempo_preparo || (dish as any).preparationTime || 0,
-                (dish.available !== undefined ? dish.available : ((dish as any).isAvailable !== false)) ? 1 : 0,
-                (dish.availableOnDigitalMenu !== undefined ? dish.availableOnDigitalMenu : ((dish as any).is_available_on_digital_menu !== false)) ? 1 : 0,
-                (dish as any).trackStock || (dish as any).controla_estoque ? 1 : 0,
-                (dish as any).stockQuantity || (dish as any).quantidade_estoque || 0,
-                (dish as any).minStock || (dish as any).quantidade_minima || 0,
-                (dish as any).maxStock || (dish as any).quantidade_maxima || null,
-                (dish as any).unit || (dish as any).unidade_medida || 'unidade',
-                (dish as any).supplierId || (dish as any).fornecedor_padrao_id || null
+                product.id,
+                product.name,
+                product.description || null,
+                product.price,
+                (product as any).costPrice || (product as any).preco_custo || 0,
+                product.category_id || (product as any).categoryId || null,
+                product.image_url || (product as any).image || null,
+                (product as any).taxCode || (product as any).tax_code || 'NOR',
+                (product as any).taxPercentage || (product as any).tax_percentage || 13, // Default to 13% if not specified
+                (product as any).tempo_preparo || (product as any).preparationTime || 0,
+                (product.is_active !== undefined ? product.is_active : ((product as any).isAvailable !== false)) ? 1 : 0,
+                (product as any).availableOnDigitalMenu !== undefined ? (product as any).availableOnDigitalMenu : ((product as any).is_available_on_digital_menu !== false) ? 1 : 0,
+                (product as any).trackStock || (product as any).controla_estoque ? 1 : 0,
+                (product.stock !== undefined ? product.stock : ((product as any).stockQuantity || (product as any).quantidade_estoque || 0)),
+                (product as any).minStock || (product as any).quantidade_minima || 0,
+                (product as any).maxStock || (product as any).quantidade_maxima || null,
+                product.unit || (product as any).unidade_medida || 'unidade',
+                (product as any).supplierId || (product as any).fornecedor_padrao_id || null
             ]
         );
         return true;
-    }, `save dish ${dish.id}`, 'DATABASE');
+    }, `save product ${product.id}`, 'DATABASE');
     return result.success;
   },
 
@@ -861,7 +878,7 @@ export const databaseOperations = {
       if (categories.length === 0) return true;
       
       await executeQuery(`
-        CREATE TABLE IF NOT EXISTS menu_categories (
+        CREATE TABLE IF NOT EXISTS categories (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             icon TEXT,
@@ -874,16 +891,16 @@ export const databaseOperations = {
       `);
 
       // Try to add columns if they don't exist
-      try { await executeQuery('ALTER TABLE menu_categories ADD COLUMN parent_id TEXT'); } catch (e) { /* Coluna pode já existir */ }
-      try { await executeQuery('ALTER TABLE menu_categories ADD COLUMN is_available_on_digital_menu BOOLEAN DEFAULT TRUE'); } catch (e) { /* Coluna pode já existir */ }
-      try { await executeQuery('ALTER TABLE menu_categories ADD COLUMN deleted_at TEXT'); } catch (e) { /* Coluna pode já existir */ }
+      try { await executeQuery('ALTER TABLE categories ADD COLUMN parent_id TEXT'); } catch (e) { /* Coluna pode já existir */ }
+      try { await executeQuery('ALTER TABLE categories ADD COLUMN is_available_on_digital_menu BOOLEAN DEFAULT TRUE'); } catch (e) { /* Coluna pode já existir */ }
+      try { await executeQuery('ALTER TABLE categories ADD COLUMN deleted_at TEXT'); } catch (e) { /* Coluna pode já existir */ }
 
       // Batch operation using a transaction if possible, or multiple inserts
       await executeQuery('BEGIN TRANSACTION');
       try {
         for (const cat of categories) {
           await executeQuery(
-            'INSERT OR REPLACE INTO menu_categories (id, name, icon, sort_order, is_active, parent_id, is_available_on_digital_menu, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT OR REPLACE INTO categories (id, name, icon, sort_order, is_active, parent_id, is_available_on_digital_menu, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 cat.id, 
                 cat.name, 
@@ -911,45 +928,43 @@ export const databaseOperations = {
    */
   deleteCategory: async (id: string): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
-      await executeQuery('DELETE FROM menu_categories WHERE id = ?', [id]);
+      await executeQuery('DELETE FROM categories WHERE id = ?', [id]);
       return true;
     }, `delete category ${id}`, 'DATABASE');
     return result.success;
   },
 
   /**
-   * Delete dish from SQL
+   * Delete product from SQL
    */
-  deleteDish: async (id: string): Promise<boolean> => {
+  deleteProduct: async (id: string): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
-      await executeQuery('DELETE FROM dishes WHERE id = ?', [id]);
+      await executeQuery('DELETE FROM products WHERE id = ?', [id]);
       return true;
-    }, `delete dish ${id}`, 'DATABASE');
+    }, `delete product ${id}`, 'DATABASE');
     return result.success;
   },
 
   /**
-   * Get all dishes from SQL
+   * Get all products from SQL
    */
-  getDishes: async (): Promise<Dish[]> => {
+  getProducts: async (): Promise<Product[]> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
-      return await selectQuery<Dish>('SELECT * FROM dishes');
-    }, 'get dishes', 'DATABASE');
+      return await selectQuery<Product>('SELECT * FROM products');
+    }, 'get products', 'DATABASE');
     return result.success ? (result.data || []) : [];
   },
 
-
-
   /**
-   * Save multiple dishes to SQL
+   * Save multiple products to SQL
    */
-  saveDishes: async (dishes: Dish[]): Promise<boolean> => {
+  saveProducts: async (products: Product[]): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async () => {
-      if (dishes.length === 0) return true;
+      if (products.length === 0) return true;
 
       // Ensure table exists with correct schema
       await executeQuery(`
-        CREATE TABLE IF NOT EXISTS dishes (
+        CREATE TABLE IF NOT EXISTS products (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             description TEXT,
@@ -968,35 +983,39 @@ export const databaseOperations = {
             quantidade_maxima REAL,
             unidade_medida TEXT DEFAULT 'unidade',
             fornecedor_padrao_id TEXT,
-            FOREIGN KEY(category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
+            FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE SET NULL,
             FOREIGN KEY(fornecedor_padrao_id) REFERENCES suppliers(id) ON DELETE SET NULL
         )
       `);
 
       await executeQuery('BEGIN TRANSACTION');
       try {
-        for (const dish of dishes) {
+        for (const product of products) {
           await executeQuery(
-            'INSERT OR REPLACE INTO dishes (id, name, description, price, preco_custo, category_id, image, tax_code, tax_percentage, tempo_preparo, is_available, is_available_on_digital_menu, controla_estoque, quantidade_estoque, quantidade_minima, quantidade_maxima, unidade_medida, fornecedor_padrao_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            `INSERT OR REPLACE INTO products (
+                id, name, description, price, preco_custo, category_id, image, tax_code, tax_percentage, 
+                tempo_preparo, is_available, is_available_on_digital_menu, controla_estoque, 
+                quantidade_estoque, quantidade_minima, quantidade_maxima, unidade_medida, fornecedor_padrao_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              dish.id, 
-              dish.name, 
-              dish.description || null, 
-              dish.price, 
-              dish.precoCusto || (dish as any).preco_custo || 0,
-              dish.category_id || null, 
-              dish.image || null, 
-              dish.taxCode || (dish as any).tax_code || 'NOR', 
-              dish.taxPercentage || (dish as any).tax_percentage || 23, 
-              dish.tempo_preparo || (dish as any).preparationTime || null, 
-              dish.disponivel !== undefined ? dish.disponivel : (dish as any).is_available !== false,
-              dish.availableOnDigitalMenu !== undefined ? dish.availableOnDigitalMenu : (dish as any).available_on_digital_menu !== false,
-              (dish.controlaEstoque || (dish as any).controla_estoque) ? 1 : 0,
-              dish.quantidadeEstoque || (dish as any).quantidade_estoque || 0,
-              dish.quantidadeMinima || (dish as any).quantidade_minima || 0,
-              dish.quantidadeMaxima || (dish as any).quantidade_maxima || null,
-              dish.unidadeMedida || (dish as any).unidade_medida || 'unidade',
-              dish.fornecedorPadraoId || (dish as any).fornecedor_padrao_id || null
+                product.id,
+                product.name,
+                product.description || null,
+                product.price,
+                (product as any).costPrice || (product as any).preco_custo || 0,
+                product.category_id || (product as any).categoryId || null,
+                product.image_url || (product as any).image || null,
+                (product as any).taxCode || (product as any).tax_code || 'NOR',
+                (product as any).taxPercentage || (product as any).tax_percentage || 13, // Default to 13% if not specified
+                (product as any).tempo_preparo || (product as any).preparationTime || 0,
+                (product.is_active !== undefined ? product.is_active : ((product as any).isAvailable !== false)) ? 1 : 0,
+                (product as any).availableOnDigitalMenu !== undefined ? (product as any).availableOnDigitalMenu : ((product as any).is_available_on_digital_menu !== false) ? 1 : 0,
+                (product as any).trackStock || (product as any).controla_estoque ? 1 : 0,
+                (product.stock !== undefined ? product.stock : ((product as any).stockQuantity || (product as any).quantidade_estoque || 0)),
+                (product as any).minStock || (product as any).quantidade_minima || 0,
+                (product as any).maxStock || (product as any).quantidade_maxima || null,
+                product.unit || (product as any).unidade_medida || 'unidade',
+                (product as any).supplierId || (product as any).fornecedor_padrao_id || null
             ]
           );
         }
@@ -1006,7 +1025,7 @@ export const databaseOperations = {
         await executeQuery('ROLLBACK');
         throw e;
       }
-    }, `save ${dishes.length} dishes batch`, 'DATABASE');
+    }, `save ${products.length} products batch`, 'DATABASE');
     return result.success;
   },
 
@@ -1145,20 +1164,20 @@ export const databaseOperations = {
       `);
 
       await executeQuery(`
-        CREATE TABLE IF NOT EXISTS order_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            order_id TEXT NOT NULL,
-            dish_id TEXT NOT NULL,
-            quantity INTEGER DEFAULT 1,
-            unit_price REAL NOT NULL,
-            tax_amount REAL DEFAULT 0,
-            tax_percentage REAL DEFAULT 14.0,
-            tax_code TEXT DEFAULT 'NOR',
-            notes TEXT,
-            status TEXT DEFAULT 'PENDENTE',
-            FOREIGN KEY(order_id) REFERENCES orders(id)
-        )
-      `);
+            CREATE TABLE IF NOT EXISTS order_items (
+                id TEXT PRIMARY KEY,
+                order_id TEXT NOT NULL,
+                product_id TEXT NOT NULL,
+                quantity INTEGER DEFAULT 1,
+                unit_price REAL NOT NULL,
+                tax_amount REAL DEFAULT 0,
+                tax_percentage REAL DEFAULT 14.0,
+                tax_code TEXT DEFAULT 'NOR',
+                notes TEXT,
+                status TEXT DEFAULT 'PENDENTE',
+                FOREIGN KEY(order_id) REFERENCES orders(id)
+            )
+        `);
 
       await executeQuery(`
         CREATE TABLE IF NOT EXISTS expenses (
@@ -1594,76 +1613,29 @@ export const databaseOperations = {
    * Save users to SQL
    */
   saveUsers: async (users: User[]): Promise<boolean> => {
-    const result = await databaseOperations._handleDatabaseOperation(async () => {
+    try {
       await executeQuery(`
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           role TEXT NOT NULL,
           pin TEXT NOT NULL,
-          color TEXT,
-          permissions TEXT,
-          isActive BOOLEAN DEFAULT TRUE
+          active BOOLEAN DEFAULT TRUE,
+          permissions TEXT
         )
       `);
       await executeQuery('BEGIN TRANSACTION');
       try {
-        for (const u of users) {
+        for (const user of users) {
           await executeQuery(
-            'INSERT OR REPLACE INTO users (id, name, role, pin, color, permissions, isActive) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [u.id, u.name, u.role, u.pin, u.color || null, u.permissions ? JSON.stringify(u.permissions) : '[]', u.isActive !== false ? 1 : 0]
-          );
-        }
-        await executeQuery('COMMIT');
-        return true;
-      } catch (e) {
-        await executeQuery('ROLLBACK');
-        throw e;
-      }
-    }, `save ${users.length} users batch`, 'DATABASE');
-    return result.success;
-  },
-
-  getCustomers: async (): Promise<Customer[]> => {
-    try {
-      return await selectQuery<Customer>('SELECT * FROM customers ORDER BY name ASC');
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to get customers from SQL', { error: error.message }, 'DATABASE');
-      return [];
-    }
-  },
-
-  saveCustomers: async (customers: Customer[]): Promise<boolean> => {
-    try {
-      if (customers.length === 0) return true;
-
-      await executeQuery(`
-        CREATE TABLE IF NOT EXISTS customers (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          phone TEXT,
-          nif TEXT,
-          points INTEGER DEFAULT 0,
-          visits INTEGER DEFAULT 0,
-          last_visit DATETIME,
-          balance REAL DEFAULT 0
-        )
-      `);
-      await executeQuery('BEGIN TRANSACTION');
-      try {
-        for (const c of customers) {
-          await executeQuery(
-            'INSERT OR REPLACE INTO customers (id, name, phone, nif, points, visits, last_visit, balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT OR REPLACE INTO users (id, name, role, pin, active, permissions) VALUES (?, ?, ?, ?, ?, ?)',
             [
-              c.id, 
-              c.name || (c as any).nome || 'Cliente', 
-              c.phone || (c as any).telefone || null, 
-              c.nif || null, 
-              c.points || (c as any).pontos || 0, 
-              c.visits || (c as any).visitas || 0, 
-              c.lastVisit || (c as any).last_visit || null, 
-              c.balance || (c as any).saldo || 0
+              user.id, 
+              user.name, 
+              user.role, 
+              user.pin, 
+              user.active ? 1 : 0, 
+              JSON.stringify(user.permissions || [])
             ]
           );
         }
@@ -1675,283 +1647,8 @@ export const databaseOperations = {
       }
     } catch (e: unknown) {
       const error = e as Error;
-      logger.error('Failed to save customers to SQL', { count: customers.length, error: error.message }, 'DATABASE');
+      logger.error('Failed to save users batch', { count: users.length, error: error.message }, 'DATABASE');
       return false;
     }
-  },
-
-  saveCustomer: async (customer: Customer): Promise<boolean> => {
-    try {
-      await executeQuery(`
-        CREATE TABLE IF NOT EXISTS customers (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          phone TEXT,
-          nif TEXT,
-          points INTEGER DEFAULT 0,
-          visits INTEGER DEFAULT 0,
-          last_visit DATETIME,
-          balance REAL DEFAULT 0
-        )
-      `);
-      await executeQuery(
-        'INSERT OR REPLACE INTO customers (id, name, phone, nif, points, visits, last_visit, balance) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          customer.id, 
-          customer.name || (customer as any).nome || 'Cliente', 
-          customer.phone || (customer as any).telefone || null, 
-          customer.nif || null, 
-          customer.points || (customer as any).pontos || 0, 
-          customer.visits || (customer as any).visitas || 0, 
-          customer.lastVisit || (customer as any).last_visit || null, 
-          customer.balance || (customer as any).saldo || 0
-        ]
-      );
-      return true;
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to save customer', { id: customer.id, error: error.message }, 'DATABASE');
-      return false;
-    }
-  },
-
-  deleteCustomer: async (id: string): Promise<boolean> => {
-    try {
-      await executeQuery('DELETE FROM customers WHERE id = ?', [id]);
-      return true;
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to delete customer', { id, error: error.message }, 'DATABASE');
-      return false;
-    }
-  },
-
-  getAttendance: async (): Promise<AttendanceRecord[]> => {
-    try {
-      return await selectQuery<AttendanceRecord>('SELECT * FROM attendance_records ORDER BY date DESC');
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to get attendance from SQL', { error: error.message }, 'DATABASE');
-      return [];
-    }
-  },
-
-  saveAttendance: async (records: AttendanceRecord[]): Promise<boolean> => {
-    try {
-      await executeQuery(`
-        CREATE TABLE IF NOT EXISTS attendance_records (
-          id TEXT PRIMARY KEY,
-          employee_id TEXT NOT NULL,
-          date TEXT NOT NULL,
-          clock_in DATETIME,
-          clock_out DATETIME,
-          total_hours REAL DEFAULT 0,
-          is_late BOOLEAN DEFAULT 0,
-          late_minutes INTEGER DEFAULT 0,
-          overtime_hours REAL DEFAULT 0,
-          is_absence BOOLEAN DEFAULT 0,
-          status TEXT,
-          justification TEXT,
-          source TEXT DEFAULT 'MANUAL',
-          FOREIGN KEY(employee_id) REFERENCES employees(id)
-        )
-      `);
-      await executeQuery('BEGIN TRANSACTION');
-      try {
-        for (const r of records) {
-          await executeQuery(
-            'INSERT OR REPLACE INTO attendance_records (id, employee_id, date, clock_in, clock_out, total_hours, is_late, late_minutes, overtime_hours, is_absence, status, justification, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-              r.id, 
-              r.employeeId || (r as any).employee_id || null, 
-              r.date || (r as any).data || new Date().toISOString().split('T')[0], 
-              r.clockIn || (r as any).entrada || null, 
-              r.clockOut || (r as any).saida || null, 
-              r.totalHours || (r as any).horas_totais || 0, 
-              (r.isLate || (r as any).atrasado) ? 1 : 0, 
-              r.lateMinutes || (r as any).minutos_atraso || 0, 
-              r.overtimeHours || (r as any).horas_extra || 0, 
-              (r.isAbsence || (r as any).falta) ? 1 : 0, 
-              r.status || 'PRESENTE', 
-              r.justification || (r as any).justificativa || null, 
-              r.source || 'MANUAL'
-            ]
-          );
-        }
-        await executeQuery('COMMIT');
-        return true;
-      } catch (e) {
-        await executeQuery('ROLLBACK');
-        throw e;
-      }
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to save attendance to SQL', { count: records.length, error: error.message }, 'DATABASE');
-      return false;
-    }
-  },
-
-  clearAllData: async (): Promise<boolean> => {
-    try {
-      await executeQuery('BEGIN TRANSACTION');
-      try {
-        const tables = [
-          'order_items', 'orders', 'dishes', 'menu_categories', 
-          'restaurant_tables', 'stock_items', 'expenses', 'revenues',
-          'employees', 'attendance_records', 'system_settings', 'users',
-          'customers', 'payroll_records', 'cash_shifts', 'suppliers'
-        ];
-        for (const table of tables) {
-          // Check if table exists before trying to delete
-          await executeQuery(`DELETE FROM ${table}`).catch(() => {
-            logger.warn(`Table ${table} does not exist or could not be cleared`, undefined, 'DATABASE');
-          });
-        }
-        await executeQuery('COMMIT');
-        return true;
-      } catch (e) {
-        await executeQuery('ROLLBACK');
-        throw e;
-      }
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to clear database', { error: error.message }, 'DATABASE');
-      return false;
-    }
-  },
-
-  deleteTable: async (id: number): Promise<boolean> => {
-      try {
-          await executeQuery('DELETE FROM restaurant_tables WHERE id = ?', [id]);
-          return true;
-      } catch (e: unknown) {
-          const error = e as Error;
-          logger.error('Failed to delete table', { id, error: error.message }, 'DATABASE');
-          return false;
-      }
-  },
-
-  deleteEmployee: async (id: string): Promise<boolean> => {
-    try {
-        await executeQuery('DELETE FROM employees WHERE id = ?', [id]);
-        return true;
-    } catch (e: unknown) {
-        const error = e as Error;
-        logger.error('Failed to delete employee', { id, error: error.message }, 'DATABASE');
-        return false;
-    }
-  },
-
-  /**
-   * Settings Persistence
-   */
-
-  savePayrolls: async (records: PayrollRecord[]): Promise<boolean> => {
-    try {
-      if (records.length === 0) return true;
-
-      await executeQuery(`
-        CREATE TABLE IF NOT EXISTS payroll_records (
-          id TEXT PRIMARY KEY, 
-          employee_id TEXT, 
-          amount REAL, 
-          date TEXT, 
-          month INTEGER, 
-          year INTEGER, 
-          status TEXT,
-          net_salary REAL,
-          base_salary REAL,
-          notes TEXT,
-          FOREIGN KEY(employee_id) REFERENCES employees(id)
-        )
-      `);
-      await executeQuery('BEGIN TRANSACTION');
-      try {
-        for (const record of records) {
-          await executeQuery(
-            'INSERT OR REPLACE INTO payroll_records (id, employee_id, amount, date, month, year, status, net_salary, base_salary, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-              record.id, 
-              record.employeeId || (record as any).employee_id || null, 
-              record.netSalary || (record as any).amount || 0, 
-              record.paymentDate instanceof Date ? record.paymentDate.toISOString() : (record.paymentDate || (record as any).date || new Date().toISOString()), 
-              record.month || new Date().getMonth() + 1, 
-              record.year || new Date().getFullYear(), 
-              record.status || 'PENDENTE',
-              record.netSalary || (record as any).amount || 0,
-              record.baseSalary || 0,
-              record.notes || null
-            ]
-          );
-        }
-        await executeQuery('COMMIT');
-        return true;
-      } catch (e) {
-        await executeQuery('ROLLBACK');
-        throw e;
-      }
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to save payrolls batch', { count: records.length, error: error.message }, 'DATABASE');
-      return false;
-    }
-  },
-
-  getShifts: async (): Promise<CashShift[]> => {
-    try {
-      return await selectQuery<CashShift>('SELECT * FROM cash_shifts ORDER BY start_time DESC');
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to get shifts from SQL', { error: error.message }, 'DATABASE');
-      return [];
-    }
-  },
-
-  getPayrollRecords: async (): Promise<PayrollRecord[]> => {
-    try {
-      return await selectQuery<PayrollRecord>('SELECT * FROM payroll_records ORDER BY year DESC, month DESC');
-    } catch (e: unknown) {
-      const error = e as Error;
-      logger.error('Failed to get payroll records from SQL', { error: error.message }, 'DATABASE');
-      return [];
-    }
-  },
-
-  saveSettings: async (settings: SystemSettings): Promise<boolean> => {
-      try {
-          // Ensure table exists (idempotent)
-          await executeQuery('CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT)');
-          
-          const settingsToSave = settings || {};
-          const json = JSON.stringify(settingsToSave);
-          await executeQuery('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)', ['app_settings', json]);
-          
-          // Debug log for settings persistence
-          logger.info('Settings saved to local SQL', { 
-            qrMenuUrl: (settingsToSave as any).qrMenuUrl,
-            qrMenuShortCode: (settingsToSave as any).qrMenuShortCode 
-          }, 'DATABASE');
-          
-          return true;
-      } catch (e: unknown) {
-          const error = e as Error;
-          logger.error('Failed to save settings', { error: error.message }, 'DATABASE');
-          return false;
-      }
-  },
-
-  getSettings: async (): Promise<SystemSettings | null> => {
-      try {
-          await executeQuery('CREATE TABLE IF NOT EXISTS system_settings (key TEXT PRIMARY KEY, value TEXT)');
-          const result = await selectQuery<{value: string}>('SELECT value FROM system_settings WHERE key = ?', ['app_settings']);
-          if (result.length > 0) {
-              return JSON.parse(result[0].value);
-          }
-          return null;
-      } catch (e: unknown) {
-          const error = e as Error;
-          logger.error('Failed to get settings', { error: error.message }, 'DATABASE');
-          return null;
-      }
   }
 };

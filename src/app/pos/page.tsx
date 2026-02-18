@@ -12,13 +12,13 @@ import {
   Wine, Sandwich, Soup, Salad, Cake, Fish, Beef, Croissant, 
   Donut, Martini, Grape, Carrot, Apple, Cherry, RotateCcw, Check, Menu
 } from 'lucide-react';
-import { PaymentMethod, Order, TableZone, Table, OrderPayment, Dish } from '@/types';
+import { PaymentMethod, Order, TableZone, Table, OrderPayment, Product } from '@/types';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { availableMonitors, primaryMonitor } from '@tauri-apps/api/window';
 import ExportButton from '@/components/ExportButton';
 import { logger } from '@/services/logger';
 import { formatKz, formatKzDetailed } from '@/services/utils/currencyFormatter';
-import { normalizeDishImage } from '@/utils/imageUtils';
+import { normalizeProductImage } from '@/utils/imageUtils';
 
 const AVAILABLE_ICONS = [
   { name: 'Utensils', icon: Utensils, label: 'Geral' },
@@ -49,7 +49,7 @@ const POS = () => {
     createNewOrder, addToOrder, removeFromOrder, 
     checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
     settings, addNotification,
-    currentShiftId, openShift, toggleSidebar, currentUser,
+    currentShiftId, openShift, toggleMobileMenu, currentUser,
     auditLogs, addTable
   } = useStore();
 
@@ -132,7 +132,7 @@ const POS = () => {
   }, [activeTableId, activeOrders, activeOrderId, setActiveOrder]);
 
   // Handle Product Click (Auto-select Balcão if no table active)
-  const handleProductClick = (dish: Dish) => {
+  const handleProductClick = (product: Product) => {
     let targetTableId = activeTableId;
     
     // Auto-select Balcão logic
@@ -184,7 +184,7 @@ const POS = () => {
        // Now add to order
        // Pass specificOrderId to avoid race conditions
        if (targetOrderId) {
-         addToOrder(targetTableId, dish, 1, '', targetOrderId);
+         addToOrder(targetTableId, product, 1, '', targetOrderId);
        }
     }
   };
@@ -374,8 +374,8 @@ const POS = () => {
     const customerTaxId = order.customerNif || '999999999';
     
     const itemsHtml = order.items.map(item => {
-      const dish = menu.find(d => d.id === item.dishId);
-      const name = dish?.name || 'Item Desconhecido';
+      const product = menu.find(p => p.id === item.productId);
+      const name = product?.name || 'Item Desconhecido';
       const unitPrice = formatKzDetailed(item.unitPrice);
       const subTotal = formatKzDetailed(item.unitPrice * item.quantity);
 
@@ -511,8 +511,8 @@ const POS = () => {
     const customerTaxId = order.customerNif || '999999999';
     
     const itemsHtml = order.items.map(item => {
-      const dish = menu.find(d => d.id === item.dishId);
-      const name = dish?.name || 'Item Desconhecido';
+      const product = menu.find(p => p.id === item.productId);
+      const name = product?.name || 'Item Desconhecido';
       const unitPrice = formatKzDetailed(item.unitPrice);
       const subTotal = formatKzDetailed(item.unitPrice * item.quantity);
 
@@ -1012,7 +1012,7 @@ const POS = () => {
       
       {/* POS Internal Command Bar */}
       <div className="w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full">
-         <button onClick={toggleSidebar} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" title="Menu Principal">
+         <button onClick={toggleMobileMenu} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" title="Menu Principal">
             <Menu size={24} />
          </button>
          
@@ -1252,7 +1252,7 @@ const POS = () => {
                               className={`group relative bg-slate-800/20 rounded-[2rem] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 overflow-hidden flex flex-col active:scale-95 cursor-pointer shadow-lg text-left w-full`}
                           >
                               <div className="aspect-square w-full overflow-hidden relative">
-                                  <img src={normalizeDishImage(dish.image)} alt={dish.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                  <img src={normalizeProductImage(dish.image_url)} alt={dish.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
                                   <div className="absolute bottom-3 left-4 right-4">
                                       <h4 className="font-bold text-[11px] text-white truncate uppercase tracking-tighter">{dish.name}</h4>
@@ -1339,7 +1339,7 @@ const POS = () => {
                     if (!dish) return null; 
                     return (
                         <div key={idx} className="flex gap-4 items-center p-3 bg-white/5 rounded-2xl border border-white/5 group animate-in slide-in-from-right-4">
-                            <img src={normalizeDishImage(dish.image)} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                            <img src={normalizeProductImage(dish.image)} className="w-12 h-12 rounded-xl object-cover" alt="" />
                             <div className="flex-1 min-w-0">
                                 <h4 className="font-bold text-white text-[10px] truncate uppercase tracking-tighter">{dish.name}</h4>
                                 <div className="flex justify-between items-center mt-1">

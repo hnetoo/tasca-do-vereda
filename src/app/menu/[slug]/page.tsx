@@ -2,6 +2,6 @@
 
 import MenuDigital from '@/components/MenuDigital';
 
-export default function MenuPage() {
+export default function MenuSlugPage() {
   return <MenuDigital />;
 }

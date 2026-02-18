@@ -12,7 +12,7 @@ import {
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { User, MenuCategory, Dish, SystemSettings, StoreState, BackupState, FinancialClearanceReport, FullApplicationState } from '@/types';
+import { User, MenuCategory, Product, SystemSettings, StoreState, BackupState, FinancialClearanceReport, FullApplicationState } from '@/types';
 import UserManagementModal from '@/components/UserManagementModal';
 import QRMenuConfig from '@/components/QRMenuConfig';
 import POSAccessManagement from '@/components/POSAccessManagement';
@@ -33,9 +33,9 @@ const CloudImportPanel = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [remoteCategories, setRemoteCategories] = useState<MenuCategory[]>([]);
-  const [remoteDishes, setRemoteDishes] = useState<Dish[]>([]);
+  const [remoteDishes, setRemoteProducts] = useState<Product[]>([]);
   const [selectedCatIds, setSelectedCatIds] = useState<Set<string>>(new Set());
-  const [selectedDishIds, setSelectedDishIds] = useState<Set<string>>(new Set());
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
   const toggleSet = (setFn: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) => {
@@ -57,9 +57,9 @@ const CloudImportPanel = () => {
     setIsLoading(true);
     try {
       const catsRes = await integrationAPIService.fetchCategoriesPaged({ page: 1, pageSize: 100, search });
-      const dishesRes = await integrationAPIService.fetchDishesPaged({ page: 1, pageSize: 200, search, categoryId: categoryFilter });
+      const prodsRes = await integrationAPIService.fetchProductsPaged({ page: 1, pageSize: 200, search, categoryId: categoryFilter });
       if (catsRes.success && catsRes.data) setRemoteCategories(catsRes.data);
-      if (dishesRes.success && dishesRes.data) setRemoteDishes(dishesRes.data);
+      if (prodsRes.success && prodsRes.data) setRemoteProducts(prodsRes.data);
       addNotification('success', 'Itens carregados da cloud');
     } catch (e: unknown) {
       addNotification('error', 'Falha ao carregar da cloud');
@@ -69,13 +69,13 @@ const CloudImportPanel = () => {
   };
 
   const selectedCategories = remoteCategories.filter(c => selectedCatIds.has(c.id));
-  const selectedDishes = remoteDishes.filter(d => selectedDishIds.has(d.id));
-  const conflicts = detectCloudConflicts({ categories: selectedCategories, dishes: selectedDishes });
+  const selectedProducts = remoteDishes.filter(d => selectedProductIds.has(d.id));
+  const conflicts = detectCloudConflicts({ categories: selectedCategories, products: selectedProducts });
 
   const importSelected = (preferCloud: boolean) => {
-    importCloudItems({ categories: selectedCategories, dishes: selectedDishes, preferCloud });
+    importCloudItems({ categories: selectedCategories, products: selectedProducts, preferCloud });
     setSelectedCatIds(new Set());
-    setSelectedDishIds(new Set());
+    setSelectedProductIds(new Set());
   };
 
   return (
@@ -125,14 +125,14 @@ const CloudImportPanel = () => {
         </div>
         <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black text-slate-300 uppercase">Produtos</span>
+            <span className="text-[10px] font-black text-slate-300 uppercase">Pratos</span>
             <span className="text-[10px] font-mono text-slate-500">{remoteDishes.length}</span>
           </div>
           <div className="max-h-64 overflow-auto space-y-2">
             {remoteDishes.map(d => (
               <label key={d.id} className="flex items-center justify-between p-2 bg-black/30 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <input type="checkbox" checked={selectedDishIds.has(d.id)} onChange={() => toggleSet(setSelectedDishIds, d.id)} />
+                  <input type="checkbox" checked={selectedProductIds.has(d.id)} onChange={() => toggleSet(setSelectedProductIds, d.id)} />
                   <span className="text-xs text-white">{d.name}</span>
                 </div>
                 <span className="text-[10px] text-slate-500">{new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(d.price)}</span>
@@ -142,7 +142,7 @@ const CloudImportPanel = () => {
         </div>
       </div>
       <div className="flex items-center justify-between p-3 bg-black/30 rounded-2xl border border-white/10 flex-wrap gap-3">
-        <span className="text-[10px] text-slate-400 font-black uppercase">Conflitos: {conflicts.categories.length + conflicts.dishes.length}</span>
+        <span className="text-[10px] text-slate-400 font-black uppercase">Conflitos: {conflicts.categories.length + conflicts.products.length}</span>
         <div className="flex gap-3 flex-wrap w-full md:w-auto justify-end">
           <button onClick={() => importSelected(true)} className="px-4 py-2 bg-primary text-black rounded-xl text-[10px] font-black uppercase tracking-widest">Integrar Selecionados</button>
           <button onClick={() => importSelected(false)} className="px-4 py-2 bg-white/5 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10">Importar Preferindo Local</button>
@@ -393,8 +393,8 @@ const Settings = () => {
              
              let cleanCategories = uniqueCategories;
 
-             // 2. Sanitize Dishes (Menu)
-             let cleanMenu = (Array.isArray(state.menu) ? state.menu : []) as Dish[];
+             // 2. Sanitize Products (Menu)
+             let cleanMenu = (Array.isArray(state.products || state.menu) ? (state.products || state.menu) : []) as Product[];
              const validCatIds = new Set(cleanCategories.map((c) => c.id));
              
              cleanMenu = cleanMenu.map((d) => {
@@ -442,12 +442,14 @@ const Settings = () => {
 
              // Update state with sanitized data
              state.categories = cleanCategories;
-             state.menu = cleanMenu;
+             state.products = cleanMenu;
+             // legacy mapping for old backups
+             if (state.menu) state.menu = cleanMenu;
 
              // Ensure FullApplicationState structure for applyState
              const fullState = {
                 categories: cleanCategories,
-                menu: cleanMenu,
+                products: cleanMenu,
                 orders: state.orders || [],
                 employees: state.employees || [],
                 stock: state.stock || [],
@@ -729,7 +731,7 @@ const Settings = () => {
 
   const handleExportSQL = () => {
     try {
-      const sql = generateSQLSchema(categories, dishes, settings);
+      const sql = generateSQLSchema(categories, menu, settings);
       const blob = new Blob([sql], { type: 'text/sql' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -878,63 +880,65 @@ const Settings = () => {
         {/* ... manter outras abas existentes (fiscal, tables, qr, integrations) ... */}
 
         {activeTab === 'fiscal' && (
-          <div className="space-y-8 animate-in fade-in duration-500 max-w-2xl">
-          <form onSubmit={handleSaveSettings} className="space-y-8">
-            <div className="bg-primary/10 border border-primary/20 p-8 rounded-[2rem] flex items-start gap-6 mb-6">
-                <ShieldCheck size={40} className="text-primary shrink-0" />
-                <div>
-                    <h4 className="text-primary font-black uppercase tracking-widest text-sm mb-1">Fiscalidade Angola</h4>
-                    <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                        Os dados abaixo são integrados nos ficheiros SAF-T (AO) para submissão à AGT.
-                    </p>
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+               <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 bg-primary/20 rounded-xl text-primary"><ShieldCheck size={22} /></div>
+                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Fiscalidade Angola</h3>
+               </div>
+               
+               <p className="text-sm text-slate-400 mb-8 font-medium">
+                  Os dados abaixo são integrados nos ficheiros SAF-T (AO) para submissão à AGT.
+               </p>
+
+              <form onSubmit={handleSaveSettings} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">NIF do Contribuinte</label>
+                        <input type="text" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.nif} onChange={e => setLocalSettings({...localSettings, nif: e.target.value})} />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Certificado AGT Nº</label>
+                        <input type="text" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.agtCertificate} onChange={e => setLocalSettings({...localSettings, agtCertificate: e.target.value})} />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Taxa de Imposto (%)</label>
+                        <input type="number" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.taxRate} onChange={e => setLocalSettings({...localSettings, taxRate: Number(e.target.value)})} />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Retenção na Fonte (%)</label>
+                        <input type="number" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.retencaoFonte || 0} onChange={e => setLocalSettings({...localSettings, retencaoFonte: Number(e.target.value)})} />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Regime IVA</label>
+                        <select className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-bold appearance-none" value={localSettings.regimeIVA || 'Regime Geral'} onChange={e => setLocalSettings({...localSettings, regimeIVA: e.target.value})}>
+                            <option value="Regime Geral" className="bg-slate-900">Regime Geral</option>
+                            <option value="Regime Simplificado" className="bg-slate-900">Regime Simplificado</option>
+                            <option value="Regime de Exclusão" className="bg-slate-900">Regime de Exclusão</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Motivo Isenção (Se aplicável)</label>
+                        <input type="text" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-bold" value={localSettings.motivoIsencao || ''} onChange={e => setLocalSettings({...localSettings, motivoIsencao: e.target.value})} />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Código Abertura Gaveta (Opcional)</label>
+                        <input type="text" placeholder="Ex: <27>p0 (Deixe em branco se não souber)" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.openDrawerCode || ''} onChange={e => setLocalSettings({...localSettings, openDrawerCode: e.target.value})} />
+                        <p className="text-[10px] text-slate-500 mt-2">Código ASCII/HEX enviado para a impressora para acionar a gaveta.</p>
+                    </div>
                 </div>
+
+                <button type="submit" className="w-full py-5 bg-primary text-black rounded-3xl font-black uppercase tracking-widest shadow-glow">
+                    Atualizar Conformidade
+                </button>
+              </form>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">NIF do Contribuinte</label>
-                    <input type="text" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.nif} onChange={e => setLocalSettings({...localSettings, nif: e.target.value})} />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Certificado AGT Nº</label>
-                    <input type="text" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.agtCertificate} onChange={e => setLocalSettings({...localSettings, agtCertificate: e.target.value})} />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Taxa de Imposto (%)</label>
-                    <input type="number" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.taxRate} onChange={e => setLocalSettings({...localSettings, taxRate: Number(e.target.value)})} />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Retenção na Fonte (%)</label>
-                    <input type="number" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.retencaoFonte || 0} onChange={e => setLocalSettings({...localSettings, retencaoFonte: Number(e.target.value)})} />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Regime IVA</label>
-                    <select className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-bold appearance-none" value={localSettings.regimeIVA || 'Regime Geral'} onChange={e => setLocalSettings({...localSettings, regimeIVA: e.target.value})}>
-                        <option value="Regime Geral" className="bg-slate-900">Regime Geral</option>
-                        <option value="Regime Simplificado" className="bg-slate-900">Regime Simplificado</option>
-                        <option value="Regime de Exclusão" className="bg-slate-900">Regime de Exclusão</option>
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Motivo Isenção (Se aplicável)</label>
-                    <input type="text" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-bold" value={localSettings.motivoIsencao || ''} onChange={e => setLocalSettings({...localSettings, motivoIsencao: e.target.value})} />
-                </div>
-                <div className="md:col-span-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Código Abertura Gaveta (Opcional)</label>
-                    <input type="text" placeholder="Ex: <27>p0 (Deixe em branco se não souber)" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold" value={localSettings.openDrawerCode || ''} onChange={e => setLocalSettings({...localSettings, openDrawerCode: e.target.value})} />
-                    <p className="text-[10px] text-slate-500 mt-2">Código ASCII/HEX enviado para a impressora para acionar a gaveta.</p>
-                </div>
-            </div>
-
-            <button type="submit" className="w-full py-5 bg-primary text-black rounded-3xl font-black uppercase tracking-widest shadow-glow">
-                Atualizar Conformidade
-            </button>
-          </form>
-
-            <div className="pt-8 border-t border-white/10">
-              <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                <FileText size={20} className="text-blue-400" /> Documentação de Certificação
-              </h3>
+            <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+              <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-500"><FileText size={22} /></div>
+                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Documentação de Certificação</h3>
+               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button 
@@ -1190,32 +1194,58 @@ const Settings = () => {
         )}
 
         {activeTab === 'qr' && (
-            <div className="flex flex-col items-center justify-center h-full gap-10 animate-in zoom-in duration-500">
-                <div className="bg-white p-8 rounded-[3rem] shadow-glow relative">
-                    <img src={generateQRUrl(`${getBaseAppUrl()}/menu-digital`)} alt="QR Menu Digital" className="w-56 h-56" />
-                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-primary text-black px-6 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">
-                       Pré-visualização
-                    </div>
-                </div>
-                <div className="text-center space-y-4">
-                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Menu Digital QR</h3>
-                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-md">
-                        Configure a URL personalizada para o seu menu digital e gere códigos QR para as mesas.
-                    </p>
-                </div>
-                <div className="flex gap-4">
-                    <button 
-                        onClick={() => setIsQRMenuConfigOpen(true)}
-                        className="px-10 py-5 bg-primary text-black rounded-3xl font-black uppercase text-xs tracking-widest flex items-center gap-3 hover:brightness-110 transition-all shadow-glow"
-                    >
-                        <QrCode size={20} /> Configurar Menu QR
-                    </button>
-                    <button onClick={handlePrintAllQRs} className="px-10 py-5 bg-slate-700 text-white rounded-3xl font-black uppercase text-xs tracking-widest flex items-center gap-3 hover:bg-slate-600 transition-all">
-                        <Printer size={20} /> Descarregar QR por Mesa
-                    </button>
-                    <button onClick={handlePrintGeneralQRs} className="px-10 py-5 bg-slate-700 text-white rounded-3xl font-black uppercase text-xs tracking-widest flex items-center gap-3 hover:bg-slate-600 transition-all">
-                        <Printer size={20} /> Descarregar QR Geral
-                    </button>
+            <div className="space-y-8 animate-in fade-in duration-500">
+                <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+                   <div className="flex items-center gap-3 mb-8">
+                      <div className="p-2.5 bg-primary/20 rounded-xl text-primary"><QrCode size={22} /></div>
+                      <div>
+                          <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Menu Digital QR</h3>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Geração de Códigos e Links</p>
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                       {/* Preview Column */}
+                       <div className="lg:col-span-1 flex justify-center">
+                           <div className="bg-white p-6 rounded-[2.5rem] shadow-glow relative group">
+                               <img src={generateQRUrl(`${getBaseAppUrl()}/menu-digital`)} alt="QR Menu Digital" className="w-48 h-48 group-hover:scale-105 transition-transform duration-500" />
+                               <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-primary text-black px-4 py-1.5 rounded-full font-black text-[8px] uppercase tracking-widest shadow-lg whitespace-nowrap">
+                                  Pré-visualização Geral
+                               </div>
+                           </div>
+                       </div>
+
+                       {/* Actions Column */}
+                       <div className="lg:col-span-2 space-y-6">
+                           <div className="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                               <p className="text-sm text-slate-400 font-medium mb-6 leading-relaxed">
+                                   Configure a URL base do seu menu digital e gere os códigos QR para impressão. 
+                                   Você pode gerar um código único para o balcão ou códigos individuais para cada mesa configurada.
+                               </p>
+
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                   <button 
+                                       onClick={() => setIsQRMenuConfigOpen(true)}
+                                       className="p-4 bg-primary text-black rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 hover:brightness-110 transition-all shadow-glow justify-center"
+                                   >
+                                       <QrCode size={18} /> Configurar URL
+                                   </button>
+                                   <button 
+                                       onClick={handlePrintGeneralQRs}
+                                       className="p-4 bg-slate-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 hover:bg-slate-600 transition-all border border-white/5 justify-center"
+                                   >
+                                       <Printer size={18} /> Imprimir Geral
+                                   </button>
+                                   <button 
+                                       onClick={handlePrintAllQRs}
+                                       className="col-span-1 md:col-span-2 p-4 bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 hover:bg-slate-700 transition-all border border-white/5 justify-center group"
+                                   >
+                                       <Printer size={18} className="text-primary group-hover:scale-110 transition-transform" /> Imprimir QRs Individuais (Mesas)
+                                   </button>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
                 </div>
             </div>
         )}

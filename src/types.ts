@@ -1,7 +1,6 @@
 export type AnyRecord = any;
 
 export type Profile = AnyRecord;
-export type Product = AnyRecord;
 export type Category = AnyRecord;
 export type Customer = AnyRecord;
 export interface Order {
@@ -55,8 +54,8 @@ export interface OrderItem {
   id?: string; // Optional, as it might be auto-generated
   orderId?: string; // Optional, set when part of an order
   order_id?: string; // For Supabase compatibility
-  dishId: string;
-  dish_id?: string; // For Supabase compatibility
+  productId: string; // Renamed from dishId
+  product_id?: string; // For Supabase compatibility
   quantity: number;
   unitPrice: number;
   unit_price?: number; // For Supabase compatibility
@@ -154,6 +153,8 @@ export interface StoreState {
   // Operational Slice (assumed)
   settings: SystemSettings;
   isInitialized: boolean;
+  isMobileMenuOpen: boolean;
+  toggleMobileMenu: () => void;
 
   // Analytics Slice
   dailyAnalyticsData: DailyAnalyticsPayload['new'] | null;
@@ -164,23 +165,29 @@ export interface StoreState {
   [key: string]: any;
 }
 
-// Existing types from the original types.ts (if any) should be added here
-// For now, assuming these are the only new types.
-
-// Example of existing types that might be in a real types.ts file:
-export interface Dish {
+// Updated Product interface to match 'products' table
+export interface Product {
   id: string;
   name: string;
   description?: string;
   price: number;
   category_id: string;
-  categoryName?: string;
   image_url?: string;
-  is_active: boolean;
+  tax_code: string;
+  tax_percentage: number;
+  is_active: boolean; // mapped to is_available
+  is_available_on_digital_menu: boolean;
+  preparation_time?: number; // mapped to tempo_preparo
+  track_stock?: boolean; // mapped to controla_estoque
+  stock_quantity?: number; // mapped to quantidade_estoque
+  min_stock_quantity?: number; // mapped to quantidade_minima
+  max_stock_quantity?: number; // mapped to quantidade_maxima
+  unit?: string; // mapped to unidade_medida
+  supplier_id?: string; // mapped to fornecedor_padrao_id
+  
+  // Legacy/Compatibility fields (optional)
+  cost?: number; // preco_custo
   sort_order?: number;
-  cost?: number;
-  stock?: number;
-  unit?: string;
   allergens?: string[];
   notes?: string;
 }
@@ -192,7 +199,8 @@ export interface MenuCategory {
   sort_order?: number;
   is_active: boolean;
   parent_id?: string;
-  parentId?: string; // For compatibility
+  is_available_on_digital_menu?: boolean;
+  deleted_at?: string;
 }
 
 export interface SystemSettings {
@@ -283,4 +291,43 @@ export interface BiometricClockEvent {
   clockTime: string | Date;
   temperature?: number;
   deviceId?: string;
+}
+
+export type Revenue = AnyRecord;
+
+export type AIAnalysisResult = {
+  summary: string;
+  recommendation: string;
+  trend: string;
+  [key: string]: any;
+};
+
+export type AIMonthlyReport = {
+  month: string;
+  totalRevenue: number;
+  topSellingItem: string;
+  strategicAdvice: string;
+  operationalEfficiency: string;
+  customerSentiment: string;
+  [key: string]: any;
+};
+
+export interface RemoteDashboardData {
+  summary: {
+    total_revenue: number;
+    total_orders: number;
+    active_orders_count: number;
+    total_expenses: number;
+  };
+  analytics: {
+    totalCustomers: number;
+    retentionRate: number;
+    menu: { productName: string; sold: number }[];
+  };
+  settings: SystemSettings;
+  expenses: Array<Expense>;
+  revenues: Array<Revenue>;
+  menu: Array<Product>;
+  users: Array<User>;
+  categories: Array<MenuCategory>;
 }

@@ -42,46 +42,20 @@ const customStorage: StateStorage = {
     }
   },
 };
-import { IntegrityIssue, MenuCategory, StoreState, Permission, IntegrationLog, Fornecedor, SystemSettings, Notification, Dish, User, StockItem, CashShift, Order, PaymentMethod, PayrollRecord, Expense, DailySalesAnalytics, MenuAnalytics, Delivery, Employee, AttendanceRecord, AuditLog, MenuAccessLog, OfflineAction, Revenue, DashboardSummary, DailyAnalyticsPayload } from '../types';
+import { IntegrityIssue, MenuCategory, StoreState, Permission, IntegrationLog, Fornecedor, SystemSettings, Notification, Product, User, StockItem, CashShift, Order, PaymentMethod, PayrollRecord, Expense, DailySalesAnalytics, MenuAnalytics, Delivery, Employee, AttendanceRecord, AuditLog, MenuAccessLog, OfflineAction, Revenue, DashboardSummary, DailyAnalyticsPayload } from '../types';
 import { MOCK_MENU, MOCK_STOCK, MOCK_USERS, MOCK_CATEGORIES, MOCK_TABLES, MOCK_CUSTOMERS, MOCK_RESERVATIONS } from '@/constants';
 import { calculateIRT, calculateINSS, calculateDeductions } from '../services/salaryCalculatorAngola';
 import { backupService, FinancialBackupData } from '../services/backupService';
 import { generateNewKeyPair, signInvoice } from '../services/agtService';
-import { validateDishCategory, resolveCategoryId } from '../services/categoryResolver';
+import { validateProductCategory, resolveCategoryId } from '../services/categoryResolver';
 import { databaseOperations } from '../services/database/operations';
 import { getDatabase } from '../services/database/connection';
 import { createMenuSlice } from './slices/menuSlice';
 import { createStaffSlice } from './slices/staffSlice';
 import { createFinanceSlice } from './slices/financeSlice';
 import { createAuthSlice } from './slices/authSlice';
-import { createOperationalSlice } from './slices/operationalSlice';
-
-const normalizeDishImage = (imagePath?: string): string | undefined => {
-  if (!imagePath || imagePath.trim() === '') return undefined;
-  
-  // Keep Data URLs, HTTP URLs, and Blob URLs
-  if (imagePath.startsWith('data:') || imagePath.startsWith('http') || imagePath.startsWith('blob:')) {
-    return imagePath;
-  }
-
-  // Handle Windows paths
-  if (imagePath.includes('\\')) {
-     const filename = imagePath.split('\\').pop();
-     return filename ? `/images/${filename}` : imagePath;
-  }
-  
-  // Handle simple filenames or existing relative paths
-  if (!imagePath.includes('/')) {
-     return `/images/${imagePath}`;
-  }
-
-  // Ensure starts with / if it looks like a relative path
-  if (!imagePath.startsWith('/')) {
-     return `/${imagePath}`;
-  }
-  
-  return imagePath;
-};
+import { normalizeProductImage } from '@/utils/imageUtils';
+import { generateUUID } from '@/utils/uuid';
 
 
 
@@ -164,6 +138,8 @@ export const useStore = create<StoreState>()(
         };
       },
       isSidebarCollapsed: false,
+      isMobileMenuOpen: false,
+      toggleMobileMenu: () => set((state) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
       isInitialized: false,
       auditLogs: [],
       integrityIssues: [],
@@ -223,10 +199,33 @@ export const useStore = create<StoreState>()(
         logger.info(`Realtime change received for table: ${payload.tableName}, event: ${payload.eventType}`, payload, 'STORE');
         const state = get();
         switch (payload.tableName) {
-          case 'menu_items':
-            if (payload.eventType === 'INSERT') state.addDish(payload.new as unknown as Dish);
-            if (payload.eventType === 'UPDATE') state.updateDish(payload.new as unknown as Dish);
-            if (payload.eventType === 'DELETE') state.removeDish(payload.old.id as string);
+          case 'products':
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const p = payload.new as any;
+              const product: Product = {
+                id: p.id,
+                name: p.name,
+                description: p.description,
+                price: p.price,
+                category_id: p.category_id,
+                image_url: p.image,
+                tax_code: p.tax_code,
+                tax_percentage: p.tax_percentage,
+                is_active: p.is_available,
+                is_available_on_digital_menu: p.is_available_on_digital_menu,
+                preparation_time: p.tempo_preparo,
+                track_stock: p.controla_estoque,
+                stock_quantity: p.quantidade_estoque,
+                min_stock_quantity: p.quantidade_minima,
+                max_stock_quantity: p.quantidade_maxima,
+                unit: p.unidade_medida,
+                supplier_id: p.fornecedor_padrao_id
+              };
+              
+              if (payload.eventType === 'INSERT') state.addProduct(product);
+              if (payload.eventType === 'UPDATE') state.updateProduct(product);
+            }
+            if (payload.eventType === 'DELETE') state.removeProduct(payload.old.id as string);
             break;
           case 'categories':
             if (payload.eventType === 'INSERT') state.addCategory(payload.new as unknown as MenuCategory);
@@ -649,157 +648,6 @@ export const useStore = create<StoreState>()(
         get().addIntegrationLog({ type: 'cloud.categories.sync', message: 'Categorias atualizadas da cloud', details: { count: categories.length } });
       },
 
-      addDish: (dish) => {
-        const state = get();
-        
-        // 1. Basic Validation
-        if (!dish.name || dish.name.trim() === '') {
-          get().addNotification('error', 'Nome do produto é obrigatório.');
-          return;
-        }
-
-        if (dish.price < 0) {
-          get().addNotification('error', 'Preço do produto não pode ser negativo.');
-          return;
-        }
-
-        // 2. Category Validation
-        const categories = get().categories;
-        const { valid, resolvedId, reason } = validateDishCategory(dish, categories);
-        if (!valid) {
-          get().addNotification('error', reason || 'Categoria inválida');
-          logger.error('Falha ao adicionar produto: Categoria inválida', { dish, reason }, 'STORE');
-          return;
-        }
-
-        const finalDish: Dish = { 
-            ...dish, 
-            id: dish.id || `dish_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            categoryId: resolvedId!,
-            categoryName: categories.find(c => c.id === resolvedId)?.name || dish.categoryName,
-            image: normalizeDishImage(dish.image)
-        };
-
-        // 3. Real-time integrity check
-        const integrity = get().validateMenuIntegrity(categories, [...state.menu, finalDish]);
-        if (!integrity.isValid) {
-           logger.error('Integrity warning before adding dish', { issues: integrity.issues }, 'STORE');
-        }
-
-        try {
-          set((state) => ({ menu: [...state.menu, finalDish] }));
-          get().invalidateMenuCache();
-
-          // 4. Persist to SQL (CRITICAL)
-          databaseOperations.saveDish(finalDish).then(success => {
-              if (success) {
-                  logger.info('Produto guardado em SQL com sucesso', { dishId: finalDish.id }, 'DATABASE');
-              } else {
-                  logger.error('Falha na persistência SQL do produto', { dish: finalDish }, 'DATABASE');
-                  get().addNotification('error', 'Erro ao guardar produto na base de dados local.');
-              }
-          }).catch((e: unknown) => {
-              logger.error('Erro de execução na persistência SQL', { error: (e as Error).message }, 'DATABASE');
-          });
-
-          get().addAuditLog('DISH_ADDED', 'Dish', finalDish.id, { message: `Produto adicionado: ${finalDish.name}`, category_id: finalDish.category_id });
-          get().triggerSync();
-        } catch (e: unknown) {
-          logger.error('Critical error adding dish', { error: (e as Error).message }, 'STORE');
-          get().addNotification('error', 'Erro interno ao adicionar produto.');
-        }
-      },
-      updateDish: (dish) => {
-        const state = get();
-
-        // 1. Basic Validation
-        if (!dish.name || dish.name.trim() === '') {
-          get().addNotification('error', 'Nome do produto é obrigatório.');
-          return;
-        }
-
-        if (dish.price < 0) {
-          get().addNotification('error', 'Preço do produto não pode ser negativo.');
-          return;
-        }
-
-        // 2. Category Validation
-        const categories = get().categories;
-        const { valid, resolvedId, reason } = validateDishCategory(dish, categories);
-        if (!valid) {
-          get().addNotification('error', reason || 'Categoria inválida');
-          logger.error('Falha ao atualizar produto: Categoria inválida', { dish, reason }, 'STORE');
-          return;
-        }
-
-        const resolvedCategory = categories.find(c => c.id === resolvedId);
-        const finalDish: Dish = { 
-            ...dish, 
-            categoryId: resolvedId!,
-            categoryName: resolvedCategory ? resolvedCategory.name : dish.categoryName,
-            image: normalizeDishImage(dish.image)
-        };
-
-        // 3. Real-time integrity check
-        const nextMenu = state.menu.map(d => d.id === finalDish.id ? finalDish : d);
-        const integrity = get().validateMenuIntegrity(categories, nextMenu);
-        if (!integrity.isValid) {
-           logger.error('Integrity warning before updating dish', { issues: integrity.issues }, 'STORE');
-        }
-
-        try {
-          set({
-            menu: nextMenu
-          });
-          get().invalidateMenuCache();
-
-          // 4. Persist to SQL (CRITICAL)
-          databaseOperations.saveDish(finalDish).then(success => {
-              if (success) {
-                  logger.info('Produto atualizado em SQL com sucesso', { dishId: finalDish.id }, 'DATABASE');
-              } else {
-                  logger.error('Falha na atualização SQL do produto', { dish: finalDish }, 'DATABASE');
-                  get().addNotification('error', 'Erro ao atualizar produto na base de dados local.');
-              }
-          }).catch((e: unknown) => {
-              logger.error('Erro de execução na atualização SQL', { error: (e as Error).message }, 'DATABASE');
-          });
-
-          get().addAuditLog('DISH_UPDATED', 'Dish', finalDish.id, { message: `Produto atualizado: ${finalDish.name}` });
-          get().triggerSync();
-        } catch (e: unknown) {
-          logger.error('Critical error updating dish', { error: (e as Error).message }, 'STORE');
-          get().addNotification('error', 'Erro interno ao atualizar produto.');
-        }
-      },
-      removeDish: (id) => {
-        const state = get();
-        const dishToRemove = state.menu.find(d => d.id === id);
-        
-        if (!dishToRemove) return;
-
-        try {
-          set((state) => ({
-            menu: state.menu.filter(d => d.id !== id)
-          }));
-          
-          get().invalidateMenuCache();
-
-          // Delete from SQL
-          databaseOperations.deleteDish(id).catch((e: unknown) => {
-              logger.error('Falha ao eliminar produto no SQL', { id, error: (e as Error).message }, 'DATABASE');
-          });
-
-          get().addAuditLog('DISH_DELETED', 'Dish', id, { message: `Produto removido: ${dishToRemove.name}`, dishName: dishToRemove.name });
-
-          get().triggerSync();
-          logger.info(`Produto removido com sucesso: ${dishToRemove.name}`, { id }, 'STORE');
-        } catch (e: unknown) {
-          logger.error('Erro crítico ao remover produto', { id, error: (e as Error).message }, 'STORE');
-          get().addNotification('error', 'Erro interno ao remover produto.');
-        }
-      },
-
       addStockItem: (item) => {
         const state = get();
         
@@ -899,15 +747,6 @@ export const useStore = create<StoreState>()(
           return;
         }
 
-        // 1. Check if any dish is linked to this stock item
-        const linkedDishes = state.menu.filter(d => d.stockItemId === id);
-        if (linkedDishes.length > 0) {
-          const dishNames = linkedDishes.map(d => d.name).join(', ');
-          get().addNotification('warning', `Não é possível remover: este item está ligado aos produtos: ${dishNames}`);
-          logger.warn('Remoção de item de stock bloqueada por dependências', { id, linkedDishes: linkedDishes.length }, 'STORE');
-          return;
-        }
-
         try {
           set((state) => ({
             stock: state.stock.filter(s => s.id !== id)
@@ -985,115 +824,6 @@ export const useStore = create<StoreState>()(
       activeTableId: null,
       activeOrderId: null,
       menuCache: null,
-
-      getCachedMenu: () => {
-        const state = get();
-        const now = Date.now();
-        const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-        if (state.menuCache && (now - state.menuCache.lastUpdated < CACHE_TTL)) {
-          return { categories: state.menuCache.categories, menu: state.menuCache.menu };
-        }
-
-        // Update cache
-        const cache = {
-          lastUpdated: now,
-          categories: state.categories,
-          menu: state.menu
-        };
-        set({ menuCache: cache });
-        return { categories: state.categories, menu: state.menu };
-      },
-
-      invalidateMenuCache: () => set({ menuCache: null }),
-
-      importCloudItems: (payload: { categories: MenuCategory[]; dishes: Dish[]; preferCloud?: boolean }) => {
-        const preferCloud = !!payload.preferCloud;
-        const state = get();
-        const localCatById = new Map(state.categories.map(c => [c.id, c]));
-        const localDishById = new Map(state.menu.map(d => [d.id, d]));
-        const nextCategories: MenuCategory[] = [...state.categories];
-        const nextMenu: Dish[] = [...state.menu];
-        payload.categories.forEach(rc => {
-          const lc = localCatById.get(rc.id) as Record<string, any> | undefined;
-          if (!lc) {
-            nextCategories.push({
-              ...rc,
-              availableOnDigitalMenu: rc.availableOnDigitalMenu !== false
-            });
-          } else {
-            const keep = preferCloud ? rc : lc;
-            const merged: MenuCategory = {
-              ...(lc as MenuCategory),
-              ...(keep as MenuCategory)
-            };
-            const idx = nextCategories.findIndex(c => c.id === lc.id);
-            if (idx >= 0) nextCategories[idx] = merged;
-          }
-        });
-        payload.dishes.forEach(rd => {
-          const ld = localDishById.get(rd.id) as Record<string, any> | undefined;
-          if (!ld) {
-            nextMenu.push({
-              ...rd,
-              disponivel: rd.disponivel !== false
-            });
-          } else {
-            const keep = preferCloud ? rd : ld;
-            const merged: Dish = {
-              ...(ld as Dish),
-              ...(keep as Dish)
-            };
-            const idx = nextMenu.findIndex(d => d.id === ld.id);
-            if (idx >= 0) nextMenu[idx] = merged;
-          }
-        });
-        set({ categories: nextCategories, menu: nextMenu });
-        get().invalidateMenuCache();
-        get().addNotification('success', 'Itens importados da cloud');
-        get().triggerSync();
-      },
-
-      detectCloudConflicts: (payload: { categories: MenuCategory[]; dishes: Dish[] }) => {
-        const state = get();
-        const conflicts: { categories: MenuCategory[]; dishes: Dish[] } = { categories: [], dishes: [] };
-        const localCatById = new Map(state.categories.map(c => [c.id, c]));
-        const localDishById = new Map(state.menu.map(d => [d.id, d]));
-        payload.categories.forEach(rc => {
-          const lc = localCatById.get(rc.id) as Record<string, any> | undefined;
-          if (lc) {
-            const a = JSON.stringify({ name: lc.name, icon: lc.icon, parentId: lc.parentId, sort_order: lc.sort_order });
-            const b = JSON.stringify({ name: rc.name, icon: rc.icon, parentId: rc.parentId, sort_order: rc.sort_order });
-            if (a !== b) conflicts.categories.push(rc);
-          }
-        });
-        payload.dishes.forEach(rd => {
-          const ld = localDishById.get(rd.id) as Record<string, any> | undefined;
-          if (ld) {
-            const a = JSON.stringify({ name: ld.name, price: ld.price, categoryId: ld.categoryId, taxCode: ld.taxCode });
-            const b = JSON.stringify({ name: rd.name, price: rd.price, category_id: rd.category_id, taxCode: rd.taxCode });
-            if (a !== b) conflicts.dishes.push(rd);
-          }
-        });
-        return conflicts;
-      },
-
-      resolveCloudConflict: (itemType: 'category' | 'dish', id: string, decision: 'cloud' | 'local', cloudItem: MenuCategory | Dish) => {
-        const state = get();
-        if (itemType === 'category') {
-          const lc = state.categories.find(c => c.id === id);
-          if (!lc) return;
-          const merged = decision === 'cloud' ? { ...lc, ...(cloudItem as MenuCategory) } : lc;
-          set({ categories: state.categories.map(c => c.id === id ? merged : c) });
-        } else {
-          const ld = state.menu.find(d => d.id === id);
-          if (!ld) return;
-          const merged = decision === 'cloud' ? { ...ld, ...(cloudItem as Dish) } : ld;
-          set({ menu: state.menu.map(d => d.id === id ? merged : d) });
-        }
-        get().invalidateMenuCache();
-        get().triggerSync();
-      },
 
       // QR Code Menu State
       qrCodeConfig: null,
@@ -1273,7 +1003,7 @@ export const useStore = create<StoreState>()(
         const { currentUser, currentShiftId } = state;
         
         try {
-          const id = `ord-${Date.now()}-${Math.random().toString(36).substring(2, 4)}`;
+          const id = generateUUID();
           const newOrder: Order = {
             id, 
             subAccountName: name || 'Principal', 
@@ -1510,17 +1240,16 @@ export const useStore = create<StoreState>()(
         get().addNotification('success', 'Mesa transferida com sucesso.');
       },
 
-      addToOrder: (_tableId, dish, quantity = 1, notes = '', specificOrderId) => {
+      addToOrder: (_tableId, product, quantity = 1, notes = '', specificOrderId) => {
         const state = get();
         
         // 1. Stock Validation (only if adding)
-        if (quantity > 0 && dish.stockItemId) {
-             const stockItem = state.stock.find(s => s.id === dish.stockItemId);
-             if (stockItem) {
-                 if (stockItem.quantity < quantity) {
-                     state.addNotification('error', `Stock insuficiente para ${dish.name}. Restam: ${stockItem.quantity}`);
-                     return;
-                 }
+        if (quantity > 0 && product.track_stock) {
+             // New logic using internal stock fields
+             const currentStock = product.stock_quantity || 0;
+             if (currentStock < quantity) {
+                 state.addNotification('error', `Stock insuficiente para ${product.name}. Restam: ${currentStock}`);
+                 return;
              }
         }
 
@@ -1540,8 +1269,8 @@ export const useStore = create<StoreState>()(
             
             const order = { ...newOrders[existingOrderIndex] };
             const newItems = [...order.items];
-            const itemIndex = newItems.findIndex(i => i.dishId === dish.id && i.status === 'PENDING' && (i.notes || '') === (notes || ''));
-            const taxItem = (dish.price * quantity) * taxMultiplier;
+            const itemIndex = newItems.findIndex(i => i.productId === product.id && i.status === 'PENDING' && (i.notes || '') === (notes || ''));
+            const taxItem = (product.price * quantity) * taxMultiplier;
             
             if (itemIndex > -1) {
               const newQuantity = newItems[itemIndex].quantity + quantity;
@@ -1560,24 +1289,24 @@ export const useStore = create<StoreState>()(
                    quantity: newQuantity,
                    taxAmount: newItems[itemIndex].taxAmount + taxItem
                  };
-                 order.total += dish.price * quantity + taxItem;
+                 order.total += product.price * quantity + taxItem;
                  order.taxTotal += taxItem;
               }
             } else if (quantity > 0) {
               newItems.push({ 
-                id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                dishId: dish.id, 
-                name: dish.name,
-                price: dish.price,
+                id: generateUUID(),
+                productId: product.id, 
+                name: product.name,
+                price: product.price,
                 quantity, 
-                total: dish.price * quantity,
+                total: product.price * quantity,
                 status: 'PENDING', 
                 notes,
-                unitPrice: dish.price, 
+                unitPrice: product.price, 
                 taxAmount: taxItem,
-                taxCode: dish.taxCode || 'ISE'
+                taxCode: product.tax_code || 'ISE'
               });
-              order.total += dish.price * quantity + taxItem;
+              order.total += product.price * quantity + taxItem;
               order.taxTotal += taxItem;
             }
             order.items = newItems;
@@ -1596,13 +1325,18 @@ export const useStore = create<StoreState>()(
           });
 
           // 2. Stock Update (Deduct/Restore)
-          if (dish.stockItemId) {
-              get().updateStockQuantity(dish.stockItemId, -quantity);
+          if (product.track_stock) {
+              // Update product stock directly
+              const currentProduct = state.products.find(p => p.id === product.id);
+              if (currentProduct) {
+                  const newQty = (currentProduct.stock_quantity || 0) - quantity;
+                  state.updateProduct({ ...currentProduct, stock_quantity: newQty });
+              }
           }
 
-          logger.info(`Produto ${quantity > 0 ? 'adicionado ao' : 'removido do'} pedido`, { dish: dish.name, quantity, targetOrderId }, 'STORE');
+          logger.info(`Produto ${quantity > 0 ? 'adicionado ao' : 'removido do'} pedido`, { product: product.name, quantity, targetOrderId }, 'STORE');
         } catch (e: unknown) {
-          logger.error('Erro crítico ao adicionar ao pedido', { error: (e as Error).message, dish: dish.name }, 'STORE');
+          logger.error('Erro crítico ao adicionar ao pedido', { error: (e as Error).message, product: product.name }, 'STORE');
           state.addNotification('error', 'Erro interno ao atualizar itens do pedido.');
         }
       },
@@ -1619,10 +1353,11 @@ export const useStore = create<StoreState>()(
             
             if (!itemToRemove) return state;
 
-            // Restaurar stock se o item estiver associado a um stockItemId
-            const dish = state.menu.find(d => d.id === itemToRemove.dishId);
-            if (dish?.stockItemId) {
-              get().updateStockQuantity(dish.stockItemId, itemToRemove.quantity);
+            // Restaurar stock se o produto controlar stock
+            const product = state.products.find(p => p.id === itemToRemove.productId);
+            if (product?.track_stock) {
+              const newQty = (product.stock_quantity || 0) + itemToRemove.quantity;
+              state.updateProduct({ ...product, stock_quantity: newQty });
             }
 
             // Calculate amounts to subtract
@@ -1656,9 +1391,10 @@ export const useStore = create<StoreState>()(
           if (order) {
             // Restaurar stock para todos os itens da ordem
             order.items.forEach(item => {
-              const dish = state.menu.find(d => d.id === item.dishId);
-              if (dish?.stockItemId) {
-                get().updateStockQuantity(dish.stockItemId, item.quantity);
+              const product = state.products.find(p => p.id === item.productId);
+              if (product?.track_stock) {
+                 const newQty = (product.stock_quantity || 0) + item.quantity;
+                 state.updateProduct({ ...product, stock_quantity: newQty });
               }
             });
 
@@ -1856,9 +1592,10 @@ export const useStore = create<StoreState>()(
         // Restaurar stock para cada ordem removida
         ordersToRemove.forEach(order => {
           order.items.forEach(item => {
-            const dish = state.menu.find(d => d.id === item.dishId);
-            if (dish?.stockItemId) {
-              get().updateStockQuantity(dish.stockItemId, item.quantity);
+            const product = state.products.find(p => p.id === item.productId);
+            if (product?.track_stock) {
+               const newQty = (product.stock_quantity || 0) + item.quantity;
+               state.updateProduct({ ...product, stock_quantity: newQty });
             }
           });
         });
@@ -1879,11 +1616,11 @@ export const useStore = create<StoreState>()(
       addReservation: (res) => set((state) => ({ reservations: [...state.reservations, res] })),
       updateReservation: (res) => set((state) => ({ reservations: state.reservations.map(r => r.id === res.id ? res : r) })),
       removeReservation: (id) => set((state) => ({ reservations: state.reservations.filter(r => r.id !== id) })),
-      updateOrderItemNotes: (orderId, dishId, notes) => set((state) => {
+      updateOrderItemNotes: (orderId, productId, notes) => set((state) => {
         const orderIndex = state.activeOrders.findIndex(o => o.id === orderId);
         if (orderIndex === -1) return state;
         const newOrders = [...state.activeOrders];
-        const itemIndex = newOrders[orderIndex].items.findIndex(i => i.dishId === dishId && i.status === 'PENDING');
+        const itemIndex = newOrders[orderIndex].items.findIndex(i => i.productId === productId && i.status === 'PENDING');
         if (itemIndex > -1) {
           newOrders[orderIndex].items[itemIndex].notes = notes;
           return { activeOrders: newOrders };
@@ -3100,143 +2837,9 @@ export const useStore = create<StoreState>()(
         }
       },
 
-      validateMenuIntegrity: (categories: MenuCategory[], menu: Dish[]) => {
-        const issues: IntegrityIssue[] = [];
-        const catIds = new Set(categories.map(c => c.id));
-        const dishIds = new Set();
-        
-        const createIssue = (msg: string, entityType: IntegrityIssue['entityType'], entityId?: string, severity: IntegrityIssue['severity'] = 'MEDIUM'): IntegrityIssue => ({
-          id: `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          type: 'INTEGRITY_CHECK',
-          severity,
-          message: msg,
-          entityType,
-          entityId,
-          timestamp: Date.now(),
-          isResolved: false
-        });
+      // Function removed (duplicates MenuSlice)
 
-        // 1. Validar Categorias
-        categories.forEach(c => {
-          if (!c.id) issues.push(createIssue(`Categoria "${c.name}" sem ID.`, 'CATEGORY', undefined, 'HIGH'));
-          if (!c.name) issues.push(createIssue(`Categoria com ID ${c.id} sem nome.`, 'CATEGORY', c.id, 'HIGH'));
-          
-          // Prevenção de loops em hierarquia
-          if (c.parent_id === c.id) {
-            issues.push(createIssue(`Loop de referência detectado na categoria ${c.name}.`, 'CATEGORY', c.id, 'CRITICAL'));
-          }
-        });
-
-        // 2. Validar Produtos
-        menu.forEach(d => {
-          if (!d.id) issues.push(createIssue(`Produto "${d.name}" sem ID.`, 'DISH', undefined, 'HIGH'));
-          if (dishIds.has(d.id)) issues.push(createIssue(`ID de produto duplicado: ${d.id} (${d.name}).`, 'DISH', d.id, 'CRITICAL'));
-          dishIds.add(d.id);
-
-          if (!d.category_id) {
-            issues.push(createIssue(`Produto "${d.name}" sem categoria associada.`, 'DISH', d.id, 'MEDIUM'));
-          } else if (!catIds.has(d.category_id)) {
-            issues.push(createIssue(`Produto "${d.name}" refere categoria inexistente (ID: ${d.category_id}).`, 'DISH', d.id, 'HIGH'));
-          }
-
-          if (d.price < 0) issues.push(createIssue(`Produto "${d.name}" com preço negativo.`, 'DISH', d.id, 'HIGH'));
-        });
-
-        return {
-          isValid: issues.length === 0,
-          issues
-        };
-      },
-
-      runIntegrityDiagnostics: async () => {
-        set({ isDiagnosing: true });
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          const state = get();
-          const issues: IntegrityIssue[] = [];
-          
-          // 1. Verificar pratos sem categoria válida
-          const invalidDishes = state.menu.filter(d => !state.categories.find(c => c.id === d.categoryId));
-          if (invalidDishes.length > 0) {
-            issues.push({
-              id: `issue-cat-${Date.now()}`,
-              type: 'INVALID_CATEGORY',
-              severity: 'HIGH',
-              message: `${invalidDishes.length} produtos sem categoria válida ou em categorias removidas.`,
-              entityType: 'DISH',
-              timestamp: Date.now(),
-              isResolved: false,
-              data: { ids: invalidDishes.map(d => d.id) }
-            });
-          }
-
-          // 2. Verificar categorias duplicadas ou sem ID
-          const seenCatIds = new Set();
-          const seenCatNames = new Set();
-          const catIssues = state.categories.filter(c => {
-            const isDupId = seenCatIds.has(c.id);
-            const isDupName = seenCatNames.has(c.name.toLowerCase());
-            const isInvalidId = !c.id || c.id === 'undefined' || c.id === 'null';
-            seenCatIds.add(c.id);
-            seenCatNames.add(c.name.toLowerCase());
-            return isDupId || isDupName || isInvalidId;
-          });
-
-          if (catIssues.length > 0) {
-            issues.push({
-              id: `issue-cat-dup-${Date.now()}`,
-              type: 'INVALID_CATEGORY',
-              severity: 'MEDIUM',
-              message: `${catIssues.length} categorias com problemas de ID ou nome duplicado.`,
-              entityType: 'CATEGORY',
-              timestamp: Date.now(),
-              isResolved: false,
-              data: { ids: catIssues.map(c => c.id) }
-            });
-          }
-
-          // 3. Verificar pratos sem imagem
-          const noImageDishes = state.menu.filter(d => !d.image);
-          if (noImageDishes.length > 0) {
-            issues.push({
-              id: `issue-img-${Date.now()}`,
-              type: 'NO_IMAGE',
-              severity: 'LOW',
-              message: `${noImageDishes.length} produtos sem imagem definida.`,
-              entityType: 'DISH',
-              timestamp: Date.now(),
-              isResolved: false
-            });
-          }
-
-          // 4. Verificar inconsistências de stock
-          const ghostStock = state.menu.filter(d => d.stockItemId && !state.stock.find(s => s.id === d.stockItemId));
-          if (ghostStock.length > 0) {
-            issues.push({
-              id: `issue-stock-${Date.now()}`,
-              type: 'GHOST_STOCK',
-              severity: 'MEDIUM',
-              message: `${ghostStock.length} produtos com referências de stock inválidas.`,
-              entityType: 'STOCK',
-              timestamp: Date.now(),
-              isResolved: false,
-              data: { ids: ghostStock.map(d => d.id) }
-            });
-          }
-
-          set({ integrityIssues: issues });
-          if (issues.length === 0) {
-            get().addNotification('success', 'Nenhuma inconsistência detectada no inventário!');
-          } else {
-            get().addNotification('warning', `${issues.length} problemas de integridade encontrados.`);
-          }
-        } catch (e: unknown) {
-          console.error("Integrity diagnostic failed:", e);
-          get().addNotification('error', 'Falha ao executar diagnóstico.');
-        } finally {
-          set({ isDiagnosing: false });
-        }
-      },
+      // Function removed (duplicates MenuSlice)
 
       performSafeCleanup: async () => {
         try {
@@ -3636,38 +3239,27 @@ export const useStore = create<StoreState>()(
               return def;
             };
 
-            const repairedDishes = currentDishes.map(d => {
-              let dish = { ...d };
-              const normalized = normalizeDishImage(d.image);
-              if (normalized !== d.image) {
-                  dish.image = normalized;
+            const repairedProducts = currentDishes.map(p => {
+              let product = { ...p };
+              const normalized = normalizeProductImage(p.image_url);
+              if (normalized !== p.image_url) {
+                  product.image_url = normalized;
                   fixedCount++;
               }
 
-              logger.debug('Processing dish for integrity repair', { dishId: dish.id, currentCategoryId: dish.categoryId, currentCategoryName: dish.categoryName });
-              const cid = String(dish.categoryId || '').trim();
-              if (cid && validCatIds.has(cid)) return dish;
-              logger.debug('Invalid categoryId found, attempting to repair by name', { dishId: dish.id, categoryId: cid, categoryName: dish.categoryName });
-              const byName = findByName(dish.categoryName);
-              if (byName) { 
-                logger.debug('Category found by name, repairing dish', { dishId: dish.id, oldCategoryId: cid, newCategoryId: byName.id });
-                fixedCount++; return { ...dish, categoryId: byName.id }; 
-              }
-              const slugMatch = findByName(cid.replace(/_/g, ' '));
-              if (slugMatch) { 
-                logger.debug('Category found by slug match, repairing dish', { dishId: dish.id, oldCategoryId: cid, newCategoryId: slugMatch.id });
-                fixedCount++; return { ...dish, categoryId: slugMatch.id }; 
-              }
+              const cid = String(product.category_id || '').trim();
+              if (cid && validCatIds.has(cid)) return product;
+
               const def = ensureDefaultCategory();
-              logger.debug('No category found by name or slug, assigning default category', { dishId: dish.id, defaultCategoryId: def.id });
+              logger.debug('No valid category found, assigning default category', { productId: product.id, defaultCategoryId: def.id });
               fixedCount++;
-              return { ...dish, categoryId: def.id };
+              return { ...product, category_id: def.id };
             });
 
             if (fixedCount > 0) {
-              set({ menu: repairedDishes });
-              logger.warn('Dish→Category mapping repaired during initialization', { fixedCount, repairedDishes }, 'STORE');
-              backupService.autoBackup(get().categories, repairedDishes);
+              set({ menu: repairedProducts });
+              logger.warn('Product→Category mapping repaired during initialization', { fixedCount, repairedProducts }, 'STORE');
+              backupService.autoBackup(get().categories, repairedProducts);
             }
           } catch (integError) {
             logger.error('Initialization integrity fix failed', { error: (integError as Error).message }, 'STORE');

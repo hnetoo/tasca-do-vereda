@@ -3,29 +3,29 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { logger } from '@/services/logger';
-import { Dish } from '@/types';
+import { Product } from '@/types';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Utensils, Copy } from 'lucide-react';
 
 const Products = () => {
-  const { menu, categories, addDish, updateDish, removeDish, setMenu } = useStore();
+  const { products, categories, addProduct, updateProduct, removeProduct, setProducts } = useStore();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('TODOS');
   
   // Modal states
-  const [isDishModalOpen, setIsDishModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
 
-  const [dishForm, setDishForm] = useState<Partial<Dish>>({
+  const [productForm, setProductForm] = useState<Partial<Product>>({
     name: '',
     description: '',
     price: 0,
     category_id: '',
-    image: '',
-    availableOnDigitalMenu: true,
-    taxCode: 'NOR',
-    stockItemId: ''
+    image_url: '',
+    is_available_on_digital_menu: true,
+    tax_code: 'NOR',
+    is_active: true
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,35 +37,34 @@ const Products = () => {
     };
   }, []);
 
-  const filteredMenu = menu.filter(dish => {
-    const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'TODOS' || String(dish.category_id) === String(selectedCategory);
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'TODOS' || String(product.category_id) === String(selectedCategory);
     return matchesSearch && matchesCategory;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const handleOpenDishModal = (dish?: Dish) => {
-    if (dish) {
-      setEditingId(dish.id);
-      setDishForm({
-        ...dish,
-        availableOnDigitalMenu: dish.availableOnDigitalMenu !== false,
-        stockItemId: dish.stockItemId || '',
-        category_id: dish.category_id // Ensure category_id is used when editing
+  const handleOpenProductModal = (product?: Product) => {
+    if (product) {
+      setEditingId(product.id);
+      setProductForm({
+        ...product,
+        is_available_on_digital_menu: product.is_available_on_digital_menu !== false,
+        category_id: product.category_id // Ensure category_id is used when editing
       });
     } else {
       setEditingId(null);
-      setDishForm({
+      setProductForm({
         name: '',
         description: '',
         price: 0,
         category_id: categories[0]?.id || '',
-        image: '',
-        availableOnDigitalMenu: true,
-        taxCode: 'NOR',
-        stockItemId: ''
+        image_url: '',
+        is_available_on_digital_menu: true,
+        tax_code: 'NOR',
+        is_active: true
       });
     }
-    setIsDishModalOpen(true);
+    setIsProductModalOpen(true);
   };
 
   const compressImage = (base64: string): Promise<string> => {
@@ -104,11 +103,11 @@ const Products = () => {
     });
   };
 
-  const handleSubmitDish = async (e: React.FormEvent) => {
+  const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dishForm.name || !dishForm.price || !dishForm.category_id) return;
+    if (!productForm.name || !productForm.price || !productForm.category_id) return;
 
-    let finalImage = dishForm.image;
+    let finalImage = productForm.image_url;
 
     // Auto-compress image if it's a new large base64 string
     if (finalImage && finalImage.startsWith('data:image') && finalImage.length > 200000) {
@@ -122,50 +121,52 @@ const Products = () => {
        }
     }
 
-    const selectedCat = categories.find(c => c.id === dishForm.category_id);
-    const dishData = {
-      ...dishForm,
-      image: finalImage,
-      price: Number(dishForm.price),
-      availableOnDigitalMenu: dishForm.availableOnDigitalMenu ?? true,
-      categoryName: selectedCat?.name || ''
-    } as Dish;
+    const selectedCat = categories.find(c => c.id === productForm.category_id);
+    const productData = {
+      ...productForm,
+      image_url: finalImage,
+      price: Number(productForm.price),
+      is_available_on_digital_menu: productForm.is_available_on_digital_menu ?? true,
+      // categoryName: selectedCat?.name || '' // Not needed in Product type
+    } as Product;
 
     if (editingId) {
-      const existing = menu.find(d => d.id === editingId);
-      const changedCategory = existing && existing.category_id !== dishData.category_id;
+      const existing = products.find(p => p.id === editingId);
+      const changedCategory = existing && existing.category_id !== productData.category_id;
       if (changedCategory) {
         const ok = confirm(`Confirma mover "${existing?.name}" para a categoria "${selectedCat?.name}"?`);
         if (!ok) return;
       }
-      updateDish(dishData);
-      setIsDishModalOpen(false);
+      updateProduct(productData);
+      setIsProductModalOpen(false);
     } else {
-      const newDish = {
-        ...dishData,
-        id: dishData.id || Math.random().toString(36).substr(2, 9)
+      const newProduct = {
+        ...productData,
+        id: productData.id || Math.random().toString(36).substr(2, 9),
+        is_active: true
       };
-      addDish(newDish);
-      setIsDishModalOpen(false);
-      setDishForm({
+      addProduct(newProduct);
+      setIsProductModalOpen(false);
+      setProductForm({
         name: '',
         description: '',
         price: 0,
-        category_id: dishForm.category_id, 
-        image: '',
-        availableOnDigitalMenu: true,
-        taxCode: 'NOR'
+        category_id: productForm.category_id, 
+        image_url: '',
+        is_available_on_digital_menu: true,
+        tax_code: 'NOR',
+        is_active: true
       });
     }
   };
 
-  const handleDuplicateDish = (dish: Dish) => {
-    const newDish = {
-      ...dish,
-      name: `${dish.name} (Cópia)`,
+  const handleDuplicateProduct = (product: Product) => {
+    const newProduct = {
+      ...product,
+      name: `${product.name} (Cópia)`,
       id: Math.random().toString(36).substr(2, 9)
     };
-    addDish(newDish as Dish);
+    addProduct(newProduct as Product);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,7 +174,7 @@ const Products = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setDishForm(prev => ({ ...prev, image: reader.result as string }));
+        setProductForm(prev => ({ ...prev, image_url: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
@@ -186,23 +187,23 @@ const Products = () => {
     let count = 0;
     
     try {
-      const updatedMenu = await Promise.all(menu.map(async (dish) => {
-        if (dish.image && dish.image.startsWith('data:image') && dish.image.length > 200000) {
+      const updatedProducts = await Promise.all(products.map(async (product) => {
+        if (product.image_url && product.image_url.startsWith('data:image') && product.image_url.length > 200000) {
            try {
-             const compressed = await compressImage(dish.image);
-             if (compressed.length < dish.image.length) {
+             const compressed = await compressImage(product.image_url);
+             if (compressed.length < product.image_url.length) {
                count++;
-               return { ...dish, image: compressed };
+               return { ...product, image_url: compressed };
              }
            } catch (e) {
-             console.error(`Error compressing image for ${dish.name}`, e);
+             console.error(`Error compressing image for ${product.name}`, e);
            }
         }
-        return dish;
+        return product;
       }));
       
       if (count > 0) {
-        setMenu(updatedMenu);
+        setProducts(updatedProducts);
         alert(`${count} imagens foram otimizadas com sucesso! O menu digital deve sincronizar mais rápido agora.`);
       } else {
         alert('As imagens já estão otimizadas.');
@@ -241,7 +242,7 @@ const Products = () => {
              {isOptimizing ? 'Otimizando...' : 'Otimizar Fotos'}
            </button>
           <button 
-            onClick={() => handleOpenDishModal()}
+            onClick={() => handleOpenProductModal()}
             className="bg-primary text-black px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-glow hover:scale-105 transition-all font-black uppercase text-xs tracking-widest"
           >
             <Plus size={18} />
@@ -275,18 +276,18 @@ const Products = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-          {filteredMenu.map((dish, index) => (
-            <div key={`${dish.id}-${index}`} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
+          {filteredProducts.map((product, index) => (
+            <div key={`${product.id}-${index}`} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
               <div className="flex items-start gap-4">
                 <div className="w-20 h-20 rounded-2xl bg-black/30 overflow-hidden shrink-0 border border-white/5 relative">
-                  {dish.image ? (
-                    <img src={dish.image} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-600">
                       <Utensils size={24} />
                     </div>
                   )}
-                  {!dish.availableOnDigitalMenu && (
+                  {!product.is_available_on_digital_menu && (
                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                         <span className="text-[8px] font-black text-white uppercase bg-red-500/80 px-2 py-1 rounded">Oculto</span>
                      </div>
@@ -294,20 +295,20 @@ const Products = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-bold text-white text-sm truncate pr-2" title={dish.name}>{dish.name}</h3>
-                    <span className="text-primary font-mono font-bold text-xs whitespace-nowrap">{formatKz(dish.price)}</span>
+                    <h3 className="font-bold text-white text-sm truncate pr-2" title={product.name}>{product.name}</h3>
+                    <span className="text-primary font-mono font-bold text-xs whitespace-nowrap">{formatKz(product.price)}</span>
                   </div>
-                  <p className="text-slate-400 text-[10px] line-clamp-2 italic mb-4 min-h-[30px]">{dish.description}</p>
+                  <p className="text-slate-400 text-[10px] line-clamp-2 italic mb-4 min-h-[30px]">{product.description}</p>
                   <div className="flex gap-2">
-                    <button onClick={() => handleOpenDishModal(dish)} className="flex-1 py-2 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">Editar</button>
-                    <button onClick={() => handleDuplicateDish(dish)} className="w-10 py-2 rounded-lg border border-blue-500/10 text-blue-500/50 hover:bg-blue-500 hover:text-white transition-all" title="Duplicar"><Copy size={14} className="mx-auto" /></button>
-                    <button onClick={() => removeDish(dish.id)} className="w-10 py-2 rounded-lg border border-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} className="mx-auto" /></button>
+                    <button onClick={() => handleOpenProductModal(product)} className="flex-1 py-2 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">Editar</button>
+                    <button onClick={() => handleDuplicateProduct(product)} className="w-10 py-2 rounded-lg border border-blue-500/10 text-blue-500/50 hover:bg-blue-500 hover:text-white transition-all" title="Duplicar"><Copy size={14} className="mx-auto" /></button>
+                    <button onClick={() => removeProduct(product.id)} className="w-10 py-2 rounded-lg border border-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} className="mx-auto" /></button>
                   </div>
                 </div>
               </div>
             </div>
           ))}
-          {filteredMenu.length === 0 && (
+          {filteredProducts.length === 0 && (
             <div className="col-span-full py-20 text-center">
               <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
                 <Search size={32} />
@@ -319,7 +320,7 @@ const Products = () => {
       </div>
 
       {/* Modal de Produto */}
-      {isDishModalOpen && (
+      {isProductModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-slate-900 w-full max-w-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
@@ -327,21 +328,21 @@ const Products = () => {
                 {editingId ? <Edit2 size={20} className="text-primary" /> : <Plus size={20} className="text-primary" />}
                 {editingId ? 'Editar Produto' : 'Novo Produto'}
               </h3>
-              <button onClick={() => setIsDishModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={() => setIsProductModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X size={24} />
               </button>
             </div>
             
             <div className="p-8 overflow-y-auto custom-scrollbar">
-              <form onSubmit={handleSubmitDish} className="space-y-6">
+              <form onSubmit={handleSubmitProduct} className="space-y-6">
                 <div className="flex gap-6">
                   <div className="w-1/3 space-y-4">
                     <div 
                       onClick={() => fileInputRef.current?.click()}
                       className="aspect-square rounded-2xl border-2 border-dashed border-white/20 hover:border-primary/50 cursor-pointer flex flex-col items-center justify-center gap-2 bg-black/20 group transition-all overflow-hidden relative"
                     >
-                      {dishForm.image ? (
-                        <img src={dishForm.image} alt="Preview" className="w-full h-full object-cover" />
+                      {productForm.image_url ? (
+                        <img src={productForm.image_url} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
                         <>
                           <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -368,8 +369,8 @@ const Products = () => {
                         type="text" 
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-primary focus:bg-white/10 outline-none transition-all font-bold"
                         placeholder="Ex: Bitoque à Casa"
-                        value={dishForm.name}
-                        onChange={e => setDishForm({...dishForm, name: e.target.value})}
+                        value={productForm.name}
+                        onChange={e => setProductForm({...productForm, name: e.target.value})}
                       />
                     </div>
 
@@ -382,8 +383,8 @@ const Products = () => {
                           min="0"
                           className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-primary focus:bg-white/10 outline-none transition-all font-mono"
                           placeholder="0.00"
-                          value={dishForm.price}
-                          onChange={e => setDishForm({...dishForm, price: parseFloat(e.target.value)})}
+                          value={productForm.price}
+                          onChange={e => setProductForm({...productForm, price: parseFloat(e.target.value)})}
                         />
                       </div>
                       <div className="space-y-2">
@@ -391,8 +392,8 @@ const Products = () => {
                         <select 
                           required
                           className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-primary focus:bg-white/10 outline-none transition-all appearance-none cursor-pointer"
-                          value={dishForm.category_id}
-                          onChange={e => setDishForm({...dishForm, category_id: e.target.value})}
+                          value={productForm.category_id}
+                          onChange={e => setProductForm({...productForm, category_id: e.target.value})}
                         >
                           <option value="" disabled>Selecione...</option>
                           {categories.map(cat => (
@@ -409,8 +410,8 @@ const Products = () => {
                   <textarea 
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-primary focus:bg-white/10 outline-none transition-all resize-none h-24"
                     placeholder="Descreva o prato..."
-                    value={dishForm.description}
-                    onChange={e => setDishForm({...dishForm, description: e.target.value})}
+                    value={productForm.description}
+                    onChange={e => setProductForm({...productForm, description: e.target.value})}
                   />
                 </div>
 
@@ -423,8 +424,8 @@ const Products = () => {
                     <input 
                       type="checkbox" 
                       className="sr-only peer"
-                      checked={dishForm.availableOnDigitalMenu}
-                      onChange={e => setDishForm({...dishForm, availableOnDigitalMenu: e.target.checked})}
+                      checked={productForm.is_available_on_digital_menu}
+                      onChange={e => setProductForm({...productForm, is_available_on_digital_menu: e.target.checked})}
                     />
                     <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>

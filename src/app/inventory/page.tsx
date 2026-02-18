@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { logger } from '@/services/logger';
 import { buildFeed, downloadFeed } from '@/services/qrFeedService';
 import { publishFeedHybrid } from '@/services/feedPublisher';
-import { Dish, MenuCategory, StockItem } from '@/types';
+import { Product, MenuCategory, StockItem } from '@/types';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Link as LinkIcon, AlertCircle, Check, Tag, Box, Utensils, Grid3X3, Coffee, Pizza, Beer, IceCream, Copy, RefreshCw } from 'lucide-react';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
@@ -14,13 +14,13 @@ import { AVAILABLE_ICONS } from '@/constants';
 
 const InventoryContent = () => {
   const { 
-    menu, 
+    products, 
     categories, 
     stock, 
     suppliers,
-    addDish, 
-    updateDish, 
-    removeDish, 
+    addProduct, 
+    updateProduct, 
+    removeProduct, 
     addCategory, 
     removeCategory, 
     updateCategory, 
@@ -28,7 +28,7 @@ const InventoryContent = () => {
     updateStockItem,
     removeStockItem,
     updateStockQuantity,
-    setMenu, 
+    setProducts, 
     addNotification, 
     scanAndRecoverCategories, 
     triggerSync,
@@ -63,9 +63,8 @@ const InventoryContent = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('TODOS');
   
   // Modal states
-  const [isDishModalOpen, setIsDishModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
-  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Optimization state
@@ -73,16 +72,19 @@ const InventoryContent = () => {
   const [isRepairing, setIsRepairing] = useState(false);
 
   // Form states
-  const [dishForm, setDishForm] = useState<Partial<Dish>>({
+  const [productForm, setProductForm] = useState<Partial<Product>>({
     name: '',
     description: '',
     price: 0,
     category_id: '',
-    image: '',
-    availableOnDigitalMenu: true,
-    taxCode: 'NOR',
-    stockItemId: '',
-    fornecedorPadraoId: ''
+    image_url: '',
+    is_available_on_digital_menu: true,
+    tax_code: 'NOR',
+    supplier_id: '',
+    track_stock: false,
+    stock_quantity: 0,
+    min_stock_quantity: 5,
+    unit: 'un'
   });
 
   const [catForm, setCatForm] = useState<Partial<MenuCategory>>({
@@ -90,13 +92,6 @@ const InventoryContent = () => {
     icon: 'Grid3X3',
     parentId: '',
     availableOnDigitalMenu: true
-  });
-
-  const [stockForm, setStockForm] = useState<Partial<StockItem>>({
-    name: '',
-    quantity: 0,
-    unit: 'un',
-    minThreshold: 5
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,36 +116,42 @@ const InventoryContent = () => {
   }, [activeTab]);
 
   // Filtered lists
-  const filteredMenu = menu.filter(dish => {
-    const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'TODOS' || String(dish.category_id) === String(selectedCategory);
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'TODOS' || String(product.category_id) === String(selectedCategory);
     return matchesSearch && matchesCategory;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const handleOpenDishModal = (dish?: Dish) => {
-    if (dish) {
-      setEditingId(dish.id);
-      setDishForm({
-        ...dish,
-        availableOnDigitalMenu: dish.availableOnDigitalMenu !== false,
-        stockItemId: dish.stockItemId || '',
-        fornecedorPadraoId: dish.fornecedorPadraoId || ''
+  const handleOpenProductModal = (product?: Product) => {
+    if (product) {
+      setEditingId(product.id);
+      setProductForm({
+        ...product,
+        is_available_on_digital_menu: product.is_available_on_digital_menu !== false,
+        supplier_id: product.supplier_id || '',
+        track_stock: product.track_stock || false,
+        stock_quantity: product.stock_quantity || 0,
+        min_stock_quantity: product.min_stock_quantity || 5,
+        unit: product.unit || 'un'
       });
     } else {
       setEditingId(null);
-      setDishForm({
+      setProductForm({
         name: '',
         description: '',
         price: 0,
         category_id: categories[0]?.id || '',
-        image: '',
-        availableOnDigitalMenu: true,
-        taxCode: 'NOR',
-        stockItemId: '',
-        fornecedorPadraoId: ''
+        image_url: '',
+        is_available_on_digital_menu: true,
+        tax_code: 'NOR',
+        supplier_id: '',
+        track_stock: false,
+        stock_quantity: 0,
+        min_stock_quantity: 5,
+        unit: 'un'
       });
     }
-    setIsDishModalOpen(true);
+    setIsProductModalOpen(true);
   };
 
   const handleOpenCatModal = (cat?: MenuCategory) => {
@@ -168,29 +169,11 @@ const InventoryContent = () => {
     setIsCatModalOpen(true);
   };
 
-  const handleOpenStockModal = (item?: StockItem) => {
-    if (item) {
-      setEditingId(item.id);
-      setStockForm({
-        ...item
-      });
-    } else {
-      setEditingId(null);
-      setStockForm({
-        name: '',
-        quantity: 0,
-        unit: 'un',
-        minThreshold: 5
-      });
-    }
-    setIsStockModalOpen(true);
-  };
-
-  const handleSubmitDish = async (e: React.FormEvent) => {
+  const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dishForm.name || !dishForm.price || !dishForm.category_id) return;
+    if (!productForm.name || !productForm.price || !productForm.category_id) return;
 
-    let finalImage = dishForm.image;
+    let finalImage = productForm.image_url;
 
     // Auto-compress image if it's a new large base64 string
     if (finalImage && finalImage.startsWith('data:image') && finalImage.length > 200000) {
@@ -204,45 +187,53 @@ const InventoryContent = () => {
        }
     }
 
-    const selectedCat = categories.find(c => c.id === dishForm.category_id);
-    const dishData = {
-      ...dishForm,
-      image: finalImage,
-      price: Number(dishForm.price),
-      availableOnDigitalMenu: dishForm.availableOnDigitalMenu ?? true,
-      categoryName: selectedCat?.name || '',
-      fornecedorPadraoId: dishForm.fornecedorPadraoId || ''
-    } as Dish;
+    const selectedCat = categories.find(c => c.id === productForm.category_id);
+    const productData = {
+      ...productForm,
+      id: editingId || productForm.id,
+      image_url: finalImage,
+      price: Number(productForm.price),
+      is_available_on_digital_menu: productForm.is_available_on_digital_menu ?? true,
+      category_id: selectedCat?.id || '',
+      supplier_id: productForm.supplier_id || '',
+      track_stock: productForm.track_stock || false,
+      stock_quantity: Number(productForm.stock_quantity || 0),
+      min_stock_quantity: Number(productForm.min_stock_quantity || 0),
+      unit: productForm.unit || 'un'
+    } as Product;
 
     if (editingId) {
-      const existing = menu.find(d => d.id === editingId);
-      const changedCategory = existing && existing.category_id !== dishData.category_id;
+      const existing = products.find(p => p.id === editingId);
+      const changedCategory = existing && existing.category_id !== productData.category_id;
       if (changedCategory) {
         const ok = confirm(`Confirma mover "${existing?.name}" para a categoria "${selectedCat?.name}"?`);
         if (!ok) return;
       }
-      logger.info('Atualizando produto', { dishId: editingId, name: dishData.name }, 'Inventory');
-      updateDish(dishData);
-      setIsDishModalOpen(false);
+      logger.info('Atualizando produto', { productId: editingId, name: productData.name }, 'Inventory');
+      updateProduct(productData);
+      setIsProductModalOpen(false);
     } else {
-      // Ensure ID generation for new dishes
-      const newDish = {
-        ...dishData,
-        id: dishData.id || `dish_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+      // Ensure ID generation for new products
+      const newProduct = {
+        ...productData,
+        id: productData.id || `product_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
       };
-      logger.info('Adicionando novo produto', { name: newDish.name }, 'Inventory');
-      addDish(newDish);
-      setIsDishModalOpen(false);
-      setDishForm({
+      logger.info('Adicionando novo produto', { name: newProduct.name }, 'Inventory');
+      addProduct(newProduct);
+      setIsProductModalOpen(false);
+      setProductForm({
         name: '',
         description: '',
         price: 0,
-        category_id: dishForm.category_id, 
-        image: '',
-        availableOnDigitalMenu: true,
-        taxCode: 'NOR',
-        stockItemId: '',
-        fornecedorPadraoId: ''
+        category_id: productForm.category_id, 
+        image_url: '',
+        is_available_on_digital_menu: true,
+        tax_code: 'NOR',
+        supplier_id: '',
+        track_stock: false,
+        stock_quantity: 0,
+        min_stock_quantity: 5,
+        unit: 'un'
       });
     }
   };
@@ -271,39 +262,13 @@ const InventoryContent = () => {
     setIsCatModalOpen(false);
   };
 
-  const handleSubmitStock = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stockForm.name) return;
-
-    const stockData = {
-      ...stockForm,
-      quantity: Number(stockForm.quantity || 0),
-      minThreshold: Number(stockForm.minThreshold || 0)
-    } as StockItem;
-
-    if (editingId) {
-      updateStockItem({ ...stockData, id: editingId });
-      logger.info('Item de stock atualizado', { id: editingId, name: stockData.name }, 'Inventory');
-    } else {
-      addStockItem(stockData);
-      logger.info('Novo item de stock adicionado', { name: stockData.name }, 'Inventory');
-    }
-    setIsStockModalOpen(false);
-  };
-
-  const handleDeleteStock = (id: string) => {
-    if (confirm('Tem a certeza que deseja remover este item de stock? Esta ação não pode ser desfeita.')) {
-      removeStockItem(id);
-    }
-  };
-
-  const handleDuplicateDish = (dish: Dish) => {
-    const newDish = {
-      ...dish,
-      name: `${dish.name} (Cópia)`,
+  const handleDuplicateProduct = (product: Product) => {
+    const newProduct = {
+      ...product,
+      name: `${product.name} (Cópia)`,
       id: Math.random().toString(36).substring(2, 11)
     };
-    addDish(newDish as Dish);
+    addProduct(newProduct as Product);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,7 +276,7 @@ const InventoryContent = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setDishForm(prev => ({ ...prev, image: reader.result as string }));
+        setProductForm(prev => ({ ...prev, image_url: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
@@ -371,24 +336,24 @@ const InventoryContent = () => {
     let count = 0;
     
     try {
-      const updatedMenu = await Promise.all(menu.map(async (dish) => {
-        if (dish.image && dish.image.startsWith('data:image') && dish.image.length > 200000) {
+      const updatedProducts = await Promise.all(products.map(async (product) => {
+        if (product.image_url && product.image_url.startsWith('data:image') && product.image_url.length > 200000) {
            try {
-             const compressed = await compressImage(dish.image);
+             const compressed = await compressImage(product.image_url);
              // Only update if compression actually reduced size
-             if (compressed.length < dish.image.length) {
+             if (compressed.length < product.image_url.length) {
                count++;
-               return { ...dish, image: compressed };
+               return { ...product, image_url: compressed };
              }
            } catch (e) {
-             console.error(`Error compressing image for ${dish.name}`, e);
+             console.error(`Error compressing image for ${product.name}`, e);
            }
         }
-        return dish;
+        return product;
       }));
       
       if (count > 0) {
-        setMenu(updatedMenu);
+        setProducts(updatedProducts);
         alert(`${count} imagens foram otimizadas com sucesso! O menu digital deve sincronizar mais rápido agora.`);
       } else {
         alert('As imagens já estão otimizadas.');
@@ -422,13 +387,13 @@ const InventoryContent = () => {
   };
 
   const handleExportFeed = () => {
-    const feed = buildFeed(categories, menu, useStore.getState().settings);
+    const feed = buildFeed(categories, products, useStore.getState().settings);
     downloadFeed(feed, 'menu_feed.json');
     addNotification('success', 'Feed JSON do menu exportado.');
   };
 
   const handlePublishFeed = async () => {
-    const res = await publishFeedHybrid(categories, menu, useStore.getState().settings);
+    const res = await publishFeedHybrid(categories, products, useStore.getState().settings);
     if (res.success) {
       addNotification('success', res.path ? `Feed JSON salvo em: ${res.path}` : 'Feed JSON salvo localmente');
     } else {
@@ -483,7 +448,7 @@ const InventoryContent = () => {
           )}
           <button 
             onClick={() => {
-              if (activeTab === 'menu') handleOpenDishModal();
+              if (activeTab === 'menu') handleOpenProductModal();
               else if (activeTab === 'categories') handleOpenCatModal();
               else if (activeTab === 'stock') handleOpenStockModal();
             }}
@@ -556,18 +521,18 @@ const InventoryContent = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-            {filteredMenu.map(dish => (
-              <div key={dish.id} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
+            {filteredProducts.map(product => (
+              <div key={product.id} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-2xl bg-black/30 overflow-hidden shrink-0 border border-white/5 relative">
-                    {dish.image ? (
-                      <img src={dish.image} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-600">
                         <Utensils size={24} />
                       </div>
                     )}
-                    {!dish.availableOnDigitalMenu && (
+                    {!product.is_available_on_digital_menu && (
                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                           <span className="text-[8px] font-black text-white uppercase bg-red-500/80 px-2 py-1 rounded">Oculto</span>
                        </div>
@@ -575,20 +540,20 @@ const InventoryContent = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-bold text-white text-sm truncate pr-2" title={dish.name}>{dish.name}</h3>
-                      <span className="text-primary font-mono font-bold text-xs whitespace-nowrap">{formatKz(dish.price)}</span>
+                      <h3 className="font-bold text-white text-sm truncate pr-2" title={product.name}>{product.name}</h3>
+                      <span className="text-primary font-mono font-bold text-xs whitespace-nowrap">{formatKz(product.price)}</span>
                     </div>
-                    <p className="text-slate-400 text-[10px] line-clamp-2 italic mb-4 min-h-[30px]">{dish.description}</p>
+                    <p className="text-slate-400 text-[10px] line-clamp-2 italic mb-4 min-h-[30px]">{product.description}</p>
                     <div className="flex gap-2">
-                      <button onClick={() => handleOpenDishModal(dish)} className="flex-1 py-2 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">Editar</button>
-                      <button onClick={() => handleDuplicateDish(dish)} className="w-10 py-2 rounded-lg border border-blue-500/10 text-blue-500/50 hover:bg-blue-500 hover:text-white transition-all" title="Duplicar"><Copy size={14} className="mx-auto" /></button>
-                      <button onClick={() => removeDish(dish.id)} className="w-10 py-2 rounded-lg border border-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} className="mx-auto" /></button>
+                      <button onClick={() => handleOpenProductModal(product)} className="flex-1 py-2 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">Editar</button>
+                      <button onClick={() => handleDuplicateProduct(product)} className="w-10 py-2 rounded-lg border border-blue-500/10 text-blue-500/50 hover:bg-blue-500 hover:text-white transition-all" title="Duplicar"><Copy size={14} className="mx-auto" /></button>
+                      <button onClick={() => removeProduct(product.id)} className="w-10 py-2 rounded-lg border border-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} className="mx-auto" /></button>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
-            {filteredMenu.length === 0 && (
+            {filteredProducts.length === 0 && (
               <div className="col-span-full py-20 text-center">
                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
                   <Search size={32} />
@@ -614,7 +579,7 @@ const InventoryContent = () => {
                 <div>
                    <h3 className="font-bold text-white text-lg tracking-tight leading-none">{cat.name}</h3>
                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                      {menu.filter(d => d.category_id === cat.id).length} Produtos
+                      {products.filter(d => d.category_id === cat.id).length} Produtos
                    </p>
                 </div>
               </div>
@@ -784,23 +749,22 @@ const InventoryContent = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-            {stock.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)).map(item => (
+            {products.filter(p => p.track_stock).filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)).map(item => (
               <div key={item.id} className="glass-panel p-6 rounded-[2rem] border border-white/5 flex flex-col gap-4 hover:border-primary/40 transition-all group">
                 <div className="flex justify-between items-start">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
                     <Box size={24} />
                   </div>
                   <div className="flex gap-1">
-                    <button onClick={() => handleOpenStockModal(item)} className="p-2 text-slate-400 hover:text-white transition-colors"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDeleteStock(item.id)} className="p-2 text-red-500/50 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                    <button onClick={() => handleOpenProductModal(item)} className="p-2 text-slate-400 hover:text-white transition-colors"><Edit2 size={16} /></button>
                   </div>
                 </div>
                 
                 <div>
                   <h3 className="font-bold text-white text-lg truncate mb-1">{item.name}</h3>
                   <div className="flex items-end gap-2">
-                    <span className={`text-2xl font-black ${item.quantity <= item.minThreshold ? 'text-red-500' : 'text-primary'}`}>
-                      {item.quantity}
+                    <span className={`text-2xl font-black ${(item.stock_quantity || 0) <= (item.min_stock_quantity || 0) ? 'text-red-500' : 'text-primary'}`}>
+                      {item.stock_quantity || 0}
                     </span>
                     <span className="text-slate-500 font-bold uppercase text-[10px] mb-1.5">{item.unit}</span>
                   </div>
@@ -809,18 +773,18 @@ const InventoryContent = () => {
                 <div className="pt-4 border-t border-white/5 flex flex-col gap-3">
                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                     <span className="text-slate-500">Mínimo Crítico</span>
-                    <span className="text-white">{item.minThreshold} {item.unit}</span>
+                    <span className="text-white">{item.min_stock_quantity || 0} {item.unit}</span>
                   </div>
                   
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => updateStockQuantity(item.id, -1)}
+                      onClick={() => updateProduct({...item, stock_quantity: Math.max(0, (item.stock_quantity || 0) - 1)})}
                       className="flex-1 py-2 bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-xl transition-all font-black text-lg"
                     >
                       -
                     </button>
                     <button 
-                      onClick={() => updateStockQuantity(item.id, 1)}
+                      onClick={() => updateProduct({...item, stock_quantity: (item.stock_quantity || 0) + 1})}
                       className="flex-1 py-2 bg-white/5 hover:bg-green-500/20 text-slate-400 hover:text-green-500 rounded-xl transition-all font-black text-lg"
                     >
                       +
@@ -829,47 +793,47 @@ const InventoryContent = () => {
                 </div>
               </div>
             ))}
-            {stock.length === 0 && (
+            {products.filter(p => p.track_stock).length === 0 && (
               <div className="col-span-full py-20 text-center">
                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
                   <Box size={32} />
                 </div>
-                <p className="text-slate-400">Nenhum item cadastrado no estoque.</p>
-                <button onClick={() => handleOpenStockModal()} className="mt-4 text-primary font-bold uppercase text-xs tracking-widest hover:underline">Adicionar Primeiro Item</button>
+                <p className="text-slate-400">Nenhum item com controlo de estoque ativo.</p>
+                <button onClick={() => handleOpenProductModal()} className="mt-4 text-primary font-bold uppercase text-xs tracking-widest hover:underline">Adicionar Primeiro Item</button>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Dish Modal */}
-      {isDishModalOpen && (
+      {/* Product Modal */}
+      {isProductModalOpen && (
         <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
           <div className="glass-panel rounded-[3rem] w-full max-w-2xl p-10 border border-white/10 shadow-2xl relative overflow-y-auto max-h-[90vh] no-scrollbar">
             <div className="flex justify-between items-center mb-8">
                <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">{editingId ? 'Editar Produto' : 'Novo Produto'}</h3>
-               <button onClick={() => setIsDishModalOpen(false)} className="text-slate-500 hover:text-white"><X /></button>
+               <button onClick={() => setIsProductModalOpen(false)} className="text-slate-500 hover:text-white"><X /></button>
             </div>
-            <form onSubmit={handleSubmitDish} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <form onSubmit={handleSubmitProduct} className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <div className="space-y-6">
                   <div className="space-y-4">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome do Prato</label>
-                    <input required type="text" placeholder="Ex: Bitoque da Casa" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" value={dishForm.name} onChange={e => setDishForm({...dishForm, name: e.target.value})} />
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome do Produto</label>
+                    <input required type="text" placeholder="Ex: Bitoque da Casa" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} />
                   </div>
                   
                   <div className="space-y-4">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Descrição</label>
-                    <textarea placeholder="Ingredientes e detalhes..." rows={3} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary resize-none" value={dishForm.description} onChange={e => setDishForm({...dishForm, description: e.target.value})} />
+                    <textarea placeholder="Ingredientes e detalhes..." rows={3} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary resize-none" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-4">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Preço (Kz)</label>
-                      <input required type="number" min="0" placeholder="0" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={dishForm.price} onChange={e => setDishForm({...dishForm, price: Number(e.target.value)})} />
+                      <input required type="number" min="0" placeholder="0" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.price} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
                     </div>
                     <div className="space-y-4">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
-                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={dishForm.category_id} onChange={e => setDishForm({...dishForm, category_id: e.target.value})}>
+                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.category_id} onChange={e => setProductForm({...productForm, category_id: e.target.value})}>
                       {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
                         <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                       ))}
@@ -878,27 +842,46 @@ const InventoryContent = () => {
                   </div>
 
                   <div className="space-y-4">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Item de Stock Associado (Controlo de Inventário)</label>
-                    <select 
-                      className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" 
-                      value={dishForm.stockItemId || ''} 
-                      onChange={e => setDishForm({...dishForm, stockItemId: e.target.value})}
-                    >
-                      <option value="" className="bg-slate-900 text-slate-400">-- Sem controlo de stock --</option>
-                      {stock.slice().sort((a, b) => a.name.localeCompare(b.name)).map(item => (
-                        <option key={item.id} value={item.id} className="bg-slate-900">
-                          {item.name} ({item.quantity} {item.unit})
-                        </option>
-                      ))}
-                    </select>
+                     <div 
+                        className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer hover:bg-white/10 transition-all select-none"
+                        onClick={() => setProductForm(prev => ({...prev, track_stock: !prev.track_stock}))}
+                     >
+                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${productForm.track_stock ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
+                           {productForm.track_stock && <Check size={14} />}
+                        </div>
+                        <span className="text-xs font-bold text-white uppercase tracking-wide">Controlar Estoque</span>
+                     </div>
                   </div>
+
+                  {productForm.track_stock && (
+                    <div className="grid grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="space-y-4">
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Qtd</label>
+                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.stock_quantity} onChange={e => setProductForm({...productForm, stock_quantity: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Mín</label>
+                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.min_stock_quantity} onChange={e => setProductForm({...productForm, min_stock_quantity: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-4">
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Un</label>
+                        <select className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.unit} onChange={e => setProductForm({...productForm, unit: e.target.value})}>
+                           <option value="un">un</option>
+                           <option value="kg">kg</option>
+                           <option value="lt">lt</option>
+                           <option value="cx">cx</option>
+                           <option value="pct">pct</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-4">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Fornecedor Padrão</label>
                     <select 
                       className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" 
-                      value={dishForm.fornecedorPadraoId || ''} 
-                      onChange={e => setDishForm({...dishForm, fornecedorPadraoId: e.target.value})}
+                      value={productForm.supplier_id || ''} 
+                      onChange={e => setProductForm({...productForm, supplier_id: e.target.value})}
                     >
                       <option value="" className="bg-slate-900 text-slate-400">-- Selecione um fornecedor --</option>
                       {suppliers.filter(s => s.ativo).sort((a, b) => a.nome.localeCompare(b.nome)).map(s => (
@@ -912,10 +895,10 @@ const InventoryContent = () => {
                   <div className="space-y-4">
                      <div 
                         className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer hover:bg-white/10 transition-all select-none"
-                        onClick={() => setDishForm(prev => ({...prev, availableOnDigitalMenu: !prev.availableOnDigitalMenu}))}
+                        onClick={() => setProductForm(prev => ({...prev, is_available_on_digital_menu: !prev.is_available_on_digital_menu}))}
                      >
-                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${dishForm.availableOnDigitalMenu ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
-                           {dishForm.availableOnDigitalMenu && <Check size={14} />}
+                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${productForm.is_available_on_digital_menu ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
+                           {productForm.is_available_on_digital_menu && <Check size={14} />}
                         </div>
                         <span className="text-xs font-bold text-white uppercase tracking-wide">Visível no Menu Digital</span>
                      </div>
@@ -924,14 +907,14 @@ const InventoryContent = () => {
 
                <div className="flex flex-col h-full">
                  <div className="space-y-4 mb-6">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Imagem do Prato</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Imagem do Produto</label>
                     <div className="aspect-video rounded-3xl bg-black/40 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-all">
-                        {dishForm.image ? (
+                        {productForm.image_url ? (
                           <>
-                            <img src={dishForm.image} alt="Preview" className="w-full h-full object-cover" />
+                            <img src={productForm.image_url} alt="Preview" className="w-full h-full object-cover" />
                             <button 
                               type="button"
-                              onClick={(e) => { e.preventDefault(); setDishForm({...dishForm, image: ''}); }}
+                              onClick={(e) => { e.preventDefault(); setProductForm({...productForm, image_url: ''}); }}
                               className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-red-500 transition-colors"
                             >
                               <X size={14} />
@@ -969,8 +952,8 @@ const InventoryContent = () => {
                         type="text" 
                         placeholder="https://exemplo.com/imagem.jpg"
                         className="w-full p-4 pl-12 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary text-xs" 
-                        value={dishForm.image?.startsWith('data:') ? '' : dishForm.image} 
-                        onChange={e => setDishForm({...dishForm, image: e.target.value})} 
+                        value={productForm.image_url?.startsWith('data:') ? '' : productForm.image_url} 
+                        onChange={e => setProductForm({...productForm, image_url: e.target.value})} 
                       />
                     </div>
                  </div>
@@ -1065,49 +1048,7 @@ const InventoryContent = () => {
         </div>
       )}
 
-      {/* Stock Modal */}
-      {isStockModalOpen && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
-          <div className="glass-panel rounded-[3rem] w-full max-w-md p-10 border border-white/10 shadow-2xl relative text-center">
-            <div className="flex justify-between items-center mb-8">
-               <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">{editingId ? 'Editar Item' : 'Novo Item de Stock'}</h3>
-               <button onClick={() => setIsStockModalOpen(false)} className="text-slate-500 hover:text-white"><X /></button>
-            </div>
-            <form onSubmit={handleSubmitStock} className="space-y-6">
-               <div className="space-y-4 text-left">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome do Item</label>
-                  <input required type="text" placeholder="Ex: Batata Congelada" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" value={stockForm.name} onChange={e => setStockForm({...stockForm, name: e.target.value})} />
-               </div>
-
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-4 text-left">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Quantidade</label>
-                    <input required type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={stockForm.quantity} onChange={e => setStockForm({...stockForm, quantity: Number(e.target.value)})} />
-                  </div>
-                  <div className="space-y-4 text-left">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Unidade</label>
-                    <select className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={stockForm.unit} onChange={e => setStockForm({...stockForm, unit: e.target.value})}>
-                      <option value="un">Unidades (un)</option>
-                      <option value="kg">Quilos (kg)</option>
-                      <option value="lt">Litros (lt)</option>
-                      <option value="cx">Caixas (cx)</option>
-                      <option value="pct">Pacotes (pct)</option>
-                    </select>
-                  </div>
-               </div>
-
-               <div className="space-y-4 text-left">
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Stock Mínimo (Alerta)</label>
-                  <input required type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={stockForm.minThreshold} onChange={e => setStockForm({...stockForm, minThreshold: Number(e.target.value)})} />
-               </div>
-
-               <button type="submit" className="w-full py-5 bg-primary text-black rounded-[1.5rem] font-black uppercase tracking-widest shadow-glow flex items-center justify-center gap-3">
-                  <Save size={18} /> Guardar Item
-               </button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Stock Modal Removed */}
     </div>
   );
 };
