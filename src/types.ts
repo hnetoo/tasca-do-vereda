@@ -308,7 +308,8 @@ export interface StoreState {
   restoreFullFinancialBackup: () => Promise<boolean>;
   clearFinancialData: (reason: string, userId: UUID) => Promise<{ success: boolean; report: FinancialClearanceReport }>;
   correctPayment: (orderId: UUID, newPayments: OrderPayment[], reason: string) => Promise<boolean>;
-  getDailySalesAnalytics: (date: Date) => DailySalesAnalytics;
+  getDailySalesAnalytics: (days: number) => DailySalesAnalytics[];
+  getSalesForDate: (date: Date) => DailySalesAnalytics;
   getMenuAnalytics: (period: 'day' | 'week' | 'month') => MenuAnalytics[];
   getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
   syncFinancialMetricsToDashboard: () => Promise<void>;

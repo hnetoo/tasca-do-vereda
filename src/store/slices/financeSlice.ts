@@ -44,7 +44,8 @@ export interface FinanceSlice {
   restoreFullFinancialBackup: () => Promise<boolean>;
   clearFinancialData: (reason: string, userId: UUID) => Promise<{ success: boolean; report: FinancialClearanceReport }>;
   correctPayment: (orderId: UUID, newPayments: OrderPayment[], reason: string) => Promise<boolean>;
-  getDailySalesAnalytics: (date: Date) => DailySalesAnalytics;
+  getDailySalesAnalytics: (days: number) => DailySalesAnalytics[];
+  getSalesForDate: (date: Date) => DailySalesAnalytics;
   getMenuAnalytics: (period: 'day' | 'week' | 'month') => MenuAnalytics[];
   getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
   syncFinancialMetricsToDashboard: () => Promise<void>;
@@ -195,8 +196,21 @@ export const createFinanceSlice: StateCreator<
     }
   },
 
-    // Calculate daily sales
-    getDailySalesAnalytics: (date: Date) => {
+    // Calculate daily sales history
+    getDailySalesAnalytics: (days: number) => {
+        const result: DailySalesAnalytics[] = [];
+        const today = new Date();
+        // Loop backwards from today (e.g. 6 days ago to today)
+        for (let i = days - 1; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - i);
+            result.push(get().getSalesForDate(d));
+        }
+        return result;
+    },
+
+    // Calculate sales for a specific date
+    getSalesForDate: (date: Date) => {
         const state = get();
         const startOfDay = new Date(date);
         startOfDay.setHours(0, 0, 0, 0);

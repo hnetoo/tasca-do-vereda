@@ -90,6 +90,12 @@ const Login = () => {
 
   const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isInitialized) {
+      logger.warn('Tentativa de login antes da inicialização da Store', undefined, 'AUTH');
+      return;
+    }
+
     // Validar explicitamente se a lista de utilizadores está vazia antes de prosseguir
     if (users.length === 0) {
       logger.warn('Tentativa de login com PIN, mas a lista de utilizadores está vazia. Impedindo login.', undefined, 'AUTH');
