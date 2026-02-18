@@ -11,7 +11,7 @@ import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 const CustomerDisplayContent = () => {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('tableId');
-  const { activeOrders, menu, settings, tables, addNotification, currentUser } = useStore();
+  const { activeOrders, products: menu, settings, tables, addNotification, currentUser } = useStore();
   const [imageErrorMap, setImageErrorMap] = useState<Record<string, boolean>>({});
   const [logoError, setLogoError] = useState(false);
   const [promoIndex, setPromoIndex] = useState(0);
@@ -138,12 +138,12 @@ const CustomerDisplayContent = () => {
               </div>
             ) : (
               allItems.map((item, idx) => {
-                const dish = menu.find(d => d.id === item.dishId);
+                const dish = menu.find(d => d.id === item.productId);
                 return (
                   <div key={idx} className="flex items-center justify-between group animate-in slide-in-from-right duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
                     <div className="flex items-center gap-6">
                        <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/5 group-hover:border-primary/30 transition-all shrink-0">
-                          <img src={dish?.image} className="w-full h-full object-cover" alt="" />
+                          <img src={dish?.image_url} className="w-full h-full object-cover" alt="" />
                        </div>
                        <div className="min-w-0">
                           <p className="text-lg font-black text-white uppercase tracking-tighter italic truncate pr-4">{dish?.name}</p>

@@ -137,11 +137,11 @@ const MobileDashboard = () => {
         totalCustomers: 312,
         retentionRate: 0.42,
         menu: [
-          { dishName: 'Francesinha Vereda', sold: 48 },
-          { dishName: 'Bife à Casa', sold: 34 },
-          { dishName: 'Risotto de Camarão', sold: 29 },
-          { dishName: 'Picanha Premium', sold: 22 },
-          { dishName: 'Sopa do Dia', sold: 19 }
+          { productName: 'Francesinha Vereda', sold: 48 },
+          { productName: 'Bife à Casa', sold: 34 },
+          { productName: 'Risotto de Camarão', sold: 29 },
+          { productName: 'Picanha Premium', sold: 22 },
+          { productName: 'Sopa do Dia', sold: 19 }
         ]
       },
       settings: {
@@ -504,7 +504,7 @@ const MobileDashboard = () => {
           dailySales: summary.total_revenue || 0,
           ordersToday: summary.total_orders || 0,
           activeOrdersCount: summary.active_orders_count || 0,
-          topDishes: [],
+          topProducts: [],
           occupancyRate: 0,
           totalRevenue: summary.total_revenue || 0,
           activeOrders: summary.active_orders_count || 0,
@@ -562,7 +562,7 @@ const MobileDashboard = () => {
       dailySales: totalSales,
       ordersToday: closedToday.length,
       activeOrdersCount,
-      topDishes: [],
+      topProducts: [],
       occupancyRate: 0,
       totalRevenue: totalSales,
       activeOrders: activeOrdersCount,
@@ -631,12 +631,12 @@ const MobileDashboard = () => {
     const totalSalesAllTime = closedOrders.reduce((acc, o) => acc + (o.total || 0), 0);
     const costMap = new Map<string, number>();
     for (const d of localMenu) {
-      const cost = typeof d.precoCusto === 'number' ? d.precoCusto : (typeof d.cost === 'number' ? d.cost : 0);
+      const cost = typeof d.cost === 'number' ? d.cost : 0;
       costMap.set(d.id, cost || 0);
     }
     const totalCOGS = closedOrders.reduce((acc, o) => {
       const cogs = o.items.reduce((sum, it) => {
-        const unitCost = costMap.get(it.dishId) || 0;
+        const unitCost = costMap.get(it.productId) || 0;
         return sum + unitCost * it.quantity;
       }, 0);
       return acc + cogs;

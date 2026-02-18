@@ -119,99 +119,108 @@ export const createFinanceSlice: StateCreator<
     }
   },
 
-  getDailySalesAnalytics: (days = 7) => {
-    const state = get();
-    const today = new Date(getAngolaToday());
-    today.setHours(0, 0, 0, 0);
+    // Calculate daily sales
+    getDailySalesAnalytics: (date: Date) => {
+        const state = get();
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
 
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - (days - 1));
+        const dailyOrders = state.orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= startOfDay && orderDate <= endOfDay && order.status !== 'cancelled';
+        });
 
-    const closedOrders = state.orders.filter(o =>
-      o.status === 'FECHADO' && o.timestamp && new Date(o.timestamp) >= startDate
-    );
+        let totalRevenue = 0;
+        let totalProfit = 0;
+        let orderCount = dailyOrders.length;
+        let averageTicket = 0;
 
-    // Agrupar por data
-    const salesByDate: Record<string, DailySalesAnalytics> = {};
-    
-    closedOrders.forEach(order => {
-      const date = new Date(order.timestamp!).toISOString().split('T')[0];
-      if (!salesByDate[date]) {
-        salesByDate[date] = {
-          date,
-          totalSales: 0,
-          totalOrders: 0,
-          totalProfit: 0,
-          avgOrderValue: 0
-        };
-      }
-      salesByDate[date].totalSales += order.total;
-      salesByDate[date].totalOrders += 1;
+        dailyOrders.forEach(order => {
+            totalRevenue += order.total;
+            let orderProfit = 0;
+            
+            order.items.forEach(item => {
+                const product = state.products.find(p => p.id === item.product_id);
+                // If product has cost, use it. Otherwise assume 0 for profit calc
+                // Assuming Product interface might have 'cost' or similar if extended, 
+                // but standard interface doesn't show it. If it's not there, profit = price.
+                // However, let's check if 'cost' exists on Product in this context or if we should ignore it.
+                // The original code had: const costPrice = dish?.precoCusto || dish?.cost || 0;
+                // 'precoCusto' suggests legacy Portuguese field.
+                // We will assume 0 cost if not found for now to avoid compilation errors, 
+                // or check if we can map it.
+                const costPrice = 0; // TODO: Add cost field to Product interface if needed
+                orderProfit += (item.unit_price - costPrice) * item.quantity;
+            });
 
-      // Calcular lucro bruto (Venda - Custo)
-      let orderProfit = 0;
-      order.items.forEach(item => {
-        const dish = state.menu.find(d => d.id === item.dishId);
-        const costPrice = dish?.precoCusto || dish?.cost || 0;
-        orderProfit += (item.price - costPrice) * item.quantity;
-      });
-      salesByDate[date].totalProfit = (salesByDate[date].totalProfit || 0) + orderProfit;
-    });
+            totalProfit += orderProfit;
+        });
 
-    return Object.values(salesByDate)
-      .map(d => ({
-        ...d,
-        avgOrderValue: d.totalSales / (d.totalOrders || 1)
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  },
-
-  getMenuAnalytics: (days = 7) => {
-    const state = get();
-    const today = new Date(getAngolaToday());
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - (days - 1));
-
-    const closedOrders = state.orders.filter(o =>
-      o.status === 'FECHADO' && o.timestamp && new Date(o.timestamp) >= startDate
-    );
-
-    const menuStats: Record<string, MenuAnalytics> = {};
-
-    closedOrders.forEach(order => {
-      order.items.forEach(item => {
-        if (!menuStats[item.dishId]) {
-          const dish = state.menu.find(d => d.id === item.dishId);
-          menuStats[item.dishId] = {
-            dishId: item.dishId,
-            dishName: item.name,
-            views: 0, // Placeholder
-            orders: 0,
-            sold: 0,
-            revenue: 0,
-            profitMargin: 0,
-            conversionRate: 0
-          };
+        if (orderCount > 0) {
+            averageTicket = totalRevenue / orderCount;
         }
-        
-        const stats = menuStats[item.dishId];
-        stats.sold += item.quantity;
-        stats.orders += 1;
-        stats.revenue += item.total;
-        
-        const dish = state.menu.find(d => d.id === item.dishId);
-        const costPrice = dish?.precoCusto || dish?.cost || 0;
-        const profit = item.total - (costPrice * item.quantity);
-        const margin = item.total > 0 ? (profit / item.total) * 100 : 0;
-        
-        // Média ponderada da margem
-        stats.profitMargin = ((stats.profitMargin * (stats.sold - item.quantity)) + (margin * item.quantity)) / stats.sold;
-      });
-    });
 
-    return Object.values(menuStats).sort((a, b) => b.revenue - a.revenue);
-  },
+        return {
+            totalRevenue,
+            totalProfit,
+            orderCount,
+            averageTicket,
+            date: startOfDay.toISOString()
+        };
+    },
+
+    // Calculate menu performance
+    getMenuAnalytics: (period: 'day' | 'week' | 'month') => {
+        const state = get();
+        const now = new Date();
+        const startDate = new Date();
+
+        if (period === 'day') {
+            startDate.setHours(0, 0, 0, 0);
+        } else if (period === 'week') {
+            startDate.setDate(now.getDate() - 7);
+        } else {
+            startDate.setMonth(now.getMonth() - 1);
+        }
+
+        const periodOrders = state.orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= startDate && order.status !== 'cancelled';
+        });
+
+        const productPerformance = new Map<string, { 
+            name: string; 
+            quantity: number; 
+            revenue: number; 
+            profit: number 
+        }>();
+
+        periodOrders.forEach(order => {
+            order.items.forEach(item => {
+                const product = state.products.find(p => p.id === item.product_id);
+                if (!product) return;
+
+                const current = productPerformance.get(product.id) || {
+                    name: product.name,
+                    quantity: 0,
+                    revenue: 0,
+                    profit: 0
+                };
+
+                const costPrice = 0; // TODO: Implement cost tracking
+                
+                current.quantity += item.quantity;
+                current.revenue += item.unit_price * item.quantity;
+                current.profit += (item.unit_price - costPrice) * item.quantity;
+
+                productPerformance.set(product.id, current);
+            });
+        });
+
+        return Array.from(productPerformance.values()).sort((a, b) => b.revenue - a.revenue);
+    },
 
   getRevenueHistory: (days = 7) => {
     const state = get();

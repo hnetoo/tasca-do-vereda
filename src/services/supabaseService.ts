@@ -108,7 +108,7 @@ export class SupabaseService {
 
   private async setupSubscriptions(handler: (payload: any) => void) {
     const tables = [
-      'menu_items', 
+      'products', 
       'categories', 
       'orders', 
       'revenues', 
@@ -365,7 +365,7 @@ export class SupabaseService {
     }
   }
 
-  async fetchDishesPaged({ page, pageSize }: { page: number; pageSize: number }) {
+  async fetchProductsPaged({ page, pageSize }: { page: number; pageSize: number }) {
     if (!this.client) return { success: false, error: 'Client not initialized' };
     try {
       const from = (page - 1) * pageSize;
@@ -396,7 +396,7 @@ export class SupabaseService {
            return data;
       }, 3, 1000, 'fetchMenu:categories');
 
-      const dishes = await exponentialBackoff(async () => {
+      const products = await exponentialBackoff(async () => {
            const { data, error } = await this.client!.from('products').select('*');
            if (error) throw error;
            return data;
@@ -410,7 +410,7 @@ export class SupabaseService {
           success: true, 
           data: { 
               categories: categories, 
-              dishes: dishes 
+              products: products 
           } 
       };
     } catch (error: any) {

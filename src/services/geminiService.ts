@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
-import { AIAnalysisResult, Order, Dish, AIMonthlyReport } from "../types";
+import { AIAnalysisResult, Order, Product, AIMonthlyReport } from "../types";
 import { logger } from "./logger";
 
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
@@ -19,7 +19,7 @@ const cleanJsonString = (text: string) => {
 
 export const analyzeBusinessPerformance = async (
   orders: Order[], 
-  menu: Dish[]
+  menu: Product[]
 ): Promise<AIAnalysisResult> => {
   const salesTotal = orders.reduce((acc, o) => acc + o.total, 0);
   const orderCount = orders.length;
@@ -81,7 +81,7 @@ export const getMenuSuggestion = async (ingredients: string): Promise<string> =>
   }
 }
 
-export const generateMonthlyReport = async (orders: Order[], menu: Dish[], monthName: string): Promise<AIMonthlyReport | null> => {
+export const generateMonthlyReport = async (orders: Order[], menu: Product[], monthName: string): Promise<AIMonthlyReport | null> => {
   const salesTotal = orders.reduce((acc, o) => acc + o.total, 0);
   // Simplification: In a real app, we would aggregate items here to find top sellers to pass to AI
   const sampleItems = orders.flatMap(o => o.items).length;
@@ -110,7 +110,7 @@ export const generateMonthlyReport = async (orders: Order[], menu: Dish[], month
       throw new Error('API key ausente para IA');
     }
     const response = await client.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',

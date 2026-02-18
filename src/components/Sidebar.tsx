@@ -51,17 +51,12 @@ interface MenuItem {
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { logout, settings, user } = useStore();
+  const { logout, settings, user, isMobileMenuOpen, toggleMobileMenu } = useStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>(['/system', '/menu-management', '/staff', '/room']);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
-  };
-
-  const toggleMobileSidebar = () => {
-    setIsMobileOpen(!isMobileOpen);
   };
 
   const toggleMenu = (path: string) => {
@@ -80,101 +75,30 @@ const Sidebar = () => {
   };
 
   const menuItems: MenuItem[] = [
-    { path: '/dashboard', icon: <LayoutGrid size={20} />, label: 'Dashboard' },
-    { path: '/admin/owner', icon: <Home size={20} />, label: 'Owner' },
+    { path: '/dashboard', icon: <LayoutGrid size={20} />, label: 'Comando' },
+    { path: '/analytics', icon: <BarChart2 size={20} />, label: 'Analytics' },
     { path: '/pos', icon: <Monitor size={20} />, label: 'POS' },
-    { path: '/kitchen', icon: <ChefHat size={20} />, label: 'Cozinha' },
-    { path: '/encomendas', icon: <Truck size={20} />, label: 'Encomendas' },
-    
-    { 
-      path: '/menu-management', 
-      icon: <UtensilsCrossed size={20} />, 
-      label: 'Menu',
-      subItems: [
-        { path: '/products', icon: <ShoppingBag size={20} />, label: 'Produtos' },
-        { path: '/categories', icon: <Tags size={20} />, label: 'Categorias' },
-        { path: '/menu', icon: <BookOpen size={20} />, label: 'Menu Digital' },
-        { path: '/qrmenumanager', icon: <QrCode size={20} />, label: 'QR Menu' },
-      ]
-    },
-
-    { 
-      path: '/room', 
-      icon: <Warehouse size={20} />, 
-      label: 'Sala',
-      subItems: [
-        { path: '/tablelayout', icon: <LayoutGrid size={20} />, label: 'Mesas' },
-        { path: '/reservations', icon: <CalendarCheck size={20} />, label: 'Reservas' },
-      ]
-    },
-
-    { path: '/customers', icon: <Users size={20} />, label: 'Clientes' },
-    { path: '/inventory', icon: <Package size={20} />, label: 'Stocks' },
-    
-    { 
-      path: '/staff', 
-      icon: <UserCog size={20} />, 
-      label: 'Equipa',
-      subItems: [
-        { path: '/employees', icon: <Users size={20} />, label: 'Funcionários' },
-        { path: '/schedules', icon: <Calendar size={20} />, label: 'Escalas' },
-      ]
-    },
-
+    { path: '/staff', icon: <UserCog size={20} />, label: 'Gestão de Staff' },
     { path: '/finance', icon: <DollarSign size={20} />, label: 'Finanças' },
-    { path: '/reports', icon: <FileText size={20} />, label: 'Relatórios' },
-    { path: '/analytics', icon: <BarChart2 size={20} />, label: 'Analítica' },
-    
-    { 
-      path: '/settings', 
-      icon: <Settings size={20} />, 
-      label: 'Definições',
-      subItems: [
-        { path: '/pos-access', icon: <Lock size={20} />, label: 'Acesso POS' },
-        { path: '/roles', icon: <Shield size={20} />, label: 'Cargos' },
-        { path: '/qrscanner', icon: <ScanLine size={20} />, label: 'QR Scanner' },
-        { path: '/mobiledashboard', icon: <Smartphone size={20} />, label: 'Mobile' },
-        { path: '/developersettings', icon: <Code size={20} />, label: 'Desenvolvedor' },
-        { path: '/systemhealth', icon: <Activity size={20} />, label: 'Saúde' },
-      ]
-    },
+    { path: '/settings', icon: <Settings size={20} />, label: 'Definições' },
   ];
-
-  // Define allowed roles for sensitive modules
-  const isAdminOrOwner = user?.role === 'ADMIN' || user?.role === 'OWNER';
-  
-  // Filter menu items based on Page Context AND User Role
-  const getFilteredItems = () => {
-    // 1. If on Owner Dashboard page, show ONLY specific items (Finance, Reports, Analytics, System)
-    // plus the Owner Dashboard itself to maintain context.
-    if (pathname?.startsWith('/admin/owner')) {
-      return menuItems.filter(item => 
-        ['/admin/owner', '/dashboard', '/finance', '/reports', '/analytics'].includes(item.path)
-      );
-    }
-
-    // 2. Default: Show all items for Admin/Owner on other pages
-    return menuItems;
-  };
-
-  const visibleMenuItems = getFilteredItems();
 
   return (
     <>
       {/* Mobile Toggle Button */}
       <button 
-        onClick={toggleMobileSidebar}
+        onClick={toggleMobileMenu}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-lg shadow-lg border border-slate-800"
         aria-label="Toggle Menu"
       >
-        {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
+        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {/* Mobile Backdrop */}
-      {isMobileOpen && (
+      {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
-          onClick={() => setIsMobileOpen(false)}
+          onClick={toggleMobileMenu}
         />
       )}
 
@@ -182,11 +106,11 @@ const Sidebar = () => {
         fixed md:static inset-y-0 left-0 z-50
         h-full bg-slate-900 text-white flex flex-col border-r border-slate-800 
         transition-all duration-300 ease-in-out
-        ${isMobileOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}
+        ${isMobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}
         ${isCollapsed ? 'md:w-20' : 'md:w-64'}
       `}>
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          {(!isCollapsed || isMobileOpen) && (
+          {(!isCollapsed || isMobileMenuOpen) && (
             <div className="flex items-center gap-3">
               {settings?.appLogoUrl ? (
               <img src={settings.appLogoUrl} alt="App Logo" className="h-10 w-10 object-contain" />
@@ -212,7 +136,7 @@ const Sidebar = () => {
         
         <nav className="flex-1 overflow-y-auto py-4 custom-scrollbar">
           <ul className="space-y-1 px-2">
-            {visibleMenuItems.map((item) => {
+            {menuItems.map((item) => {
               const hasSubItems = item.subItems && item.subItems.length > 0;
               const expanded = expandedMenus.includes(item.path);
               const active = isActive(item.path) || (hasSubItems && isParentActive(item));
@@ -231,14 +155,14 @@ const Sidebar = () => {
                       >
                         <div className="flex items-center gap-3">
                           {item.icon}
-                          {(!isCollapsed || isMobileOpen) && <span>{item.label}</span>}
+                          {(!isCollapsed || isMobileMenuOpen) && <span>{item.label}</span>}
                         </div>
-                        {(!isCollapsed || isMobileOpen) && (
+                        {(!isCollapsed || isMobileMenuOpen) && (
                           expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
                         )}
                       </button>
                       
-                      {(!isCollapsed || isMobileOpen) && expanded && (
+                      {(!isCollapsed || isMobileMenuOpen) && expanded && (
                         <ul className="mt-1 ml-4 space-y-1 border-l border-slate-700 pl-2">
                           {item.subItems!.map(sub => (
                             <li key={sub.path}>
@@ -268,7 +192,7 @@ const Sidebar = () => {
                       }`}
                     >
                       {item.icon}
-                      {(!isCollapsed || isMobileOpen) && <span>{item.label}</span>}
+                      {(!isCollapsed || isMobileMenuOpen) && <span>{item.label}</span>}
                     </Link>
                   )}
                 </li>
@@ -283,7 +207,7 @@ const Sidebar = () => {
             className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-400 hover:bg-red-900/20 transition-colors"
           >
             <LogOut size={20} />
-            {(!isCollapsed || isMobileOpen) && <span>Sair</span>}
+            {(!isCollapsed || isMobileMenuOpen) && <span>Sair</span>}
           </button>
         </div>
       </div>

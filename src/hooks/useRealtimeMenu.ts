@@ -2,15 +2,15 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabaseService } from '../services/supabaseService';
-import { MenuCategory, Dish } from '../types';
+import { MenuCategory, Product } from '../types';
 import { logger } from '../services/logger';
 
 export interface RealtimeMenuData {
   categories: MenuCategory[];
-  dishes: Dish[];
+  products: Product[];
   loading: boolean;
   error: string | null;
-  toggleAvailability: (dishId: string, available: boolean) => Promise<void>;
+  toggleAvailability: (productId: string, available: boolean) => Promise<void>;
 }
 
 /**
@@ -21,7 +21,7 @@ export interface RealtimeMenuData {
  */
 export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
-  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,21 +39,43 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
 
       if (catsError) throw catsError;
 
-      // Fetch Products (Dishes)
+      // Fetch Products
       const query = client.from('products').select('*');
       
+      let data: any[] = [];
       if (!isOwner) {
         // Consumer view: only available items
-        const { data, error } = await query.eq('available', true);
+        const { data: d, error } = await query.eq('is_available', true);
         if (error) throw error;
-        setDishes(data || []);
+        data = d || [];
       } else {
         // Owner view: all items
-        const { data, error } = await query;
+        const { data: d, error } = await query;
         if (error) throw error;
-        setDishes(data || []);
+        data = d || [];
       }
 
+      const mappedProducts: Product[] = data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        category_id: p.category_id,
+        image_url: p.image,
+        tax_code: p.tax_code,
+        tax_percentage: p.tax_percentage,
+        is_active: p.is_available,
+        is_available_on_digital_menu: p.is_available_on_digital_menu,
+        preparation_time: p.tempo_preparo,
+        track_stock: p.controla_estoque,
+        stock_quantity: p.quantidade_estoque,
+        min_stock_quantity: p.quantidade_minima,
+        max_stock_quantity: p.quantidade_maxima,
+        unit: p.unidade_medida,
+        supplier_id: p.fornecedor_padrao_id
+      }));
+
+      setProducts(mappedProducts);
       setCategories(cats || []);
       setError(null);
     } catch (err: any) {
@@ -97,7 +119,7 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
     };
   }, [fetchMenu]);
 
-  const toggleAvailability = async (dishId: string, available: boolean) => {
+  const toggleAvailability = async (productId: string, available: boolean) => {
     if (!isOwner) return;
 
     const client = supabaseService.getClient();
@@ -105,16 +127,16 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
 
     try {
       // Optimistic update
-      setDishes(prev => prev.map(d => d.id === dishId ? { ...d, available } : d));
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, is_active: available } : p));
 
       const { error } = await client
         .from('products')
-        .update({ available })
-        .eq('id', dishId);
+        .update({ is_available: available })
+        .eq('id', productId);
 
       if (error) throw error;
       
-      logger.info(`Dish ${dishId} availability toggled to ${available}`, {}, 'MENU_SYNC');
+      logger.info(`Product ${productId} availability toggled to ${available}`, {}, 'MENU_SYNC');
     } catch (err: any) {
       logger.error('Failed to toggle availability', { error: err.message }, 'MENU_SYNC');
       // Revert optimistic update
@@ -125,7 +147,7 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
 
   return {
     categories,
-    dishes,
+    products,
     loading,
     error,
     toggleAvailability

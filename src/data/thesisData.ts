@@ -12,13 +12,13 @@ export const thesisData: RemoteDashboardData = {
     totalCustomers: 1245,
     retentionRate: 0.72,
     menu: [
-      { dishName: 'Francesinha Especial', sold: 185 },
-      { dishName: 'Bacalhau à Brás', sold: 124 },
-      { dishName: 'Picanha na Chapa', sold: 110 },
-      { dishName: 'Arroz de Marisco', sold: 95 },
-      { dishName: 'Sopa do Mar', sold: 58 },
-      { dishName: 'Mousse de Chocolate', sold: 145 },
-      { dishName: 'Vinho da Casa', sold: 210 }
+      { productName: 'Francesinha Especial', sold: 185 },
+      { productName: 'Bacalhau à Brás', sold: 124 },
+      { productName: 'Picanha na Chapa', sold: 110 },
+      { productName: 'Arroz de Marisco', sold: 95 },
+      { productName: 'Sopa do Mar', sold: 58 },
+      { productName: 'Mousse de Chocolate', sold: 145 },
+      { productName: 'Vinho da Casa', sold: 210 }
     ]
   },
   settings: {
@@ -50,18 +50,18 @@ export const thesisData: RemoteDashboardData = {
     { id: 't-rev-5', amount: 310000, description: 'Serviço de Catering', date: '2026-02-12', category: 'EVENTOS' }
   ],
   menu: [
-    { id: 'thesis-dish-1', name: 'Francesinha Especial', description: 'A nossa especialidade da casa.', price: 1500, category_id: 'cat-thesis-1', image_url: '', available: true, tax_rate: 14, createdAt: new Date(), updatedAt: new Date(), availableOnDigitalMenu: true },
-    { id: 'thesis-dish-2', name: 'Bacalhau à Brás', description: 'Um clássico da cozinha portuguesa.', price: 1200, category_id: 'cat-thesis-1', image_url: '', available: true, tax_rate: 14, createdAt: new Date(), updatedAt: new Date(), availableOnDigitalMenu: true },
-    { id: 'thesis-dish-3', name: 'Picanha na Chapa', description: 'Picanha suculenta servida na chapa.', price: 1800, category_id: 'cat-thesis-1', image_url: '', available: true, tax_rate: 14, createdAt: new Date(), updatedAt: new Date(), availableOnDigitalMenu: true },
-    { id: 'thesis-dish-4', name: 'Mousse de Chocolate', description: 'Deliciosa mousse de chocolate caseira.', price: 500, category_id: 'cat-thesis-2', image_url: '', available: true, tax_rate: 14, createdAt: new Date(), updatedAt: new Date(), availableOnDigitalMenu: true }
+    { id: 'thesis-prod-1', name: 'Francesinha Especial', description: 'A nossa especialidade da casa.', price: 1500, category_id: 'cat-thesis-1', image_url: '', is_active: true, tax_percentage: 14, tax_code: 'NOR', is_available_on_digital_menu: true },
+    { id: 'thesis-prod-2', name: 'Bacalhau à Brás', description: 'Um clássico da cozinha portuguesa.', price: 1200, category_id: 'cat-thesis-1', image_url: '', is_active: true, tax_percentage: 14, tax_code: 'NOR', is_available_on_digital_menu: true },
+    { id: 'thesis-prod-3', name: 'Picanha na Chapa', description: 'Picanha suculenta servida na chapa.', price: 1800, category_id: 'cat-thesis-1', image_url: '', is_active: true, tax_percentage: 14, tax_code: 'NOR', is_available_on_digital_menu: true },
+    { id: 'thesis-prod-4', name: 'Mousse de Chocolate', description: 'Deliciosa mousse de chocolate caseira.', price: 500, category_id: 'cat-thesis-2', image_url: '', is_active: true, tax_percentage: 14, tax_code: 'NOR', is_available_on_digital_menu: true }
   ],
   users: [
-    { id: 'thesis-owner', name: 'Owner Thesis', role: 'OWNER', pin: '0000' },
-    { id: 'thesis-admin', name: 'Admin Thesis', role: 'ADMIN', pin: '1111' },
-    { id: 'thesis-manager', name: 'Gerente Thesis', role: 'GERENTE', pin: '2222' }
+    { id: 'thesis-owner', name: 'Owner Thesis', role: 'OWNER', pin: '0000', active: true },
+    { id: 'thesis-admin', name: 'Admin Thesis', role: 'ADMIN', pin: '1111', active: true },
+    { id: 'thesis-manager', name: 'Gerente Thesis', role: 'GERENTE', pin: '2222', active: true }
   ],
   categories: [
-    { id: 'cat-thesis-1', name: 'Pratos Principais (Thesis)', sortOrder: 1, is_active: true, availableOnDigitalMenu: true },
-    { id: 'cat-thesis-2', name: 'Sobremesas (Thesis)', sortOrder: 2, is_active: true, availableOnDigitalMenu: true }
+    { id: 'cat-thesis-1', name: 'Pratos Principais (Thesis)', sort_order: 1, is_active: true, is_available_on_digital_menu: true },
+    { id: 'cat-thesis-2', name: 'Sobremesas (Thesis)', sort_order: 2, is_active: true, is_available_on_digital_menu: true }
   ]
 };

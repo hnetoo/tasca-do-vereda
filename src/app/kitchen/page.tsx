@@ -38,7 +38,7 @@ const FilterButton = ({ label, status, icon: Icon, count, colorClass, activeFilt
 );
 
 const Kitchen = () => {
-  const { activeOrders, menu, updateOrderItemStatus, markOrderAsServed } = useStore();
+  const { activeOrders, products: menu, updateOrderItemStatus, markOrderAsServed } = useStore();
   const [activeFilter, setActiveFilter] = useState<KitchenFilter>('TODOS');
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -286,7 +286,7 @@ const Kitchen = () => {
 
                     return (
                       <div
-                        key={`${item.dishId}-${idx}`} 
+                        key={`${item.productId}-${idx}`} 
                         onClick={() => handleToggleItem(order.id, idx, item.status)}
                         className={`flex items-center justify-between group cursor-pointer p-3 rounded-lg transition-all border select-none relative overflow-hidden
                           ${statusColor}
@@ -305,7 +305,7 @@ const Kitchen = () => {
                           </div>
                           <div>
                             <p className={`font-medium transition-colors ${isDone ? 'text-gray-500 line-through' : 'text-gray-100'}`}>
-                              {getDishName(item.dishId)}
+                              {getProductName(item.productId)}
                             </p>
                             {item.notes && (
                               <div className="flex items-center gap-1 text-xs text-red-300 mt-1 bg-red-900/30 px-1.5 py-0.5 rounded w-fit border border-red-900/50 animate-pulse">

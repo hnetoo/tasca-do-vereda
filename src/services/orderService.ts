@@ -4,7 +4,7 @@ import { logger } from './logger';
 export interface CreateOrderDTO {
   tableId: number;
   items: {
-    dishId: string;
+    productId: string;
     quantity: number;
     notes?: string;
   }[];
@@ -34,21 +34,13 @@ class OrderService {
     const missingItems: string[] = [];
 
     for (const item of items) {
-      const dish = store.menu.find(d => d.id === item.dishId);
-      if (!dish) continue;
+      const product = store.products.find(d => d.id === item.productId);
+      if (!product) continue;
 
-      if (dish.stockItemId) {
-        const stockItem = store.stock.find(s => s.id === dish.stockItemId);
-        // If stock item exists, check quantity
-        if (stockItem) {
-            if (stockItem.quantity < item.quantity) {
-                missingItems.push(`${dish.name} (Disponível: ${stockItem.quantity})`);
-            }
-        } else {
-            // If linked stock item is missing/deleted, should we block? 
-            // Let's assume yes for safety, or warn. 
-            // For now, allow if stock item not found but warn? No, strict mode requested.
-            // missingItems.push(`${dish.name} (Item de stock não encontrado)`);
+      if (product.track_stock) {
+        const currentStock = product.stock_quantity || 0;
+        if (currentStock < item.quantity) {
+            missingItems.push(`${product.name} (Disponível: ${currentStock})`);
         }
       }
     }
@@ -83,15 +75,16 @@ class OrderService {
       
       // 3. Add Items and Deduct Stock
       for (const item of data.items) {
-        const dish = store.menu.find(d => d.id === item.dishId);
-        if (dish) {
+        const product = store.products.find(d => d.id === item.productId);
+        if (product) {
             // Add to order
-            store.addToOrder(data.tableId, dish, item.quantity, item.notes, orderId);
+            store.addToOrder(data.tableId, product, item.quantity, item.notes, orderId);
             
-            // Deduct stock if linked
-            if (dish.stockItemId) {
-                store.updateStockQuantity(dish.stockItemId, -item.quantity);
-                logger.info(`Stock deducted for ${dish.name}`, { dishId: dish.id, stockId: dish.stockItemId, qty: item.quantity }, 'OrderService');
+            // Deduct stock if tracked
+            if (product.track_stock) {
+                const newQuantity = Math.max(0, (product.stock_quantity || 0) - item.quantity);
+                store.updateProduct({ ...product, stock_quantity: newQuantity });
+                logger.info(`Stock deducted for ${product.name}`, { productId: product.id, qty: item.quantity, newStock: newQuantity }, 'OrderService');
             }
         }
       }
