@@ -37,18 +37,32 @@ export default function MenuDigital() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: cats } = await supabase
+        // Fetch categories without ordering by sort_order to avoid crash if column missing
+        const { data: cats, error: catError } = await supabase
           .from('categories')
-          .select('*')
-          .order('sort_order', { ascending: true });
+          .select('*');
         
-        const { data: prods } = await supabase
-          .from('products')
-          .select('*')
-          .eq('is_available_on_digital_menu', true); // Only fetch available items
+        if (catError) throw catError;
 
-        if (cats) setCategories(cats as MenuCategory[]);
-        if (prods) setProducts(prods.map(mapToProduct));
+        // Fetch all products and filter in client to avoid crash if column missing
+        const { data: prods, error: prodError } = await supabase
+          .from('products')
+          .select('*');
+
+        if (prodError) throw prodError;
+
+        if (cats) {
+          // Client-side sort
+          const sortedCats = (cats as MenuCategory[]).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          setCategories(sortedCats);
+        }
+
+        if (prods) {
+          const mappedProds = prods.map(mapToProduct);
+          // Client-side filter
+          const availableProds = mappedProds.filter(p => p.is_available_on_digital_menu);
+          setProducts(availableProds);
+        }
       } catch (error) {
         console.error('Error fetching menu:', error);
       } finally {
