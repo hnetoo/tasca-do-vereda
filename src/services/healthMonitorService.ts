@@ -1,6 +1,6 @@
 import { logger } from './logger';
 import { dlpAlertService } from './dlpAlertService';
-import { disasterRecoveryService } from './disasterRecoveryService';
+import { performSelfCheckAction } from '@/app/actions/health';
 
 export interface SystemHealthReport {
   timestamp: string;
@@ -219,16 +219,24 @@ class HealthMonitorService {
         this.handleIssue('MEMORY_CRITICAL', `Memory usage at ${(mem.usedJSHeapSize / 1024 / 1024).toFixed(2)}MB`, 'CRITICAL');
       }
 
-      // 3. Data Integrity Check (via DLP)
-      const isHealthy = await disasterRecoveryService.healthCheck();
+      // 3. Data Integrity Check (via Server Action)
+      const { isHealthy, recovered, issue } = await performSelfCheckAction(
+        this.totalFailures,
+        this.totalRecoveries,
+        this.issueHistory
+      );
+
       if (!isHealthy) {
         this.totalFailures++;
         this.lastFailureTime = Date.now();
-        this.handleIssue('DATA_INTEGRITY_FAIL', 'DLP detected state corruption', 'CRITICAL');
-        const recovered = await disasterRecoveryService.autoRecover();
+        if (issue) {
+          this.issueHistory.push(issue);
+        }
         if (recovered) {
           this.totalRecoveries++;
-          this.issueHistory[this.issueHistory.length - 1].recovered = true;
+          if (this.issueHistory.length > 0) {
+            this.issueHistory[this.issueHistory.length - 1].recovered = true;
+          }
         }
       }
 

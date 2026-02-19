@@ -107,7 +107,7 @@ export class BiometricIntegrationService {
       // Depois, sincronizar periodicamente
       const timer = setInterval(() => {
         this.syncDevice(deviceId);
-      }, device.syncInterval * 60 * 1000); // converter minutos para ms
+      }, (device.syncInterval || 60) * 60 * 1000); // converter minutos para ms
 
       this.syncTimers.set(deviceId, timer);
     } catch (e: unknown) {
@@ -182,8 +182,9 @@ export class BiometricIntegrationService {
         overtimeHours: 0,
         isAbsence: false,
         totalHours: 0,
-        clockIn: event.type === 'CLOCK_IN' ? event.clockTime.toISOString() : undefined,
-        clockOut: event.type === 'CLOCK_OUT' ? event.clockTime.toISOString() : undefined
+        clockInMethod: 'BIOMETRIC',
+        clockIn: event.type === 'CLOCK_IN' ? new Date(event.clockTime).toISOString() : undefined,
+        clockOut: event.type === 'CLOCK_OUT' ? new Date(event.clockTime).toISOString() : undefined
       };
 
       // Verificar se há registro de clock in no mesmo dia

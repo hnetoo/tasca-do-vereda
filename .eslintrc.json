@@ -1,3 +1,8 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": ["next/core-web-vitals", "plugin:@next/next/recommended"],
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
 }

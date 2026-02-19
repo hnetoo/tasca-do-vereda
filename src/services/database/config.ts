@@ -1,7 +1,7 @@
 
 export const dbConfig = {
-  type: 'sqlite',
-  database: 'tasca.db',
+  type: 'postgres',
+  database: process.env.DATABASE_URL || 'tasca-postgres',
   tables: [
     'menu_categories',
     'dishes',

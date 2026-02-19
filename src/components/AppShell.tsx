@@ -34,42 +34,28 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
     }
   }, [isPublicRoute, isInitialized, isAuthenticated, router]);
 
-  if (isPublicRoute) {
-    return (
-      <>
-        {children}
-        <SmartAlertsPanel />
-      </>
-    );
-  }
-
-  if (!isInitialized) {
-    return (
-      <div className="min-h-[100dvh] w-full flex items-center justify-center bg-slate-950 text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  if (!showSidebar) {
-    return (
-      <>
-        {children}
-        <SmartAlertsPanel />
-      </>
-    );
-  }
-
   return (
-    <div className="min-h-[100dvh] bg-slate-950 text-white flex">
-      <Sidebar />
-      <main className="flex-1 min-w-0">{children}</main>
-      <SmartAlertsPanel />
-    </div>
+    <>
+      <>
+        {/* This structure is now always rendered, preventing hook order changes */}
+        <div
+          className={`min-h-[100dvh] bg-slate-950 text-white flex ${
+            (!isInitialized || (!isAuthenticated && !isPublicRoute)) ? 'opacity-0' : 'opacity-100'
+          } transition-opacity duration-300`}
+        >
+          <Sidebar showSidebar={showSidebar} />
+          <main className={`flex-1 min-w-0 ${showSidebar ? 'ml-64' : 'ml-0'}`}>{children}</main>
+        </div>
+        <SmartAlertsPanel />
+
+        {/* Loading overlay */}
+        {!isInitialized && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary"></div>
+          </div>
+        )}
+      </>
+    </>
   );
 };
 

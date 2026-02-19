@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import { exportChartToPDF } from '@/services/exportService';
-import { PaymentMethod } from '@/types';
+import { PaymentMethod, DailySalesAnalytics } from '@/types';
 import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
@@ -40,9 +40,9 @@ const Analytics = () => {
   const avgOrderValue = useMemo(() => getAverageOrderValue(), [getAverageOrderValue]);
   const retention = useMemo(() => getCustomerRetention(), [getCustomerRetention]);
 
-  const totalRevenue = useMemo(() => dailyAnalytics.reduce((acc, d) => acc + d.totalSales, 0), [dailyAnalytics]);
-  const totalProfit = useMemo(() => dailyAnalytics.reduce((acc, d) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
-  const totalOrders = useMemo(() => dailyAnalytics.reduce((acc, d) => acc + d.totalOrders, 0), [dailyAnalytics]);
+  const totalRevenue = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + d.totalRevenue, 0), [dailyAnalytics]);
+  const totalProfit = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
+  const totalOrders = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + d.orderCount, 0), [dailyAnalytics]);
   const avgDaily = useMemo(() => totalRevenue / (selectedPeriod || 1), [totalRevenue, selectedPeriod]);
 
   const COLORS = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444'];
@@ -63,10 +63,10 @@ const Analytics = () => {
 
   const extractPayments = (order: typeof activeOrders[number]) => {
     if (order.splitPayments && order.splitPayments.length > 0) {
-      return order.splitPayments.map(p => ({ method: p.method, amount: p.amount }));
+      return order.splitPayments.map((p: any) => ({ method: p.method, amount: p.amount }));
     }
     if (order.payments && order.payments.length > 0) {
-      return order.payments.map(p => ({ method: p.method, amount: p.amount }));
+      return order.payments.map((p: any) => ({ method: p.method, amount: p.amount }));
     }
     if (order.paymentMethod) {
       return [{ method: order.paymentMethod, amount: order.total }];
@@ -95,21 +95,21 @@ const Analytics = () => {
   }, [paymentPeriod, paymentYear]);
 
   const paymentDailyData = useMemo(() => {
-    const closedOrders = activeOrders.filter(o => o.status === 'FECHADO' || o.status === 'PAGO');
+    const closedOrders = activeOrders.filter((o: any) => o.status === 'FECHADO' || o.status === 'PAGO');
     const { start, end } = paymentDateRange;
     const days = buildDateRange(start, end);
     const profitByDay = new Map<number, number>();
     days.forEach(date => {
       const dayKey = normalizeDate(date).getTime();
-      const daySales = closedOrders.reduce((acc, order) => {
-        const d = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
-        return d.getTime() === dayKey ? acc + order.total : acc;
+      const daySales = closedOrders.reduce((acc: number, order: any) => {
+        const d = normalizeDate(getOrderDate((order.timestamp || order.createdAt || order.updatedAt) || undefined));
+        return d.getTime() === dayKey ? acc + (order.total || 0) : acc;
       }, 0);
-      const dayExpenses = (expenses || []).reduce((acc, exp) => {
+      const dayExpenses = (expenses || []).reduce((acc: number, exp: any) => {
         const d = normalizeDate(getOrderDate(exp.date));
         return d.getTime() === dayKey ? acc + exp.amount : acc;
       }, 0);
-      const dayRevenues = (revenues || []).reduce((acc, rev) => {
+      const dayRevenues = (revenues || []).reduce((acc: number, rev: any) => {
         const d = normalizeDate(getOrderDate(rev.date));
         return d.getTime() === dayKey ? acc + rev.amount : acc;
       }, 0);
@@ -131,18 +131,18 @@ const Analytics = () => {
         MULTIBANCO: 0,
         TRANSFER: 0
       };
-      closedOrders.forEach(order => {
+      closedOrders.forEach((order: any) => {
         const orderDate = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
         if (orderDate.getTime() !== dayKey) return;
-        extractPayments(order).forEach(payment => {
-          if (salesByMethod[payment.method] !== undefined) {
-            salesByMethod[payment.method] += payment.amount;
+        extractPayments(order).forEach((payment: any) => {
+          if (salesByMethod[payment.method as PaymentMethod] !== undefined) {
+            salesByMethod[payment.method as PaymentMethod] += payment.amount;
           }
         });
       });
       const totalSales = paymentMethods.reduce((acc, method) => acc + salesByMethod[method], 0);
       const totalProfit = profitByDay.get(dayKey) || 0;
-      const profitByMethod = paymentMethods.reduce((acc, method) => {
+      const profitByMethod = paymentMethods.reduce((acc: any, method) => {
         const methodSales = salesByMethod[method];
         const allocated = totalSales > 0 ? (totalProfit * methodSales) / totalSales : 0;
         acc[method] = allocated;
@@ -170,14 +170,14 @@ const Analytics = () => {
     });
   }, [paymentDailyData, paymentMethods, paymentMetric]);
 
-  const lowStockItems = stockAnalytics.filter(s => s.currentStock <= s.minThreshold);
-  const criticalStockItems = stockAnalytics.filter(s => s.daysToRunOut < 3 && s.daysToRunOut > 0);
+  const lowStockItems = stockAnalytics.filter((s: any) => s.currentStock <= s.minThreshold);
+  const criticalStockItems = stockAnalytics.filter((s: any) => s.daysToRunOut < 3 && s.daysToRunOut > 0);
 
   const getExportConfig = () => {
     switch (activeTab) {
       case 'vendas':
         return {
-          data: dailyAnalytics.map(d => ({
+          data: dailyAnalytics.map((d: any) => ({
             ...d,
             totalSales: formatKz(d.totalSales),
             averageOrder: formatKz(d.totalSales / (d.totalOrders || 1))
@@ -193,7 +193,7 @@ const Analytics = () => {
         };
       case 'menu':
         return {
-          data: menuAnalytics.map(m => ({
+          data: menuAnalytics.map((m: any) => ({
             ...m,
             revenue: formatKz(m.revenue),
             profitMargin: `${m.profitMargin.toFixed(1)}%`
@@ -221,9 +221,9 @@ const Analytics = () => {
         };
       case 'funcionarios':
         return {
-          data: employeePerf.map(p => ({
+          data: employeePerf.map((p: any) => ({
             ...p,
-            name: employees.find(e => e.id === p.employeeId)?.name || 'N/A',
+            name: employees.find((e: any) => e.id === p.employeeId)?.name || 'N/A',
             efficiency: `${p.efficiency.toFixed(1)}%`
           })),
           columns: [
@@ -413,7 +413,7 @@ const Analytics = () => {
               </h3>
               <div className="space-y-2">
                 {peakHours.length > 0 ? (
-                  peakHours.map((hour, i) => (
+                  peakHours.map((hour: any, i: number) => (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
                       <span className="font-black text-primary text-lg">{hour.toString().padStart(2, '0')}:00</span>
                       <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
@@ -435,7 +435,7 @@ const Analytics = () => {
               </h3>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-1">
-                  {(['DIA', 'SEMANA', 'MES', 'ANO'] as const).map(period => (
+                  {(['DIA', 'SEMANA', 'MES', 'ANO'] as const).map((period: any) => (
                     <button
                       key={period}
                       onClick={() => setPaymentPeriod(period)}
@@ -453,7 +453,7 @@ const Analytics = () => {
                     onChange={(e) => setPaymentYear(Number(e.target.value))}
                     className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-xl px-3 py-2 outline-none"
                   >
-                    {[0, 1, 2, 3, 4].map(offset => {
+                    {[0, 1, 2, 3, 4].map((offset: number) => {
                       const year = new Date().getFullYear() - offset;
                       return (
                         <option key={year} value={year}>{year}</option>
@@ -496,8 +496,15 @@ const Analytics = () => {
                   contentStyle={{ backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem' }}
                   formatter={(val: number, name: string) => [formatKz(val), paymentLabels[name as PaymentMethod] || name]}
                 />
-                {paymentMethods.map((method, index) => (
-                  <Bar key={method} dataKey={method} stackId="a" fill={COLORS[index % COLORS.length]} radius={[6, 6, 0, 0]} />
+                {paymentMethods.map((method: any, index: number) => (
+                  <Bar
+                    key={method}
+                    dataKey={method}
+                    name={method}
+                    stackId="a"
+                    fill={COLORS[index % COLORS.length]}
+                    radius={index === paymentMethods.length - 1 ? [8, 8, 0, 0] : [0, 0, 0, 0]}
+                  />
                 ))}
               </BarChart>
             </ResponsiveContainer>
@@ -513,8 +520,8 @@ const Analytics = () => {
               <ChefHat size={20} /> Pratos Mais Vendidos
             </h3>
             <div className="space-y-3">
-              {topDishes.map((dish, i) => {
-                const analytics = menuAnalytics.find(m => m.dishId === dish.id);
+              {topDishes.map((dish: any, i: number) => {
+                const analytics = menuAnalytics.find((m: any) => m.dishId === dish.id);
                 return (
                   <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all">
                     <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center font-black text-primary">
@@ -548,7 +555,7 @@ const Analytics = () => {
                   outerRadius={100}
                   label
                 >
-                  {menuAnalytics.map((entry, index) => (
+                  {menuAnalytics.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -571,7 +578,7 @@ const Analytics = () => {
                 <AlertTriangle size={20} /> Alertas de Estoque
               </h3>
               <div className="space-y-2">
-                {criticalStockItems.map(item => (
+                {criticalStockItems.map((item: any) => (
                   <div key={item.itemId} className="p-3 rounded-lg bg-red-500/20 border border-red-500/30">
                     <p className="font-bold text-red-200">{item.itemName}</p>
                     <p className="text-xs text-red-300">{item.daysToRunOut} dias até esgotar | {item.currentStock} unidades</p>
@@ -585,7 +592,7 @@ const Analytics = () => {
           <div className="glass-panel rounded-2xl p-6 border border-white/10">
             <h3 className="text-lg font-black text-white mb-4">Estado do Estoque</h3>
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {stockAnalytics.map(item => {
+              {stockAnalytics.map((item: any) => {
                 const status = item.currentStock <= item.minThreshold ? 'CRÍTICO' : item.daysToRunOut < 7 ? 'ATENÇÃO' : 'OK';
                 const statusColor = status === 'CRÍTICO' ? 'red' : status === 'ATENÇÃO' ? 'yellow' : 'green';
 
@@ -621,10 +628,10 @@ const Analytics = () => {
             <Star size={20} /> Performance da Equipa
           </h3>
           <div className="space-y-4">
-            {employeePerf.map((perf, i) => (
+            {employeePerf.map((perf: any, i: number) => (
               <div key={i} className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-all">
                 <div className="flex justify-between items-start mb-2">
-                  <p className="font-bold text-white">{employees.find(e => e.id === perf.employeeId)?.name || 'Desconhecido'}</p>
+                  <p className="font-bold text-white">{employees.find((e: any) => e.id === perf.employeeId)?.name || 'Desconhecido'}</p>
                   <div className="flex items-center gap-1">
                     {[...Array(5)].map((_, j) => (
                       <span key={j} className={j < Math.floor(perf.rating) ? 'text-yellow-400' : 'text-slate-600'}>★</span>

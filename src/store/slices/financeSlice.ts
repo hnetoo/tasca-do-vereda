@@ -1,12 +1,15 @@
 import { StateCreator } from 'zustand';
-import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Product } from '@/types';
+import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Dish } from '@/types';
 import { logger } from '@/services/logger';
 import { backupService } from '@/services/backupService';
 import { integrationAPIService } from '@/services/integrationAPIService';
 import { getAngolaToday } from '@/utils/date';
 
-import { executeQuery } from '@/services/database/connection';
-import { databaseOperations } from '@/services/database/operations';
+import { 
+  clearFinancialDataAction, 
+  correctPaymentAction, 
+  saveShiftsAction 
+} from '@/app/actions/finance';
 
 export interface FinanceSlice {
   orders: Order[];
@@ -46,20 +49,20 @@ export interface FinanceSlice {
   correctPayment: (orderId: UUID, newPayments: OrderPayment[], reason: string) => Promise<boolean>;
   getDailySalesAnalytics: (days: number) => DailySalesAnalytics[];
   getSalesForDate: (date: Date) => DailySalesAnalytics;
-  getMenuAnalytics: (period: 'day' | 'week' | 'month') => MenuAnalytics[];
+  getMenuAnalytics: (period: 'day' | 'week' | 'month' | number) => MenuAnalytics[];
   getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
   syncFinancialMetricsToDashboard: () => Promise<void>;
   fetchRemoteDashboard: () => Promise<void>;
   handleRealtimeUpdate: (payload: any) => void;
   
-  addToOrder: (tableId: number, product: Product, quantity: number, notes: string, orderId: UUID) => void;
+  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID) => void;
   removeFromOrder: (orderId: UUID, itemIndex: number) => void;
   checkoutTable: (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string) => Promise<void>;
 }
 
 export const createFinanceSlice: StateCreator<
   StoreState,
-  [['zustand/persist', unknown]],
+  [],
   [],
   FinanceSlice
 > = (set, get) => ({
@@ -91,7 +94,7 @@ export const createFinanceSlice: StateCreator<
     }
   },
   
-  addToOrder: (tableId: number, product: Product, quantity: number, notes: string, orderId: UUID) => {
+  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID) => {
     const state = get();
     const order = state.orders.find(o => o.id === orderId);
     if (!order) return;
@@ -99,21 +102,17 @@ export const createFinanceSlice: StateCreator<
     // Logic to add item
      const newItem: any = {
        id: `temp-${Date.now()}`, // Generate temp ID
-       productId: product.id,
-       product_id: product.id,
+       dishId: dish.id,
        quantity,
-       unitPrice: product.price,
-       unit_price: product.price,
+       unitPrice: dish.price,
        notes,
-       taxPercentage: product.tax_percentage,
-       tax_percentage: product.tax_percentage,
-       taxCode: product.tax_code,
-       tax_code: product.tax_code
+       taxPercentage: dish.taxPercentage || dish.tax_percentage || 14,
+       taxCode: dish.taxCode || dish.tax_code || 'NOR'
      };
      
      // This is a simplified implementation. Real one would handle merging similar items, etc.
      const updatedItems = [...(order.items || []), newItem];
-     const newTotal = updatedItems.reduce((sum: number, item: any) => sum + ((item.unitPrice || item.unit_price || 0) * item.quantity), 0);
+     const newTotal = updatedItems.reduce((sum: number, item: any) => sum + (Number(item.unitPrice || 0) * Number(item.quantity || 0)), 0);
     
     const updatedOrder = { ...order, items: updatedItems, total: newTotal, updatedAt: new Date().toISOString() };
     
@@ -129,7 +128,7 @@ export const createFinanceSlice: StateCreator<
     if (!order || !order.items) return;
     
     const updatedItems = order.items.filter((_, idx) => idx !== itemIndex);
-     const newTotal = updatedItems.reduce((sum: number, item: any) => sum + ((item.unitPrice || item.unit_price || 0) * item.quantity), 0);
+     const newTotal = updatedItems.reduce((sum: number, item: any) => sum + ((item.unitPrice || 0) * item.quantity), 0);
      
      const updatedOrder = { ...order, items: updatedItems, total: newTotal, updatedAt: new Date().toISOString() };
     
@@ -228,14 +227,14 @@ export const createFinanceSlice: StateCreator<
         let averageTicket = 0;
 
         dailyOrders.forEach(order => {
-            totalRevenue += order.total;
+            totalRevenue += Number(order.total || 0);
             let orderProfit = 0;
             
             (order.items || []).forEach((item: any) => {
-                const product = state.products?.find(p => p.id === item.product_id);
+                const dish = state.dishes?.find(dish => dish.id === item.dishId);
                 const costPrice = 0; 
-                const unitPrice = item.unitPrice || item.unit_price || 0;
-                orderProfit += (unitPrice - costPrice) * item.quantity;
+                const unitPrice = Number(item.unitPrice || 0);
+                orderProfit += (unitPrice - Number(costPrice)) * Number(item.quantity || 0);
             });
 
             totalProfit += orderProfit;
@@ -255,12 +254,14 @@ export const createFinanceSlice: StateCreator<
     },
 
     // Calculate menu performance
-    getMenuAnalytics: (period: 'day' | 'week' | 'month') => {
+    getMenuAnalytics: (period: 'day' | 'week' | 'month' | number) => {
         const state = get();
         const now = new Date();
         const startDate = new Date();
 
-        if (period === 'day') {
+        if (typeof period === 'number') {
+            startDate.setDate(now.getDate() - period);
+        } else if (period === 'day') {
             startDate.setHours(0, 0, 0, 0);
         } else if (period === 'week') {
             startDate.setDate(now.getDate() - 7);
@@ -273,7 +274,7 @@ export const createFinanceSlice: StateCreator<
             return orderDate >= startDate && order.status !== 'cancelled';
         });
 
-        const productPerformance = new Map<string, { 
+        const dishPerformance = new Map<string, { 
             name: string; 
             quantity: number; 
             revenue: number; 
@@ -282,28 +283,28 @@ export const createFinanceSlice: StateCreator<
 
         periodOrders.forEach(order => {
             (order.items || []).forEach((item: any) => {
-                const product = state.products?.find(p => p.id === item.product_id);
-                if (!product) return;
+                const dish = state.dishes?.find(dish => dish.id === item.dishId);
+                if (!dish) return;
 
-                const current = productPerformance.get(product.id) || {
-                    name: product.name,
+                const current = dishPerformance.get(dish.id) || {
+                    name: dish.name,
                     quantity: 0,
                     revenue: 0,
                     profit: 0
                 };
 
                 const costPrice = 0; // TODO: Implement cost tracking
-                const unitPrice = item.unitPrice || item.unit_price || 0;
+                const unitPrice = item.unitPrice || 0;
                 
                 current.quantity += item.quantity;
                 current.revenue += unitPrice * item.quantity;
                 current.profit += (unitPrice - costPrice) * item.quantity;
 
-                productPerformance.set(product.id, current);
+                dishPerformance.set(dish.id, current);
             });
         });
 
-        return Array.from(productPerformance.values()).sort((a, b) => b.revenue - a.revenue);
+        return Array.from(dishPerformance.values()).sort((a, b) => b.revenue - a.revenue);
     },
 
   getRevenueHistory: (days = 7) => {
@@ -354,7 +355,7 @@ export const createFinanceSlice: StateCreator<
     };
 
     try {
-      await integrationAPIService.syncDashboardData(summary, state.activeOrders);
+      // await integrationAPIService.syncDashboardData(summary, state.activeOrders);
       logger.info('Métricas financeiras sincronizadas com o dashboard', summary, 'FINANCE');
     } catch (error) {
       logger.error('Erro ao sincronizar métricas financeiras com o dashboard', error, 'FINANCE');
@@ -622,13 +623,10 @@ export const createFinanceSlice: StateCreator<
       });
 
       // 4. Clear Database (Destructive operation)
-      await executeQuery('DELETE FROM order_items');
-
-      await executeQuery('DELETE FROM orders');
-      await executeQuery('DELETE FROM expenses');
-      await executeQuery('DELETE FROM revenues');
-      await executeQuery('DELETE FROM payroll_records');
-      await executeQuery('DELETE FROM cash_shifts');
+      const result = await clearFinancialDataAction(userId, reason);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to clear financial data');
+      }
 
       // 5. Audit Log (AGT Requirement)
       get().addAuditLog({
@@ -763,7 +761,9 @@ export const createFinanceSlice: StateCreator<
           set({ shifts });
           
           // Persistir turno atualizado
-          databaseOperations.saveShifts([shift]).catch((e: Error) => 
+          saveShiftsAction([shift]).then(res => {
+            if (!res.success) logger.error('Falha ao atualizar breakdown do turno após correção', { shiftId: shift.id, error: res.error }, 'FINANCE');
+          }).catch((e: Error) => 
             logger.error('Falha ao atualizar breakdown do turno após correção', { shiftId: shift.id, error: e.message }, 'FINANCE')
           );
         }
@@ -789,14 +789,10 @@ export const createFinanceSlice: StateCreator<
 
       // Persistência em Banco de Dados (Transação simulada via executeQuery sequencial)
       // Em um ambiente real, usaríamos BEGIN TRANSACTION
-      await executeQuery('DELETE FROM order_payments WHERE order_id = ?', [order.id]);
-      for (const p of newPayments) {
-        await executeQuery('INSERT INTO order_payments (id, order_id, method, amount, timestamp) VALUES (?, ?, ?, ?, ?)', 
-          [p.id, order.id, p.method, p.amount, p.timestamp]);
+      const result = await correctPaymentAction(order.id, currentUser.id, reason, newPayments);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to correct payment');
       }
-      
-      await executeQuery('INSERT INTO payment_corrections (id, order_id, user_id, reason, type, timestamp, data) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [correction.id, order.id, currentUser.id, reason, correction.type, correction.timestamp, JSON.stringify(correction)]);
 
       logger.info('Payment correction applied successfully', { orderId, type: correction.type }, 'FINANCE');
       get().addNotification('success', 'Pagamento corrigido com sucesso.');
@@ -817,10 +813,10 @@ export const createFinanceSlice: StateCreator<
       const today = getAngolaToday().split('T')[0];
       
       // 1. Fetch Summary
-      const summaryResult = await integrationAPIService.fetchDashboard(today, today);
-      if (summaryResult.success && summaryResult.data) {
-        state.setDashboardSummary(summaryResult.data);
-      }
+      // const summaryResult = await integrationAPIService.fetchDashboard(today, today);
+      // if (summaryResult.success && summaryResult.data) {
+      //   state.setDashboardSummary(summaryResult.data);
+      // }
 
       // 2. Fetch Financials (Today)
       const financialsResult = await integrationAPIService.fetchFinancials(today, today);
@@ -830,7 +826,7 @@ export const createFinanceSlice: StateCreator<
       }
 
       // 3. Fetch Menu (for analytics mapping)
-      // const menuResult = await integrationAPIService.fetchMenu();
+      const menuResult = await integrationAPIService.fetchMenu();
       if (menuResult.success && menuResult.data) {
          // Using 'as any' because these methods belong to other slices but are available in StoreState
          (state as any).importCloudItems({

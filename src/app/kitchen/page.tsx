@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
 import { Clock, CheckCircle, AlertCircle, Filter, Flame, ChefHat, Bell, CheckSquare, Volume2, VolumeX, Timer, Zap } from 'lucide-react';
-import { OrderItem } from '@/types';
+import { OrderItem, Order } from '@/types';
 
 type KitchenFilter = 'TODOS' | 'PENDENTE' | 'PREPARANDO' | 'PRONTO' | 'ENTREGUE';
 
@@ -57,9 +57,9 @@ const Kitchen = () => {
   // Helper to get counts for badges
   const getStatusCount = (status: OrderItem['status']) => {
     return activeOrders
-      .filter(o => o.status === 'ABERTO')
-      .flatMap(o => o.items)
-      .filter(i => i.status === status).length;
+      .filter((o: Order) => o.status === 'ABERTO')
+      .flatMap((o: Order) => o.items || [])
+      .filter((i: OrderItem) => i.status === status).length;
   };
 
   const counts = {
@@ -129,20 +129,20 @@ const Kitchen = () => {
 
   // --- EFFECT FOR DETECTING CHANGES ---
   useEffect(() => {
-    const currentOpenOrders = activeOrders.filter(o => o.status === 'ABERTO');
-    const prevOpenOrders = prevOrdersRef.current.filter(o => o.status === 'ABERTO');
+    const currentOpenOrders = activeOrders.filter((o: Order) => o.status === 'ABERTO');
+    const prevOpenOrders = prevOrdersRef.current.filter((o: Order) => o.status === 'ABERTO');
 
     // 1. Check for NEW Orders
-    const currentIds = currentOpenOrders.map(o => o.id);
-    const prevIds = prevOpenOrders.map(o => o.id);
-    const hasNewOrder = currentIds.some(id => !prevIds.includes(id));
+    const currentIds = currentOpenOrders.map((o: Order) => o.id);
+    const prevIds = prevOpenOrders.map((o: Order) => o.id);
+    const hasNewOrder = currentIds.some((id: string) => !prevIds.includes(id));
 
     if (hasNewOrder) {
       playNotificationSound('NEW_ORDER');
     } else {
       // 2. Check for items turning PRONTO
-      const currentProntoCount = currentOpenOrders.flatMap(o => o.items).filter(i => i.status === 'PRONTO').length;
-      const prevProntoCount = prevOpenOrders.flatMap(o => o.items).filter(i => i.status === 'PRONTO').length;
+      const currentProntoCount = currentOpenOrders.flatMap((o: Order) => o.items || []).filter((i: OrderItem) => i.status === 'PRONTO').length;
+      const prevProntoCount = prevOpenOrders.flatMap((o: Order) => o.items || []).filter((i: OrderItem) => i.status === 'PRONTO').length;
 
       if (currentProntoCount > prevProntoCount) {
         playNotificationSound('ORDER_READY');
@@ -154,21 +154,21 @@ const Kitchen = () => {
 
 
   // --- CORRECTED FILTER LOGIC ---
-  const kitchenOrders = activeOrders.filter(o => {
+  const kitchenOrders = activeOrders.filter((o: Order) => {
     if (o.status !== 'ABERTO') return false;
 
     // If specific filter is selected, show orders that have AT LEAST one item in that status
     if (activeFilter !== 'TODOS') {
-        return o.items.some(i => i.status === activeFilter);
+        return (o.items || []).some((i: OrderItem) => i.status === activeFilter);
     }
 
     // If 'TODOS' (Default View): Show orders that are NOT fully delivered yet (active work)
     // We hide orders where ALL items are 'ENTREGUE' to keep screen clean
-    const allItemsDelivered = o.items.every(i => i.status === 'ENTREGUE');
+    const allItemsDelivered = (o.items || []).every((i: OrderItem) => i.status === 'ENTREGUE');
     return !allItemsDelivered;
   });
 
-  const getDishName = (id: string) => menu.find(d => d.id === id)?.name || 'Desconhecido';
+  const getDishName = (id: string) => menu.find((d: any) => d.id === id)?.name || 'Desconhecido';
 
   const handleToggleItem = (orderId: string, itemIndex: number, currentStatus: string) => {
       let newStatus: OrderItem['status'] = 'PENDENTE';
@@ -255,8 +255,8 @@ const Kitchen = () => {
             <p className="text-sm mt-2 opacity-50">Aguardando novas comandas...</p>
           </div>
         ) : (
-          kitchenOrders.map((order) => {
-            const { minutes, seconds } = getOrderDuration(order.timestamp);
+          kitchenOrders.map((order: Order) => {
+            const { minutes, seconds } = getOrderDuration(order.createdAt as Date);
             const urgencyClass = getUrgencyColor(minutes);
             const timerColor = getTimerColor(minutes);
 
@@ -276,7 +276,7 @@ const Kitchen = () => {
                 </div>
                 
                 <div className="p-4 space-y-3 flex-1 overflow-y-auto max-h-[400px]">
-                  {order.items.map((item, idx) => {
+                  {(order.items || []).map((item: OrderItem, idx: number) => {
                     const isDone = item.status === 'ENTREGUE';
                     let statusColor = 'bg-gray-700 border-gray-600';
                     if (item.status === 'PENDENTE') statusColor = 'bg-yellow-900/20 border-yellow-700/50';
@@ -287,7 +287,7 @@ const Kitchen = () => {
                     return (
                       <div
                         key={`${item.productId}-${idx}`} 
-                        onClick={() => handleToggleItem(order.id, idx, item.status)}
+                        onClick={() => handleToggleItem(order.id, idx, item.status || 'PENDENTE')}
                         className={`flex items-center justify-between group cursor-pointer p-3 rounded-lg transition-all border select-none relative overflow-hidden
                           ${statusColor}
                           hover:brightness-110
@@ -305,7 +305,7 @@ const Kitchen = () => {
                           </div>
                           <div>
                             <p className={`font-medium transition-colors ${isDone ? 'text-gray-500 line-through' : 'text-gray-100'}`}>
-                              {getProductName(item.productId)}
+                              {getDishName(item.productId as string)}
                             </p>
                             {item.notes && (
                               <div className="flex items-center gap-1 text-xs text-red-300 mt-1 bg-red-900/30 px-1.5 py-0.5 rounded w-fit border border-red-900/50 animate-pulse">

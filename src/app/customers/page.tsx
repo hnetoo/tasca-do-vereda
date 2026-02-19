@@ -21,7 +21,7 @@ const Customers = () => {
       name: '', phone: '', nif: '', points: 0, balance: 0
   });
 
-  const filteredCustomers = customers.filter(c => 
+  const filteredCustomers = customers.filter((c: Customer) => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.phone.includes(searchTerm)
   );
@@ -30,7 +30,7 @@ const Customers = () => {
 
   const getExportConfig = () => {
     return {
-      data: filteredCustomers.map(c => ({
+      data: filteredCustomers.map((c: Customer) => ({
         name: c.name,
         phone: c.phone,
         nif: c.nif || 'N/A',
@@ -140,10 +140,13 @@ const Customers = () => {
       
       // Perguntar se deseja imprimir recibo
       if (window.confirm("Deseja imprimir o recibo do pagamento?")) {
-        handlePrintStatement({ 
-            ...customers.find(c => c.id === paymentModal.id)!,
-            balance: customers.find(c => c.id === paymentModal.id)!.balance - Number(paymentAmount) // Simulate new balance
-        });
+        const customer = customers.find((c: Customer) => c.id === paymentModal.id);
+        if (customer) {
+            handlePrintStatement({ 
+                ...customer,
+                balance: customer.balance - Number(paymentAmount) // Simulate new balance
+            });
+        }
       }
 
       setPaymentModal(null);
@@ -248,7 +251,7 @@ const Customers = () => {
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-                {filteredCustomers.map(customer => (
+                {filteredCustomers.map((customer: Customer) => (
                     <tr key={customer.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                             <div className="font-bold text-gray-800">{customer.name}</div>

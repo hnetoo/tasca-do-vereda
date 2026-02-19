@@ -9,8 +9,8 @@ const POSAccessManagement = () => {
   const { employees } = useStore();
   
   // Filter employees who have access to POS
-  const posUsers = employees.filter(emp => canAccessModule(emp.role, 'pos'));
-  const otherUsers = employees.filter(emp => !canAccessModule(emp.role, 'pos'));
+  const posUsers = employees.filter(emp => canAccessModule(emp.role as any, 'pos'));
+  const otherUsers = employees.filter(emp => !canAccessModule(emp.role as any, 'pos'));
 
   return (
     <div className="space-y-6">

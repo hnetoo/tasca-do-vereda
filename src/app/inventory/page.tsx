@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { logger } from '@/services/logger';
 import { buildFeed, downloadFeed } from '@/services/qrFeedService';
 import { publishFeedHybrid } from '@/services/feedPublisher';
-import { Product, MenuCategory, StockItem } from '@/types';
+import { Product, MenuCategory, StockItem, IntegrityIssue, Supplier } from '@/types';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Link as LinkIcon, AlertCircle, Check, Tag, Box, Utensils, Grid3X3, Coffee, Pizza, Beer, IceCream, Copy, RefreshCw } from 'lucide-react';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
@@ -42,16 +42,7 @@ const InventoryContent = () => {
   const router = useRouter();
   
   // Determine default tab based on URL path if no tab param is present
-  const getDefaultTab = () => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam) return tabParam as 'menu' | 'categories' | 'integrity' | 'stock' | 'orders';
-    
-    if (pathname.includes('categories')) return 'categories';
-    if (pathname.includes('stock')) return 'stock';
-    return 'menu';
-  };
-
-  const activeTab = getDefaultTab() as 'menu' | 'categories' | 'integrity' | 'stock' | 'orders';
+  const activeTab = (searchParams.get('tab') || (pathname.includes('categories') ? 'categories' : pathname.includes('stock') ? 'stock' : 'menu')) as 'menu' | 'categories' | 'integrity' | 'stock' | 'orders';
 
   const setActiveTab = (tab: 'menu' | 'categories' | 'integrity' | 'stock' | 'orders') => {
     const params = new URLSearchParams(searchParams.toString());
@@ -65,6 +56,7 @@ const InventoryContent = () => {
   // Modal states
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Optimization state
@@ -117,11 +109,30 @@ const InventoryContent = () => {
   }, [activeTab]);
 
   // Filtered lists
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = products.filter((product: Product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'TODOS' || String(product.category_id) === String(selectedCategory);
     return matchesSearch && matchesCategory;
-  }).sort((a, b) => a.name.localeCompare(b.name));
+  }).sort((a: Product, b: Product) => a.name.localeCompare(b.name));
+
+  const handleOpenStockModal = () => {
+    setProductForm({
+      name: '',
+      description: '',
+      price: 0,
+      category_id: categories[0]?.id || '',
+      image_url: '',
+      is_available_on_digital_menu: false,
+      is_active: true,
+      tax_code: 'NOR',
+      supplier_id: '',
+      track_stock: true,
+      stock_quantity: 0,
+      min_stock_quantity: 5,
+      unit: 'un'
+    });
+    setIsStockModalOpen(true);
+  };
 
   const handleOpenProductModal = (product?: Product) => {
     if (product) {
@@ -188,7 +199,7 @@ const InventoryContent = () => {
        }
     }
 
-    const selectedCat = categories.find(c => c.id === productForm.category_id);
+    const selectedCat = categories.find((c: MenuCategory) => c.id === productForm.category_id);
     const productData = {
       ...productForm,
       id: editingId || productForm.id,
@@ -204,7 +215,7 @@ const InventoryContent = () => {
     } as Product;
 
     if (editingId) {
-      const existing = products.find(p => p.id === editingId);
+      const existing = products.find((p: Product) => p.id === editingId);
       const changedCategory = existing && existing.category_id !== productData.category_id;
       if (changedCategory) {
         const ok = confirm(`Confirma mover "${existing?.name}" para a categoria "${selectedCat?.name}"?`);
@@ -337,7 +348,7 @@ const InventoryContent = () => {
     let count = 0;
     
     try {
-      const updatedProducts = await Promise.all(products.map(async (product) => {
+      const updatedProducts = await Promise.all(products.map(async (product: Product) => {
         if (product.image_url && product.image_url.startsWith('data:image') && product.image_url.length > 200000) {
            try {
              const compressed = await compressImage(product.image_url);
@@ -515,14 +526,14 @@ const InventoryContent = () => {
               onChange={e => setSelectedCategory(e.target.value)}
             >
               <option value="TODOS" className="bg-slate-900 text-slate-300">Todas as Categorias</option>
-              {categories.map(cat => (
+              {categories.map((cat: MenuCategory) => (
                 <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
               ))}
             </select>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-            {filteredProducts.map(product => (
+            {filteredProducts.map((product: Product) => (
               <div key={product.id} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-2xl bg-black/30 overflow-hidden shrink-0 border border-white/5 relative">
@@ -568,7 +579,7 @@ const InventoryContent = () => {
 
       {activeTab === 'categories' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name)).map(cat => {
+          {categories.slice().sort((a: MenuCategory, b: MenuCategory) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name)).map((cat: MenuCategory) => {
             const iconObj = AVAILABLE_ICONS.find(i => i.name === cat.icon);
             const IconComp = iconObj ? iconObj.icon : Grid3X3;
             return (
@@ -580,7 +591,7 @@ const InventoryContent = () => {
                 <div>
                    <h3 className="font-bold text-white text-lg tracking-tight leading-none">{cat.name}</h3>
                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                      {products.filter(d => d.category_id === cat.id).length} Produtos
+                      {products.filter((d: Product) => d.category_id === cat.id).length} Produtos
                    </p>
                 </div>
               </div>
@@ -689,7 +700,7 @@ const InventoryContent = () => {
             
             <div className="flex-1 overflow-y-auto pr-2 space-y-3 no-scrollbar">
               {integrityIssues.length > 0 ? (
-                integrityIssues.map((issue, idx) => (
+                integrityIssues.map((issue: IntegrityIssue, idx: number) => (
                   <div key={idx} className={`flex items-center justify-between p-5 rounded-2xl border ${issue.severity === 'high' ? 'bg-red-500/5 border-red-500/20' : issue.severity === 'medium' ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-white/5 border-white/5'}`}>
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${issue.severity === 'high' ? 'text-red-500' : issue.severity === 'medium' ? 'text-yellow-500' : 'text-slate-400'}`}>
@@ -750,7 +761,7 @@ const InventoryContent = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-            {products.filter(p => p.track_stock).filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)).map(item => (
+            {products.filter((p: Product) => p.track_stock).filter((item: Product) => item.name.toLowerCase().includes(searchTerm.toLowerCase())).sort((a: Product, b: Product) => a.name.localeCompare(b.name)).map((item: Product) => (
               <div key={item.id} className="glass-panel p-6 rounded-[2rem] border border-white/5 flex flex-col gap-4 hover:border-primary/40 transition-all group">
                 <div className="flex justify-between items-start">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
@@ -794,7 +805,7 @@ const InventoryContent = () => {
                 </div>
               </div>
             ))}
-            {products.filter(p => p.track_stock).length === 0 && (
+            {products.filter((p: Product) => p.track_stock).length === 0 && (
               <div className="col-span-full py-20 text-center">
                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
                   <Box size={32} />
@@ -819,23 +830,23 @@ const InventoryContent = () => {
                <div className="space-y-6">
                   <div className="space-y-4">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome do Produto</label>
-                    <input required type="text" placeholder="Ex: Bitoque da Casa" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} />
+                    <input required type="text" placeholder="Ex: Bitoque da Casa" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" value={productForm.name || ''} onChange={e => setProductForm({...productForm, name: e.target.value})} />
                   </div>
                   
                   <div className="space-y-4">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Descrição</label>
-                    <textarea placeholder="Ingredientes e detalhes..." rows={3} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary resize-none" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} />
+                    <textarea placeholder="Ingredientes e detalhes..." rows={3} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary resize-none" value={productForm.description || ''} onChange={e => setProductForm({...productForm, description: e.target.value})} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-4">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Preço (Kz)</label>
-                      <input required type="number" min="0" placeholder="0" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.price} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
+                      <input required type="number" min="0" placeholder="0" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.price || 0} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
                     </div>
                     <div className="space-y-4">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
-                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.category_id} onChange={e => setProductForm({...productForm, category_id: e.target.value})}>
-                      {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
+                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.category_id || ''} onChange={e => setProductForm({...productForm, category_id: e.target.value})}>
+                      {categories.slice().sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
                         <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                       ))}
                     </select>
@@ -858,11 +869,11 @@ const InventoryContent = () => {
                     <div className="grid grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2">
                       <div className="space-y-4">
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Qtd</label>
-                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.stock_quantity} onChange={e => setProductForm({...productForm, stock_quantity: Number(e.target.value)})} />
+                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.stock_quantity || 0} onChange={e => setProductForm({...productForm, stock_quantity: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-4">
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Mín</label>
-                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.min_stock_quantity} onChange={e => setProductForm({...productForm, min_stock_quantity: Number(e.target.value)})} />
+                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.min_stock_quantity || 0} onChange={e => setProductForm({...productForm, min_stock_quantity: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-4">
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Un</label>
@@ -885,9 +896,9 @@ const InventoryContent = () => {
                       onChange={e => setProductForm({...productForm, supplier_id: e.target.value})}
                     >
                       <option value="" className="bg-slate-900 text-slate-400">-- Selecione um fornecedor --</option>
-                      {suppliers.filter(s => s.ativo).sort((a, b) => a.nome.localeCompare(b.nome)).map(s => (
+                      {suppliers.filter((s: Supplier) => s.isActive).sort((a: Supplier, b: Supplier) => a.name.localeCompare(b.name)).map((s: Supplier) => (
                         <option key={s.id} value={s.id} className="bg-slate-900">
-                          {s.nome} {s.categoria ? `(${s.categoria})` : ''}
+                          {s.name} {s.category ? `(${s.category})` : ''}
                         </option>
                       ))}
                     </select>
@@ -1004,7 +1015,7 @@ const InventoryContent = () => {
                     onChange={e => setCatForm({...catForm, parentId: e.target.value})}
                   >
                     <option value="" className="bg-slate-900 text-slate-400">-- Sem categoria superior --</option>
-                    {categories.filter(c => c.id !== editingId).sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
+                    {categories.filter((c: MenuCategory) => c.id !== editingId).sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
                       <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                     ))}
                   </select>
@@ -1049,7 +1060,81 @@ const InventoryContent = () => {
         </div>
       )}
 
-      {/* Stock Modal Removed */}
+      {/* Stock Modal */}
+      {isStockModalOpen && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
+          <div className="glass-panel rounded-[3rem] w-full max-w-md p-10 border border-white/10 shadow-2xl relative text-center">
+            <div className="flex justify-between items-center mb-8">
+               <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Novo Item de Estoque</h3>
+               <button onClick={() => setIsStockModalOpen(false)} className="text-slate-500 hover:text-white"><X /></button>
+            </div>
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                addProduct({
+                    ...productForm,
+                    id: crypto.randomUUID(),
+                    track_stock: true,
+                    is_active: true
+                } as Product);
+                setIsStockModalOpen(false);
+                addNotification('success', 'Item de estoque adicionado com sucesso');
+            }} className="space-y-6">
+               <div className="space-y-4 text-left">
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome do Item</label>
+                  <input 
+                    required 
+                    type="text" 
+                    placeholder="Ex: Arroz Agulha" 
+                    className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" 
+                    value={productForm.name} 
+                    onChange={e => setProductForm({...productForm, name: e.target.value})} 
+                  />
+               </div>
+               
+               <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-4 text-left">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Quantidade</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" 
+                        value={productForm.stock_quantity || 0} 
+                        onChange={e => setProductForm({...productForm, stock_quantity: Number(e.target.value)})} 
+                      />
+                   </div>
+                   <div className="space-y-4 text-left">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Mínimo</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" 
+                        value={productForm.min_stock_quantity || 0} 
+                        onChange={e => setProductForm({...productForm, min_stock_quantity: Number(e.target.value)})} 
+                      />
+                   </div>
+               </div>
+
+               <div className="space-y-4 text-left">
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Unidade</label>
+                  <select 
+                    className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer"
+                    value={productForm.unit || 'un'}
+                    onChange={e => setProductForm({...productForm, unit: e.target.value})}
+                  >
+                    <option value="un" className="bg-slate-900">Unidade (un)</option>
+                    <option value="kg" className="bg-slate-900">Quilograma (kg)</option>
+                    <option value="l" className="bg-slate-900">Litro (l)</option>
+                    <option value="cx" className="bg-slate-900">Caixa (cx)</option>
+                  </select>
+               </div>
+
+               <button type="submit" className="w-full py-5 bg-primary text-black rounded-[1.5rem] font-black uppercase tracking-widest shadow-glow flex items-center justify-center gap-3">
+                  <Save size={18} /> Confirmar Estoque
+               </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,383 @@
+agtValidation.ts(2,28): error TS2307: Cannot find module './services/agtService' or its corresponding type declarations.
+agtValidation.ts(73,35): error TS7006: Parameter 'e' implicitly has an 'any' type.
+generate_sample_state.ts(18,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(34,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(52,43): error TS18048: 'sampleDish.tax_rate' is possibly 'undefined'.
+generate_sample_state.ts(53,28): error TS18048: 'sampleDish.tax_rate' is possibly 'undefined'.
+generate_sample_state.ts(54,33): error TS2551: Property 'tax_code' does not exist on type 'Dish'. Did you mean 'taxCode'?
+generate_sample_state.ts(55,13): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(60,44): error TS18048: 'sampleDish.tax_rate' is possibly 'undefined'.
+generate_sample_state.ts(61,42): error TS18048: 'sampleDish.tax_rate' is possibly 'undefined'.
+generate_sample_state.ts(65,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(66,9): error TS2322: Type 'null' is not assignable to type 'PaymentMethod | undefined'.
+generate_sample_state.ts(69,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(70,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(71,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(72,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(73,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(75,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(124,9): error TS2820: Type '"Transferência"' is not assignable to type 'PaymentMethod | undefined'. Did you mean '"TRANSFERENCIA"'?
+generate_sample_state.ts(125,9): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+generate_sample_state.ts(148,9): error TS2353: Object literal may only specify known properties, and 'initial_cash' does not exist in type 'CashShift'.
+generate_sample_state.ts(188,11): error TS2739: Type '{ restaurantName: string; currency: string; taxRate: number; apiToken: string; webhookEnabled: false; nif: string; address: string; phone: string; qrMenuUrl: string; qrMenuShortCode: string; printerConfig: { ...; }; ... 20 more ...; version: string; }' is missing the following properties from type 'SystemSettings': invoiceSeries, retencaoFonte, regimeIVA, isSidebarCollapsed
+i18n.ts(2,18): error TS2307: Cannot find module 'i18next' or its corresponding type declarations.
+i18n.ts(3,34): error TS2307: Cannot find module 'react-i18next' or its corresponding type declarations.
+src/app/analytics/page.tsx(35,56): error TS2345: Argument of type '7 | 30 | 90' is not assignable to parameter of type '"day" | "month" | "week"'.
+  Type '7' is not assignable to type '"day" | "month" | "week"'.
+src/app/analytics/page.tsx(43,80): error TS2339: Property 'totalSales' does not exist on type 'DailySalesAnalytics'.
+src/app/analytics/page.tsx(45,79): error TS2339: Property 'totalOrders' does not exist on type 'DailySalesAnalytics'.
+src/app/analytics/page.tsx(138,15): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaymentMethod, number>'.
+src/app/analytics/page.tsx(139,13): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaymentMethod, number>'.
+src/app/analytics/page.tsx(173,47): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/analytics/page.tsx(174,52): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/analytics/page.tsx(182,36): error TS2339: Property 'totalSales' does not exist on type 'DailySalesAnalytics'.
+src/app/analytics/page.tsx(183,38): error TS2339: Property 'totalSales' does not exist on type 'DailySalesAnalytics'.
+src/app/analytics/page.tsx(183,54): error TS2339: Property 'totalOrders' does not exist on type 'DailySalesAnalytics'.
+src/app/analytics/page.tsx(199,32): error TS2339: Property 'profitMargin' does not exist on type 'MenuAnalytics'.
+src/app/analytics/page.tsx(224,34): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/analytics/page.tsx(416,34): error TS7006: Parameter 'hour' implicitly has an 'any' type.
+src/app/analytics/page.tsx(416,40): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/analytics/page.tsx(516,31): error TS7006: Parameter 'dish' implicitly has an 'any' type.
+src/app/analytics/page.tsx(516,37): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/analytics/page.tsx(517,61): error TS2339: Property 'dishId' does not exist on type 'MenuAnalytics'.
+src/app/analytics/page.tsx(525,73): error TS2339: Property 'sold' does not exist on type 'MenuAnalytics'.
+src/app/analytics/page.tsx(529,74): error TS2339: Property 'profitMargin' does not exist on type 'MenuAnalytics'.
+src/app/analytics/page.tsx(574,41): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/analytics/page.tsx(588,35): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/app/analytics/page.tsx(624,32): error TS7006: Parameter 'perf' implicitly has an 'any' type.
+src/app/analytics/page.tsx(624,38): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/customer-display/page.tsx(8,10): error TS2305: Module '"@/types"' has no exported member 'CustomerDisplayEvent'.
+src/app/customer-display/page.tsx(21,47): error TS2339: Property 'image' does not exist on type 'Product'.
+src/app/customer-display/page.tsx(21,61): error TS2339: Property 'available' does not exist on type 'Product'.
+src/app/customer-display/page.tsx(51,17): error TS2322: Type '{}' is not assignable to type 'string'.
+src/app/customer-display/page.tsx(141,54): error TS18048: 'item' is possibly 'undefined'.
+src/app/customer-display/page.tsx(151,117): error TS18048: 'item' is possibly 'undefined'.
+src/app/customer-display/page.tsx(152,91): error TS18048: 'item' is possibly 'undefined'.
+src/app/customer-display/page.tsx(156,147): error TS18048: 'item' is possibly 'undefined'.
+src/app/customer-display/page.tsx(156,164): error TS18048: 'item' is possibly 'undefined'.
+src/app/customer-display/page.tsx(182,29): error TS2339: Property 'image' does not exist on type 'Product'.
+src/app/customer-display/page.tsx(184,37): error TS2339: Property 'image' does not exist on type 'Product'.
+src/app/customer-display/page.tsx(185,37): error TS2339: Property 'image' does not exist on type 'Product'.
+src/app/customers/page.tsx(24,46): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/customers/page.tsx(33,35): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/customers/page.tsx(144,31): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/customers/page.tsx(145,37): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/customers/page.tsx(251,40): error TS7006: Parameter 'customer' implicitly has an 'any' type.
+src/app/dashboard/page.tsx(69,15): error TS2339: Property 'totalSales' does not exist on type 'DailySalesAnalytics'.
+src/app/dashboard/page.tsx(73,119): error TS2820: Type '"OUTROS"' is not assignable to type 'PaymentMethod'. Did you mean '"OUTRO"'?
+src/app/dashboard/page.tsx(73,129): error TS2820: Type '"Cash"' is not assignable to type 'PaymentMethod'. Did you mean '"CASH"'?
+src/app/dashboard/page.tsx(73,137): error TS2820: Type '"Card"' is not assignable to type 'PaymentMethod'. Did you mean '"CARD"'?
+src/app/dashboard/page.tsx(73,145): error TS2820: Type '"MBWay"' is not assignable to type 'PaymentMethod'. Did you mean '"MBWAY"'?
+src/app/dashboard/page.tsx(73,154): error TS2322: Type '"Other"' is not assignable to type 'PaymentMethod'.
+src/app/dashboard/page.tsx(81,5): error TS2561: Object literal may only specify known properties, but 'OUTROS' does not exist in type 'Record<PaymentMethod, string>'. Did you mean to write 'OUTRO'?
+src/app/dashboard/page.tsx(159,9): error TS2561: Object literal may only specify known properties, but 'OUTROS' does not exist in type 'Record<PaymentMethod, number>'. Did you mean to write 'OUTRO'?
+src/app/dashboard/page.tsx(169,15): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaymentMethod, number>'.
+src/app/dashboard/page.tsx(170,13): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaymentMethod, number>'.
+src/app/dashboard/page.tsx(207,30): error TS2339: Property 'totalSales' does not exist on type 'DailySalesAnalytics'.
+src/app/dashboard/page.tsx(209,17): error TS2339: Property 'totalSales' does not exist on type 'DailySalesAnalytics'.
+src/app/dashboard/page.tsx(209,63): error TS2339: Property 'totalSales' does not exist on type 'DailySalesAnalytics'.
+src/app/dashboard/page.tsx(418,81): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/employees/page.tsx(45,5): error TS2353: Object literal may only specify known properties, and 'dayOfWeek' does not exist in type 'Partial<WorkShift> | (() => Partial<WorkShift>)'.
+src/app/employees/page.tsx(70,30): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/app/employees/page.tsx(86,32): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/employees/page.tsx(91,21): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/employees/page.tsx(91,24): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/employees/page.tsx(131,35): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/employees/page.tsx(184,30): error TS2339: Property 'dayOfWeek' does not exist on type 'Partial<WorkShift>'.
+src/app/employees/page.tsx(223,41): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/employees/page.tsx(340,83): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/app/employees/page.tsx(366,55): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/employees/page.tsx(366,91): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/employees/page.tsx(366,93): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/employees/page.tsx(382,65): error TS2353: Object literal may only specify known properties, and 'dayOfWeek' does not exist in type 'SetStateAction<Partial<WorkShift>>'.
+src/app/employees/page.tsx(393,43): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/employees/page.tsx(550,95): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/app/employees/page.tsx(562,67): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/employees/page.tsx(568,107): error TS2339: Property 'absenceDeduction' does not exist on type 'PayrollRecord'.
+src/app/employees/page.tsx(777,38): error TS2339: Property 'dayOfWeek' does not exist on type 'Partial<WorkShift>'.
+src/app/employees/page.tsx(778,64): error TS2353: Object literal may only specify known properties, and 'dayOfWeek' does not exist in type 'SetStateAction<Partial<WorkShift>>'.
+src/app/employees/page.tsx(816,15): error TS2322: Type '{ name: string; role: string; salarioBase: number | undefined; workDaysPerMonth: number | undefined; dailyWorkHours: number | undefined; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'name' does not exist on type 'IntrinsicAttributes'.
+src/app/encomendas/page.tsx(59,60): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/encomendas/page.tsx(64,49): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/encomendas/page.tsx(109,61): error TS2339: Property 'driverName' does not exist on type 'Delivery'.
+src/app/encomendas/page.tsx(171,37): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/encomendas/page.tsx(264,40): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/encomendas/page.tsx(287,57): error TS2339: Property 'image' does not exist on type 'Product'.
+src/app/encomendas/page.tsx(344,31): error TS7006: Parameter 'dish' implicitly has an 'any' type.
+src/app/encomendas/page.tsx(502,159): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/finance/page.tsx(162,40): error TS7006: Parameter 'payment' implicitly has an 'any' type.
+src/app/finance/page.tsx(163,15): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaymentMethod, number>'.
+src/app/finance/page.tsx(164,13): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaymentMethod, number>'.
+src/app/finance/page.tsx(289,73): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(298,34): error TS2339: Property 'baseSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(299,33): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(300,27): error TS2339: Property 'workDays' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(300,41): error TS2339: Property 'totalWorkDays' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(301,26): error TS2339: Property 'overtimeHours' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(322,33): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/app/finance/page.tsx(591,101): error TS2339: Property 'baseSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(592,82): error TS2339: Property 'workDays' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(592,100): error TS2339: Property 'totalWorkDays' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(593,84): error TS2339: Property 'overtimeHours' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(594,109): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(618,159): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(622,161): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(626,160): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(981,108): error TS2339: Property 'baseSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(985,99): error TS2339: Property 'workDays' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(985,132): error TS2339: Property 'totalWorkDays' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(994,93): error TS2339: Property 'overtimeHours' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(995,98): error TS2339: Property 'overtimeBonus' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(1003,88): error TS2339: Property 'lateMinutes' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(1004,97): error TS2339: Property 'latenessDeduction' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(1007,87): error TS2339: Property 'absenceDays' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(1008,97): error TS2339: Property 'absenceDeduction' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(1017,118): error TS2339: Property 'netSalary' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(1031,82): error TS2339: Property 'paymentDate' does not exist on type 'PayrollRecord'.
+src/app/finance/page.tsx(1031,167): error TS2339: Property 'paymentDate' does not exist on type 'PayrollRecord'.
+src/app/inventory/page.tsx(381,13): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/app/inventory/page.tsx(454,47): error TS2552: Cannot find name 'handleOpenStockModal'. Did you mean 'handleOpenCatModal'?
+src/app/inventory/page.tsx(672,27): error TS18048: 'integrityIssues' is possibly 'undefined'.
+src/app/inventory/page.tsx(674,19): error TS18048: 'integrityIssues' is possibly 'undefined'.
+src/app/inventory/page.tsx(691,16): error TS18048: 'integrityIssues' is possibly 'undefined'.
+src/app/inventory/page.tsx(692,17): error TS18048: 'integrityIssues' is possibly 'undefined'.
+src/app/inventory/page.tsx(693,105): error TS2367: This comparison appears to be unintentional because the types '"error" | "info" | "warning" | "critical" | "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" | undefined' and '"high"' have no overlap.
+src/app/inventory/page.tsx(693,168): error TS2367: This comparison appears to be unintentional because the types '"error" | "info" | "warning" | "critical" | "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" | undefined' and '"medium"' have no overlap.
+src/app/inventory/page.tsx(695,96): error TS2367: This comparison appears to be unintentional because the types '"error" | "info" | "warning" | "critical" | "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" | undefined' and '"high"' have no overlap.
+src/app/inventory/page.tsx(695,141): error TS2367: This comparison appears to be unintentional because the types '"error" | "info" | "warning" | "critical" | "HIGH" | "MEDIUM" | "LOW" | "CRITICAL" | undefined' and '"medium"' have no overlap.
+src/app/inventory/page.tsx(700,119): error TS2339: Property 'action' does not exist on type 'IntegrityIssue'.
+src/app/inventory/page.tsx(705,35): error TS2339: Property 'action' does not exist on type 'IntegrityIssue'.
+src/app/inventory/page.tsx(707,42): error TS2339: Property 'action' does not exist on type 'IntegrityIssue'.
+src/app/inventory/page.tsx(709,42): error TS2339: Property 'action' does not exist on type 'IntegrityIssue'.
+src/app/inventory/page.tsx(721,45): error TS2339: Property 'action' does not exist on type 'IntegrityIssue'.
+src/app/inventory/page.tsx(722,30): error TS2339: Property 'action' does not exist on type 'IntegrityIssue'.
+src/app/inventory/page.tsx(722,82): error TS2339: Property 'action' does not exist on type 'IntegrityIssue'.
+src/app/inventory/page.tsx(888,41): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/inventory/page.tsx(888,61): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/inventory/page.tsx(888,64): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/inventory/page.tsx(888,104): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/inventory/page.tsx(1003,36): error TS2551: Property 'parentId' does not exist on type 'Partial<MenuCategory>'. Did you mean 'parent_id'?
+src/app/inventory/page.tsx(1004,60): error TS2353: Object literal may only specify known properties, and 'parentId' does not exist in type 'SetStateAction<Partial<MenuCategory>>'.
+src/app/inventory/page.tsx(1037,60): error TS2353: Object literal may only specify known properties, and 'availableOnDigitalMenu' does not exist in type 'SetStateAction<Partial<MenuCategory>>'.
+src/app/inventory/page.tsx(1037,93): error TS2551: Property 'availableOnDigitalMenu' does not exist on type 'Partial<MenuCategory>'. Did you mean 'is_available_on_digital_menu'?
+src/app/inventory/page.tsx(1038,102): error TS2551: Property 'availableOnDigitalMenu' does not exist on type 'Partial<MenuCategory>'. Did you mean 'is_available_on_digital_menu'?
+src/app/inventory/page.tsx(1040,121): error TS2551: Property 'availableOnDigitalMenu' does not exist on type 'Partial<MenuCategory>'. Did you mean 'is_available_on_digital_menu'?
+src/app/kitchen/page.tsx(62,20): error TS18048: 'i' is possibly 'undefined'.
+src/app/kitchen/page.tsx(144,86): error TS18048: 'i' is possibly 'undefined'.
+src/app/kitchen/page.tsx(145,80): error TS18048: 'i' is possibly 'undefined'.
+src/app/kitchen/page.tsx(162,16): error TS18048: 'o.items' is possibly 'undefined'.
+src/app/kitchen/page.tsx(167,31): error TS18048: 'o.items' is possibly 'undefined'.
+src/app/kitchen/page.tsx(279,20): error TS18048: 'order.items' is possibly 'undefined'.
+src/app/kitchen/page.tsx(290,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/kitchen/page.tsx(308,32): error TS2304: Cannot find name 'getProductName'.
+src/app/pos/page.tsx(237,22): error TS18048: 'o.items' is possibly 'undefined'.
+src/app/pos/page.tsx(388,23): error TS18048: 'order.items' is possibly 'undefined'.
+src/app/pos/page.tsx(411,38): error TS18048: 'order.taxTotal' is possibly 'undefined'.
+src/app/pos/page.tsx(487,26): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/app/pos/page.tsx(525,23): error TS18048: 'order.items' is possibly 'undefined'.
+src/app/pos/page.tsx(547,38): error TS18048: 'order.taxTotal' is possibly 'undefined'.
+src/app/pos/page.tsx(550,23): error TS18048: 'order.items' is possibly 'undefined'.
+src/app/pos/page.tsx(658,30): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/app/pos/page.tsx(721,19): error TS18048: 'order.taxTotal' is possibly 'undefined'.
+src/app/pos/page.tsx(1316,26): error TS18048: 'order.items' is possibly 'undefined'.
+src/app/pos/page.tsx(1332,33): error TS18048: 'order.items' is possibly 'undefined'.
+src/app/pos/page.tsx(1349,18): error TS18048: 'currentOrder.items' is possibly 'undefined'.
+src/app/pos/page.tsx(1350,63): error TS2339: Property 'dishId' does not exist on type 'OrderItem'.
+src/app/pos/page.tsx(1354,66): error TS2339: Property 'image' does not exist on type 'Product'.
+src/app/pos/page.tsx(1378,18): error TS18048: 'currentOrder.items' is possibly 'undefined'.
+src/app/pos/page.tsx(1399,50): error TS18048: 'currentOrder.items' is possibly 'undefined'.
+src/app/pos/page.tsx(1482,65): error TS2345: Argument of type 'OrderPayment[] | { id: string; method: PaymentMethod; amount: number; timestamp: string | Date; }[]' is not assignable to parameter of type 'SetStateAction<OrderPayment[]>'.
+  Type '{ id: string; method: PaymentMethod; amount: number; timestamp: string | Date; }[]' is not assignable to type 'SetStateAction<OrderPayment[]>'.
+    Type '{ id: string; method: PaymentMethod; amount: number; timestamp: string | Date; }[]' is not assignable to type 'OrderPayment[]'.
+      Type '{ id: string; method: PaymentMethod; amount: number; timestamp: string | Date; }' is not assignable to type 'OrderPayment'.
+        Types of property 'timestamp' are incompatible.
+          Type 'string | Date' is not assignable to type 'string | undefined'.
+            Type 'Date' is not assignable to type 'string'.
+src/app/pos/page.tsx(1846,35): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/pos/page.tsx(1847,34): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/pos/page.tsx(1847,37): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/pos/page.tsx(1848,32): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/pos/page.tsx(1868,42): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(5,10): error TS2305: Module '"@/types"' has no exported member 'MenuAccessStats'.
+src/app/qrcodeanalytics/page.tsx(20,46): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(44,39): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(54,13): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(55,14): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(55,19): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(77,27): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(85,27): error TS7006: Parameter 'cell' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(278,57): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/qrcodeanalytics/page.tsx(278,62): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/app/qrmenumanager/page.tsx(30,51): error TS2339: Property 'trim' does not exist on type '{}'.
+src/app/qrmenumanager/page.tsx(71,60): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type '{}' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type '{}' is not assignable to parameter of type 'string | number'.
+src/app/qrmenumanager/page.tsx(352,36): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/qrmenumanager/page.tsx(357,45): error TS2551: Property 'availableOnDigitalMenu' does not exist on type 'MenuCategory'. Did you mean 'is_available_on_digital_menu'?
+src/app/qrmenumanager/page.tsx(365,27): error TS2551: Property 'availableOnDigitalMenu' does not exist on type 'MenuCategory'. Did you mean 'is_available_on_digital_menu'?
+src/app/qrmenumanager/page.tsx(370,26): error TS2551: Property 'availableOnDigitalMenu' does not exist on type 'MenuCategory'. Did you mean 'is_available_on_digital_menu'?
+src/app/qrmenumanager/page.tsx(438,45): error TS2551: Property 'availableOnDigitalMenu' does not exist on type 'MenuCategory'. Did you mean 'is_available_on_digital_menu'?
+src/app/qrmenumanager/page.tsx(446,27): error TS2551: Property 'isAvailableOnDigitalMenu' does not exist on type 'MenuCategory'. Did you mean 'is_available_on_digital_menu'?
+src/app/qrmenumanager/page.tsx(451,26): error TS2551: Property 'isAvailableOnDigitalMenu' does not exist on type 'MenuCategory'. Did you mean 'is_available_on_digital_menu'?
+src/app/qrscanner/page.tsx(9,10): error TS2305: Module '"@/types"' has no exported member 'QRScanResult'.
+src/app/qrscanner/page.tsx(9,24): error TS2305: Module '"@/types"' has no exported member 'QRScanData'.
+src/app/qrscanner/page.tsx(80,15): error TS2322: Type '{ onScan: (result: QRScanResult) => void; onError: (error: unknown) => void; components: { finder: boolean; }; styles: { container: { width: string; height: string; }; }; }' is not assignable to type 'IntrinsicAttributes & IQrScannerProps'.
+  Property 'onScan' does not exist on type 'IntrinsicAttributes & IQrScannerProps'.
+src/app/reports/page.tsx(47,5): error TS2561: Object literal may only specify known properties, but 'OUTROS' does not exist in type 'Record<PaymentMethod, string>'. Did you mean to write 'OUTRO'?
+src/app/reports/page.tsx(163,9): error TS2561: Object literal may only specify known properties, but 'OUTROS' does not exist in type 'Record<PaymentMethod, number>'. Did you mean to write 'OUTRO'?
+src/app/reports/page.tsx(173,15): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaymentMethod, number>'.
+src/app/reports/page.tsx(174,13): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PaymentMethod, number>'.
+src/app/reports/page.tsx(214,7): error TS18048: 'order.items' is possibly 'undefined'.
+src/app/reports/page.tsx(215,21): error TS2339: Property 'dishId' does not exist on type 'OrderItem'.
+src/app/reports/page.tsx(215,44): error TS2339: Property 'dishId' does not exist on type 'OrderItem'.
+src/app/reports/page.tsx(221,25): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/reports/page.tsx(241,13): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/app/reports/page.tsx(602,45): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/app/reservations/page.tsx(31,52): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/app/reservations/page.tsx(43,21): error TS2339: Property 'people' does not exist on type 'Reservation'.
+src/app/reservations/page.tsx(133,38): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/app/schedules/page.tsx(56,5): error TS2353: Object literal may only specify known properties, and 'dayOfWeek' does not exist in type 'Partial<WorkShift> | (() => Partial<WorkShift>)'.
+src/app/schedules/page.tsx(64,30): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/schedules/page.tsx(72,33): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/schedules/page.tsx(85,14): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/schedules/page.tsx(85,17): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/app/schedules/page.tsx(90,38): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/schedules/page.tsx(91,38): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/schedules/page.tsx(133,9): error TS2353: Object literal may only specify known properties, and 'dayOfWeek' does not exist in type 'WorkShift'.
+src/app/schedules/page.tsx(133,29): error TS2339: Property 'dayOfWeek' does not exist on type 'Partial<WorkShift>'.
+src/app/schedules/page.tsx(145,7): error TS2353: Object literal may only specify known properties, and 'dayOfWeek' does not exist in type 'SetStateAction<Partial<WorkShift>>'.
+src/app/schedules/page.tsx(162,7): error TS2353: Object literal may only specify known properties, and 'dayOfWeek' does not exist in type 'SetStateAction<Partial<WorkShift>>'.
+src/app/schedules/page.tsx(180,24): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/schedules/page.tsx(193,30): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/schedules/page.tsx(199,31): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/schedules/page.tsx(199,38): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/schedules/page.tsx(302,88): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/schedules/page.tsx(340,37): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/schedules/page.tsx(419,51): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/schedules/page.tsx(420,50): error TS7006: Parameter 'total' implicitly has an 'any' type.
+src/app/schedules/page.tsx(420,57): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/schedules/page.tsx(447,37): error TS7006: Parameter 'shift' implicitly has an 'any' type.
+src/app/schedules/page.tsx(530,35): error TS2339: Property 'dayOfWeek' does not exist on type 'Partial<WorkShift>'.
+src/app/schedules/page.tsx(531,61): error TS2353: Object literal may only specify known properties, and 'dayOfWeek' does not exist in type 'SetStateAction<Partial<WorkShift>>'.
+src/app/settings/page.tsx(59,51): error TS2551: Property 'fetchCategoriesPaged' does not exist on type 'IntegrationAPIService'. Did you mean 'fetchCategories'?
+src/app/settings/page.tsx(60,52): error TS2551: Property 'fetchProductsPaged' does not exist on type 'IntegrationAPIService'. Did you mean 'fetchProducts'?
+src/app/settings/page.tsx(76,56): error TS2353: Object literal may only specify known properties, and 'products' does not exist in type '{ categories: MenuCategory[]; dishes: Product[]; preferCloud: boolean; }'.
+src/app/settings/page.tsx(241,50): error TS2339: Property 'testConnection' does not exist on type 'IntegrationAPIService'.
+src/app/settings/page.tsx(291,48): error TS2339: Property 'setupRLS' does not exist on type 'IntegrationAPIService'.
+src/app/settings/page.tsx(310,48): error TS2339: Property 'setupBuckets' does not exist on type 'IntegrationAPIService'.
+src/app/settings/page.tsx(403,18): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/settings/page.tsx(542,44): error TS2339: Property 'trim' does not exist on type '{}'.
+src/app/settings/page.tsx(644,49): error TS2339: Property 'error' does not exist on type 'FinancialClearanceReport'.
+src/app/settings/page.tsx(681,81): error TS18048: 'report.summary' is possibly 'undefined'.
+src/app/settings/page.tsx(682,82): error TS18048: 'report.summary' is possibly 'undefined'.
+src/app/settings/page.tsx(683,75): error TS18048: 'report.summary' is possibly 'undefined'.
+src/app/settings/page.tsx(684,81): error TS18048: 'report.summary' is possibly 'undefined'.
+src/app/settings/page.tsx(685,91): error TS18048: 'report.summary' is possibly 'undefined'.
+src/app/settings/page.tsx(734,49): error TS2304: Cannot find name 'menu'.
+src/app/settings/page.tsx(898,178): error TS2322: Type 'unknown' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/app/settings/page.tsx(902,178): error TS2322: Type 'unknown' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/app/settings/page.tsx(906,180): error TS2322: Type 'unknown' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/app/settings/page.tsx(910,180): error TS2322: Type '{}' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/app/settings/page.tsx(914,173): error TS2322: Type '{}' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/app/settings/page.tsx(922,168): error TS2322: Type '{}' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/app/settings/page.tsx(926,235): error TS2322: Type '{}' is not assignable to type 'string | number | readonly string[] | undefined'.
+src/app/settings/page.tsx(1173,34): error TS2322: Type '{ onOpenUserModal: () => void; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'onOpenUserModal' does not exist on type 'IntrinsicAttributes'.
+src/app/settings/page.tsx(1572,61): error TS2345: Argument of type '(prev: SystemSettings) => { supabaseConfig: { url: string; enabled?: boolean | undefined; key?: string | undefined; autoSync?: boolean | undefined; }; id?: string | undefined; ... 5 more ...; sqlServerConfig?: { ...; } | undefined; }' is not assignable to parameter of type 'SetStateAction<SystemSettings>'.
+  Type '(prev: SystemSettings) => { supabaseConfig: { url: string; enabled?: boolean | undefined; key?: string | undefined; autoSync?: boolean | undefined; }; id?: string | undefined; ... 5 more ...; sqlServerConfig?: { ...; } | undefined; }' is not assignable to type '(prevState: SystemSettings) => SystemSettings'.
+    Call signature return types '{ supabaseConfig: { url: string; enabled?: boolean | undefined; key?: string | undefined; autoSync?: boolean | undefined; }; id?: string | undefined; restaurantName?: string | undefined; ... 4 more ...; sqlServerConfig?: { ...; } | undefined; }' and 'SystemSettings' are incompatible.
+      The types of 'supabaseConfig.enabled' are incompatible between these types.
+        Type 'boolean | undefined' is not assignable to type 'boolean'.
+          Type 'undefined' is not assignable to type 'boolean'.
+src/app/settings/page.tsx(1585,61): error TS2345: Argument of type '(prev: SystemSettings) => { supabaseConfig: { key: string; enabled?: boolean | undefined; url?: string | undefined; autoSync?: boolean | undefined; }; id?: string | undefined; ... 5 more ...; sqlServerConfig?: { ...; } | undefined; }' is not assignable to parameter of type 'SetStateAction<SystemSettings>'.
+  Type '(prev: SystemSettings) => { supabaseConfig: { key: string; enabled?: boolean | undefined; url?: string | undefined; autoSync?: boolean | undefined; }; id?: string | undefined; ... 5 more ...; sqlServerConfig?: { ...; } | undefined; }' is not assignable to type '(prevState: SystemSettings) => SystemSettings'.
+    Call signature return types '{ supabaseConfig: { key: string; enabled?: boolean | undefined; url?: string | undefined; autoSync?: boolean | undefined; }; id?: string | undefined; restaurantName?: string | undefined; ... 4 more ...; sqlServerConfig?: { ...; } | undefined; }' and 'SystemSettings' are incompatible.
+      The types of 'supabaseConfig.enabled' are incompatible between these types.
+        Type 'boolean | undefined' is not assignable to type 'boolean'.
+          Type 'undefined' is not assignable to type 'boolean'.
+src/app/settings/page.tsx(1739,21): error TS2322: Type '{ isOpen: boolean; onClose: () => void; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'isOpen' does not exist on type 'IntrinsicAttributes'.
+src/app/tablelayout/page.tsx(12,17): error TS2305: Module '"@/types"' has no exported member 'TableStatus'.
+src/app/tablelayout/page.tsx(12,41): error TS2305: Module '"@/types"' has no exported member 'TableShape'.
+src/components/POSAccessManagement.tsx(12,60): error TS2345: Argument of type 'string' is not assignable to parameter of type 'UserRole'.
+src/components/POSAccessManagement.tsx(13,63): error TS2345: Argument of type 'string' is not assignable to parameter of type 'UserRole'.
+src/components/public-menu/ProductMenu.tsx(5,10): error TS2305: Module '"../../types"' has no exported member 'CartEntry'.
+src/constants.ts(16,3): error TS2741: Property 'active' is missing in type '{ id: string; name: string; role: string; pin: string; }' but required in type 'User'.
+src/constants.ts(17,3): error TS2741: Property 'active' is missing in type '{ id: string; name: string; role: string; pin: string; }' but required in type 'User'.
+src/constants.ts(18,3): error TS2741: Property 'active' is missing in type '{ id: string; name: string; role: string; pin: string; }' but required in type 'User'.
+src/constants.ts(19,3): error TS2741: Property 'active' is missing in type '{ id: string; name: string; role: string; pin: string; }' but required in type 'User'.
+src/constants.ts(30,14): error TS2353: Object literal may only specify known properties, and 'name' does not exist in type 'StockItem'.
+src/constants.ts(31,14): error TS2353: Object literal may only specify known properties, and 'name' does not exist in type 'StockItem'.
+src/data/thesisData.ts(46,5): error TS2741: Property 'source' is missing in type '{ id: string; amount: number; description: string; date: string; category: string; }' but required in type 'Revenue'.
+src/data/thesisData.ts(47,5): error TS2741: Property 'source' is missing in type '{ id: string; amount: number; description: string; date: string; category: string; }' but required in type 'Revenue'.
+src/data/thesisData.ts(48,5): error TS2741: Property 'source' is missing in type '{ id: string; amount: number; description: string; date: string; category: string; }' but required in type 'Revenue'.
+src/data/thesisData.ts(49,5): error TS2741: Property 'source' is missing in type '{ id: string; amount: number; description: string; date: string; category: string; }' but required in type 'Revenue'.
+src/data/thesisData.ts(50,5): error TS2741: Property 'source' is missing in type '{ id: string; amount: number; description: string; date: string; category: string; }' but required in type 'Revenue'.
+src/hooks/useRealtimeSync.ts(29,22): error TS2345: Argument of type 'RealtimePostgresChangesPayload<{ [key: string]: any; }>' is not assignable to parameter of type 'RealtimePostgresChangesPayload<RealtimePayload>'.
+  Type 'RealtimePostgresInsertPayload<{ [key: string]: any; }>' is not assignable to type 'RealtimePostgresChangesPayload<RealtimePayload>'.
+    Type 'RealtimePostgresInsertPayload<{ [key: string]: any; }>' is not assignable to type 'RealtimePostgresInsertPayload<RealtimePayload>'.
+      Type 'RealtimePostgresInsertPayload<{ [key: string]: any; }>' is not assignable to type '{ eventType: "INSERT"; new: RealtimePayload; old: {}; }'.
+        Types of property 'new' are incompatible.
+          Type '{ [key: string]: any; }' is not assignable to type 'RealtimePayload'.
+            Type '{ [key: string]: any; }' is missing the following properties from type 'DailyAnalyticsPayload': eventType, new, old, schema, and 2 more.
+src/hooks/useRealtimeSync.ts(40,22): error TS2345: Argument of type 'RealtimePostgresChangesPayload<{ [key: string]: any; }>' is not assignable to parameter of type 'RealtimePostgresChangesPayload<RealtimePayload>'.
+  Type 'RealtimePostgresInsertPayload<{ [key: string]: any; }>' is not assignable to type 'RealtimePostgresChangesPayload<RealtimePayload>'.
+    Type 'RealtimePostgresInsertPayload<{ [key: string]: any; }>' is not assignable to type 'RealtimePostgresInsertPayload<RealtimePayload>'.
+      Type 'RealtimePostgresInsertPayload<{ [key: string]: any; }>' is not assignable to type '{ eventType: "INSERT"; new: RealtimePayload; old: {}; }'.
+        Types of property 'new' are incompatible.
+          Type '{ [key: string]: any; }' is not assignable to type 'RealtimePayload'.
+            Type '{ [key: string]: any; }' is missing the following properties from type 'DailyAnalyticsPayload': eventType, new, old, schema, and 2 more.
+src/hooks/useRestaurantStats.ts(41,11): error TS2353: Object literal may only specify known properties, and 'totalOrders' does not exist in type 'DailyAnalytics | ((prevState: DailyAnalytics | null) => DailyAnalytics | null)'.
+src/hooks/useRestaurantStats.ts(103,21): error TS2353: Object literal may only specify known properties, and 'totalOrders' does not exist in type 'DailyAnalytics | ((prevState: DailyAnalytics | null) => DailyAnalytics | null)'.
+src/hooks/useRestaurantStats.ts(137,31): error TS2339: Property 'netProfit' does not exist on type 'DailyAnalytics'.
+src/hooks/useRestaurantStats.ts(138,21): error TS2339: Property 'totalOrders' does not exist on type 'DailyAnalytics'.
+src/middleware.ts(1,10): error TS2305: Module '"@supabase/auth-helpers-nextjs"' has no exported member 'createMiddlewareClient'.
+src/services/agtService.ts(121,23): error TS18048: 'order.items' is possibly 'undefined'.
+src/services/agtService.ts(121,98): error TS18046: 'settings.taxRate' is of type 'unknown'.
+src/services/agtService.ts(125,9): error TS2322: Type '{ lineNumber: number; productCode: any; productDescription: string; quantity: number; unitOfMeasure: string; unitPrice: number; unitPriceBase: number; debitAmount: number; creditAmount: number; taxes: { ...; }[]; settlementAmount: number; }[]' is not assignable to type 'AGTLine[]'.
+  Type '{ lineNumber: number; productCode: any; productDescription: string; quantity: number; unitOfMeasure: string; unitPrice: number; unitPriceBase: number; debitAmount: number; creditAmount: number; taxes: { ...; }[]; settlementAmount: number; }' is not assignable to type 'AGTLine'.
+    Types of property 'taxes' are incompatible.
+      Type '{ taxType: string; taxCountryRegion: string; taxCode: string; taxPercentage: {}; taxContribution: number; }[]' is not assignable to type 'AGTTax[]'.
+        Type '{ taxType: string; taxCountryRegion: string; taxCode: string; taxPercentage: {}; taxContribution: number; }' is not assignable to type 'AGTTax'.
+          Types of property 'taxPercentage' are incompatible.
+            Type '{}' is not assignable to type 'number'.
+src/services/agtService.ts(125,28): error TS18048: 'order.items' is possibly 'undefined'.
+src/services/agtService.ts(126,47): error TS2339: Property 'dishId' does not exist on type 'OrderItem'.
+src/services/agtService.ts(132,25): error TS2339: Property 'dishId' does not exist on type 'OrderItem'.
+src/services/agtService.ts(145,62): error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/services/agtService.ts(178,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/services/agtService.ts(201,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/services/backupService.ts(333,46): error TS2339: Property 'saveDish' does not exist on type '{ _handleDatabaseOperation: <T>(operation: () => Promise<T>, context: string, functionName?: string) => Promise<{ success: boolean; data?: T | undefined; error?: string | undefined; }>; ... 54 more ...; saveCustomers: (customers: any[]) => Promise<...>; }'.
+src/services/biometricService.ts(110,10): error TS18048: 'device.syncInterval' is possibly 'undefined'.
+src/services/biometricService.ts(175,13): error TS2741: Property 'clockInMethod' is missing in type '{ id: string; employeeId: string; date: string; source: string; isLate: false; lateMinutes: number; overtimeHours: number; isAbsence: false; totalHours: number; clockIn: any; clockOut: any; }' but required in type 'AttendanceRecord'.
+src/services/biometricService.ts(185,62): error TS2551: Property 'toISOString' does not exist on type 'string | Date'. Did you mean 'toString'?
+  Property 'toISOString' does not exist on type 'string'.
+src/services/biometricService.ts(186,64): error TS2551: Property 'toISOString' does not exist on type 'string | Date'. Did you mean 'toString'?
+  Property 'toISOString' does not exist on type 'string'.
+src/services/feedFetch.ts(7,32): error TS2339: Property 'replace' does not exist on type '{}'.
+src/services/geminiService.ts(1,30): error TS2305: Module '"@google/generative-ai"' has no exported member 'SchemaType'.
+src/services/geminiService.ts(122,17): error TS2741: Property 'properties' is missing in type '{ type: any; }' but required in type 'FunctionDeclarationSchema'.
+src/services/geminiService.ts(123,17): error TS2741: Property 'properties' is missing in type '{ type: any; }' but required in type 'FunctionDeclarationSchema'.
+src/services/geminiService.ts(124,17): error TS2741: Property 'properties' is missing in type '{ type: any; }' but required in type 'FunctionDeclarationSchema'.
+src/services/geminiService.ts(125,17): error TS2741: Property 'properties' is missing in type '{ type: any; }' but required in type 'FunctionDeclarationSchema'.
+src/services/geminiService.ts(126,17): error TS2741: Property 'properties' is missing in type '{ type: any; }' but required in type 'FunctionDeclarationSchema'.
+src/services/geminiService.ts(127,17): error TS2741: Property 'properties' is missing in type '{ type: any; }' but required in type 'FunctionDeclarationSchema'.
+src/store/slices/financeSlice.ts(834,11): error TS2304: Cannot find name 'menuResult'.
+src/store/slices/financeSlice.ts(834,33): error TS2304: Cannot find name 'menuResult'.
+src/store/slices/financeSlice.ts(837,25): error TS2304: Cannot find name 'menuResult'.
+src/store/slices/financeSlice.ts(838,21): error TS2304: Cannot find name 'menuResult'.
+src/store/slices/menuSlice.ts(510,13): error TS2304: Cannot find name 'prodResult'.
+src/store/slices/menuSlice.ts(510,35): error TS2304: Cannot find name 'prodResult'.
+src/store/slices/menuSlice.ts(511,29): error TS2304: Cannot find name 'prodResult'.
+src/store/slices/menuSlice.ts(513,32): error TS2304: Cannot find name 'prodResult'.

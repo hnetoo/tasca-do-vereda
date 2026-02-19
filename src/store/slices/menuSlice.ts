@@ -1,25 +1,36 @@
 import { StateCreator } from 'zustand';
-import { Product, MenuCategory, StoreState, IntegrityIssue, UUID } from '@/types';
-import { databaseOperations } from '@/services/database/operations';
+import { Dish, MenuCategory, StoreState, IntegrityIssue, UUID } from '@/types';
+import { 
+  saveCategoryAction, 
+  deleteCategoryAction, 
+  saveDishAction, 
+  deleteDishAction,
+  recreateMenuSchemaAction,
+  saveCategoriesAction,
+  saveDishesAction,
+  getCategoriesAction,
+  getDishesAction
+} from '@/app/actions';
+import { getMenuData } from '@/app/actions/menu';
 import { logger } from '@/services/logger';
 import { integrationAPIService } from '@/services/integrationAPIService';
 import { MOCK_MENU, MOCK_CATEGORIES } from '@/constants';
-import { validateProductCategory, resolveCategoryId } from '@/services/categoryResolver';
-import { normalizeProductImage } from '@/utils/imageUtils';
+import { validateDishCategory, resolveCategoryId } from '@/services/categoryResolver';
+import { normalizeDishImage } from '@/utils/imageUtils';
 import { backupService } from '@/services/backupService';
 import { generateUUID } from '@/utils/uuid';
 
 export interface MenuSlice {
-  products: Product[];
+  dishes: Dish[];
   categories: MenuCategory[];
   deletedCategoryIds: UUID[];
   
   // Basic CRUD
-  setProducts: (products: Product[]) => void;
+  setDishes: (dishes: Dish[]) => void;
   setCategories: (categories: MenuCategory[]) => void;
   
   // Cloud Sync Helpers
-  setProductsFromCloud: (products: Product[]) => void;
+  setDishesFromCloud: (dishes: Dish[]) => void;
   setCategoriesFromCloud: (categories: MenuCategory[]) => void;
   
   // Category Management
@@ -30,46 +41,46 @@ export interface MenuSlice {
   recoverDeletedCategory: (category: MenuCategory) => void;
   scanAndRecoverCategories: () => Promise<void>;
   
-  // Product Management
-  addProduct: (product: Product) => void;
-  updateProduct: (product: Product) => void;
-  removeProduct: (id: UUID) => void;
+  // Dish Management
+  addDish: (dish: Dish) => void;
+  updateDish: (dish: Dish) => void;
+  removeDish: (id: UUID) => void;
   
   // Utilities
   restoreMenuData: () => Promise<void>;
   hardResetMenu: () => Promise<void>;
   loadFromSQLExclusively: () => Promise<boolean>;
-  getProductById: (id: UUID) => Product | undefined;
-  getProductsByCategory: (categoryId: UUID) => Product[];
+  getDishById: (id: UUID) => Dish | undefined;
+  getDishesByCategory: (categoryId: UUID) => Dish[];
   getCategoryById: (id: UUID) => MenuCategory | undefined;
-  rebuildMenu: (categories: MenuCategory[], products: Product[]) => void;
+  rebuildMenu: (categories: MenuCategory[], dishes: Dish[]) => void;
   invalidateMenuCache: () => void;
   syncMenuWithCloud: () => Promise<void>;
   
   // Integrity & Diagnostics
-  validateMenuIntegrity: (categories: MenuCategory[], products: Product[]) => { isValid: boolean; issues: IntegrityIssue[] };
+  validateMenuIntegrity: (categories: MenuCategory[], dishes: Dish[]) => { isValid: boolean; issues: IntegrityIssue[] };
   runIntegrityDiagnostics: () => Promise<void>;
   performSafeCleanup: () => Promise<boolean>;
-  importCloudItems: (data: { categories: MenuCategory[], dishes: Product[], preferCloud: boolean }) => Promise<void>;
+  importCloudItems: (data: { categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => Promise<void>;
 }
 
 export const createMenuSlice: StateCreator<
   StoreState,
-  [['zustand/persist', unknown]],
+  [],
   [],
   MenuSlice
 > = (set, get) => ({
-  products: MOCK_MENU,
+  dishes: MOCK_MENU as Dish[],
   categories: MOCK_CATEGORIES,
   deletedCategoryIds: [],
   
-  setProducts: (products: Product[]) => set({ products }),
+  setDishes: (dishes: Dish[]) => set({ dishes }),
   setCategories: (categories: MenuCategory[]) => set({ categories }),
   
-  setProductsFromCloud: (products: Product[]) => {
-      set({ products });
+  setDishesFromCloud: (dishes: Dish[]) => {
+      set({ dishes });
       // Assuming addIntegrationLog is available on StoreState
-      get().addIntegrationLog?.({ type: 'cloud.products.sync', status: 'INFO', message: 'Produtos atualizados da cloud', details: { count: products.length } } as any);
+      get().addIntegrationLog?.({ type: 'cloud.dishes.sync', status: 'INFO', message: 'Pratos atualizados da cloud', details: { count: dishes.length } } as any);
   },
   
   setCategoriesFromCloud: (categories: MenuCategory[]) => {
@@ -77,10 +88,10 @@ export const createMenuSlice: StateCreator<
       get().addIntegrationLog?.({ type: 'cloud.categories.sync', status: 'INFO', message: 'Categorias atualizadas da cloud', details: { count: categories.length } } as any);
   },
 
-  getProductById: (id: UUID) => get().products.find((p: Product) => p.id === id),
-  getProductsByCategory: (category_id: string) => get().products.filter((p: Product) => p.category_id === category_id),
+  getDishById: (id: UUID) => get().dishes.find((p: Dish) => p.id === id),
+  getDishesByCategory: (categoryId: string) => get().dishes.filter((p: Dish) => p.categoryId === categoryId),
   getCategoryById: (id: UUID) => get().categories.find((c: MenuCategory) => c.id === id),
-  rebuildMenu: (categories: MenuCategory[], products: Product[]) => set({ categories, products }),
+  rebuildMenu: (categories: MenuCategory[], dishes: Dish[]) => set({ categories, dishes }),
   
   invalidateMenuCache: () => {
     logger.info('Menu cache invalidated', undefined, 'SYSTEM');
@@ -107,7 +118,7 @@ export const createMenuSlice: StateCreator<
     }
 
     // 4. Prevenção de loops em hierarquia
-    if (cat.parent_id && cat.parent_id === cat.id) {
+    if (cat.parentId && cat.parentId === cat.id) {
        state.addNotification?.('error', 'Uma categoria não pode ser subcategoria de si mesma.');
        return;
     }
@@ -120,27 +131,28 @@ export const createMenuSlice: StateCreator<
     }
 
     // 6. Real-time integrity check before adding
-    const integrity = get().validateMenuIntegrity([...state.categories, cat], state.products);
+    const integrity = get().validateMenuIntegrity([...state.categories, cat], state.dishes);
     if (!integrity.isValid) {
        logger.error('Integrity warning before adding category', { issues: integrity.issues }, 'STORE');
     }
 
     // 7. Assign Sort Order if missing
-    if (cat.sort_order === undefined) {
-         const maxOrder = state.categories.reduce((max: number, c: MenuCategory) => Math.max(max, c.sort_order || 0), 0);
-         cat.sort_order = maxOrder + 1;
+    if (cat.sortOrder === undefined) {
+         const maxOrder = state.categories.reduce((max: number, c: MenuCategory) => Math.max(max, c.sortOrder || 0), 0);
+         cat.sortOrder = maxOrder + 1;
     }
 
     try {
-      set((state) => ({ categories: [...state.categories, cat] }));
+      set((state: MenuSlice) => ({ categories: [...state.categories, cat] }));
       get().invalidateMenuCache();
       
       // 4. Persist to SQL (CRITICAL)
-      databaseOperations.saveCategory(cat).then(success => {
-          if (success) {
+      logger.debug('Category object before saving to SQL (updateCategory)', { category: cat }, 'DATABASE');
+      saveCategoryAction(cat).then(result => {
+          if (result.success) {
               logger.info('Categoria guardada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
           } else {
-              logger.error('Falha na persistência SQL da categoria', { category: cat }, 'DATABASE');
+              logger.error('Falha na persistência SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
               state.addNotification?.('error', 'Erro ao guardar categoria na base de dados local.');
           }
       }).catch((e: unknown) => {
@@ -172,7 +184,7 @@ export const createMenuSlice: StateCreator<
     }
 
     // 2. Prevenção de loops em hierarquia
-    if (cat.parent_id && cat.parent_id === cat.id) {
+    if (cat.parentId && cat.parentId === cat.id) {
        state.addNotification?.('error', 'Uma categoria não pode ser subcategoria de si mesma.');
        return;
     }
@@ -187,24 +199,24 @@ export const createMenuSlice: StateCreator<
 
     // 4. Real-time integrity check before updating
     const nextCategories = state.categories.map((c: MenuCategory) => c.id === cat.id ? cat : c);
-    const integrity = get().validateMenuIntegrity(nextCategories, state.products);
+    const integrity = get().validateMenuIntegrity(nextCategories, state.dishes);
     if (!integrity.isValid) {
        logger.error('Integrity warning before updating category', { issues: integrity.issues }, 'STORE');
     }
 
     try {
-      set((state) => ({
+      set((state: MenuSlice) => ({
         categories: state.categories.map((c: MenuCategory) => c.id === cat.id ? cat : c)
       }));
       
       get().invalidateMenuCache();
 
       // 6. Persist to SQL (CRITICAL)
-      databaseOperations.saveCategory(cat).then(success => {
-          if (success) {
+      saveCategoryAction(cat).then(result => {
+          if (result.success) {
               logger.info('Categoria atualizada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
           } else {
-              logger.error('Falha na atualização SQL da categoria', { category: cat }, 'DATABASE');
+              logger.error('Falha na atualização SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
               state.addNotification?.('error', 'Erro ao atualizar categoria na base de dados local.');
           }
       }).catch((e: unknown) => {
@@ -228,10 +240,10 @@ export const createMenuSlice: StateCreator<
   removeCategory: async (id: UUID) => {
     const state = get();
     
-    // 1. Check for active products first
-    const hasProducts = state.products.some((p: Product) => p.category_id === id);
-    if (hasProducts) {
-      state.addNotification?.('warning', 'Não é possível remover categoria com produtos ativos.');
+    // 1. Check for active dishes first
+    const hasDishes = state.dishes.some((d: Dish) => d.categoryId === id);
+    if (hasDishes) {
+      state.addNotification?.('warning', 'Não é possível remover categoria com pratos ativos.');
       return;
     }
 
@@ -248,13 +260,13 @@ export const createMenuSlice: StateCreator<
          return;
       }
 
-      set({ 
+      set((state: MenuSlice) => ({
         categories: newCategories,
-        deletedCategoryIds: [...(state.deletedCategoryIds || []), id] 
-      });
+        deletedCategoryIds: [...(state.deletedCategoryIds || []), id]
+      }));
 
       // Delete from SQL
-      databaseOperations.deleteCategory(id).catch((e: unknown) => {
+      deleteCategoryAction(id).catch((e: unknown) => {
         logger.error('Failed to delete category from SQL', { error: (e as Error).message, id }, 'DATABASE');
       });
 
@@ -278,18 +290,18 @@ export const createMenuSlice: StateCreator<
   },
 
   restoreCategory: (id: UUID) => {
-    set((state) => ({
+    set((state: MenuSlice) => ({
       deletedCategoryIds: state.deletedCategoryIds.filter((cid: UUID) => cid !== id)
     }));
     logger.info(`Category ${id} restored from deletion list`, undefined, 'SYSTEM');
   },
 
   recoverDeletedCategory: (category: MenuCategory) => {
-    set((state) => ({
+    set((state: MenuSlice) => ({
       categories: [...state.categories, category],
       deletedCategoryIds: state.deletedCategoryIds.filter((id: UUID) => id !== category.id)
     }));
-    databaseOperations.saveCategory(category);
+    saveCategoryAction(category);
     logger.info(`Category ${category.name} fully recovered`, undefined, 'SYSTEM');
   },
   
@@ -304,213 +316,215 @@ export const createMenuSlice: StateCreator<
       state.addNotification?.('info', 'Funcionalidade de recuperação em manutenção.');
   },
 
-  addProduct: async (product: Product) => {
+  addDish: async (dish: Dish) => {
     const state = get();
     
     // 1. Basic Validation
-    if (!product.name || product.name.trim() === '') {
-      state.addNotification?.('error', 'Nome do produto é obrigatório.');
+    if (!dish.name || dish.name.trim() === '') {
+      state.addNotification?.('error', 'Nome do prato é obrigatório.');
       return;
     }
 
-    if (product.price < 0) {
-      state.addNotification?.('error', 'Preço do produto não pode ser negativo.');
+    if (dish.price < 0) {
+      state.addNotification?.('error', 'Preço do prato não pode ser negativo.');
       return;
     }
 
     // 2. Category Validation
     const categories = get().categories;
-    const { valid, resolvedId, reason } = validateProductCategory(product, categories);
+    const { valid, resolvedId, reason } = validateDishCategory(dish, categories);
     if (!valid) {
       state.addNotification?.('error', reason || 'Categoria inválida');
-      logger.error('Falha ao adicionar produto: Categoria inválida', { product, reason }, 'STORE');
+      logger.error('Falha ao adicionar prato: Categoria inválida', { dish, reason }, 'STORE');
       return;
     }
 
-    const finalProduct: Product = { 
-        ...product, 
-        id: product.id || generateUUID(),
-        category_id: resolvedId!,
-        image_url: normalizeProductImage(product.image_url)
+    const finalDish: Dish = { 
+        ...dish, 
+        id: dish.id || generateUUID(),
+        categoryId: resolvedId!,
+        imageUrl: normalizeDishImage(dish.imageUrl || '')
     };
 
     // 3. Real-time integrity check
-    const integrity = get().validateMenuIntegrity(categories, [...state.products, finalProduct]);
+    const integrity = get().validateMenuIntegrity(categories, [...state.dishes, finalDish]);
     if (!integrity.isValid) {
-       logger.error('Integrity warning before adding product', { issues: integrity.issues }, 'STORE');
+       logger.error('Integrity warning before adding dish', { issues: integrity.issues }, 'STORE');
     }
 
     try {
-      set((state) => ({ products: [...state.products, finalProduct] }));
+      set((state: MenuSlice) => ({ dishes: [...state.dishes, finalDish] }));
       get().invalidateMenuCache();
 
       // 4. Persist to SQL (CRITICAL)
-      databaseOperations.saveProduct(finalProduct).then(success => {
-          if (success) {
-              logger.info('Produto guardado em SQL com sucesso', { productId: finalProduct.id }, 'DATABASE');
+      logger.debug('Dish object before saving to SQL (updateDish)', { dish: finalDish }, 'DATABASE');
+      saveDishAction(finalDish).then(result => {
+          if (result.success) {
+              logger.info('Prato guardado em SQL com sucesso', { dishId: finalDish.id }, 'DATABASE');
           } else {
-              logger.error('Falha na persistência SQL do produto', { product: finalProduct }, 'DATABASE');
-              state.addNotification?.('error', 'Erro ao guardar produto na base de dados local.');
+              logger.error('Falha na persistência SQL do prato', { dish: finalDish, error: result.error }, 'DATABASE');
+              state.addNotification?.('error', 'Erro ao guardar prato na base de dados local.');
           }
       }).catch((e: unknown) => {
           logger.error('Erro de execução na persistência SQL', { error: (e as Error).message }, 'DATABASE');
       });
 
       state.addAuditLog?.({ 
-        type: 'PRODUCT_ADDED', 
-        entityType: 'Product', 
-        entityId: finalProduct.id, 
-        details: { message: `Produto adicionado: ${finalProduct.name}`, category_id: finalProduct.category_id } 
+        type: 'DISH_ADDED', 
+        entityType: 'Dish', 
+        entityId: finalDish.id, 
+        details: { message: `Prato adicionado: ${finalDish.name}`, categoryId: finalDish.categoryId } 
       } as any);
       get().triggerSync?.();
     } catch (e: unknown) {
-      logger.error('Critical error adding product', { error: (e as Error).message }, 'STORE');
-      state.addNotification?.('error', 'Erro interno ao adicionar produto.');
+      logger.error('Critical error adding dish', { error: (e as Error).message }, 'STORE');
+      state.addNotification?.('error', 'Erro interno ao adicionar prato.');
     }
   },
 
-  updateProduct: async (product: Product) => {
+  updateDish: async (dish: Dish) => {
     const state = get();
 
     // 1. Basic Validation
-    if (!product.name || product.name.trim() === '') {
-      state.addNotification?.('error', 'Nome do produto é obrigatório.');
+    if (!dish.name || dish.name.trim() === '') {
+      state.addNotification?.('error', 'Nome do prato é obrigatório.');
       return;
     }
 
-    if (product.price < 0) {
-      state.addNotification?.('error', 'Preço do produto não pode ser negativo.');
+    if (dish.price < 0) {
+      state.addNotification?.('error', 'Preço do prato não pode ser negativo.');
       return;
     }
 
     // 2. Category Validation
     const categories = get().categories;
-    const { valid, resolvedId, reason } = validateProductCategory(product, categories);
+    const { valid, resolvedId, reason } = validateDishCategory(dish, categories);
     if (!valid) {
       state.addNotification?.('error', reason || 'Categoria inválida');
-      logger.error('Falha ao atualizar produto: Categoria inválida', { product, reason }, 'STORE');
+      logger.error('Falha ao atualizar prato: Categoria inválida', { dish, reason }, 'STORE');
       return;
     }
 
-    const finalProduct: Product = { 
-        ...product, 
-        category_id: resolvedId!,
-        image_url: normalizeProductImage(product.image_url)
+    const finalDish: Dish = { 
+        ...dish, 
+        categoryId: resolvedId!,
+        imageUrl: normalizeDishImage(dish.imageUrl || '')
     };
 
     // 3. Real-time integrity check
-    const nextProducts = state.products.map((p: Product) => p.id === finalProduct.id ? finalProduct : p);
-    const integrity = get().validateMenuIntegrity(categories, nextProducts);
+    const nextDishes = state.dishes.map((d: Dish) => d.id === finalDish.id ? finalDish : d);
+    const integrity = get().validateMenuIntegrity(categories, nextDishes);
     if (!integrity.isValid) {
-       logger.error('Integrity warning before updating product', { issues: integrity.issues }, 'STORE');
+       logger.error('Integrity warning before updating dish', { issues: integrity.issues }, 'STORE');
     }
 
     try {
-      set({
-        products: nextProducts
-      });
+      set((state: MenuSlice) => ({
+        dishes: nextDishes
+      }));
       get().invalidateMenuCache();
 
       // 4. Persist to SQL (CRITICAL)
-      databaseOperations.saveProduct(finalProduct).then(success => {
-          if (success) {
-              logger.info('Produto atualizado em SQL com sucesso', { productId: finalProduct.id }, 'DATABASE');
+      saveDishAction(finalDish).then(result => {
+          if (result.success) {
+              logger.info('Prato atualizado em SQL com sucesso', { dishId: finalDish.id }, 'DATABASE');
           } else {
-              logger.error('Falha na atualização SQL do produto', { product: finalProduct }, 'DATABASE');
-              state.addNotification?.('error', 'Erro ao atualizar produto na base de dados local.');
+              logger.error('Falha na atualização SQL do prato', { dish: finalDish, error: result.error }, 'DATABASE');
+              state.addNotification?.('error', 'Erro ao atualizar prato na base de dados local.');
           }
       }).catch((e: unknown) => {
           logger.error('Erro de execução na atualização SQL', { error: (e as Error).message }, 'DATABASE');
       });
 
       state.addAuditLog?.({ 
-        type: 'PRODUCT_UPDATED', 
-        entityType: 'Product', 
-        entityId: finalProduct.id, 
-        details: { message: `Produto atualizado: ${finalProduct.name}` } 
+        type: 'DISH_UPDATED', 
+        entityType: 'Dish', 
+        entityId: finalDish.id, 
+        details: { message: `Prato atualizado: ${finalDish.name}` } 
       } as any);
       get().triggerSync?.();
     } catch (e: unknown) {
-      logger.error('Critical error updating product', { error: (e as Error).message }, 'STORE');
-      state.addNotification?.('error', 'Erro interno ao atualizar produto.');
+      logger.error('Critical error updating dish', { error: (e as Error).message }, 'STORE');
+      state.addNotification?.('error', 'Erro interno ao atualizar prato.');
     }
   },
 
-  removeProduct: async (id: UUID) => {
+  removeDish: async (id: UUID) => {
     const state = get();
-    const productToRemove = state.products.find((p: Product) => p.id === id);
+    const dishToRemove = state.dishes.find((d: Dish) => d.id === id);
     
-    if (!productToRemove) return;
+    if (!dishToRemove) return;
 
     try {
-      set((state) => ({
-        products: state.products.filter((p: Product) => p.id !== id),
+      set((state: MenuSlice) => ({
+        dishes: state.dishes.filter((d: Dish) => d.id !== id),
       }));
       
       get().invalidateMenuCache();
 
-      await databaseOperations.deleteProduct(id).catch((e: unknown) => {
-          logger.error('Falha ao eliminar produto no SQL', { id, error: (e as Error).message }, 'DATABASE');
+      await deleteDishAction(id).catch((e: unknown) => {
+          logger.error('Falha ao eliminar prato no SQL', { id, error: (e as Error).message }, 'DATABASE');
       });
 
       state.addAuditLog?.({ 
-        type: 'PRODUCT_DELETED', 
-        entityType: 'Product', 
+        type: 'DISH_DELETED', 
+        entityType: 'Dish', 
         entityId: id, 
-        details: { message: `Produto removido: ${productToRemove.name}`, productName: productToRemove.name } 
+        details: { message: `Prato removido: ${dishToRemove.name}`, dishName: dishToRemove.name } 
       } as any);
 
       get().triggerSync?.();
-      logger.info(`Produto removido com sucesso: ${productToRemove.name}`, { id }, 'STORE');
+      logger.info(`Prato removido com sucesso: ${dishToRemove.name}`, { id }, 'STORE');
     } catch (e: unknown) {
-      logger.error('Erro crítico ao remover produto', { id, error: (e as Error).message }, 'STORE');
-      state.addNotification?.('error', 'Erro interno ao remover produto.');
+      logger.error('Erro crítico ao remover prato', { id, error: (e as Error).message }, 'STORE');
+      state.addNotification?.('error', 'Erro interno ao remover prato.');
     }
   },
 
   restoreMenuData: async () => {
     logger.info("Starting menu restoration from SQL", undefined, 'DATABASE');
-    const categories = await databaseOperations.getCategories();
-    const products = await databaseOperations.getProducts();
+    const categoriesResult = await getCategoriesAction();
+    const dishesResult = await getDishesAction();
     
-    if (categories.length > 0 || products.length > 0) {
+    const categories = categoriesResult.data || [];
+    const dishes = dishesResult.data?.map(p => ({ ...p, imageUrl: normalizeDishImage(p.imageUrl) })) || [];
+    
+    if (categories.length > 0 || dishes.length > 0) {
       set({ 
-        categories: categories.map((c: MenuCategory) => ({...c, is_active: !!c.is_active})), 
-        products: products
+        categories: categories.map((c: MenuCategory) => ({...c, isActive: !!c.isActive})), 
+        dishes: dishes
       });
-      logger.info(`Restored ${categories.length} categories and ${products.length} products`, undefined, 'DATABASE');
+      logger.info(`Restored ${categories.length} categories and ${dishes.length} dishes`, undefined, 'DATABASE');
     }
   },
 
   hardResetMenu: async () => {
     if (!window.confirm("ATENÇÃO: Isso apagará todo o menu local e recriará as tabelas. Deseja continuar?")) return;
     
-    await databaseOperations.recreateMenuSchema();
-    set({ products: [], categories: [] });
+    await recreateMenuSchemaAction();
+    set({ dishes: [], categories: [] });
   },
 
   syncMenuWithCloud: async () => {
-    const { categories, products, settings } = get();
+    const { categories, dishes, settings } = get();
     if (settings.supabaseConfig?.enabled && integrationAPIService.isConnected()) {
         logger.info('Starting menu cloud sync...', {}, 'SYNC');
         
         // Sync Categories
-        const catResult = await integrationAPIService.syncCategoriesList(categories);
-        if (catResult.success && catResult.data) {
-            set({ categories: catResult.data });
+        const catResult = await integrationAPIService.syncMenu(categories, [], settings);
+        if (catResult.success) { 
             // Save to local DB
-            for (const cat of catResult.data) {
-                await databaseOperations.saveCategory(cat);
+            for (const cat of categories) {
+                await saveCategoryAction(cat);
             }
         }
 
-        // Sync Products
-        // const prodResult = await integrationAPIService.syncProducts(products);
-        if (prodResult.success && prodResult.data) {
-            set({ products: prodResult.data });
+        // Sync Dishes
+        const dishResult = await integrationAPIService.syncDishes(dishes);
+        if (dishResult.success) {
             // Save to local DB
-            for (const prod of prodResult.data) {
-                await databaseOperations.saveProduct(prod);
+            for (const dish of dishes) {
+                await saveDishAction(dish);
             }
         }
         
@@ -520,33 +534,38 @@ export const createMenuSlice: StateCreator<
 
   loadFromSQLExclusively: async () => {
     try {
-        const [cats, prods] = await Promise.all([
-            databaseOperations.getCategories(),
-            databaseOperations.getProducts()
-        ]);
+      const result = await getMenuData();
 
-        if (cats.length > 0 || prods.length > 0) {
-            set({
-                categories: cats,
-                products: prods
-            });
-            logger.info('Menu loaded exclusively from SQL', { categories: cats.length, products: prods.length }, 'DATABASE');
-            return true;
-        }
+      if (!result.success) {
+        logger.error('Failed to load menu exclusively from SQL via Server Action', { error: result.error }, 'DATABASE');
         return false;
+      }
+
+      const cats = result.categories || [];
+      const dishes = result.dishes || [];
+
+      if (cats.length > 0 || dishes.length > 0) {
+        set({
+          categories: cats,
+          dishes: dishes
+        });
+        logger.info('Menu loaded exclusively from SQL via Server Action', { categories: cats.length, dishes: dishes.length }, 'DATABASE');
+        return true;
+      }
+      return false;
     } catch (e: unknown) {
-        const error = e as Error;
-        logger.error('Failed to load menu exclusively from SQL', { error: error.message }, 'DATABASE');
-        return false;
+      const error = e as Error;
+      logger.error('Failed to load menu exclusively from SQL', { error: error.message }, 'DATABASE');
+      return false;
     }
   },
 
-  validateMenuIntegrity: (categories: MenuCategory[], products: Product[]) => {
+  validateMenuIntegrity: (categories: MenuCategory[], dishes: Dish[]) => {
     const issues: IntegrityIssue[] = [];
     const catIds = new Set(categories.map((c: MenuCategory) => c.id));
-    const productIds = new Set();
+    const dishIds = new Set();
     
-    const createIssue = (msg: string, entityType: IntegrityIssue['entityType'], entityId?: string, severity: IntegrityIssue['severity'] = 'MEDIUM'): IntegrityIssue => ({
+    const createIssue = (msg: string, entityType: IntegrityIssue['entityType'], entityId?: string, severity: IntegrityIssue['severity'] = 'medium'): IntegrityIssue => ({
       id: `issue-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       type: 'INTEGRITY_CHECK',
       severity,
@@ -559,30 +578,30 @@ export const createMenuSlice: StateCreator<
 
     // 1. Validar Categorias
     categories.forEach((c: MenuCategory) => {
-      if (!c.id) issues.push(createIssue(`Categoria "${c.name}" sem ID.`, 'CATEGORY', undefined, 'HIGH'));
-      if (!c.name) issues.push(createIssue(`Categoria com ID ${c.id} sem nome.`, 'CATEGORY', c.id, 'HIGH'));
+      if (!c.id) issues.push(createIssue(`Categoria "${c.name}" sem ID.`, 'CATEGORY', undefined, 'high'));
+      if (!c.name) issues.push(createIssue(`Categoria com ID ${c.id} sem nome.`, 'CATEGORY', c.id, 'high'));
       
       // Prevenção de loops em hierarquia
-      if (c.parent_id === c.id) {
-        issues.push(createIssue(`Loop de referência detectado na categoria ${c.name}.`, 'CATEGORY', c.id, 'CRITICAL'));
+      if (c.parentId === c.id) {
+        issues.push(createIssue(`Loop de referência detectado na categoria ${c.name}.`, 'CATEGORY', c.id, 'high'));
       }
     });
 
-    // 2. Validar Produtos
-    products.forEach((p: Product) => {
-      if (!p.id) issues.push(createIssue(`Produto "${p.name}" sem ID.`, 'PRODUCT', undefined, 'HIGH'));
-      if (productIds.has(p.id)) issues.push(createIssue(`ID de produto duplicado: ${p.id} (${p.name}).`, 'PRODUCT', p.id, 'CRITICAL'));
-      productIds.add(p.id);
+    // 2. Validar Pratos
+    dishes.forEach((d: Dish) => {
+      if (!d.id) issues.push(createIssue(`Prato "${d.name}" sem ID.`, 'DISH', undefined, 'high'));
+      if (dishIds.has(d.id)) issues.push(createIssue(`ID de prato duplicado: ${d.id} (${d.name}).`, 'DISH', d.id, 'high'));
+      dishIds.add(d.id);
 
-      if (!p.category_id) {
-        issues.push(createIssue(`Produto "${p.name}" sem categoria associada.`, 'PRODUCT', p.id, 'MEDIUM'));
-      } else if (!catIds.has(p.category_id)) {
-        issues.push(createIssue(`Produto "${p.name}" refere categoria inexistente (ID: ${p.category_id}).`, 'PRODUCT', p.id, 'HIGH'));
+      if (!d.category_id) {
+        issues.push(createIssue(`Prato "${d.name}" sem categoria associada.`, 'DISH', d.id, 'medium'));
+      } else if (!catIds.has(d.category_id)) {
+        issues.push(createIssue(`Prato "${d.name}" refere categoria inexistente (ID: ${d.category_id}).`, 'DISH', d.id, 'high'));
       }
 
-      if (p.price < 0) issues.push(createIssue(`Produto "${p.name}" com preço negativo.`, 'PRODUCT', p.id, 'HIGH'));
+      if (d.price < 0) issues.push(createIssue(`Prato "${d.name}" com preço negativo.`, 'DISH', d.id, 'high'));
     });
-
+    
     return {
       isValid: issues.length === 0,
       issues
@@ -596,18 +615,18 @@ export const createMenuSlice: StateCreator<
       const state = get();
       const issues: IntegrityIssue[] = [];
       
-      // 1. Verificar produtos sem categoria válida
-      const invalidProducts = state.products.filter((p: Product) => !state.categories.find((c: MenuCategory) => c.id === p.category_id));
-      if (invalidProducts.length > 0) {
+      // 1. Verificar pratos sem categoria válida
+      const invalidDishes = state.dishes.filter((d: Dish) => !state.categories.find((c: MenuCategory) => c.id === d.categoryId));
+      if (invalidDishes.length > 0) {
         issues.push({
           id: `issue-cat-${Date.now()}`,
           type: 'INVALID_CATEGORY',
-          severity: 'HIGH',
-          message: `${invalidProducts.length} produtos sem categoria válida ou em categorias removidas.`,
-          entityType: 'PRODUCT',
+          severity: 'high',
+          message: `${invalidDishes.length} pratos sem categoria válida ou em categorias removidas.`,
+          entityType: 'DISH',
           timestamp: Date.now(),
           isResolved: false,
-          data: { ids: invalidProducts.map((p: Product) => p.id) }
+          data: { ids: invalidDishes.map((d: Dish) => d.id) }
         });
       }
 
@@ -627,7 +646,7 @@ export const createMenuSlice: StateCreator<
         issues.push({
           id: `issue-cat-dup-${Date.now()}`,
           type: 'INVALID_CATEGORY',
-          severity: 'MEDIUM',
+          severity: 'medium',
           message: `${catIssues.length} categorias com problemas de ID ou nome duplicado.`,
           entityType: 'CATEGORY',
           timestamp: Date.now(),
@@ -636,15 +655,15 @@ export const createMenuSlice: StateCreator<
         });
       }
 
-      // 3. Verificar produtos sem imagem
-      const noImageProducts = state.products.filter((p: Product) => !p.image_url);
-      if (noImageProducts.length > 0) {
+      // 3. Verificar pratos sem imagem
+      const noImageDishes = state.dishes.filter((d: Dish) => !d.image_url);
+      if (noImageDishes.length > 0) {
         issues.push({
           id: `issue-img-${Date.now()}`,
           type: 'NO_IMAGE',
-          severity: 'LOW',
-          message: `${noImageProducts.length} produtos sem imagem definida.`,
-          entityType: 'PRODUCT',
+          severity: 'low',
+          message: `${noImageDishes.length} pratos sem imagem definida.`,
+          entityType: 'DISH',
           timestamp: Date.now(),
           isResolved: false
         });
@@ -662,10 +681,10 @@ export const createMenuSlice: StateCreator<
     
     try {
       // 0. Backup in-memory
-      const originalProducts = [...state.products];
+      const originalDishes = [...state.dishes];
       const originalCategories = [...state.categories];
       
-      let cleanedProducts = [...state.products];
+      let cleanedDishes = [...state.dishes];
       let cleanedCategories = [...state.categories];
       let fixedCount = 0;
 
@@ -674,15 +693,15 @@ export const createMenuSlice: StateCreator<
       //  Accessing get().stock might be unsafe if not fully merged. 
       //  However, get() returns StoreState, so it should be fine.)
       const stock = get().stock || [];
-      cleanedProducts = cleanedProducts.map((p: Product) => {
-        if (p.track_stock && p.stock_quantity === undefined) { // Check if stock items are valid?
+      cleanedDishes = cleanedDishes.map((d: Dish) => {
+        if (d.trackStock && d.stockQuantity === undefined) { // Check if stock items are valid?
            // Legacy logic checked stockItemId. New logic uses internal fields.
-           // If track_stock is true, but no quantity logic...
-           // Actually, Product now has track_stock, stock_quantity internally.
-           // So this check might be less relevant unless we validate supplier_id.
-           return p;
+           // If trackStock is true, but no quantity logic...
+           // Actually, Dish now has trackStock, stockQuantity internally.
+           // So this check might be less relevant unless we validate supplierId.
+           return d;
         }
-        return p;
+        return d;
       });
 
       // 2. Auto-fix Category IDs and Duplicates
@@ -708,32 +727,32 @@ export const createMenuSlice: StateCreator<
       });
 
       // 3. Resolve broken category mappings
-      cleanedProducts = cleanedProducts.map((p: Product) => {
-        const resolvedId = resolveCategoryId(p, cleanedCategories);
-        if (resolvedId && p.category_id !== resolvedId) {
+      cleanedDishes = cleanedDishes.map((d: Dish) => {
+        const resolvedId = resolveCategoryId(d, cleanedCategories);
+        if (resolvedId && d.categoryId !== resolvedId) {
           fixedCount++;
           return { 
-            ...p, 
-            category_id: resolvedId
+            ...d, 
+            categoryId: resolvedId
           };
         }
-        return p;
+        return d;
       });
 
-      // 4. Re-assign products to first available category if their category was removed
+      // 4. Re-assign dishes to first available category if their category was removed
       if (catFixed && cleanedCategories.length > 0) {
         const firstCatId = cleanedCategories[0].id;
-        cleanedProducts = cleanedProducts.map((p: Product) => {
-          if (!cleanedCategories.find((c: MenuCategory) => c.id === p.category_id)) {
+        cleanedDishes = cleanedDishes.map((d: Dish) => {
+          if (!cleanedCategories.find((c: MenuCategory) => c.id === d.categoryId)) {
             fixedCount++;
-            return { ...p, category_id: firstCatId };
+            return { ...d, categoryId: firstCatId };
           }
-          return p;
+          return d;
         });
       }
 
       if (fixedCount > 0) {
-        set({ products: cleanedProducts, categories: cleanedCategories });
+        set({ dishes: cleanedDishes, categories: cleanedCategories });
         state.addNotification?.('success', `${fixedCount} problemas de integridade foram corrigidos automaticamente.`);
         state.addAuditLog?.({ 
           type: 'INTEGRITY_CLEANUP', 
@@ -744,9 +763,13 @@ export const createMenuSlice: StateCreator<
         
         // Persist changes
         await Promise.all([
-          databaseOperations.saveCategories(cleanedCategories).catch(e => logger.error('Error saving categories during cleanup', e, 'STORE')),
-          databaseOperations.saveProducts(cleanedProducts).catch(e => logger.error('Error saving products during cleanup', e, 'STORE'))
-        ]);
+          saveCategoriesAction(cleanedCategories).then(res => {
+            if (!res.success) logger.error('Error saving categories during cleanup', { error: res.error }, 'STORE');
+          }),
+          saveDishesAction(cleanedDishes).then(res => {
+            if (!res.success) logger.error('Error saving dishes during cleanup', { error: res.error }, 'STORE');
+          })
+        ]).catch((e: unknown) => logger.error('Error during cleanup save', { error: (e as Error).message }, 'STORE'));
         
         get().invalidateMenuCache();
         // Refresh diagnostics after cleanup
@@ -763,19 +786,23 @@ export const createMenuSlice: StateCreator<
     }
   },
 
-  importCloudItems: async (data: { categories: MenuCategory[], dishes: Product[], preferCloud: boolean }) => {
+  importCloudItems: async (data: { categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => {
     const { categories, dishes, preferCloud } = data;
     const state = get();
     
-    logger.info('Importing cloud items', { categoriesCount: categories.length, productsCount: dishes.length, preferCloud }, 'STORE');
+    logger.info('Importing cloud items', { categoriesCount: categories.length, dishesCount: dishes.length, preferCloud }, 'STORE');
     
     // If preferCloud is true, we overwrite local state with cloud data
     if (preferCloud) {
-        set({ categories, products: dishes });
+        set({ categories, dishes: dishes });
         // Persist to local DB
         await Promise.all([
-            databaseOperations.saveCategories(categories),
-            databaseOperations.saveProducts(dishes)
+            saveCategoriesAction(categories).then(res => {
+                if (!res.success) logger.error('Failed to save restored categories', { error: res.error }, 'STORE');
+            }),
+            saveDishesAction(dishes).then(res => {
+                if (!res.success) logger.error('Failed to save restored dishes', { error: res.error }, 'STORE');
+            })
         ]);
         state.addNotification?.('success', 'Dados importados da cloud com sucesso (substituição).');
     } else {
@@ -784,7 +811,7 @@ export const createMenuSlice: StateCreator<
         // This is a complex operation, but for now we'll do a simple merge
         
         const currentCats = [...state.categories];
-        const currentProds = [...state.products];
+        const currentDishes = [...state.dishes];
         
         // Merge categories
         categories.forEach((c: MenuCategory) => {
@@ -796,22 +823,26 @@ export const createMenuSlice: StateCreator<
             }
         });
         
-        // Merge products
-        dishes.forEach((p: Product) => {
-            const index = currentProds.findIndex((pp: Product) => pp.id === p.id);
+        // Merge dishes
+        dishes.forEach((d: Dish) => {
+            const index = currentDishes.findIndex((dd: Dish) => dd.id === d.id);
             if (index >= 0) {
-                currentProds[index] = { ...currentProds[index], ...p }; // Update existing
+                currentDishes[index] = { ...currentDishes[index], ...d }; // Update existing
             } else {
-                currentProds.push(p);
+                currentDishes.push(d);
             }
         });
         
-        set({ categories: currentCats, products: currentProds });
+        set({ categories: currentCats, dishes: currentDishes });
         
         // Persist
         await Promise.all([
-            databaseOperations.saveCategories(currentCats),
-            databaseOperations.saveProducts(currentProds)
+            saveCategoriesAction(currentCats).then(res => {
+                if (!res.success) logger.error('Failed to save synced categories', { error: res.error }, 'STORE');
+            }),
+            saveDishesAction(currentDishes).then(res => {
+                if (!res.success) logger.error('Failed to save synced dishes', { error: res.error }, 'STORE');
+            })
         ]);
         
         state.addNotification?.('success', 'Dados da cloud mesclados com sucesso.');

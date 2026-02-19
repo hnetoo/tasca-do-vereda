@@ -165,12 +165,14 @@ const TableLayout = () => {
       return;
     }
     const nextStatus: Record<TableStatus, TableStatus> = {
-      'LIVRE': 'RESERVADO',
-      'RESERVADO': 'OCUPADO',
-      'OCUPADO': 'PAGAMENTO',
-      'PAGAMENTO': 'LIVRE'
+      'AVAILABLE': 'RESERVED',
+      'RESERVED': 'OCCUPIED',
+      'OCCUPIED': 'PAYMENT',
+      'PAYMENT': 'AVAILABLE',
+      'DIRTY': 'AVAILABLE',
+      'MAINTENANCE': 'AVAILABLE'
     };
-    updateTableStatus(table.id, nextStatus[table.status]);
+    updateTableStatus(table.id, nextStatus[table.status as TableStatus]);
   };
 
   const handleUpdateProperty = <T extends keyof Table>(prop: T, value: Table[T]) => {
@@ -183,10 +185,10 @@ const TableLayout = () => {
 
   const getStatusColor = (status: TableStatus) => {
     switch (status) {
-      case 'LIVRE': return 'border-green-500 bg-green-500/10 text-green-500';
-      case 'OCUPADO': return 'border-red-500 bg-red-600/20 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)]';
-      case 'RESERVADO': return 'border-yellow-500 bg-yellow-500/10 text-yellow-500';
-      case 'PAGAMENTO': return 'border-primary bg-primary/20 text-primary animate-pulse shadow-glow';
+      case 'AVAILABLE': return 'border-green-500 bg-green-500/10 text-green-500';
+      case 'OCCUPIED': return 'border-red-500 bg-red-600/20 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)]';
+      case 'RESERVED': return 'border-yellow-500 bg-yellow-500/10 text-yellow-500';
+      case 'PAYMENT': return 'border-primary bg-primary/20 text-primary animate-pulse shadow-glow';
       default: return 'border-slate-700 bg-slate-800 text-slate-400';
     }
   };

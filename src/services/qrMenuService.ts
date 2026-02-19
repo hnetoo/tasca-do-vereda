@@ -1,3 +1,5 @@
+'use server';
+
 /**
  * QR Code Menu Service
  * Gera códigos QR para acessar o menu online
@@ -290,7 +292,7 @@ export async function distributeMarketingLink(
   logger.audit('MARKETING_DISTRIBUTION', { platform, url });
 }
 
-export default {
+const qrMenuService = {
   generateMenuUrl,
   generateQRCodeData,
   generateMenuSessionId,
@@ -303,3 +305,5 @@ export default {
   generateMarketingUrl,
   distributeMarketingLink
 };
+
+export default qrMenuService;

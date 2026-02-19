@@ -11,7 +11,7 @@ import { QRScanResult, QRScanData } from '@/types';
 const Scanner = dynamic(
   () => import('@yudiel/react-qr-scanner').then((mod) => mod.QrScanner),
   { ssr: false }
-);
+) as any;
 
 const QRScanner = () => {
   const router = useRouter();
@@ -19,7 +19,7 @@ const QRScanner = () => {
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(true);
 
-  const handleScan = (result: QRScanResult) => {
+  const handleScan = (result: any) => {
     if (!result) return;
     
     // Suporte para versão antiga e nova da biblioteca (result pode ser string ou array)

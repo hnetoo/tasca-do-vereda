@@ -88,7 +88,7 @@ const Categories = () => {
 
       <div className="flex-1">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name)).map(cat => {
+          {categories.slice().sort((a: MenuCategory, b: MenuCategory) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.name.localeCompare(b.name)).map((cat: MenuCategory) => {
             const iconObj = AVAILABLE_ICONS.find(i => i.name === cat.icon);
             const IconComp = iconObj ? iconObj.icon : Grid3X3;
             

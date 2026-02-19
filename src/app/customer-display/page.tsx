@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { listen } from '@tauri-apps/api/event';
 import { useStore } from '@/store/useStore';
 import { ChefHat, ShoppingBasket, Sparkles, CheckCircle2 } from 'lucide-react';
-import { CustomerDisplayEvent, Order } from '@/types';
+import { CustomerDisplayEvent, Order, Product, Table, OrderItem } from '@/types';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 const CustomerDisplayContent = () => {
@@ -18,7 +18,7 @@ const CustomerDisplayContent = () => {
 
   // Derived state for promos (assuming menu items can be promos, or just showing all items)
   // Filtering for items with images as "promos" to display
-  const promoItems = menu.filter(item => item.image && item.available);
+  const promoItems = menu.filter((item: Product) => item.imageUrl && item.available);
   const currentPromo = promoItems[promoIndex] || {};
 
   // Rotate promos
@@ -59,13 +59,13 @@ const CustomerDisplayContent = () => {
     </div>
   );
 
-  const table = tables.find(t => t.id === Number(tableId));
-  const tableOrders = activeOrders.filter(o => o.tableId === Number(tableId) && o.status === 'ABERTO');
+  const table = tables.find((t: Table) => t.id === tableId);
+  const tableOrders = activeOrders.filter((o: Order) => o.tableId === tableId && o.status === 'ABERTO');
   
   const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
 
-  const allItems = tableOrders.flatMap(o => o.items);
-  const total = tableOrders.reduce((acc, o) => acc + o.total, 0);
+  const allItems = tableOrders.flatMap((o: Order) => o.items);
+  const total = tableOrders.reduce((acc: number, o: Order) => acc + (o.total ?? 0), 0);
 
   if (allItems.length === 0) {
     return (
@@ -137,8 +137,8 @@ const CustomerDisplayContent = () => {
                 <p className="text-4xl font-black uppercase tracking-widest italic">Prepare-se para o melhor!</p>
               </div>
             ) : (
-              allItems.map((item, idx) => {
-                const dish = menu.find(d => d.id === item.productId);
+              allItems.map((item: OrderItem, idx: number) => {
+                const dish = menu.find((d: Product) => d.id === item.productId);
                 return (
                   <div key={idx} className="flex items-center justify-between group animate-in slide-in-from-right duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
                     <div className="flex items-center gap-6">
