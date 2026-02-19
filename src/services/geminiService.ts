@@ -1,6 +1,22 @@
-import { GoogleGenerativeAI, Part } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AIAnalysisResult, Order, Product, AIMonthlyReport } from "../types";
 import { logger } from "./logger";
+
+// Define SchemaType locally if not exported, or use strings if supported.
+// Based on Google Generative AI SDK, SchemaType is an enum.
+// If it's not exported, we might be using a version that defines it differently.
+// For now, we will use string literals which are often accepted or try to avoid using the enum if possible.
+// However, the error says 'SchemaType' is not exported.
+// Let's try using the string values directly if the SDK supports it, or define a compatible enum.
+
+const SchemaType = {
+  STRING: "STRING",
+  NUMBER: "NUMBER",
+  INTEGER: "INTEGER",
+  BOOLEAN: "BOOLEAN",
+  ARRAY: "ARRAY",
+  OBJECT: "OBJECT"
+} as const;
 
 const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || '';
 let ai: GoogleGenerativeAI | null = null;
@@ -34,20 +50,22 @@ export const analyzeBusinessPerformance = async (
   `;
 
   try {
-    // Correct usage of generateContent with gemini-3-flash-preview and property access for .text
     const client = getAI();
     if (!client) {
       throw new Error('API key ausente para IA');
     }
-    const response = await client.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json'
-      }
+    
+    const model = client.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        generationConfig: {
+            responseMimeType: 'application/json'
+        }
     });
 
-    const text = response.text;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
     if (!text) throw new Error("No response from AI");
     
     return JSON.parse(cleanJsonString(text)) as AIAnalysisResult;
@@ -64,16 +82,18 @@ export const analyzeBusinessPerformance = async (
 
 export const getMenuSuggestion = async (ingredients: string): Promise<string> => {
   try {
-    // Correct usage of generateContent with gemini-3-flash-preview and property access for .text
     const client = getAI();
     if (!client) {
       throw new Error('API key ausente para IA');
     }
-    const response = await client.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Sugira um prato especial do dia usando estes ingredientes principais: ${ingredients}. Dê um nome criativo e uma descrição curta e apetitosa. Estilo: Culinária Angolana Fusion.`
-    });
-    return response.text || "Sem sugestão.";
+
+    const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const result = await model.generateContent(
+        `Sugira um prato especial do dia usando estes ingredientes principais: ${ingredients}. Dê um nome criativo e uma descrição curta e apetitosa. Estilo: Culinária Angolana Fusion.`
+    );
+    const response = await result.response;
+    return response.text() || "Sem sugestão.";
   } catch (e: unknown) {
     const error = e as Error;
     logger.error("Erro na IA: Menu Suggestion", { error: error.message }, 'AI');
@@ -83,7 +103,6 @@ export const getMenuSuggestion = async (ingredients: string): Promise<string> =>
 
 export const generateMonthlyReport = async (orders: Order[], menu: Product[], monthName: string): Promise<AIMonthlyReport | null> => {
   const salesTotal = orders.reduce((acc, o) => acc + o.total, 0);
-  // Simplification: In a real app, we would aggregate items here to find top sellers to pass to AI
   const sampleItems = orders.flatMap(o => o.items).length;
   const menuItems = menu.map(m => m.name).join(', ');
 
@@ -104,32 +123,36 @@ export const generateMonthlyReport = async (orders: Order[], menu: Product[], mo
   `;
 
   try {
-    // Correct usage of generateContent with gemini-3-flash-preview, text property and responseSchema
     const client = getAI();
     if (!client) {
       throw new Error('API key ausente para IA');
     }
-    const response = await client.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            month: { type: "string" },
-            totalRevenue: { type: "number" },
-            topSellingItem: { type: "string" },
-            strategicAdvice: { type: "string" },
-            operationalEfficiency: { type: "string" },
-            customerSentiment: { type: "string" },
-          }
+
+    const model = client.getGenerativeModel({ 
+        model: 'gemini-1.5-flash',
+        generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: SchemaType.OBJECT as any,
+              properties: {
+                month: { type: SchemaType.STRING as any },
+                totalRevenue: { type: SchemaType.NUMBER as any },
+                topSellingItem: { type: SchemaType.STRING as any },
+                strategicAdvice: { type: SchemaType.STRING as any },
+                operationalEfficiency: { type: SchemaType.STRING as any },
+                customerSentiment: { type: SchemaType.STRING as any },
+              },
+              required: ["month", "totalRevenue", "topSellingItem", "strategicAdvice", "operationalEfficiency", "customerSentiment"]
+            } as any
         }
-      }
     });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
     
-    if (response.text) {
-      return JSON.parse(cleanJsonString(response.text)) as AIMonthlyReport;
+    if (text) {
+      return JSON.parse(cleanJsonString(text)) as AIMonthlyReport;
     }
     return null;
   } catch (e: unknown) {

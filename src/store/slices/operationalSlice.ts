@@ -1,11 +1,22 @@
 import { StateCreator } from 'zustand';
 import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID } from '../../types';
-import { databaseOperations } from '../../services/database/operations';
+import { 
+  saveTableAction, 
+  deleteTableAction, 
+  saveCustomerAction, 
+  deleteCustomerAction,
+  saveReservationAction,
+  deleteReservationAction,
+  saveStockItemAction,
+  deleteStockItemAction,
+  saveDeliveryAction,
+  deleteDeliveryAction
+} from '@/app/actions/operational';
 import { logger } from '../../services/logger';
 
 export interface OperationalSlice {
   tables: Table[];
-  activeTableId: number | null;
+  activeTableId: string | null;
   customers: Customer[];
   reservations: Reservation[];
   stock: StockItem[];
@@ -13,10 +24,10 @@ export interface OperationalSlice {
   currentShiftId: UUID | null;
   deliveries: Delivery[];
   
-  setActiveTable: (id: number | null) => void;
+  setActiveTable: (id: string | null) => void;
   addTable: (table: Table) => void;
   updateTable: (table: Table) => void;
-  removeTable: (id: number) => void;
+  removeTable: (id: string) => void;
   
   addCustomer: (customer: Customer) => void;
   updateCustomer: (customer: Customer) => void;
@@ -33,11 +44,11 @@ export interface OperationalSlice {
   openShift: (amount: number) => void;
   closeShift: (closingAmount: number) => void;
   backupLayout: () => void;
-  createNewOrder: (tableId: number, name: string) => UUID;
+  createNewOrder: (tableId: string, name: string) => UUID;
   updateStockQuantity: (id: UUID, quantity: number) => void;
   
-  closeTableWithoutOrders: (tableId: number) => void;
-  transferTable: (fromTableId: number, toTableId: number) => void;
+  closeTableWithoutOrders: (tableId: string) => void;
+  transferTable: (fromTableId: string, toTableId: string) => void;
 
   addDelivery: (delivery: Delivery) => void;
   updateDelivery: (delivery: Delivery) => void;
@@ -62,89 +73,107 @@ export const createOperationalSlice: StateCreator<
   currentShiftId: null,
   deliveries: [],
   
-  setActiveTable: (id: number | null) => set({ activeTableId: id }),
+  setActiveTable: (id: string | null) => set({ activeTableId: id }),
   
   addTable: (table: Table) => {
-    set((state) => ({ tables: [...state.tables, table] }));
-    databaseOperations.saveTable(table).catch(e => 
+    set((state: OperationalSlice) => ({ tables: [...state.tables, table] }));
+    saveTableAction(table).then(res => {
+      if (!res.success) logger.error('Failed to persist new table to SQL', { id: table.id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to persist new table to SQL', { id: table.id, error: e.message }, 'DATABASE')
     );
   },
   
   updateTable: (table: Table) => {
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       tables: state.tables.map((t: Table) => t.id === table.id ? table : t)
     }));
-    databaseOperations.saveTable(table).catch(e => 
+    saveTableAction(table).then(res => {
+      if (!res.success) logger.error('Failed to persist updated table to SQL', { id: table.id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to persist updated table to SQL', { id: table.id, error: e.message }, 'DATABASE')
     );
   },
   
-  removeTable: (id: number) => {
-    set((state) => ({
+  removeTable: (id: string) => {
+    set((state: OperationalSlice) => ({
       tables: state.tables.filter((t: Table) => t.id !== id)
     }));
-    databaseOperations.deleteTable(id).catch(e => 
+    deleteTableAction(id).then(res => {
+      if (!res.success) logger.error('Failed to delete table from SQL', { id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to delete table from SQL', { id, error: e.message }, 'DATABASE')
     );
   },
   
   addCustomer: (customer: Customer) => {
-    set((state) => ({ customers: [...state.customers, customer] }));
-    databaseOperations.saveCustomer(customer).catch(e => 
+    set((state: OperationalSlice) => ({ customers: [...state.customers, customer] }));
+    saveCustomerAction(customer).then(res => {
+      if (!res.success) logger.error('Failed to persist new customer to SQL', { id: customer.id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to persist new customer to SQL', { id: customer.id, error: e.message }, 'DATABASE')
     );
   },
   
   updateCustomer: (customer: Customer) => {
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       customers: state.customers.map((c: Customer) => c.id === customer.id ? customer : c)
     }));
-    databaseOperations.saveCustomer(customer).catch(e => 
+    saveCustomerAction(customer).then(res => {
+      if (!res.success) logger.error('Failed to persist updated customer to SQL', { id: customer.id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to persist updated customer to SQL', { id: customer.id, error: e.message }, 'DATABASE')
     );
   },
   
   removeCustomer: (id: UUID) => {
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       customers: state.customers.filter((c: Customer) => c.id !== id)
     }));
-    databaseOperations.deleteCustomer(id).catch(e => 
+    deleteCustomerAction(id).then(res => {
+      if (!res.success) logger.error('Failed to delete customer from SQL', { id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to delete customer from SQL', { id, error: e.message }, 'DATABASE')
     );
   },
   
-  addReservation: (res: Reservation) => set((state) => ({ reservations: [...state.reservations, res] })),
+  addReservation: (res: Reservation) => set((state: OperationalSlice) => ({ reservations: [...state.reservations, res] })),
   
-  updateReservation: (res: Reservation) => set((state) => ({
+  updateReservation: (res: Reservation) => set((state: OperationalSlice) => ({
     reservations: state.reservations.map((r: Reservation) => r.id === res.id ? res : r)
   })),
   
-  removeReservation: (id: UUID) => set((state) => ({
+  removeReservation: (id: UUID) => set((state: OperationalSlice) => ({
     reservations: state.reservations.filter((r: Reservation) => r.id !== id)
   })),
   
   addStockItem: (item: StockItem) => {
-    set((state) => ({ stock: [...state.stock, item] }));
-    databaseOperations.saveStockItem(item).catch(e => 
+    set((state: OperationalSlice) => ({ stock: [...state.stock, item] }));
+    saveStockItemAction(item).then(res => {
+      if (!res.success) logger.error('Failed to persist new stock item to SQL', { id: item.id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to persist new stock item to SQL', { id: item.id, error: e.message }, 'DATABASE')
     );
   },
   
   updateStockItem: (item: StockItem) => {
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       stock: state.stock.map((s: StockItem) => s.id === item.id ? item : s)
     }));
-    databaseOperations.saveStockItem(item).catch(e => 
+    saveStockItemAction(item).then(res => {
+      if (!res.success) logger.error('Failed to persist updated stock item to SQL', { id: item.id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to persist updated stock item to SQL', { id: item.id, error: e.message }, 'DATABASE')
     );
   },
   
   removeStockItem: (id: UUID) => {
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       stock: state.stock.filter((s: StockItem) => s.id !== id)
     }));
-    databaseOperations.deleteStockItem(id).catch(e => 
+    deleteStockItemAction(id).then(res => {
+      if (!res.success) logger.error('Failed to delete stock item from SQL', { id, error: res.error }, 'DATABASE');
+    }).catch(e => 
       logger.error('Failed to delete stock item from SQL', { id, error: e.message }, 'DATABASE')
     );
   },
@@ -166,7 +195,7 @@ export const createOperationalSlice: StateCreator<
     get().addNotification?.('success', 'Layout de mesas guardado!');
   },
 
-  createNewOrder: (tableId: number, name: string) => {
+  createNewOrder: (tableId: string, name: string) => {
     const orderId = `order-${Date.now()}`;
     const newOrder: any = {
       id: orderId,
@@ -193,17 +222,17 @@ export const createOperationalSlice: StateCreator<
     return orderId;
   },
   
-  closeTableWithoutOrders: (tableId: number) => {
-    set((state) => ({
+  closeTableWithoutOrders: (tableId: string) => {
+    set((state: OperationalSlice) => ({
       tables: state.tables.map((t: Table) => t.id === tableId ? { ...t, status: 'LIVRE' } : t),
       activeTableId: state.activeTableId === tableId ? null : state.activeTableId
     }));
   },
 
-  transferTable: (fromTableId: number, toTableId: number) => {
+  transferTable: (fromTableId: string, toTableId: string) => {
     const state = get();
     // Update tables
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       tables: state.tables.map((t: Table) => {
         if (t.id === fromTableId) return { ...t, status: 'LIVRE' };
         if (t.id === toTableId) return { ...t, status: 'OCUPADO' };
@@ -224,7 +253,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   updateStockQuantity: (id: UUID, quantity: number) => {
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       stock: state.stock.map((item: StockItem) => 
         item.id === id ? { ...item, quantity, lastUpdated: new Date() } : item
       )
@@ -232,14 +261,16 @@ export const createOperationalSlice: StateCreator<
     
     const item = get().stock.find((s: StockItem) => s.id === id);
     if (item) {
-      databaseOperations.saveStockItem(item).catch(e => 
+      saveStockItemAction(item).then(res => {
+        if (!res.success) logger.error('Failed to update stock quantity in SQL', { id, error: res.error }, 'DATABASE');
+      }).catch(e => 
         logger.error('Failed to update stock quantity in SQL', { id, error: e.message }, 'DATABASE')
       );
     }
   },
 
   addDelivery: (delivery: Delivery) => {
-    set((state) => ({ deliveries: [...state.deliveries, delivery] }));
+    set((state: OperationalSlice) => ({ deliveries: [...state.deliveries, delivery] }));
     get().addAuditLog({
       action: 'DELIVERY_ADD',
       details: `Entrega adicionada para o pedido: ${delivery.orderId}`,
@@ -249,7 +280,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   updateDelivery: (delivery: Delivery) => {
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       deliveries: state.deliveries.map((d: Delivery) => d.id === delivery.id ? delivery : d)
     }));
     get().addAuditLog({
@@ -261,7 +292,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   removeDelivery: (id: UUID) => {
-    set((state) => ({
+    set((state: OperationalSlice) => ({
       deliveries: state.deliveries.filter((d: Delivery) => d.id !== id)
     }));
     get().addAuditLog({

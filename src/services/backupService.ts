@@ -1,11 +1,10 @@
 import { StoreState, Dish, MenuCategory, Order, Expense, Revenue, User, Employee, AttendanceRecord, StockItem, Fornecedor, FinancialBackupData } from '../types';
 export type { FinancialBackupData };
-import { databaseOperations } from './database/operations';
 import { logger } from './logger';
 import { integrationAPIService } from './integrationAPIService';
-import { executeQuery } from './database/connection';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { calculateHash } from '@/utils/crypto';
+
 
 export const AUTO_BACKUP_KEY = 'tasca_auto_backup_v1';
 export const FINANCIAL_BACKUP_KEY = 'tasca_financial_backup_v1';
@@ -88,8 +87,8 @@ export class BackupService {
                 throw new Error('Failed to parse backup data');
             }
             
-            // 4. Import data
-            return await this.importBackup(backupData);
+            // 4. Return data for server action to import
+            return { success: true, data: backupData };
             
         } catch (error: any) {
             logger.error('Failed to restore from local file', { error: error.message, filepath }, 'BACKUP');
@@ -299,108 +298,17 @@ export class BackupService {
         return migrated;
     }
 
-    /**
-     * Import backup data with ACID transaction
-     */
-    async importBackup(backup: BackupData): Promise<{ success: boolean; report: any }> {
-        logger.info('Starting backup import...', { version: backup.version }, 'BACKUP');
-        
-        const report = {
-            totalRecords: 0,
-            processed: 0,
-            errors: [] as string[],
-            startTime: Date.now(),
-            endTime: 0
-        };
 
-        try {
-            // Start Transaction
-            await executeQuery('BEGIN TRANSACTION');
-
-            // 1. Import Categories
-            if (backup.data.categories) {
-                for (const cat of backup.data.categories) {
-                    await databaseOperations.saveCategory(cat);
-                    report.processed++;
-                }
-            }
-
-            // 2. Import Menu (Dishes)
-            if (backup.data.menu) {
-                // Checkpoints every 1000 records
-                let count = 0;
-                for (const dish of backup.data.menu) {
-                    await databaseOperations.saveDish(dish);
-                    report.processed++;
-                    count++;
-                    if (count % 1000 === 0) {
-                        logger.info(`Checkpoint: Processed ${count} dishes`, {}, 'BACKUP');
-                    }
-                }
-            }
-
-            // 3. Import Orders (and Order Items)
-            if (backup.data.orders) {
-                let count = 0;
-                // Batch save orders for better performance if possible, but saveOrder handles items too
-                for (const order of backup.data.orders) {
-                    await databaseOperations.saveOrder(order);
-                    report.processed++;
-                    count++;
-                    if (count % 1000 === 0) {
-                         logger.info(`Checkpoint: Processed ${count} orders`, {}, 'BACKUP');
-                    }
-                }
-            }
-            
-            // 4. Import Financials (Revenues/Expenses)
-            if (backup.data.expenses) {
-                 for (const exp of backup.data.expenses) {
-                     await databaseOperations.saveExpense(exp);
-                     report.processed++;
-                 }
-            }
-            
-            if (backup.data.revenues) {
-                 for (const rev of backup.data.revenues) {
-                     await databaseOperations.saveRevenue(rev);
-                     report.processed++;
-                 }
-            }
-
-            // Commit Transaction
-            await executeQuery('COMMIT');
-            
-            report.endTime = Date.now();
-            logger.info('Backup import completed successfully', report, 'BACKUP');
-            
-            // Trigger Cloud Sync if enabled
-            if (integrationAPIService.isConnected()) {
-                // We could trigger a full sync here
-                // integrationAPIService.syncMenu(...)
-            }
-
-            return { success: true, report };
-
-        } catch (error: any) {
-            // Rollback Transaction
-            await executeQuery('ROLLBACK');
-            logger.error('Backup import failed, rolled back', { error: error.message }, 'BACKUP');
-            report.errors.push(error.message);
-            report.endTime = Date.now();
-            return { success: false, report };
-        }
-    }
 
     /**
      * Calculate totals for financial reconciliation
      */
     calculateFinancialTotals(data: FinancialBackupData) {
-        const revenue = (data.orders || []).reduce((sum, o) => sum + o.total, 0) + 
-                       (data.revenues || []).reduce((sum, r) => sum + r.amount, 0);
+        const revenue = (data.orders || []).reduce((sum, o) => sum + Number(o.total || 0), 0) + 
+                       (data.revenues || []).reduce((sum, r) => sum + Number(r.amount || 0), 0);
         
-        const expense = (data.expenses || []).reduce((sum, e) => sum + e.amount, 0) +
-                       (data.payroll || []).reduce((sum, p) => sum + p.netSalary, 0);
+        const expense = (data.expenses || []).reduce((sum, e) => sum + Number(e.amount || 0), 0) +
+                       (data.payroll || []).reduce((sum, p) => sum + Number(p.netSalary || 0), 0);
                        
         return {
             revenue,

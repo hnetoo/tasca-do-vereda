@@ -37,3 +37,5 @@ build/
 src-tauri/target/
 src-tauri/gen/
 src-tauri/.DS_Store
+
+/src/generated/prisma

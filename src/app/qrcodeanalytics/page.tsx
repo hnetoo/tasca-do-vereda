@@ -17,7 +17,7 @@ const QRCodeAnalytics = () => {
   const stats = getMenuAccessStats() as MenuAccessStats;
 
   // Filter logs based on selected filters
-  const filteredLogs = menuAccessLogs.filter(log => {
+  const filteredLogs = menuAccessLogs.filter((log: MenuAccessStats) => {
     if (filterType !== 'ALL' && log.type !== filterType) return false;
 
     const logDate = new Date(log.timestamp);
@@ -41,7 +41,7 @@ const QRCodeAnalytics = () => {
 
   // Calculate analytics
   const hourlyData = Array.from({ length: 24 }, (_, i) => {
-    const count = filteredLogs.filter(log => {
+    const count = filteredLogs.filter((log: MenuAccessStats) => {
       const logDate = new Date(log.timestamp);
       return logDate.getHours() === i;
     }).length;

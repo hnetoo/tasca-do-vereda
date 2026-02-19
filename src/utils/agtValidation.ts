@@ -1,5 +1,5 @@
-import { Order, Dish, SystemSettings } from './types';
-import { agtService } from './services/agtService';
+import { Order, Dish, SystemSettings } from '../types';
+import { agtService } from '../services/agtService';
 
 /**
  * AGT Compliance Test Suite
@@ -70,7 +70,7 @@ export async function runAgtValidationTests(
         console.log('✅ SAF-T AO Simulation: VALID (Chain of 2 documents verified)');
     } else {
         console.warn('⚠️ SAF-T AO Simulation: FAILED (Expected valid chain)');
-        simulation.errors.forEach(e => console.error(`  - ${e}`));
+        simulation.errors.forEach((e: any) => console.error(`  - ${e}`));
     }
 
     return results;

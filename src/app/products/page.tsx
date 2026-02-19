@@ -5,9 +5,11 @@ import { useStore } from '@/store/useStore';
 import { logger } from '@/services/logger';
 import { Product } from '@/types';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Utensils, Copy } from 'lucide-react';
+import { Dish } from '@/types';
+import Image from 'next/image';
 
 const Products = () => {
-  const { products, categories, addProduct, updateProduct, removeProduct, setProducts } = useStore();
+  const { dishes, categories, addDish, updateDish, removeDish, setDishes } = useStore();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('TODOS');
@@ -17,7 +19,7 @@ const Products = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
 
-  const [productForm, setProductForm] = useState<Partial<Product>>({
+  const [productForm, setProductForm] = useState<Partial<Dish>>({
     name: '',
     description: '',
     price: 0,
@@ -37,19 +39,19 @@ const Products = () => {
     };
   }, []);
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'TODOS' || String(product.category_id) === String(selectedCategory);
+  const filteredProducts = dishes.filter((dish: Dish) => {
+    const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'TODOS' || String(dish.category_id) === String(selectedCategory);
     return matchesSearch && matchesCategory;
-  }).sort((a, b) => a.name.localeCompare(b.name));
+  }).sort((a: Dish, b: Dish) => a.name.localeCompare(b.name));
 
-  const handleOpenProductModal = (product?: Product) => {
-    if (product) {
-      setEditingId(product.id);
+  const handleOpenProductModal = (dish?: Dish) => {
+    if (dish) {
+      setEditingId(dish.id);
       setProductForm({
-        ...product,
-        is_available_on_digital_menu: product.is_available_on_digital_menu !== false,
-        category_id: product.category_id // Ensure category_id is used when editing
+        ...dish,
+        is_available_on_digital_menu: dish.is_available_on_digital_menu !== false,
+        category_id: dish.category_id // Ensure category_id is used when editing
       });
     } else {
       setEditingId(null);
@@ -105,9 +107,9 @@ const Products = () => {
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productForm.name || !productForm.price || !productForm.category_id) return;
+    if (!productForm.name || !productForm.price || !productForm.categoryId) return;
 
-    let finalImage = productForm.image_url;
+    let finalImage = productForm.imageUrl;
 
     // Auto-compress image if it's a new large base64 string
     if (finalImage && finalImage.startsWith('data:image') && finalImage.length > 200000) {
@@ -121,31 +123,32 @@ const Products = () => {
        }
     }
 
-    const selectedCat = categories.find(c => c.id === productForm.category_id);
-    const productData = {
+    const selectedCat = categories.find((c: any) => c.id === productForm.category_id);
+    const dishData = {
       ...productForm,
       image_url: finalImage,
       price: Number(productForm.price),
       is_available_on_digital_menu: productForm.is_available_on_digital_menu ?? true,
-      // categoryName: selectedCat?.name || '' // Not needed in Product type
-    } as Product;
+    } as Dish;
 
     if (editingId) {
-      const existing = products.find(p => p.id === editingId);
-      const changedCategory = existing && existing.category_id !== productData.category_id;
+      const existing = dishes.find((d: Dish) => d.id === editingId);
+      const changedCategory = existing && existing.category_id !== dishData.category_id;
       if (changedCategory) {
         const ok = confirm(`Confirma mover "${existing?.name}" para a categoria "${selectedCat?.name}"?`);
         if (!ok) return;
       }
-      updateProduct(productData);
+      updateDish(dishData);
       setIsProductModalOpen(false);
     } else {
-      const newProduct = {
-        ...productData,
-        id: productData.id || Math.random().toString(36).substr(2, 9),
-        is_active: true
+      const newDish: Dish = {
+        ...dishData,
+        id: dishData.id || Math.random().toString(36).substr(2, 9),
+        is_active: true,
+        name: dishData.name || '',
+        price: dishData.price || 0,
       };
-      addProduct(newProduct);
+      addDish(newDish);
       setIsProductModalOpen(false);
       setProductForm({
         name: '',
@@ -160,13 +163,13 @@ const Products = () => {
     }
   };
 
-  const handleDuplicateProduct = (product: Product) => {
-    const newProduct = {
-      ...product,
-      name: `${product.name} (Cópia)`,
+  const handleDuplicateProduct = (dish: Dish) => {
+    const newDish = {
+      ...dish,
+      name: `${dish.name} (Cópia)`,
       id: Math.random().toString(36).substr(2, 9)
     };
-    addProduct(newProduct as Product);
+    addDish(newDish as Dish);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,23 +190,23 @@ const Products = () => {
     let count = 0;
     
     try {
-      const updatedProducts = await Promise.all(products.map(async (product) => {
-        if (product.image_url && product.image_url.startsWith('data:image') && product.image_url.length > 200000) {
+      const updatedDishes = await Promise.all(dishes.map(async (dish: Dish) => {
+        if (dish.image_url && dish.image_url.startsWith('data:image') && dish.image_url.length > 200000) {
            try {
-             const compressed = await compressImage(product.image_url);
-             if (compressed.length < product.image_url.length) {
+             const compressed = await compressImage(dish.image_url);
+             if (compressed.length < dish.image_url.length) {
                count++;
-               return { ...product, image_url: compressed };
+               return { ...dish, image_url: compressed };
              }
            } catch (e) {
-             console.error(`Error compressing image for ${product.name}`, e);
+             console.error(`Error compressing image for ${dish.name}`, e);
            }
         }
-        return product;
+        return dish;
       }));
       
       if (count > 0) {
-        setProducts(updatedProducts);
+        setDishes(updatedDishes);
         alert(`${count} imagens foram otimizadas com sucesso! O menu digital deve sincronizar mais rápido agora.`);
       } else {
         alert('As imagens já estão otimizadas.');
@@ -269,25 +272,31 @@ const Products = () => {
             onChange={e => setSelectedCategory(e.target.value)}
           >
             <option value="TODOS" className="bg-slate-900 text-slate-300">Todas as Categorias</option>
-            {categories.map((cat, index) => (
+            {categories.map((cat: any, index: number) => (
               <option key={`${cat.id}-${index}`} value={cat.id} className="bg-slate-900">{cat.name}</option>
             ))}
           </select>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-          {filteredProducts.map((product, index) => (
-            <div key={`${product.id}-${index}`} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
+          {filteredProducts.map((dish: Dish, index: number) => (
+            <div key={`${dish.id}-${index}`} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
               <div className="flex items-start gap-4">
                 <div className="w-20 h-20 rounded-2xl bg-black/30 overflow-hidden shrink-0 border border-white/5 relative">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  {dish.image_url ? (
+                    <Image 
+                      src={dish.image_url} 
+                      alt={dish.name} 
+                      fill 
+                      sizes="80px"
+                      className="object-cover group-hover:scale-110 transition-transform duration-500" 
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-600">
                       <Utensils size={24} />
                     </div>
                   )}
-                  {!product.is_available_on_digital_menu && (
+                  {!dish.is_available_on_digital_menu && (
                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                         <span className="text-[8px] font-black text-white uppercase bg-red-500/80 px-2 py-1 rounded">Oculto</span>
                      </div>
@@ -295,14 +304,14 @@ const Products = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-bold text-white text-sm truncate pr-2" title={product.name}>{product.name}</h3>
-                    <span className="text-primary font-mono font-bold text-xs whitespace-nowrap">{formatKz(product.price)}</span>
+                    <h3 className="font-bold text-white text-sm truncate pr-2" title={dish.name}>{dish.name}</h3>
+                    <span className="text-primary font-mono font-bold text-xs whitespace-nowrap">{formatKz(dish.price || 0)}</span>
                   </div>
-                  <p className="text-slate-400 text-[10px] line-clamp-2 italic mb-4 min-h-[30px]">{product.description}</p>
+                  <p className="text-slate-400 text-[10px] line-clamp-2 italic mb-4 min-h-[30px]">{dish.description}</p>
                   <div className="flex gap-2">
-                    <button onClick={() => handleOpenProductModal(product)} className="flex-1 py-2 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">Editar</button>
-                    <button onClick={() => handleDuplicateProduct(product)} className="w-10 py-2 rounded-lg border border-blue-500/10 text-blue-500/50 hover:bg-blue-500 hover:text-white transition-all" title="Duplicar"><Copy size={14} className="mx-auto" /></button>
-                    <button onClick={() => removeProduct(product.id)} className="w-10 py-2 rounded-lg border border-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} className="mx-auto" /></button>
+                    <button onClick={() => handleOpenProductModal(dish)} className="flex-1 py-2 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">Editar</button>
+                    <button onClick={() => handleDuplicateProduct(dish)} className="w-10 py-2 rounded-lg border border-blue-500/10 text-blue-500/50 hover:bg-blue-500 hover:text-white transition-all" title="Duplicar"><Copy size={14} className="mx-auto" /></button>
+                    <button onClick={() => removeDish(dish.id)} className="w-10 py-2 rounded-lg border border-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} className="mx-auto" /></button>
                   </div>
                 </div>
               </div>
@@ -342,7 +351,13 @@ const Products = () => {
                       className="aspect-square rounded-2xl border-2 border-dashed border-white/20 hover:border-primary/50 cursor-pointer flex flex-col items-center justify-center gap-2 bg-black/20 group transition-all overflow-hidden relative"
                     >
                       {productForm.image_url ? (
-                        <img src={productForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                        <Image 
+                          src={productForm.image_url} 
+                          alt="Preview" 
+                          fill 
+                          sizes="100%"
+                          className="object-cover" 
+                        />
                       ) : (
                         <>
                           <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -392,11 +407,11 @@ const Products = () => {
                         <select 
                           required
                           className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-primary focus:bg-white/10 outline-none transition-all appearance-none cursor-pointer"
-                          value={productForm.category_id}
+                          value={productForm.category_id || ''}
                           onChange={e => setProductForm({...productForm, category_id: e.target.value})}
                         >
                           <option value="" disabled>Selecione...</option>
-                          {categories.map(cat => (
+                          {categories.map((cat: any) => (
                             <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                           ))}
                         </select>
@@ -410,7 +425,7 @@ const Products = () => {
                   <textarea 
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-primary focus:bg-white/10 outline-none transition-all resize-none h-24"
                     placeholder="Descreva o prato..."
-                    value={productForm.description}
+                    value={productForm.description || ''}
                     onChange={e => setProductForm({...productForm, description: e.target.value})}
                   />
                 </div>
@@ -424,7 +439,7 @@ const Products = () => {
                     <input 
                       type="checkbox" 
                       className="sr-only peer"
-                      checked={productForm.is_available_on_digital_menu}
+                      checked={productForm.is_available_on_digital_menu ?? false}
                       onChange={e => setProductForm({...productForm, is_available_on_digital_menu: e.target.checked})}
                     />
                     <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>

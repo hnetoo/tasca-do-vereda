@@ -103,14 +103,14 @@ export default function OwnerDashboard() {
   const metrics = useMemo(() => {
     const totalSales = orders
       .filter(o => o.status === 'FECHADO' || o.status === 'PAID')
-      .reduce((acc, o) => acc + (o.total || 0), 0);
+      .reduce((acc, o) => acc + Number(o.total || 0), 0);
 
     const activeOrders = orders.filter(o => ['PENDENTE', 'PREPARANDO', 'PRONTO'].includes(o.status)).length;
     
     // Expenses (Mock if no transactions)
     const totalExpenses = transactions
       .filter(t => t.type === 'expense')
-      .reduce((acc, t) => acc + (t.amount || 0), 0);
+      .reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
     const netProfit = totalSales - totalExpenses;
     const cashFlow = totalSales - totalExpenses; // Simplified for now
@@ -124,13 +124,13 @@ export default function OwnerDashboard() {
     // Hourly Data for Chart
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({ hour: i, sales: 0, profit: 0 }));
     orders.forEach(order => {
-      const dateStr = order.created_at || (order.timestamp instanceof Date ? order.timestamp.toISOString() : order.timestamp);
+      const dateStr = order.createdAt ? new Date(order.createdAt).toISOString() : null;
       if (!dateStr) return;
       const hour = new Date(dateStr).getHours();
       if (hourlyData[hour]) {
-        hourlyData[hour].sales += order.total;
+        hourlyData[hour].sales += (order.total || 0);
         // Assume 30% profit margin for simplicity if no expense data per order
-        hourlyData[hour].profit += order.total * 0.3; 
+        hourlyData[hour].profit += (order.total || 0) * 0.3;
       }
     });
     

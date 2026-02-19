@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect } from 'react'; 
- import { supabase } from '@/lib/supabase'; // Ajuste o caminho conforme seu projeto 
- import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
- import { RealtimePayload } from '@/types';
- 
- export const useRealtimeSync = (
+import { supabase } from '@/lib/supabase';
+import { RealtimePayload } from '@/types';
+
+export const useRealtimeSync = (
   table: string,
-  callback: (payload: RealtimePostgresChangesPayload<RealtimePayload>) => void,
+  callback: (payload: RealtimePayload) => void,
   filter?: { column: string; value: string | number }
 ) => {
   useEffect(() => {
@@ -26,7 +25,7 @@ import { useEffect } from 'react';
           },
           (payload) => {
             console.log(`Mudança real-time em ${table} (filtrado por ${filter.column}=${filter.value}):`, payload);
-            callback(payload);
+            callback(payload as unknown as RealtimePayload);
           }
         );
     } else {
@@ -37,7 +36,7 @@ import { useEffect } from 'react';
           { event: '*', schema: 'public', table: table },
           (payload) => {
             console.log(`Mudança real-time em ${table}:`, payload);
-            callback(payload);
+            callback(payload as unknown as RealtimePayload);
           }
         );
     }

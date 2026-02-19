@@ -5,13 +5,30 @@ import { useStore } from '@/store/useStore';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, BarChart, Bar } from 'recharts';
 import { DollarSign, ShoppingBag, Users, TrendingUp, Sparkles, Loader2, Activity, ChefHat, QrCode, ArrowRight, Utensils, Clock, Download } from 'lucide-react';
 import { analyzeBusinessPerformance } from '@/services/geminiService';
-import { AIAnalysisResult, PaymentMethod, PedidoPayload, DailyAnalyticsPayload } from '@/types';
+import { Order, AIAnalysisResult, PedidoPayload, DailyAnalyticsPayload, PaymentMethod, Expense, Revenue, Customer } from '@/types';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import ExportButton from '@/components/ExportButton';
 import { exportChartToPDF } from '@/services/exportService';
 import { formatKz } from '@/services/utils/currencyFormatter';
 import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+
+const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE', 'MBWAY', 'OUTRO'];
+
+const paymentLabels: Record<PaymentMethod, string> = {
+  NUMERARIO: 'Numerário',
+  TPA: 'Cartão',
+  TRANSFERENCIA: 'Transferência',
+  QR_CODE: 'QR Code',
+  CONTA_CORRENTE: 'Conta Corrente',
+  MBWAY: 'MBWay',
+  OUTRO: 'Outros',
+  CASH: 'Dinheiro',
+  CARD: 'Cartão',
+  MULTIBANCO: 'Multibanco',
+  TRANSFER: 'Transferência'
+};
 
 const Dashboard = () => {
   const { 
@@ -54,36 +71,23 @@ const Dashboard = () => {
   }, [realtimeActivity]);
 
   // Métricas em Tempo Real
-  const closedOrders = useMemo(() => orders.filter(o => o.status === 'FECHADO'), [orders]);
-  const activeOrderCount = useMemo(() => activeOrders.filter(o => o.status === 'ABERTO').length, [activeOrders]);
+  const closedOrders = useMemo(() => orders.filter((o: Order) => o.status === 'FECHADO'), [orders]);
+  const activeOrderCount = useMemo(() => activeOrders.filter((o: Order) => o.status === 'ABERTO').length, [activeOrders]);
   
   const dailyAnalytics = useMemo(() => getDailySalesAnalytics(7), [getDailySalesAnalytics]);
   const performanceAnalytics = useMemo(() => getDailySalesAnalytics(performanceRange === 'SEMANA' ? 7 : 30), [getDailySalesAnalytics, performanceRange]);
   const todayStats = useMemo(() => dailyAnalytics[dailyAnalytics.length - 1] || { totalSales: 0, totalProfit: 0, totalOrders: 0 }, [dailyAnalytics]);
   
-  const totalSales = useMemo(() => closedOrders.reduce((acc, o) => acc + o.total, 0), [closedOrders]);
-  const totalProfit = useMemo(() => dailyAnalytics.reduce((acc, d) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
+  const totalSales = useMemo(() => closedOrders.reduce((acc: number, o: Order) => acc + (o.total || 0), 0), [closedOrders]);
+  const totalProfit = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailyAnalyticsPayload) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
   const avgMargin = useMemo(() => totalSales > 0 ? (totalProfit / totalSales) * 100 : 0, [totalSales, totalProfit]);
-  const chartData = performanceAnalytics.map(d => ({
+  const chartData = performanceAnalytics.map((d: DailyAnalyticsPayload) => ({
     name: new Date(d.date).toLocaleDateString('pt-AO', { weekday: 'short' }),
     vendas: d.totalSales,
     lucro: d.totalProfit
   }));
 
-  const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE', 'MBWAY', 'OUTROS', 'Cash', 'Card', 'MBWay', 'Other'];
-  const paymentLabels: Record<PaymentMethod, string> = {
-    NUMERARIO: 'Numerário',
-    TPA: 'Cartão',
-    TRANSFERENCIA: 'Transferência',
-    QR_CODE: 'QR Code',
-    CONTA_CORRENTE: 'Conta Corrente',
-    MBWAY: 'MBWay',
-    OUTROS: 'Outros',
-    Cash: 'Dinheiro',
-    Card: 'Cartão',
-    MBWay: 'MBWay',
-    Other: 'Outros'
-  };
+
 
   const handleAIAnalysis = async () => {
     setLoadingAi(true);
@@ -92,15 +96,15 @@ const Dashboard = () => {
     setLoadingAi(false);
   };
 
-  const extractPayments = (order: typeof orders[number]) => {
+  const extractPayments = (order: Order): { method: PaymentMethod; amount: number }[] => {
     if (order.splitPayments && order.splitPayments.length > 0) {
-      return order.splitPayments.map(p => ({ method: p.method, amount: p.amount }));
+      return order.splitPayments.map(p => ({ method: p.method as PaymentMethod, amount: p.amount }));
     }
     if (order.payments && order.payments.length > 0) {
-      return order.payments.map(p => ({ method: p.method, amount: p.amount }));
+      return order.payments.map(p => ({ method: p.method as PaymentMethod, amount: p.amount }));
     }
     if (order.paymentMethod) {
-      return [{ method: order.paymentMethod, amount: order.total }];
+      return [{ method: order.paymentMethod as PaymentMethod, amount: order.total || 0 }];
     }
     return [];
   };
@@ -126,21 +130,21 @@ const Dashboard = () => {
   }, [paymentPeriod, paymentYear]);
 
   const paymentDailyData = useMemo(() => {
-    const closed = orders.filter(o => o.status === 'FECHADO' || o.status === 'PAGO');
+    const closed = orders.filter((o: Order) => o.status === 'FECHADO' || o.status === 'PAGO');
     const { start, end } = paymentDateRange;
     const days = buildDateRange(start, end);
     const profitByDay = new Map<number, number>();
     days.forEach(date => {
       const dayKey = normalizeDate(date).getTime();
-      const daySales = closed.reduce((acc, order) => {
-        const d = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
-        return d.getTime() === dayKey ? acc + order.total : acc;
+      const daySales = closed.reduce((acc: number, order: Order) => {
+        const d = normalizeDate(getOrderDate(order.timestamp || (order as any).createdAt || (order as any).updatedAt));
+        return d.getTime() === dayKey ? acc + (order.total || 0) : acc;
       }, 0);
-      const dayExpenses = (expenses || []).reduce((acc, exp) => {
+      const dayExpenses = (expenses || []).reduce((acc: number, exp: Expense) => {
         const d = normalizeDate(getOrderDate(exp.date));
         return d.getTime() === dayKey ? acc + exp.amount : acc;
       }, 0);
-      const dayRevenues = (revenues || []).reduce((acc, rev) => {
+      const dayRevenues = (revenues || []).reduce((acc: number, rev: Revenue) => {
         const d = normalizeDate(getOrderDate(rev.date));
         return d.getTime() === dayKey ? acc + rev.amount : acc;
       }, 0);
@@ -156,14 +160,14 @@ const Dashboard = () => {
         QR_CODE: 0,
         CONTA_CORRENTE: 0,
         MBWAY: 0,
-        OUTROS: 0,
-        Cash: 0,
-        Card: 0,
-        MBWay: 0,
-        Other: 0
+        OUTRO: 0,
+        CASH: 0,
+        CARD: 0,
+        MULTIBANCO: 0,
+        TRANSFER: 0
       };
-      closed.forEach(order => {
-        const orderDate = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
+      closed.forEach((order: Order) => {
+        const orderDate = normalizeDate(getOrderDate((order.timestamp || order.createdAt || order.updatedAt) || undefined));
         if (orderDate.getTime() !== dayKey) return;
         extractPayments(order).forEach(payment => {
           if (salesByMethod[payment.method] !== undefined) {
@@ -202,7 +206,7 @@ const Dashboard = () => {
   }, [paymentDailyData, paymentMethods, paymentMetric]);
 
   const exportConfig = {
-    data: dailyAnalytics.map(d => ({
+    data: dailyAnalytics.map((d: DailyAnalyticsPayload) => ({
       ...d,
       totalSales: formatKz(d.totalSales),
       totalProfit: formatKz(d.totalProfit || 0),
@@ -293,15 +297,10 @@ const Dashboard = () => {
             </div>
           )}
 
-          <button 
-            onClick={() => router.push('/qrscanner')}
-            className="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 hover:border-primary/50 text-slate-300 hover:text-white transition-all flex items-center gap-2 group flex-1 md:flex-none justify-center"
-          >
-            <QrCode size={18} className="group-hover:text-primary transition-colors"/>
-            <span className="text-xs font-bold uppercase tracking-wide">Ler QR Code</span>
-          </button>
-          
-          <button 
+
+
+
+          <button
             onClick={handleAIAnalysis}
             disabled={loadingAi}
             className="relative group overflow-hidden px-6 py-2.5 rounded-xl bg-primary text-slate-950 hover:bg-white transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] flex-1 md:flex-none justify-center"
@@ -415,192 +414,16 @@ const Dashboard = () => {
                     <p className="text-[10px] text-slate-400 uppercase tracking-wider">{customers.length} Registados</p>
                   </div>
                 </div>
-                <div className="text-xs font-bold text-white">{customers.filter(c => c.balance > 0).length} c/ Dívida</div>
+                <div className="text-xs font-bold text-white">{customers.filter((c: Customer) => c.balance > 0).length} c/ Dívida</div>
               </div>
             </div>
           </div>
-
-          <button 
-            onClick={() => router.push('/pos')}
-            className="w-full py-4 bg-white text-slate-950 rounded-2xl font-black uppercase tracking-wider hover:bg-primary transition-colors flex items-center justify-center gap-2 shadow-lg mt-4"
-          >
-            Abrir POS <ArrowRight size={18} />
-          </button>
         </div>
-
-        {/* Sales Chart - Wide Card */}
-        <div className="col-span-1 md:col-span-2 lg:col-span-4 row-span-2 bg-slate-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-3xl relative">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-black uppercase tracking-widest">
-              <Activity size={14} />
-              {performanceRange === 'SEMANA' ? 'Performance Semanal' : 'Performance 30 Dias'}
-            </div>
-            <select
-              value={performanceRange}
-              onChange={(e) => setPerformanceRange(e.target.value as 'SEMANA' | '30D')}
-              className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg px-2 py-1 outline-none"
-            >
-              <option value="SEMANA">Esta Semana</option>
-              <option value="30D">Últimos 30 dias</option>
-            </select>
-          </div>
-          
-          <div className="h-[150px] sm:h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#64748b', fontSize: 10, fontWeight: 'bold'}} 
-                  dy={10}
-                />
-                <YAxis hide />
-                <Tooltip 
-                  contentStyle={{backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff'}}
-                  itemStyle={{color: '#06b6d4'}}
-                  formatter={(value: number) => [formatKz(value), 'Vendas']}
-                  labelStyle={{display: 'none'}}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="vendas" 
-                  stroke="#06b6d4" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorVendas)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="col-span-1 md:col-span-4 lg:col-span-6 row-span-2 bg-slate-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-3xl" ref={paymentChartRef}>
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-black uppercase tracking-widest">
-              <ShoppingBag size={14} />
-              Pagamentos por Dia
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-1">
-                {(['DIA', 'SEMANA', 'MES', 'ANO'] as const).map(period => (
-                  <button
-                    key={period}
-                    onClick={() => setPaymentPeriod(period)}
-                    className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                      paymentPeriod === period ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {period === 'DIA' ? 'Dia' : period === 'SEMANA' ? 'Semana' : period === 'MES' ? 'Mês' : 'Ano'}
-                  </button>
-                ))}
-              </div>
-              {paymentPeriod === 'ANO' && (
-                <select
-                  value={paymentYear}
-                  onChange={(e) => setPaymentYear(Number(e.target.value))}
-                  className="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-xl px-3 py-2 outline-none"
-                >
-                  {[0, 1, 2, 3, 4].map(offset => {
-                    const year = new Date().getFullYear() - offset;
-                    return (
-                      <option key={year} value={year}>{year}</option>
-                    );
-                  })}
-                </select>
-              )}
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-1">
-                <button
-                  onClick={() => setPaymentMetric('VENDAS')}
-                  className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    paymentMetric === 'VENDAS' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Vendas
-                </button>
-                <button
-                  onClick={() => setPaymentMetric('LUCRO')}
-                  className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    paymentMetric === 'LUCRO' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Lucro
-                </button>
-              </div>
-              <button
-                onClick={handleExportPayments}
-                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-black uppercase tracking-widest text-slate-300 hover:text-white flex items-center gap-2"
-              >
-                <Download size={14} /> Exportar PDF
-              </button>
-            </div>
-          </div>
-          <div className="h-[200px] sm:h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={paymentChartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{fill: '#64748b', fontSize: 10, fontWeight: 'bold'}}
-                  dy={10}
-                />
-                <YAxis hide />
-                <Tooltip
-                  contentStyle={{backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#fff'}}
-                  formatter={(value: number, name: string) => [formatKz(value), paymentLabels[name as PaymentMethod] || name]}
-                  labelStyle={{display: 'none'}}
-                />
-                {paymentMethods.map((method, index) => (
-                  <Bar key={method} dataKey={method} stackId="a" fill={['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b'][index % 5]} radius={[6, 6, 0, 0]} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        {/* Weather/Time Widget - Small Card */}
-        <div className="col-span-1 row-span-1 bg-slate-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-3xl flex flex-col justify-center items-center text-center">
-          <Clock size={32} className="text-slate-500 mb-2" />
-          <p className="text-2xl font-black text-white">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">
-            {new Date().toLocaleDateString('pt-AO', {weekday: 'long'})}
-          </p>
-        </div>
-
-        {/* AI Insight - Wide Low Card */}
-        {aiAnalysis && (
-          <div className="col-span-1 md:col-span-4 lg:col-span-6 row-span-auto bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 p-6 rounded-3xl relative overflow-hidden animate-in slide-in-from-bottom duration-500">
-             <div className="flex items-start gap-4">
-                <div className="bg-indigo-500/20 p-3 rounded-xl text-indigo-400 shrink-0">
-                  <Sparkles size={24} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-white mb-2">Insight Tático (IA)</h4>
-                  <p className="text-sm text-slate-300 leading-relaxed">{aiAnalysis.summary}</p>
-                  
-                  <div className="grid grid-cols-1 gap-4 mt-4">
-                    <div className="bg-slate-950/50 p-4 rounded-xl border border-white/5 text-sm text-slate-300">
-                      <span className="text-primary font-bold mr-2">Recomendação:</span>
-                      {aiAnalysis.recommendation}
-                    </div>
-                  </div>
-                </div>
-             </div>
-          </div>
-        )}
-
       </div>
     </div>
   );
 };
 
 export default Dashboard;
+
 

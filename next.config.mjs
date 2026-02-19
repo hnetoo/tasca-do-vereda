@@ -10,13 +10,15 @@ const nextConfig = {
     unoptimized: true 
   },
   
+  turbopack: {
+    root: './',
+  },
+  
   // Ignorar erros de linting e typescript durante o build
   typescript: { 
-    ignoreBuildErrors: true 
+    ignoreBuildErrors: false 
   },
-  eslint: { 
-    ignoreDuringBuilds: true 
-  },
+
 
   // Configuração do Webpack para lidar com módulos node:
   webpack: (config, { isServer }) => {

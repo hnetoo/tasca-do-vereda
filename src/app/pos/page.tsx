@@ -12,7 +12,8 @@ import {
   Wine, Sandwich, Soup, Salad, Cake, Fish, Beef, Croissant, 
   Donut, Martini, Grape, Carrot, Apple, Cherry, RotateCcw, Check, Menu
 } from 'lucide-react';
-import { PaymentMethod, Order, TableZone, Table, OrderPayment, Product } from '@/types';
+import Image from 'next/image';
+import { PaymentMethod, Order, TableZone, Table, OrderPayment, Product, AuditLog, OrderItem } from '@/types';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { availableMonitors, primaryMonitor } from '@tauri-apps/api/window';
 import ExportButton from '@/components/ExportButton';
@@ -53,18 +54,6 @@ const POS = () => {
     auditLogs, addTable
   } = useStore();
 
-  // Safeguard against undefined store data
-  if (!tables || !menu || !categories || !activeOrders) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">A carregar dados do sistema...</p>
-        </div>
-      </div>
-    );
-  }
-
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -101,8 +90,8 @@ const POS = () => {
   const GRID_SIZE = 10;
   const GRID_ROWS = 8;
 
-  const currentOrder = activeOrders.find(o => o.id === activeOrderId);
-  const activeTable = tables.find(t => t.id === activeTableId);
+  const currentOrder = activeOrders?.find((o: Order) => o.id === activeOrderId);
+  const activeTable = tables?.find((t: Table) => t.id === activeTableId);
 
   // Validate activeTableId on mount and updates
   useEffect(() => {
@@ -115,7 +104,7 @@ const POS = () => {
 
   useEffect(() => {
     // Only clear activeTableId if we have tables loaded and the ID is invalid
-    if (tables.length > 0 && activeTableId && !activeTable) {
+    if (tables?.length > 0 && activeTableId && !activeTable) {
       setActiveTable(null);
     }
     
@@ -124,15 +113,15 @@ const POS = () => {
     if (!activeTableId) {
         setShowMap(false);
     }
-  }, [activeTableId, activeTable, tables.length, setActiveTable]);
+  }, [activeTableId, activeTable, tables?.length, setActiveTable]);
 
   // Sync activeOrderId with activeTableId
   useEffect(() => {
-    if (activeTableId) {
-      const tableOrders = activeOrders.filter(o => o.tableId === activeTableId && o.status === 'ABERTO');
+    if (activeTableId && activeOrders) {
+      const tableOrders = activeOrders.filter((o: Order) => o.tableId === activeTableId && o.status === 'ABERTO');
       if (tableOrders.length > 0) {
         // If the current activeOrderId is not one of this table's orders, switch to the first one
-        if (!activeOrderId || !tableOrders.find(o => o.id === activeOrderId)) {
+        if (!activeOrderId || !tableOrders.find((o: Order) => o.id === activeOrderId)) {
           setActiveOrder(tableOrders[0].id);
         }
       } else {
@@ -150,11 +139,11 @@ const POS = () => {
     // Auto-select Balcão logic
     if (!targetTableId) {
       // Find or create Balcão table
-      let balcao = tables.find(t => t.name.toLowerCase().includes('balcão') || t.id === 999);
+      let balcao = tables.find((t: Table) => t.name?.toLowerCase().includes('balcão') || t.id === 'balcao-999');
       
       if (!balcao) {
-        const newTable: Table = {
-          id: 999,
+        const newTable = {
+          id: 'balcao-999',
           name: 'Balcão',
           seats: 100,
           status: 'LIVRE',
@@ -162,8 +151,9 @@ const POS = () => {
           y: 0,
           zone: 'INTERIOR',
           shape: 'RECTANGLE',
-          rotation: 0
-        };
+          rotation: 0,
+          number: 999,
+        } as Table;
         addTable(newTable);
         balcao = newTable;
       }
@@ -177,18 +167,18 @@ const POS = () => {
     if (targetTableId) {
        // Check for active order or create one
        let targetOrderId = activeOrderId;
-       const tableOrders = activeOrders.filter(o => o.tableId === targetTableId && o.status === 'ABERTO');
+       const tableOrders = activeOrders.filter((o: Order) => o.tableId === targetTableId && o.status === 'ABERTO');
        
        if (tableOrders.length > 0) {
           // If we have an active order but it's not for this table (shouldn't happen due to effect, but safety check)
           // or if activeOrderId is null
-          if (!targetOrderId || !tableOrders.find(o => o.id === targetOrderId)) {
+          if (!targetOrderId || !tableOrders.find((o: Order) => o.id === targetOrderId)) {
              targetOrderId = tableOrders[0].id;
              setActiveOrder(targetOrderId);
           }
        } else {
           // Create new order
-          const tableName = tables.find(t => t.id === targetTableId)?.name || 'Mesa';
+          const tableName = tables.find((t: Table) => t.id === targetTableId)?.name || 'Mesa';
           targetOrderId = createNewOrder(targetTableId, tableName);
           setActiveOrder(targetOrderId);
        }
@@ -202,39 +192,51 @@ const POS = () => {
   };
 
 
-  const openOrdersForTable = activeOrders.filter(o => o.tableId === activeTableId && o.status === 'ABERTO');
+  // Safeguard against undefined store data
+  if (!tables || !menu || !categories || !activeOrders) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">A carregar dados do sistema...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const openOrdersForTable = activeOrders.filter((o: Order) => o.tableId === activeTableId && o.status === 'ABERTO');
   
   // Sort tables numerically
   const sortedTables = [...tables].sort((a, b) => {
-    const numA = parseInt(a.name.replace(/\D/g, '')) || 9999;
-    const numB = parseInt(b.name.replace(/\D/g, '')) || 9999;
-    return numA - numB || a.name.localeCompare(b.name);
+    const numA = parseInt(a.name?.replace(/\D/g, '') || '9999');
+    const numB = parseInt(b.name?.replace(/\D/g, '') || '9999');
+    return numA - numB || a.name?.localeCompare(b.name || '') || 0;
   });
 
   // Encontrar todas as mesas que têm pelo menos um pedido aberto
-  const occupiedTables = sortedTables.filter(t => 
-    activeOrders.some(o => o.tableId === t.id && o.status === 'ABERTO')
+  const occupiedTables = sortedTables.filter((t: Table) => 
+    activeOrders.some((o: Order) => o.tableId === t.id && o.status === 'ABERTO')
   );
 
-  const filteredMenu = menu.filter(item => {
-    const matchesCategory = selectedCategoryId === 'TODOS' || item.category_id === selectedCategoryId;
+  const filteredMenu = menu.filter((item: Product) => {
+    const matchesCategory = selectedCategoryId === 'TODOS' || item.categoryId === selectedCategoryId;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
-  }).sort((a, b) => a.name.localeCompare(b.name));
+  }).sort((a: Product, b: Product) => a.name.localeCompare(b.name));
 
 
   
   const totalWithTax = currentOrder ? currentOrder.total : 0;
 
   const getExportConfig = () => {
-    const shiftOrders = activeOrders.filter(o => o.status === 'FECHADO' && o.shiftId === currentShiftId);
+    const shiftOrders = activeOrders.filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId);
           return {
-            data: shiftOrders.map(o => ({
+            data: shiftOrders.map((o: Order) => ({
               id: o.invoiceNumber || o.id,
-              time: new Date(o.timestamp).toLocaleTimeString('pt-AO'),
-              total: formatKz(o.total),
+              time: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('pt-AO') : '',
+              total: formatKz(o.total || 0),
               payment: o.paymentMethod || 'N/A',
-              items: o.items.length
+              items: o.items?.length || 0
             })),
       columns: [
         { header: 'Fatura', dataKey: 'id' },
@@ -385,8 +387,8 @@ const POS = () => {
   const generateStandardInvoiceHTML = (order: Order): string => {
     const customerTaxId = order.customerNif || '999999999';
     
-    const itemsHtml = order.items.map(item => {
-      const product = menu.find(p => p.id === item.productId);
+    const itemsHtml = (order.items || []).map(item => {
+      const product = menu.find((p: Product) => p.id === item.productId);
       const name = product?.name || 'Item Desconhecido';
       const unitPrice = formatKzDetailed(item.unitPrice);
       const subTotal = formatKzDetailed(item.unitPrice * item.quantity);
@@ -399,17 +401,17 @@ const POS = () => {
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-top: 2px;">
           <span>(Unit: ${unitPrice} Kz)</span>
-          <span>IVA: ${settings.taxRate}%</span>
+          <span>IVA: ${settings.taxPercentage}%</span>
         </div>
       </div>`;
     }).join('');
 
-    const now = new Date(order.timestamp);
+    const now = new Date(order.createdAt || '');
     const dateStr = now.toLocaleDateString('pt-AO', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const timeStr = now.toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit' });
     
-    const grossTotal = order.total - order.taxTotal;
-    const taxAmount = order.taxTotal;
+    const taxAmount = order.taxTotal || 0;
+    const grossTotal = (order.total || 0) - taxAmount;
     const finalTotal = order.total;
 
     return `
@@ -488,7 +490,7 @@ const POS = () => {
       </div>
       <div class="total-row grand">
         <span>TOTAL</span>
-        <span>${formatKz(finalTotal)}</span>
+        <span>${formatKz(finalTotal || 0)}</span>
       </div>
     </div>
 
@@ -522,8 +524,8 @@ const POS = () => {
   const generateThermalReceiptHTML = (order: Order): string => {
     const customerTaxId = order.customerNif || '999999999';
     
-    const itemsHtml = order.items.map(item => {
-      const product = menu.find(p => p.id === item.productId);
+    const itemsHtml = (order.items || []).map(item => {
+      const product = menu.find((p: Product) => p.id === item.productId);
       const name = product?.name || 'Item Desconhecido';
       const unitPrice = formatKzDetailed(item.unitPrice);
       const subTotal = formatKzDetailed(item.unitPrice * item.quantity);
@@ -544,10 +546,10 @@ const POS = () => {
     const dateStr = now.toLocaleDateString('pt-AO', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-');
     const timeStr = now.toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
-    const grossTotal = order.total - order.taxTotal;
-    const taxAmount = order.taxTotal;
-    const finalTotal = order.total;
-    const itemCount = order.items.reduce((acc, item) => acc + item.quantity, 0);
+    const taxAmount = order.taxTotal || 0;
+    const grossTotal = (order.total || 0) - taxAmount;
+    const finalTotal = order.total || 0;
+    const itemCount = (order.items || []).reduce((acc, item) => acc + item.quantity, 0);
     const formatNumber = (val: number) => new Intl.NumberFormat('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
     const paymentMethodName = order.paymentMethod === 'NUMERARIO' ? 'Numerário' : 
@@ -654,7 +656,7 @@ const POS = () => {
         <span>Incidencia</span>
       </div>
       <div class="info-row">
-        <span>${settings.taxRate},00</span>
+        <span>${settings.taxPercentage},00</span>
         <span>${formatNumber(taxAmount)}</span>
         <span>${formatNumber(grossTotal)}</span>
       </div>
@@ -695,7 +697,7 @@ const POS = () => {
 
   // Função para gerar Relatório de Fecho de Caixa
   const generateShiftReportHTML = (): string => {
-    const shiftOrders = activeOrders.filter(o => o.status === 'FECHADO' && o.shiftId === currentShiftId);
+    const shiftOrders = activeOrders.filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId);
     
     // Totais por método de pagamento
     const totals: Record<string, number> = {
@@ -710,15 +712,15 @@ const POS = () => {
     let totalSales = 0;
     let totalTax = 0;
     
-    shiftOrders.forEach(order => {
+    shiftOrders.forEach((order: Order) => {
       const method = order.paymentMethod || 'OUTROS';
       if (totals[method] !== undefined) {
-        totals[method] += order.total;
+        totals[method] += order.total || 0;
       } else {
-        totals['OUTROS'] += order.total;
+        totals['OUTROS'] += order.total || 0;
       }
-      totalSales += order.total;
-      totalTax += order.taxTotal;
+      totalSales += order.total || 0;
+      totalTax += order.taxTotal || 0;
     });
 
     const formatNumber = (val: number) => new Intl.NumberFormat('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
@@ -836,11 +838,11 @@ const POS = () => {
   const addPayment = (method: PaymentMethod, amount: number) => {
     // Se já existe um pagamento que cobre o total e estamos adicionando outro,
     // verificar se é uma substituição de método (apenas se houver 1 pagamento e valor igual ao total)
-    if (currentPayments.length === 1 && Math.abs(currentPayments[0].amount - totalWithTax) < 0.01) {
+    if (currentPayments.length === 1 && Math.abs(currentPayments[0].amount - (totalWithTax || 0)) < 0.01) {
        const newPayment: OrderPayment = {
         id: `pay-${Date.now()}`,
         method,
-        amount: totalWithTax, // Garante que o valor é exato
+        amount: totalWithTax || 0, // Garante que o valor é exato
         timestamp: new Date().toISOString()
       };
       setCurrentPayments([newPayment]);
@@ -857,13 +859,13 @@ const POS = () => {
   };
 
   const removePayment = (id: string) => {
-    setCurrentPayments(currentPayments.filter(p => p.id !== id));
+    setCurrentPayments(currentPayments.filter((p: OrderPayment) => p.id !== id));
   };
 
   const handlePayment = () => {
     if (activeOrderId && currentPayments.length > 0 && currentOrder) {
       const totalPaid = currentPayments.reduce((sum, p) => sum + p.amount, 0);
-      if (Math.abs(totalPaid - totalWithTax) > 0.01) {
+      if (Math.abs(totalPaid - (totalWithTax || 0)) > 0.01) {
         addNotification('error', 'O valor total pago deve ser igual ao total do pedido.');
         return;
       }
@@ -871,11 +873,11 @@ const POS = () => {
       const normalizedNif = customerNif.trim();
       checkoutTable(activeOrderId, currentPayments, undefined, normalizedNif || undefined);
       
-      const finalOrder = { 
+      const finalOrder: Order = { 
         ...currentOrder, 
         status: 'FECHADO' as const, 
         payments: currentPayments,
-        paymentMethod: currentPayments.length === 1 ? currentPayments[0].method : undefined,
+        paymentMethod: currentPayments.length === 1 ? currentPayments[0].method : 'SPLIT',
         invoiceNumber: 'A PROCESSAR...',
         customerNif: normalizedNif || undefined
       };
@@ -891,7 +893,7 @@ const POS = () => {
 
   const handleCorrection = async () => {
     if (correctionOrderId && currentPayments.length > 0 && correctionReason) {
-      const order = activeOrders.find(o => o.id === correctionOrderId);
+      const order = activeOrders.find((o: Order) => o.id === correctionOrderId);
       if (!order) return;
 
       const isPostPrint = order.invoiceNumber && order.invoiceNumber !== 'A PROCESSAR...';
@@ -1100,10 +1102,10 @@ const POS = () => {
           
           <div className="w-px h-6 bg-white/10 mx-2"></div>
 
-          {occupiedTables.map(table => {
+          {occupiedTables.map((table: Table) => {
             const tableTotal = activeOrders
-              .filter(o => o.tableId === table.id && o.status === 'ABERTO')
-              .reduce((acc, o) => acc + o.total, 0);
+              .filter((o: Order) => o.tableId === table.id && o.status === 'ABERTO')
+              .reduce((acc: number, o: Order) => acc + (o.total || 0), 0);
             
             return (
               <button 
@@ -1193,7 +1195,7 @@ const POS = () => {
                                >
                                   <Icon size={18} />
                                   <span className="text-xs font-black uppercase tracking-widest">{zoneConfig[zone].label}</span>
-                                  <span className="bg-black/20 px-2 py-0.5 rounded text-[10px] opacity-60">{(tables || []).filter(t => t.zone === zone).length}</span>
+                                  <span className="bg-black/20 px-2 py-0.5 rounded text-[10px] opacity-60">{(tables || []).filter((t: Table) => t.zone === zone).length}</span>
                                </button>
                              );
                           })}
@@ -1219,14 +1221,14 @@ const POS = () => {
                           >
                             {Array.from({ length: GRID_ROWS }).map((_, y) => (
                               Array.from({ length: GRID_SIZE }).map((_, x) => {
-                                const table = tables.find(t => t.zone === activeZone && t.x === x && t.y === y);
+                                const table = tables.find((t: Table) => t.zone === activeZone && t.x === x && t.y === y);
                                 
                                 if (!table) return <div key={`${x}-${y}`} />;
 
-                                const isActive = activeOrders.some(o => o.tableId === table.id && o.status === 'ABERTO');
+                                const isActive = activeOrders.some((o: Order) => o.tableId === table.id && o.status === 'ABERTO');
                                 const tableTotal = activeOrders
-                                   .filter(o => o.tableId === table.id && o.status === 'ABERTO')
-                                   .reduce((acc, o) => acc + o.total, 0);
+                                   .filter((o: Order) => o.tableId === table.id && o.status === 'ABERTO')
+                                   .reduce((acc: number, o: Order) => acc + (o.total || 0), 0);
 
                                 return (
                                   <button
@@ -1256,7 +1258,7 @@ const POS = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 pb-12 animate-in fade-in zoom-in duration-300">
-                      {filteredMenu.map(dish => (
+                      {filteredMenu.map((dish: Product) => (
                           <button 
                               key={dish.id} 
                               type="button"
@@ -1264,7 +1266,13 @@ const POS = () => {
                               className={`group relative bg-slate-800/20 rounded-[2rem] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 overflow-hidden flex flex-col active:scale-95 cursor-pointer shadow-lg text-left w-full`}
                           >
                               <div className="aspect-square w-full overflow-hidden relative">
-                                  <img src={normalizeProductImage(dish.image_url)} alt={dish.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                  <Image 
+                                      src={normalizeProductImage(dish.image_url)} 
+                                      alt={dish.name} 
+                                      fill 
+                                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                      className="object-cover transition-transform duration-700 group-hover:scale-110" 
+                                  />
                                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
                                   <div className="absolute bottom-3 left-4 right-4">
                                       <h4 className="font-bold text-[11px] text-white truncate uppercase tracking-tighter">{dish.name}</h4>
@@ -1302,7 +1310,7 @@ const POS = () => {
 
               {/* Sub-account tabs within the table */}
               <div className="flex gap-2 flex-wrap pb-2">
-                 {openOrdersForTable.map(order => (
+                 {openOrdersForTable.map((order: Order) => (
                     <div key={order.id} className="relative group">
                       <button 
                         onClick={() => setActiveOrder(order.id)}
@@ -1313,7 +1321,7 @@ const POS = () => {
                         {order.subAccountName}
                       </button>
                       <div className="flex items-center gap-1 absolute right-1 top-1/2 -translate-y-1/2">
-                        {order.items.length > 0 && (
+                        {order.items && order.items.length > 0 && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1329,7 +1337,7 @@ const POS = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (order.items.length > 0) {
+                            if (order.items && order.items.length > 0) {
                               if (!window.confirm('ATENÇÃO: Isto irá APAGAR os itens sem registar pagamento. Deseja continuar?')) return;
                             }
                             removeOrder(order.id);
@@ -1346,16 +1354,24 @@ const POS = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-3">
-                {currentOrder?.items.map((item, idx) => { 
-                    const dish = menu.find(d => d.id === item.dishId); 
+                {currentOrder?.items.map((item: OrderItem, idx: number) => { 
+                    const dish = menu.find((d: Product) => d.id === item.productId); 
                     if (!dish) return null; 
                     return (
                         <div key={idx} className="flex gap-4 items-center p-3 bg-white/5 rounded-2xl border border-white/5 group animate-in slide-in-from-right-4">
-                            <img src={normalizeProductImage(dish.image)} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                            <div className="relative w-12 h-12 rounded-xl overflow-hidden">
+                                <Image 
+                                    src={normalizeProductImage(dish.imageUrl)} 
+                                    alt={dish.name} 
+                                    fill 
+                                    sizes="48px"
+                                    className="object-cover" 
+                                />
+                            </div>
                             <div className="flex-1 min-w-0">
                                 <h4 className="font-bold text-white text-[10px] truncate uppercase tracking-tighter">{dish.name}</h4>
                                 <div className="flex justify-between items-center mt-1">
-                                    <span className="text-[10px] font-mono font-bold text-primary/80">{formatKz(dish.price * item.quantity)}</span>
+                                    <span className="text-[10px] font-mono font-bold text-primary/80">{formatKz((dish.price || 0) * (item.quantity || 0))}</span>
                                     <div className="flex items-center gap-2">
                                       <div className="flex items-center gap-3 bg-black/40 p-1 rounded-lg">
                                           <button onClick={() => addToOrder(activeTableId!, dish, -1, '', currentOrder.id)} className="w-6 h-6 rounded-md bg-white/5 text-slate-400 flex items-center justify-center hover:bg-white/10"><Minus size={12}/></button>
@@ -1449,19 +1465,19 @@ const POS = () => {
                     </thead>
                     <tbody className="divide-y divide-white/5">
                        {activeOrders
-                          .filter(o => o.status === 'FECHADO' && o.shiftId === currentShiftId)
-                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                          .map(order => {
-                             const table = tables.find(t => t.id === order.tableId);
+                          .filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId)
+                          .sort((a: Order, b: Order) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                          .map((order: Order) => {
+                             const table = tables.find((t: Table) => t.id === order.tableId);
                              return (
                                 <tr key={order.id} className="hover:bg-white/5 transition-colors group">
                                    <td className="p-4 font-mono text-sm text-white">{order.invoiceNumber || 'N/A'}</td>
-                                   <td className="p-4 text-sm text-slate-300">{new Date(order.timestamp).toLocaleTimeString('pt-AO', {hour: '2-digit', minute:'2-digit'})}</td>
+                                   <td className="p-4 text-sm text-slate-300">{new Date(order.createdAt || 0).toLocaleTimeString('pt-AO', {hour: '2-digit', minute:'2-digit'})}</td>
                                    <td className="p-4 text-sm text-slate-300">
                                       <div className="font-bold text-white">{table?.name || 'Balcão'}</div>
                                       <div className="text-[10px] opacity-50">{order.subAccountName}</div>
                                    </td>
-                                   <td className="p-4 text-sm font-mono font-bold text-primary text-right">{formatKz(order.total)}</td>
+                                   <td className="p-4 text-sm font-mono font-bold text-primary text-right">{formatKz(order.total || 0)}</td>
                                    <td className="p-4 text-center">
                                       <span className="px-2 py-1 rounded-md bg-white/5 text-[10px] font-bold uppercase text-slate-400 border border-white/5">
                                          {order.paymentMethod}
@@ -1482,8 +1498,8 @@ const POS = () => {
                                              setCurrentPayments(order.payments || (order.paymentMethod ? [{
                                                id: `legacy-${order.id}`,
                                                method: order.paymentMethod,
-                                               amount: order.total,
-                                               timestamp: order.timestamp
+                                               amount: order.total || 0,
+                                               timestamp: order.createdAt?.toString() || new Date().toISOString()
                                              }] : []));
                                              setIsCorrectionModalOpen(true);
                                            }}
@@ -1497,7 +1513,7 @@ const POS = () => {
                                 </tr>
                              );
                           })}
-                          {activeOrders.filter(o => o.status === 'FECHADO' && o.shiftId === currentShiftId).length === 0 && (
+                          {activeOrders.filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId).length === 0 && (
                              <tr>
                                 <td colSpan={6} className="p-10 text-center text-slate-500 opacity-50">
                                    <History size={48} className="mx-auto mb-4 opacity-50" />
@@ -1570,7 +1586,7 @@ const POS = () => {
               {/* Lista de Pagamentos Adicionados */}
               {currentPayments.length > 0 && (
                 <div className="mb-8 space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
-                  {currentPayments.map((p) => (
+                  {currentPayments.map((p: OrderPayment) => (
                     <div key={p.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-black">
@@ -1591,7 +1607,7 @@ const POS = () => {
 
               <div className="grid grid-cols-2 gap-4 mb-10">
                  {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
-                   const remaining = totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0);
+                   const remaining = (totalWithTax || 0) - currentPayments.reduce((sum, p) => sum + p.amount, 0);
                    const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
                    const isDisabled = remaining <= 0.01 && !canSubstitute;
 
@@ -1599,7 +1615,7 @@ const POS = () => {
                      <button key={method} 
                       onClick={() => {
                         if (remaining > 0.01 || canSubstitute) {
-                          addPayment(method, remaining > 0 ? remaining : totalWithTax);
+                          addPayment(method, remaining > 0 ? remaining : (totalWithTax || 0));
                         }
                       }}
                       disabled={isDisabled}
@@ -1612,7 +1628,7 @@ const POS = () => {
                  })}
               </div>
               <button 
-                disabled={Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - totalWithTax) > 0.01} 
+                disabled={Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - (totalWithTax || 0)) > 0.01} 
                 onClick={handlePayment} 
                 className="w-full py-6 bg-primary text-black rounded-3xl font-black uppercase tracking-widest shadow-glow disabled:opacity-10 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3"
               >
@@ -1628,7 +1644,7 @@ const POS = () => {
               <div className="flex justify-between items-center mb-10">
                  <div>
                    <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Corrigir Pagamento</h3>
-                   <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mt-1">Pedido: {activeOrders.find(o => o.id === correctionOrderId)?.invoiceNumber || correctionOrderId}</p>
+                   <p className="text-slate-400 text-[10px] uppercase font-bold tracking-widest mt-1">Pedido: {activeOrders.find((o: Order) => o.id === correctionOrderId)?.invoiceNumber || correctionOrderId}</p>
                  </div>
                  <button onClick={() => {
                    setIsCorrectionModalOpen(false);
@@ -1658,11 +1674,11 @@ const POS = () => {
               <div className="mb-8">
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Novos Métodos</p>
-                  <p className="font-mono font-bold text-white">{formatKz(activeOrders.find(o => o.id === correctionOrderId)?.total || 0)}</p>
+                  <p className="font-mono font-bold text-white">{formatKz(activeOrders.find((o: Order) => o.id === correctionOrderId)?.total || 0)}</p>
                 </div>
                 
                 <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2 mb-4">
-                  {currentPayments.map((p) => (
+                  {currentPayments.map((p: OrderPayment) => (
                     <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
                       <span className="text-xs font-bold text-white uppercase tracking-wider">{p.method.replace('_', ' ')}</span>
                       <div className="flex items-center gap-3">
@@ -1677,7 +1693,7 @@ const POS = () => {
 
                 <div className="grid grid-cols-4 gap-2">
                   {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
-                    const order = activeOrders.find(o => o.id === correctionOrderId);
+                    const order = activeOrders.find((o: Order) => o.id === correctionOrderId);
                     const total = order?.total || 0;
                     const remaining = total - currentPayments.reduce((sum, p) => sum + p.amount, 0);
                     const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
@@ -1702,7 +1718,7 @@ const POS = () => {
               </div>
 
               <button 
-                disabled={isCorrecting || !correctionReason || Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - (activeOrders.find(o => o.id === correctionOrderId)?.total || 0)) > 0.01}
+                disabled={isCorrecting || !correctionReason || Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - (activeOrders.find((o: Order) => o.id === correctionOrderId)?.total || 0)) > 0.01}
                 onClick={handleCorrection}
                 className={`w-full py-5 bg-yellow-500 text-black rounded-2xl font-black uppercase tracking-widest shadow-glow-yellow hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 ${isCorrecting ? 'opacity-50 cursor-wait' : ''}`}
               >
@@ -1780,27 +1796,27 @@ const POS = () => {
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Mesa de Destino</label>
               <div className="grid grid-cols-4 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                 {tables
-                  .filter(t => t.id !== activeTableId)
-                  .sort((a, b) => {
-                    const numA = parseInt(a.name.replace(/\D/g, '')) || 0;
-                    const numB = parseInt(b.name.replace(/\D/g, '')) || 0;
+                  .filter((t: Table) => t.id !== activeTableId)
+                  .sort((a: Table, b: Table) => {
+                    const numA = parseInt(a.name?.replace(/\D/g, '') || '0');
+                    const numB = parseInt(b.name?.replace(/\D/g, '') || '0');
                     return numA - numB;
                   })
-                  .map(table => (
+                  .map((table: Table) => (
                     <button
                       key={table.id}
                       onClick={() => setTransferTargetId(table.id)}
                       className={`p-3 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center gap-1
                         ${transferTargetId === table.id 
                           ? 'bg-primary/20 border-primary text-primary' 
-                          : table.status === 'OCUPADO' 
+                          : table.status === 'OCUPADA' 
                             ? 'bg-red-500/10 border-red-500/20 text-red-500/50 cursor-not-allowed'
                             : 'bg-slate-800/40 border-white/5 text-slate-300 hover:border-white/20'
                         }`}
-                      disabled={table.status === 'OCUPADO'}
+                      disabled={table.status === 'OCUPADA'}
                     >
                       <span className="text-xs font-black">{table.name}</span>
-                      <div className={`w-2 h-2 rounded-full ${table.status === 'OCUPADO' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${table.status === 'OCUPADA' ? 'bg-red-500' : 'bg-green-500'}`}></div>
                     </button>
                   ))}
               </div>
@@ -1843,13 +1859,13 @@ const POS = () => {
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                  <ul className="divide-y divide-white/10">
                        {auditLogs
-                          .filter(log => log.action === 'TABLE_TRANSFER')
-                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                          .map(log => (
+                          .filter((log: AuditLog) => log.action === 'TABLE_TRANSFER')
+                          .sort((a: AuditLog, b: AuditLog) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                          .map((log: AuditLog) => (
                              <li key={log.id} className="py-3 px-2">
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="text-slate-400">
-                                       {new Date(log.timestamp).toLocaleString('pt-AO', {
+                                       {new Date(log.createdAt || 0).toLocaleString('pt-AO', {
                                           day: '2-digit',
                                           month: '2-digit',
                                           hour: '2-digit',
@@ -1857,7 +1873,7 @@ const POS = () => {
                                        })}
                                     </span>
                                     <span className="font-medium text-white">
-                                       {String(log.metadata?.operator || 'N/A')}
+                                       {String(log.userId || 'N/A')}
                                     </span>
                                 </div>
                                 <p className="text-xs text-slate-500 mt-1">
@@ -1865,7 +1881,7 @@ const POS = () => {
                                 </p>
                              </li>
                           ))}
-                       {auditLogs.filter(log => log.action === 'TABLE_TRANSFER').length === 0 && (
+                       {auditLogs.filter((log: AuditLog) => log.action === 'TABLE_TRANSFER').length === 0 && (
                           <div className="p-10 text-center text-slate-500 opacity-50 rounded-xl bg-white/[0.03] border border-white/5">
                              <Move size={48} className="mx-auto mb-4 opacity-50" />
                              <p className="uppercase text-xs tracking-widest font-bold">Nenhuma transferência registada</p>
@@ -1972,14 +1988,14 @@ const POS = () => {
                     <p className="text-[9px] text-slate-500 uppercase font-bold mb-1">Vendas Totais</p>
                     <p className="text-xl font-mono font-bold text-white">
                       {formatKz(activeOrders
-                        .filter(o => (o.status === 'FECHADO' || o.status === 'PAGO') && o.shiftId === currentShiftId)
-                        .reduce((acc, o) => acc + o.total, 0))}
+                        .filter((o: Order) => (o.status === 'FECHADO' || o.status === 'PAGO') && o.shiftId === currentShiftId)
+                        .reduce((acc: number, o: Order) => acc + (o.total || 0), 0))}
                     </p>
                   </div>
                   <div className="text-center">
                     <p className="text-[9px] text-slate-500 uppercase font-bold mb-1">Fundo Inicial</p>
                     <p className="text-xl font-mono font-bold text-white">
-                      {formatKz(useStore.getState().shifts.find(s => s.id === currentShiftId)?.openingBalance || 0)}
+                      {formatKz(useStore.getState().shifts.find((s: any) => s.id === currentShiftId)?.openingBalance || 0)}
                     </p>
                   </div>
                 </div>

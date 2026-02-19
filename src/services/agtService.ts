@@ -118,18 +118,18 @@ export async function buildInvoicePayload(order: Order, settings: SystemSettings
   
   // 1. Prepare Document Data
   const docTotalNet = order.total; // Assuming total is net for simplicity, normally need to calc from lines
-  const docTotalTax = order.items.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (settings.taxRate / 100)), 0);
+  const docTotalTax = (order.items || []).reduce((acc, item) => acc + (item.unitPrice * item.quantity * ((settings.taxRate || 14) / 100)), 0);
   const docTotalGross = docTotalNet + docTotalTax;
 
   // Build Lines
-  const lines: AGTLine[] = order.items.map((item, index) => {
-    const dish = menu.find(d => d.id === item.dishId);
+  const lines: AGTLine[] = (order.items || []).map((item, index) => {
+    const dish = menu.find(d => d.id === item.productId);
     const taxRate = item.taxPercentage || settings.taxRate || 14;
     const taxCode = item.taxCode || 'NOR';
     
     return {
       lineNumber: index + 1,
-      productCode: item.dishId,
+      productCode: item.productId,
       productDescription: dish ? dish.name : 'Item Desconhecido',
       quantity: item.quantity,
       unitOfMeasure: 'UN',
@@ -151,7 +151,7 @@ export async function buildInvoicePayload(order: Order, settings: SystemSettings
   // Document JWS Payload (Subset of fields)
   const documentJwsPayload = {
     documentNo: order.invoiceNumber || `FT ${now.getFullYear()}/${order.id.slice(0, 8)}`,
-    taxRegistrationNumber: settings.nif,
+    taxRegistrationNumber: settings.nif as string,
     documentType: "FT",
     documentDate: now.toISOString().split('T')[0],
     customerTaxID: order.customerId || "999999999", 
@@ -175,7 +175,7 @@ export async function buildInvoicePayload(order: Order, settings: SystemSettings
     documentStatus: "N",
     jwsDocumentSignature,
     systemEntryDate: now.toISOString(),
-    taxRegistrationNumber: settings.nif, // Added missing field
+    taxRegistrationNumber: settings.nif || "999999999", // Added missing field
     lines,
     documentTotals: documentJwsPayload.documentTotals
   };
@@ -198,7 +198,7 @@ export async function buildInvoicePayload(order: Order, settings: SystemSettings
   return {
     schemaVersion: "1.2",
     submissionUUID,
-    taxRegistrationNumber: settings.nif,
+    taxRegistrationNumber: settings.nif || "999999999",
     submissionTimeStamp: now.toISOString(),
     softwareInfo,
     numberOfEntries: 1,

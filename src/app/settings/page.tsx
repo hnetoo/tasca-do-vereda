@@ -17,15 +17,15 @@ import UserManagementModal from '@/components/UserManagementModal';
 import QRMenuConfig from '@/components/QRMenuConfig';
 import POSAccessManagement from '@/components/POSAccessManagement';
 import RoleManagementModal from '@/components/RoleManagementModal';
-import { executeQuery } from '@/services/database/connection';
-import { dbConfig } from '@/services/database/config';
+
 import { downloadManual } from '@/services/manualService';
 import { generateSQLSchema } from '@/services/sqlExportService';
-import { disasterRecoveryService } from '@/services/disasterRecoveryService';
 
+
+import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction } from '@/app/actions/settings';
 import { logger } from '@/services/logger';
 
-import { integrationAPIService } from '@/services/integrationAPIService';
+
 import { healthMonitorService, SystemHealthReport, SystemIssue } from '@/services/healthMonitorService';
 
 const CloudImportPanel = () => {
@@ -51,13 +51,10 @@ const CloudImportPanel = () => {
       addNotification('warning', 'Configure a cloud antes de importar');
       return;
     }
-    if (!integrationAPIService.isConnected()) {
-      integrationAPIService.initialize(settings.supabaseConfig.url, settings.supabaseConfig.key);
-    }
     setIsLoading(true);
     try {
-      const catsRes = await integrationAPIService.fetchCategoriesPaged({ page: 1, pageSize: 100, search });
-      const prodsRes = await integrationAPIService.fetchProductsPaged({ page: 1, pageSize: 200, search, categoryId: categoryFilter });
+      const catsRes = await fetchRemoteCategoriesAction(search);
+      const prodsRes = await fetchRemoteProductsAction(search, categoryFilter);
       if (catsRes.success && catsRes.data) setRemoteCategories(catsRes.data);
       if (prodsRes.success && prodsRes.data) setRemoteProducts(prodsRes.data);
       addNotification('success', 'Itens carregados da cloud');
@@ -73,7 +70,7 @@ const CloudImportPanel = () => {
   const conflicts = detectCloudConflicts({ categories: selectedCategories, products: selectedProducts });
 
   const importSelected = (preferCloud: boolean) => {
-    importCloudItems({ categories: selectedCategories, products: selectedProducts, preferCloud });
+    importCloudItems({ categories: selectedCategories, dishes: selectedProducts, preferCloud });
     setSelectedCatIds(new Set());
     setSelectedProductIds(new Set());
   };
@@ -135,7 +132,7 @@ const CloudImportPanel = () => {
                   <input type="checkbox" checked={selectedProductIds.has(d.id)} onChange={() => toggleSet(setSelectedProductIds, d.id)} />
                   <span className="text-xs text-white">{d.name}</span>
                 </div>
-                <span className="text-[10px] text-slate-500">{new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(d.price)}</span>
+                <span className="text-[10px] text-slate-500">{new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(Number(d.price))}</span>
               </label>
             ))}
           </div>
@@ -152,7 +149,7 @@ const CloudImportPanel = () => {
   );
 };
 const Settings = () => {
-  const { settings, updateSettings, currentUser, addNotification, categories, menu: dishes, hardResetMenu, tables } = useStore();
+  const { settings, updateSettings, currentUser, addNotification, categories, products: dishes, hardResetMenu, tables } = useStore();
   const [activeTab, setActiveTab] = useState<'general' | 'users' | 'fiscal' | 'tables' | 'qr' | 'integrations' | 'roles' | 'database' | 'agt' | 'dlp' | 'monitoring' | 'cloud' | 'bd'>('general');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isQRMenuConfigOpen, setIsQRMenuConfigOpen] = useState(false);
@@ -238,8 +235,8 @@ const Settings = () => {
     logger.info('Iniciando teste de conexão Supabase...', null, 'CLOUD');
 
     try {
-      const result = await integrationAPIService.testConnection(localSettings.supabaseConfig.url, localSettings.supabaseConfig.key);
-      if (result) {
+      const { success, error } = await testCloudConnectionAction(localSettings.supabaseConfig.url, localSettings.supabaseConfig.key);
+      if (success) {
         setCloudStatus('success');
         addNotification('success', 'Conexão Supabase estabelecida com sucesso!');
         logger.info('Conexão Supabase validada.', null, 'CLOUD');
@@ -280,15 +277,9 @@ const Settings = () => {
   };
 
   const handleSetupRLS = async () => {
-    if (!integrationAPIService.isConnected()) {
-      addNotification('warning', 'Supabase não inicializado. Configure e teste a conexão primeiro.');
-      logger.warn('Tentativa de configurar RLS sem conexão Supabase ativa', null, 'SECURITY');
-      return;
-    }
-    
     addNotification('info', 'Validando conexão para políticas de segurança...');
     logger.info('Iniciando validação de políticas RLS', null, 'SECURITY');
-    const result = await integrationAPIService.setupRLS();
+    const result = await setupRLSAction();
     if (result.success) {
       addNotification('success', (result as any).message || 'Políticas validadas com sucesso.');
       logger.info('RLS validado com sucesso', { result }, 'SECURITY');
@@ -299,15 +290,9 @@ const Settings = () => {
   };
 
   const handleSetupBuckets = async () => {
-    if (!integrationAPIService.isConnected()) {
-      addNotification('warning', 'Supabase não inicializado. Configure e teste a conexão primeiro.');
-      logger.warn('Tentativa de configurar buckets sem conexão Supabase ativa', null, 'STORAGE');
-      return;
-    }
-
     addNotification('info', 'Configurando buckets de armazenamento...');
     logger.info('Iniciando configuração de buckets de armazenamento', null, 'STORAGE');
-    const result = await integrationAPIService.setupBuckets();
+    const result = await setupBucketsAction();
     if (result.success) {
       addNotification('success', (result as any).message || 'Buckets configurados com sucesso.');
       logger.info('Buckets configurados com sucesso', { result }, 'STORAGE');
@@ -320,7 +305,7 @@ const Settings = () => {
   const handleBackup = async () => {
     try {
       addNotification('info', 'A preparar backup completo (SQL + Local)...');
-      const state = await disasterRecoveryService.captureFullState();
+      const state = await captureFullStateAction();
       
       const backupData = {
         state,
@@ -468,7 +453,7 @@ const Settings = () => {
              } as unknown as FullApplicationState;
              
              // Save sanitized content to SQL and Local
-             await disasterRecoveryService.applyState(fullState);
+             await restoreFullStateAction(fullState);
              
              // Also update localStorage for Zustand rehydration (safety)
              localStorage.setItem('tasca-vereda-storage-v2', JSON.stringify({ state: fullState, version: 3 }));
@@ -678,11 +663,11 @@ const Settings = () => {
           </div>
           <div class="section">
             <h3>Resumo dos Dados Removidos</h3>
-            <div class="row"><span class="label">Pedidos/Vendas:</span> <span>${report.summary.ordersCount}</span></div>
-            <div class="row"><span class="label">Receitas Totais:</span> <span>${report.summary.totalRevenue.toLocaleString('pt-AO')} Kz</span></div>
-            <div class="row"><span class="label">Despesas:</span> <span>${report.summary.expensesCount}</span></div>
-            <div class="row"><span class="label">Despesas Fixas:</span> <span>${report.summary.fixedExpensesCount}</span></div>
-            <div class="row"><span class="label">Processamentos Salariais:</span> <span>${report.summary.payrollCount}</span></div>
+            <div class="row"><span class="label">Pedidos/Vendas:</span> <span>${report.summary?.ordersCount}</span></div>
+            <div class="row"><span class="label">Receitas Totais:</span> <span>${report.summary?.totalRevenue.toLocaleString('pt-AO')} Kz</span></div>
+            <div class="row"><span class="label">Despesas:</span> <span>${report.summary?.expensesCount}</span></div>
+            <div class="row"><span class="label">Despesas Fixas:</span> <span>${report.summary?.fixedExpensesCount}</span></div>
+            <div class="row"><span class="label">Processamentos Salariais:</span> <span>${report.summary?.payrollCount}</span></div>
           </div>
           <div class="footer">
             <p>Este documento é um comprovativo de auditoria exigido pela Administração Geral Tributária (AGT) de Angola para operações de limpeza de dados financeiros.</p>
@@ -1170,7 +1155,7 @@ const Settings = () => {
 
 
         {activeTab === 'users' && (
-            <POSAccessManagement onOpenUserModal={() => setIsUserModalOpen(true)} />
+            <POSAccessManagement />
         )}
 
         {activeTab === 'roles' && (

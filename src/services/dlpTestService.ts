@@ -39,7 +39,7 @@ export const dlpTestService = {
     const corruptedData: Partial<FullApplicationState> = {};
     
     if (type === 'MENU') {
-      corruptedData.menu = [{ id: '', name: null as unknown as string } as unknown as Dish]; // Invalid dish
+      corruptedData.products = [{ id: '', name: null as unknown as string } as unknown as Dish]; // Invalid dish
     } else if (type === 'CATEGORIES') {
       corruptedData.categories = "not an array" as unknown as MenuCategory[]; // Critical failure
     } else if (type === 'SETTINGS') {

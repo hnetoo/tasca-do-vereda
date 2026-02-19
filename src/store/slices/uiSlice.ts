@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { SystemSettings, Notification, StoreState } from '../../types';
-import { databaseOperations } from '../../services/database/operations';
+import { saveSettingsAction } from '@/app/actions';
 import { logger } from '../../services/logger';
 import { supabaseService } from '../../services/supabaseService';
 
@@ -22,6 +22,7 @@ export const createUISlice: StateCreator<
   UISlice
 > = (set, get) => ({
   settings: {
+    id: "default-settings",
     restaurantName: "Tasca Do VEREDA",
     appLogoUrl: "", 
     currency: "Kz",
@@ -45,29 +46,36 @@ export const createUISlice: StateCreator<
     qrMenuShortCode: "",
     qrMenuTitle: "",
     qrMenuLogo: "",
+    email: "info@tascadovereda.com",
+    logo: null,
+    taxPercentage: 14,
+    timezone: "Africa/Luanda",
+    language: "pt-AO",
   },
   notifications: [],
   isSidebarCollapsed: false,
   
   addNotification: (type, message) => {
     const id = Math.random().toString(36).substring(7);
-    set((state) => ({ notifications: [...state.notifications, { id, type, message }] }));
+    set((state: StoreState) => ({ notifications: [...state.notifications, { id, type, message }] }));
     setTimeout(() => get().removeNotification(id), 3000);
   },
   
-  removeNotification: (id) => set((state) => ({
-    notifications: state.notifications.filter((n) => n.id !== id)
+  removeNotification: (id) => set((state: StoreState) => ({
+    notifications: state.notifications.filter((n: Notification) => n.id !== id)
   })),
   
   updateSettings: (newSettings) => {
-    set((state) => {
+    set((state: StoreState) => {
       const updated = { ...state.settings, ...newSettings };
-      databaseOperations.saveSettings(updated).catch(e => logger.error('Failed to save settings', { error: (e as Error).message }, 'DATABASE'));
+      saveSettingsAction(updated).then(res => {
+        if (!res.success) logger.error('Failed to save settings', { error: res.error }, 'DATABASE');
+      }).catch(e => logger.error('Failed to save settings', { error: (e as Error).message }, 'DATABASE'));
       return { settings: updated };
     });
   },
   
-  toggleSidebar: () => set((state) => ({ 
+  toggleSidebar: () => set((state: StoreState) => ({ 
     isSidebarCollapsed: !state.isSidebarCollapsed 
   })),
 

@@ -18,3 +18,22 @@ View your app in AI Studio: https://ai.studio/apps/drive/180t5EnT9Ulalh5omVfl0sa
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Drizzle ORM Migration (Feb 2026)
+
+The project has been migrated to stable Drizzle ORM versions to resolve TypeScript conflicts and ensure compatibility with Next.js 16.
+
+**Versions:**
+- `drizzle-orm`: `^0.38.0`
+- `drizzle-kit`: `^0.30.0`
+
+**Changes:**
+- Refactored `src/db/schema.ts` imports to align with version 0.38.0 standards:
+  - `pgTable`, `serial`, `text`, etc. imported from `drizzle-orm/pg-core`.
+  - `relations` imported from `drizzle-orm`.
+- Cleaned and reinstalled `node_modules` to remove beta version artifacts.
+- Fixed critical type definition issues in `src/types.ts`.
+
+**Verification:**
+- `src/db/schema.ts` compiles without errors.
+- Database migrations generated successfully.

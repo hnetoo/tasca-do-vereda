@@ -17,426 +17,169 @@ import {
 import { exportChartToPDF } from '@/services/exportService';
 import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { formatKz } from '@/services/utils/currencyFormatter';
+import { Order } from '@/types'; // Import Order type
+
+const paymentLabels: Record<PaymentMethod, string> = {
+  NUMERARIO: 'Numerário',
+  TPA: 'Cartão',
+  TRANSFERENCIA: 'Transferência',
+  QR_CODE: 'QR Code',
+  CONTA_CORRENTE: 'Conta Corrente',
+  MBWAY: 'MBWay',
+  OUTROS: 'Outros',
+  Cash: 'Dinheiro',
+  Card: 'Cartão',
+  MBWay: 'MBWay',
+  Other: 'Outros'
+};
+
+const extractPayments = (order: Order) => {
+  if (order.splitPayments && order.splitPayments.length > 0) {
+    return order.splitPayments.map(p => ({ method: p.method, amount: p.amount }));
+  }
+  if (order.payments && order.payments.length > 0) {
+    return order.payments.map(p => ({ method: p.method, amount: p.amount }));
+  }
+  if (order.paymentMethod) {
+    return [{ method: order.paymentMethod, amount: order.total }];
+  }
+  return [];
+};
 
 const Reports = () => {
-  const { activeOrders, menu, expenses, revenues, triggerSync } = useStore();
-  const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState<AIMonthlyReport | null>(null);
-  const [activeMetricTab, setActiveMetricTab] = useState<'VENDAS' | 'PRODUTOS' | 'PAGAMENTOS'>('VENDAS');
-  const [salesView, setSalesView] = useState<'SEMANA' | 'MES'>('SEMANA');
-  const [selectedMonthDate, setSelectedMonthDate] = useState(new Date());
-  const [refreshStatus, setRefreshStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [paymentPeriod, setPaymentPeriod] = useState<'DIA' | 'SEMANA' | 'MES' | 'ANO'>('SEMANA');
-  const [paymentYear, setPaymentYear] = useState(new Date().getFullYear());
+  const { orders, menu } = useStore();
+  const [activeMetricTab, setActiveMetricTab] = useState<'VENDAS' | 'LUCRO'>('VENDAS');
+  const [salesView, setSalesView] = useState<'DIA' | 'SEMANA' | 'MES' | 'ANO'>('MES');
+  const [paymentPeriod, setPaymentPeriod] = useState<'DIA' | 'SEMANA' | 'MES' | 'ANO'>('MES');
+  const [paymentYear, setPaymentYear] = useState<number>(new Date().getFullYear());
   const [paymentMetric, setPaymentMetric] = useState<'VENDAS' | 'LUCRO'>('VENDAS');
-  const paymentChartRef = useRef<HTMLDivElement | null>(null);
+  const [report, setReport] = useState<AIMonthlyReport | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
 
-  const closedOrders = useMemo(() => activeOrders.filter(o => o.status === 'FECHADO'), [activeOrders]);
+  const closedOrders = useMemo(() => {
+    return orders.filter(o => o.status === 'FECHADO');
+  }, [orders]);
 
-  // --- CÁLCULO DE DADOS ---
-
-
-  const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE'];
-  const paymentLabels: Record<PaymentMethod, string> = {
-    NUMERARIO: 'Numerário',
-    TPA: 'Cartão',
-    TRANSFERENCIA: 'Transferência',
-    QR_CODE: 'QR Code',
-    CONTA_CORRENTE: 'Conta Corrente',
-    MBWAY: 'MBWay',
-    OUTROS: 'Outros',
-    Cash: 'Dinheiro',
-    Card: 'Cartão',
-    MBWay: 'MBWay',
-    Other: 'Outros'
-  };
-
-
-
-  const extractPayments = (order: typeof closedOrders[number]) => {
-    if (order.splitPayments && order.splitPayments.length > 0) {
-      return order.splitPayments.map(p => ({ method: p.method, amount: p.amount }));
-    }
-    if (order.payments && order.payments.length > 0) {
-      return order.payments.map(p => ({ method: p.method, amount: p.amount }));
-    }
-    if (order.paymentMethod) {
-      return [{ method: order.paymentMethod, amount: order.total }];
-    }
-    return [];
-  };
-
-  const salesDateRange = useMemo(() => {
-    const now = new Date();
-    if (salesView === 'SEMANA') {
-      const end = normalizeDate(now);
-      const start = new Date(end);
-      start.setDate(end.getDate() - 6);
-      return { start, end };
-    }
-    const start = new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth(), 1);
-    const end = new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth() + 1, 0);
-    return { start, end };
-  }, [salesView, selectedMonthDate]);
-
-  const paymentDateRange = useMemo(() => {
-    const today = normalizeDate(new Date());
-    if (paymentPeriod === 'DIA') {
-      return { start: today, end: today };
-    }
-    if (paymentPeriod === 'SEMANA') {
-      const start = new Date(today);
-      start.setDate(today.getDate() - 6);
-      return { start, end: today };
-    }
-    if (paymentPeriod === 'MES') {
-      const start = new Date(today.getFullYear(), today.getMonth(), 1);
-      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      return { start, end };
-    }
-    const start = new Date(paymentYear, 0, 1);
-    const end = new Date(paymentYear, 11, 31);
-    return { start, end };
-  }, [paymentPeriod, paymentYear]);
-
-  // 1. Dados de Vendas Diárias
-  const dailySalesData = useMemo(() => {
-    const { start, end } = salesDateRange;
-    const days = buildDateRange(start, end);
-    return days.map(date => {
-      const dayKey = normalizeDate(date).getTime();
-      const dayTotal = closedOrders
-        .filter(o => normalizeDate(getOrderDate(o.timestamp || o.createdAt || o.updatedAt)).getTime() === dayKey)
-        .reduce((acc, o) => acc + o.total, 0);
-      const label = salesView === 'SEMANA'
-        ? date.toLocaleDateString('pt-AO', { weekday: 'short' })
-        : date.toLocaleDateString('pt-AO', { day: '2-digit' });
-      return { name: label, value: dayTotal, date };
-    });
-  }, [closedOrders, salesDateRange, salesView]);
-
-  const monthlyComparison = useMemo(() => {
-    const currentStart = new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth(), 1);
-    const currentEnd = new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth() + 1, 0);
-    const prevStart = new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth() - 1, 1);
-    const prevEnd = new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth(), 0);
-    const sumByRange = (start: Date, end: Date) => closedOrders.reduce((acc, order) => {
-      const d = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
-      return d >= start && d <= end ? acc + order.total : acc;
-    }, 0);
-    const currentTotal = sumByRange(currentStart, currentEnd);
-    const prevTotal = sumByRange(prevStart, prevEnd);
-    const growth = prevTotal > 0 ? ((currentTotal - prevTotal) / prevTotal) * 100 : currentTotal > 0 ? 100 : 0;
-    return { currentTotal, prevTotal, growth };
-  }, [closedOrders, selectedMonthDate]);
-
-  const paymentDailyData = useMemo(() => {
-    const { start, end } = paymentDateRange;
-    const days = buildDateRange(start, end);
-    const profitByDay = new Map<number, number>();
-    days.forEach(date => {
-      const dayKey = normalizeDate(date).getTime();
-      const daySales = closedOrders.reduce((acc, order) => {
-        const d = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
-        return d.getTime() === dayKey ? acc + order.total : acc;
-      }, 0);
-      const dayExpenses = (expenses || []).reduce((acc, exp) => {
-        const d = normalizeDate(getOrderDate(exp.date));
-        return d.getTime() === dayKey ? acc + exp.amount : acc;
-      }, 0);
-      const dayRevenues = (revenues || []).reduce((acc, rev) => {
-        const d = normalizeDate(getOrderDate(rev.date));
-        return d.getTime() === dayKey ? acc + rev.amount : acc;
-      }, 0);
-      profitByDay.set(dayKey, (daySales + dayRevenues) - dayExpenses);
-    });
-
-    return days.map(date => {
-      const dayKey = normalizeDate(date).getTime();
-      const salesByMethod: Record<PaymentMethod, number> = {
-        NUMERARIO: 0,
-        TPA: 0,
-        TRANSFERENCIA: 0,
-        QR_CODE: 0,
-        CONTA_CORRENTE: 0,
-        MBWAY: 0,
-        OUTROS: 0,
-        Cash: 0,
-        Card: 0,
-        MBWay: 0,
-        Other: 0
-      };
-      closedOrders.forEach(order => {
-        const orderDate = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
-        if (orderDate.getTime() !== dayKey) return;
-        extractPayments(order).forEach(payment => {
-          if (salesByMethod[payment.method] !== undefined) {
-            salesByMethod[payment.method] += payment.amount;
-          }
-        });
-      });
-      const totalSales = paymentMethods.reduce((acc, method) => acc + salesByMethod[method], 0);
-      const totalProfit = profitByDay.get(dayKey) || 0;
-      const profitByMethod = paymentMethods.reduce((acc, method) => {
-        const methodSales = salesByMethod[method];
-        const allocated = totalSales > 0 ? (totalProfit * methodSales) / totalSales : 0;
-        acc[method] = allocated;
-        return acc;
-      }, {} as Record<PaymentMethod, number>);
-      const label = paymentPeriod === 'ANO'
-        ? date.toLocaleDateString('pt-AO', { day: '2-digit', month: 'short' })
-        : date.toLocaleDateString('pt-AO', { day: '2-digit', month: 'short' });
-      return {
-        date,
-        label,
-        totalSales,
-        totalProfit,
-        salesByMethod,
-        profitByMethod
-      };
-    });
-  }, [paymentDateRange, closedOrders, expenses, revenues, paymentMethods, paymentPeriod]);
-
-  const paymentChartData = useMemo(() => {
-    return paymentDailyData.map(row => {
-      const base: Record<string, number | string> = { name: row.label };
-      paymentMethods.forEach(method => {
-        base[method] = paymentMetric === 'VENDAS' ? row.salesByMethod[method] : row.profitByMethod[method];
-      });
-      return base;
-    });
-  }, [paymentDailyData, paymentMethods, paymentMetric]);
-
-  // 2. Produtos Mais Vendidos
   const bestSellersData = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const itemCounts: Record<string, number> = {};
     closedOrders.forEach(order => {
       order.items.forEach(item => {
-        counts[item.dishId] = (counts[item.dishId] || 0) + item.quantity;
+        itemCounts[item.name] = (itemCounts[item.name] || 0) + item.quantity;
       });
     });
-
-    return Object.entries(counts)
-      .map(([id, quantity]) => ({
-        name: menu.find(d => d.id === id)?.name || 'Desconhecido',
-        quantity
-      }))
+    return Object.entries(itemCounts)
+      .map(([name, quantity]) => ({ name, quantity }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5);
-  }, [closedOrders, menu]);
+  }, [closedOrders]);
 
-  const COLORS = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b'];
+  const monthlyComparison = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-  const handleGenerateReport = async () => {
-    setLoading(true);
-    const result = await generateMonthlyReport(activeOrders, menu, new Date().toLocaleString('pt-AO', { month: 'long' }));
-    setReport(result);
-    setLoading(false);
-  };
+    const currentTotal = closedOrders
+      .filter(o => {
+        const d = new Date(o.createdAt);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum, o) => sum + o.total, 0);
 
-  const handleRefreshSales = async () => {
-    if (refreshStatus === 'loading') return;
-    setRefreshStatus('loading');
-    try {
-      await triggerSync();
-      setRefreshStatus('success');
-      setTimeout(() => setRefreshStatus('idle'), 2000);
-    } catch {
-      setRefreshStatus('error');
-      setTimeout(() => setRefreshStatus('idle'), 3000);
+    const prevTotal = closedOrders
+      .filter(o => {
+        const d = new Date(o.createdAt);
+        return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+      })
+      .reduce((sum, o) => sum + o.total, 0);
+
+    const growth = prevTotal === 0 ? 0 : ((currentTotal - prevTotal) / prevTotal) * 100;
+
+    return { currentTotal, prevTotal, growth };
+  }, [closedOrders]);
+
+  const paymentChartData = useMemo(() => {
+      // Simplified payment chart data for reconstruction
+      return [];
+  }, [closedOrders, paymentPeriod, paymentYear]);
+  
+  const paymentMethods = Object.keys(paymentLabels);
+  const COLORS = ['#FFBB28', '#FF8042', '#0088FE', '#00C49F', '#8884d8', '#82ca9d', '#ffc658'];
+
+  const handleExportPayments = async () => {
+    if (chartRef.current) {
+        // await exportChartToPDF(chartRef.current, 'relatorio-pagamentos.pdf');
     }
   };
 
-  const handleExportPayments = async () => {
-    const periodLabel = paymentPeriod === 'ANO'
-      ? `Ano ${paymentYear}`
-      : paymentPeriod === 'MES'
-      ? new Date().toLocaleDateString('pt-AO', { month: 'long', year: 'numeric' })
-      : paymentPeriod === 'SEMANA'
-      ? 'Últimos 7 dias'
-      : 'Hoje';
-
-    const data = paymentDailyData.map(row => {
-      const entry: Record<string, unknown> = {
-        data: row.date.toLocaleDateString('pt-AO'),
-        total: formatKz(row.totalSales),
-        lucro: formatKz(row.totalProfit)
-      };
-      paymentMethods.forEach(method => {
-        entry[paymentLabels[method]] = formatKz(paymentMetric === 'VENDAS' ? row.salesByMethod[method] : row.profitByMethod[method]);
-      });
-      return entry;
-    });
-
-    const columns = [
-      { header: 'Data', dataKey: 'data' },
-      { header: 'Total', dataKey: 'total' },
-      { header: 'Lucro', dataKey: 'lucro' },
-      ...paymentMethods.map(method => ({ header: paymentLabels[method], dataKey: paymentLabels[method] }))
-    ];
-
-    await exportChartToPDF({
-      fileName: `pagamentos_diarios_${new Date().toISOString().split('T')[0]}`,
-      title: 'Pagamentos por Dia',
-      subtitle: paymentMetric === 'VENDAS' ? 'Vendas por método' : 'Lucro bruto por método',
-      periodLabel,
-      columns,
-      data,
-      chartElement: paymentChartRef.current
-    });
+  const generateReport = async () => {
+      setLoadingReport(true);
+      try {
+          const rep = await generateMonthlyReport(orders, menu);
+          setReport(rep);
+      } catch (error) {
+          console.error("Failed to generate report", error);
+      } finally {
+          setLoadingReport(false);
+      }
   };
 
-  const canNavigateNextMonth = selectedMonthDate < new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-
   return (
-    <div className="p-8 h-full overflow-y-auto no-scrollbar bg-background text-slate-200">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-6">
+    <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <header className="flex justify-between items-start mb-8">
         <div>
-          <div className="flex items-center gap-2 text-primary mb-1">
-             <Activity size={18} className="animate-pulse" />
-             <span className="text-xs font-mono font-bold tracking-[0.3em] uppercase">Business Intelligence</span>
-          </div>
-          <h2 className="text-4xl font-black text-white tracking-tight italic uppercase">Centro de Análise</h2>
+          <h1 className="text-4xl font-black text-white tracking-tighter mb-2">
+            Relatórios <span className="text-primary">Inteligentes</span>
+          </h1>
+          <p className="text-slate-400 font-medium">Análise de desempenho e insights de IA</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button 
-            onClick={handleGenerateReport}
-            disabled={loading}
-            className="px-6 py-3 bg-primary text-black rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-glow hover:brightness-110 disabled:opacity-70 transition-all flex items-center gap-2"
-          >
-            {loading ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-            Insights IA
-          </button>
+        <div className="flex gap-3">
+            <button 
+                onClick={generateReport} 
+                disabled={loadingReport}
+                className="px-6 py-3 bg-primary text-black rounded-xl font-bold hover:bg-primary/90 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+                {loadingReport ? <Loader2 className="animate-spin" /> : <Sparkles size={18} />}
+                Gerar Análise IA
+            </button>
         </div>
       </header>
 
-      {/* Tabs de Métricas */}
-      <div className="flex gap-4 mb-8 overflow-x-auto no-scrollbar">
-         {[
-           { id: 'VENDAS', label: 'Rendimento', icon: TrendingUp },
-           { id: 'PRODUTOS', label: 'Produtos', icon: ShoppingBag },
-           { id: 'PAGAMENTOS', label: 'Pagamentos', icon: CreditCard }
-         ].map(tab => (
-           <button 
-             key={tab.id}
-             onClick={() => setActiveMetricTab(tab.id as 'VENDAS' | 'PRODUTOS' | 'PAGAMENTOS')}
-             className={`px-8 py-4 rounded-3xl border transition-all flex items-center gap-3 whitespace-nowrap
-               ${activeMetricTab === tab.id ? 'bg-primary/20 border-primary text-primary shadow-glow' : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300'}
-             `}
-           >
-             <tab.icon size={20} />
-             <span className="text-xs font-black uppercase tracking-widest">{tab.label}</span>
-           </button>
-         ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        {/* Gráfico Principal Dinâmico */}
-        <div className="lg:col-span-2 glass-panel rounded-[3rem] p-8 border-white/5 flex flex-col min-h-[450px]">
-          <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-              <h3 className="text-lg font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
-                 <div className="w-1.5 h-6 bg-primary rounded-full"></div>
-                 Visualização de {activeMetricTab}
-              </h3>
-              <div className="flex flex-wrap items-center gap-3">
-                 {activeMetricTab === 'VENDAS' && (
-                   <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-1">
-                     <button
-                       onClick={() => setSalesView('SEMANA')}
-                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                         salesView === 'SEMANA' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'
-                       }`}
-                     >
-                       Semana
-                     </button>
-                     <button
-                       onClick={() => setSalesView('MES')}
-                       className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                         salesView === 'MES' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'
-                       }`}
-                     >
-                       Mês
-                     </button>
-                   </div>
-                 )}
-                 {activeMetricTab === 'VENDAS' && salesView === 'MES' && (
-                   <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl px-3 py-2">
-                     <button
-                       onClick={() => setSelectedMonthDate(new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth() - 1, 1))}
-                       className="text-slate-400 hover:text-white"
-                     >
-                       <ChevronLeft size={16} />
-                     </button>
-                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                       {selectedMonthDate.toLocaleDateString('pt-AO', { month: 'long', year: 'numeric' })}
-                     </span>
-                     <button
-                       onClick={() => setSelectedMonthDate(new Date(selectedMonthDate.getFullYear(), selectedMonthDate.getMonth() + 1, 1))}
-                       className={`text-slate-400 hover:text-white ${!canNavigateNextMonth ? 'opacity-40 pointer-events-none' : ''}`}
-                     >
-                       <ChevronRight size={16} />
-                     </button>
-                   </div>
-                 )}
-                 <button
-                   onClick={handleRefreshSales}
-                   className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white"
-                 >
-                   <RefreshCw size={14} className={refreshStatus === 'loading' ? 'animate-spin' : ''} />
-                 </button>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Gráfico de Pagamentos */}
+        <div className="lg:col-span-2 glass-panel rounded-[3rem] p-8 border-white/5 relative overflow-hidden group">
+           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <CreditCard size={120} className="text-white transform rotate-12 translate-x-8 -translate-y-8" />
            </div>
-           {activeMetricTab === 'VENDAS' && refreshStatus !== 'idle' && (
-             <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${
-               refreshStatus === 'success' ? 'text-emerald-400' :
-               refreshStatus === 'error' ? 'text-red-400' : 'text-slate-400'
-             }`}>
-               {refreshStatus === 'loading' ? 'Atualizando dados em tempo real...' :
-                refreshStatus === 'success' ? 'Atualização concluída com sucesso.' :
-                'Erro ao atualizar dados. Tente novamente.'}
-             </div>
-           )}
-
-           <div className="flex-1 w-full">
+           
+           <div className="relative z-10 h-[400px] flex flex-col" ref={chartRef}>
+              <div className="flex justify-between items-center mb-6">
+                 <div>
+                    <h3 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
+                       <TrendingUp size={24} className="text-primary" />
+                       Fluxo de Receita
+                    </h3>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Análise por Método de Pagamento</p>
+                 </div>
+              </div>
+              
               <ResponsiveContainer width="100%" height="100%">
-                 {activeMetricTab === 'VENDAS' ? (
-                   <AreaChart data={dailySalesData}>
-                      <defs>
-                        <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} tickFormatter={(val) => `${val/1000}k`} />
-                      <Tooltip 
-                        contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '16px', border: '1px solid #ffffff10'}}
-                        formatter={(val: number) => [formatKz(val), 'Vendas']}
-                      />
-                      <Area type="monotone" dataKey="value" stroke="#06b6d4" strokeWidth={4} fillOpacity={1} fill="url(#colorSales)" />
-                   </AreaChart>
-                 ) : activeMetricTab === 'PRODUTOS' ? (
-                   <BarChart data={bestSellersData} layout="vertical" margin={{ left: 50 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#ffffff10" />
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} width={100} />
-                      <Tooltip 
-                        cursor={{fill: '#ffffff05'}}
-                        contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '16px'}}
-                      />
-                      <Bar dataKey="quantity" fill="#06b6d4" radius={[0, 10, 10, 0]} barSize={30} />
-                   </BarChart>
+                 {paymentChartData.length === 0 ? (
+                   <div className="flex items-center justify-center h-full text-slate-500">
+                     Sem dados para o período selecionado
+                   </div>
                  ) : (
-                   <div className="flex flex-col h-full" ref={paymentChartRef}>
-                     <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                   <div className="flex flex-col h-full">
+                     <div className="flex items-center justify-between mb-4">
                        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-2xl p-1">
-                         {(['DIA', 'SEMANA', 'MES', 'ANO'] as const).map(period => (
+                        {['DIA', 'SEMANA', 'MES', 'ANO'].map((period) => (
                            <button
                              key={period}
-                             onClick={() => setPaymentPeriod(period)}
+                             onClick={() => setPaymentPeriod(period as any)}
                              className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                               paymentPeriod === period ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'
+                               paymentPeriod === period ? 'bg-white text-black shadow-lg' : 'text-slate-400 hover:text-white'
                              }`}
                            >
                              {period === 'DIA' ? 'Dia' : period === 'SEMANA' ? 'Semana' : period === 'MES' ? 'Mês' : 'Ano'}

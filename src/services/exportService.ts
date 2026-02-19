@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-import ExcelJS from 'exceljs/dist/exceljs.min.js';
+import ExcelJS from 'exceljs';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 import { logger } from './logger';

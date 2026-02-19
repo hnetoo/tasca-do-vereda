@@ -16,23 +16,28 @@ export default function MenuDigital() {
   const mapToProduct = (row: any): Product => {
     if (!row) return {} as Product;
     return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    price: row.price,
-    category_id: row.category_id,
-    image_url: row.image_url || row.image, // Support both column names
-    tax_code: row.tax_code || 'NOR',
-    tax_percentage: row.tax_percentage || 0,
-    is_active: row.is_active ?? row.is_available ?? true,
-    is_available_on_digital_menu: row.is_available_on_digital_menu ?? true,
-    preparation_time: row.preparation_time || row.tempo_preparo,
-    track_stock: row.track_stock ?? row.controla_estoque ?? false,
-    stock_quantity: row.stock_quantity ?? row.quantidade_estoque ?? 0,
-    min_stock_quantity: row.min_stock_quantity ?? row.quantidade_minima ?? 0,
-    max_stock_quantity: row.max_stock_quantity ?? row.quantidade_maxima ?? 0,
-    unit: row.unit || row.unidade_medida || 'un',
-    supplier_id: row.supplier_id || row.fornecedor_padrao_id
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      price: Number(row.price),
+      categoryId: row.category_id,
+      imageUrl: row.image_url || row.image, // Support both column names
+      taxCode: row.tax_code || 'NOR',
+      taxPercentage: row.tax_percentage || 0,
+      isActive: row.is_active ?? row.is_available ?? true,
+      available: row.available ?? row.is_available ?? true, // Schema has 'available'
+      createdAt: row.created_at ? new Date(row.created_at) : undefined,
+      updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
+      
+      // Legacy / Runtime extensions
+      is_available_on_digital_menu: row.is_available_on_digital_menu ?? true,
+      preparation_time: row.preparation_time || row.tempo_preparo,
+      track_stock: row.track_stock ?? row.controla_estoque ?? false,
+      stock_quantity: row.stock_quantity ?? row.quantidade_estoque ?? 0,
+      min_stock_quantity: row.min_stock_quantity ?? row.quantidade_minima ?? 0,
+      max_stock_quantity: row.max_stock_quantity ?? row.quantidade_maxima ?? 0,
+      unit: row.unit || row.unidade_medida || 'un',
+      supplier_id: row.supplier_id || row.fornecedor_padrao_id
     };
   };
 
@@ -40,30 +45,37 @@ export default function MenuDigital() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch categories without ordering by sort_order to avoid crash if column missing
+        // Fetch categories (table: menu_categories)
         const { data: cats, error: catError } = await supabase
-          .from('categories')
+          .from('menu_categories')
           .select('*');
         
         if (catError) throw catError;
 
-        // Fetch all products and filter in client to avoid crash if column missing
+        // Fetch all products (table: dishes)
         const { data: prods, error: prodError } = await supabase
-          .from('products')
+          .from('dishes')
           .select('*');
 
         if (prodError) throw prodError;
 
         if (cats) {
           // Client-side sort
-          const sortedCats = (cats as MenuCategory[]).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          const sortedCats = (cats as any[]).map(c => ({
+            ...c,
+            // Map snake_case to camelCase for internal use if needed, or rely on Product type aliases
+            id: c.id,
+            name: c.name,
+            sortOrder: c.sort_order,
+            isActive: c.is_active
+          } as MenuCategory)).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
           setCategories(sortedCats);
         }
 
         if (prods) {
           const mappedProds = prods.map(mapToProduct);
           // Client-side filter
-          const availableProds = mappedProds.filter(p => p.is_available_on_digital_menu);
+          const availableProds = mappedProds.filter(p => p.isActive !== false); // Default true
           setProducts(availableProds);
         }
       } catch (error) {
@@ -78,20 +90,20 @@ export default function MenuDigital() {
 
   // Realtime Subscriptions
   useEffect(() => {
-    // Products Channel
+    // Products Channel (table: dishes)
     const productsChannel = supabase
-      .channel('menu-geral-products')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+      .channel('menu-geral-dishes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'dishes' }, (payload) => {
         console.log('Product change received:', payload);
         if (payload.eventType === 'INSERT') {
           const newProduct = mapToProduct(payload.new);
-          if (newProduct.is_available_on_digital_menu) {
+          if (newProduct.isActive !== false) {
             setProducts(prev => [...prev, newProduct]);
           }
         } else if (payload.eventType === 'UPDATE') {
           const updatedProduct = mapToProduct(payload.new);
-          // Check availability directly from the payload
-          if (updatedProduct.is_available_on_digital_menu) {
+          // Check availability
+          if (updatedProduct.isActive !== false) {
             setProducts(prev => {
               const exists = prev.some(p => p.id === updatedProduct.id);
               return exists 
@@ -108,17 +120,32 @@ export default function MenuDigital() {
       })
       .subscribe();
 
-    // Categories Channel
+    // Categories Channel (table: menu_categories)
     const categoriesChannel = supabase
       .channel('menu-geral-categories')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, (payload) => {
         console.log('Category change received:', payload);
         if (!payload.new && payload.eventType !== 'DELETE') return;
 
         if (payload.eventType === 'INSERT') {
-          setCategories(prev => [...prev, payload.new as MenuCategory].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
+          const c = payload.new as any;
+          const newCat: MenuCategory = {
+             id: c.id,
+             name: c.name,
+             sortOrder: c.sort_order,
+             isActive: c.is_active,
+             // ... other fields
+          } as MenuCategory;
+          setCategories(prev => [...prev, newCat].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
         } else if (payload.eventType === 'UPDATE') {
-          setCategories(prev => prev.map(c => c.id === payload.new.id ? payload.new as MenuCategory : c).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
+           const c = payload.new as any;
+           const updatedCat: MenuCategory = {
+             id: c.id,
+             name: c.name,
+             sortOrder: c.sort_order,
+             isActive: c.is_active,
+          } as MenuCategory;
+          setCategories(prev => prev.map(cat => cat.id === updatedCat.id ? updatedCat : cat).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
         } else if (payload.eventType === 'DELETE') {
           setCategories(prev => prev.filter(c => c.id !== payload.old.id));
         }

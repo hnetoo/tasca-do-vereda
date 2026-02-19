@@ -7,7 +7,7 @@ export async function fetchMenuFromFeed(settings: SystemSettings) {
     const url = base ? `${base.replace(/\/+$/, "")}/menu_feed.json` : "/menu_feed.json";
     const res = await fetch(url, { cache: "no-cache" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
+    const json: any = await res.json();
     return {
       settings: json.restaurant ? { restaurantName: json.restaurant.name, appLogoUrl: json.restaurant.logo } : null,
       categories: Array.isArray(json.categories) ? json.categories : [],
