@@ -122,7 +122,7 @@ export interface OrderPayment {
   timestamp?: string;
 }
 
-export type Order = Partial<Database['public']['Tables']['orders']['Row']> & {
+export type Order = Omit<Partial<Database['public']['Tables']['orders']['Row']>, 'created_at' | 'updated_at' | 'split_payments'> & {
   items?: (OrderItem & { dish?: Dish; product?: Dish })[];
   payments?: OrderPayment[];
   payment_method?: PaymentMethod;
