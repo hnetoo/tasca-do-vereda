@@ -2,42 +2,40 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  AreaChart, Area, CartesianGrid, LineChart, Line, Legend
+  AreaChart, Area, CartesianGrid, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { 
-  DollarSign, TrendingUp, CreditCard, Activity, 
-  ArrowUpRight, ArrowDownRight, Calendar, Users, Clock, 
-  Utensils, AlertCircle, Wifi, Wallet, 
-  Banknote, TrendingDown, Layers
+  DollarSign, TrendingUp, Users, Clock, 
+  Utensils, Wallet, Banknote, TrendingDown, Layers, Activity, Wifi
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, differenceInMinutes, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatAOA } from '@/utils/format';
 import { useStore } from '@/store/useStore';
 import KPICard from '@/components/KPICard';
-import { Order, Transaction } from '@/types';
+import { Order, Transaction, PaymentMethod } from '@/types';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export default function OwnerDashboard() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [yesterdaySales, setYesterdaySales] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { employees, tables, currentUser } = useStore(); 
 
   // Admin Verification
   useEffect(() => {
-    // If we have a currentUser but they are not admin/owner/manager, redirect
-    // We wait for currentUser to be populated (it might be null initially)
     if (currentUser) {
        if (currentUser.role !== 'ADMIN' && currentUser.role !== 'OWNER' && currentUser.role !== 'MANAGER') {
           router.push('/pos'); 
        }
     }
-    // Note: If currentUser is null, we might be loading or not logged in. 
-    // Ideally we should have a loading state for auth.
   }, [currentUser, router]);
 
   // Initial Fetch
@@ -47,12 +45,30 @@ export default function OwnerDashboard() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
         // Fetch Orders (Today)
         const { data: ordersData } = await supabase
           .from('orders')
           .select('*')
           .gte('created_at', today.toISOString())
           .order('created_at', { ascending: false });
+
+        // Fetch Orders (Yesterday) for trend
+        const { data: yesterdayData } = await supabase
+          .from('orders')
+          .select('total, status')
+          .gte('created_at', yesterday.toISOString())
+          .lt('created_at', today.toISOString());
+
+        // Calculate Yesterday Sales
+        if (yesterdayData) {
+            const total = yesterdayData
+                .filter(o => o.status === 'FECHADO' || o.status === 'PAID')
+                .reduce((acc, o) => acc + Number(o.total || 0), 0);
+            setYesterdaySales(total);
+        }
 
         // Fetch Transactions
         const { data: transData } = await supabase
@@ -101,30 +117,60 @@ export default function OwnerDashboard() {
 
   // Metrics Calculation
   const metrics = useMemo(() => {
-    const totalSales = orders
-      .filter(o => o.status === 'FECHADO' || o.status === 'PAID')
-      .reduce((acc, o) => acc + Number(o.total || 0), 0);
+    const closedOrders = orders.filter(o => o.status === 'FECHADO' || o.status === 'PAID');
+    
+    const totalSales = closedOrders.reduce((acc, o) => acc + Number(o.total || 0), 0);
+
+    // Sales Trend Calculation
+    let salesTrend: 'up' | 'down' | 'neutral' = 'neutral';
+    let salesTrendValue = '0%';
+    
+    if (yesterdaySales > 0) {
+        const diff = totalSales - yesterdaySales;
+        const percentage = (diff / yesterdaySales) * 100;
+        salesTrend = percentage > 0 ? 'up' : percentage < 0 ? 'down' : 'neutral';
+        salesTrendValue = `${percentage > 0 ? '+' : ''}${percentage.toFixed(1)}%`;
+    } else if (totalSales > 0) {
+        salesTrend = 'up';
+        salesTrendValue = '+100%'; // First day or no sales yesterday
+    }
 
     const activeOrders = orders.filter(o => o.status && ['PENDENTE', 'PREPARANDO', 'PRONTO'].includes(o.status)).length;
     
-    // Expenses (Mock if no transactions)
+    // Expenses (from transactions table)
     const totalExpenses = transactions
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
     const netProfit = totalSales - totalExpenses;
-    const cashFlow = totalSales - totalExpenses; // Simplified for now
+    const cashFlow = totalSales - totalExpenses; 
 
-    // Staff active (Mock logic or use store)
+    // Staff active 
     const activeStaff = employees?.filter((e: any) => e.status === 'ATIVO').length || 0;
 
     // Free tables
     const freeTables = tables?.filter((t: any) => t.status === 'LIVRE').length || 0;
 
+    // Prep Time Calculation
+    let totalPrepTime = 0;
+    let prepCount = 0;
+    closedOrders.forEach(order => {
+        if (order.created_at && order.updated_at) {
+            const start = parseISO(order.created_at as string);
+            const end = parseISO(order.updated_at as string);
+            const diff = differenceInMinutes(end, start);
+            if (diff > 0 && diff < 120) { // Filter out outliers > 2 hours
+                totalPrepTime += diff;
+                prepCount++;
+            }
+        }
+    });
+    const avgPrepTime = prepCount > 0 ? `${Math.round(totalPrepTime / prepCount)}m` : '15m'; // Default to 15m if no data
+
     // Hourly Data for Chart
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({ hour: i, sales: 0, profit: 0 }));
     orders.forEach(order => {
-      const dateStr = order.createdAt ? new Date(order.createdAt).toISOString() : null;
+      const dateStr = order.created_at ? (typeof order.created_at === 'string' ? order.created_at : order.created_at.toISOString()) : null;
       if (!dateStr) return;
       const hour = new Date(dateStr).getHours();
       if (hourlyData[hour]) {
@@ -134,11 +180,38 @@ export default function OwnerDashboard() {
       }
     });
     
-    // Filter out future hours or empty leading hours if desired, but keeping 24h format is fine
     const chartData = hourlyData.filter(h => h.sales > 0 || h.hour <= new Date().getHours());
+
+    // Payment Methods Distribution
+    const paymentMethodsMap: Record<string, number> = {};
+    
+    closedOrders.forEach(order => {
+        // Check split payments first
+        if (order.split_payments && order.split_payments.length > 0) {
+            order.split_payments.forEach(split => {
+                const method = split.method || 'OTHER';
+                paymentMethodsMap[method] = (paymentMethodsMap[method] || 0) + (split.amount || 0);
+            });
+        } else if (order.payment_method) {
+            const method = order.payment_method;
+            paymentMethodsMap[method] = (paymentMethodsMap[method] || 0) + (order.total || 0);
+        }
+    });
+
+    const paymentMethodsData = Object.entries(paymentMethodsMap).map(([name, value], index) => ({
+        name: name.replace('_', ' '), // Format name (e.g. QR_CODE -> QR CODE)
+        value
+    }));
+
+    // If empty, add a placeholder for visualization
+    if (paymentMethodsData.length === 0) {
+        paymentMethodsData.push({ name: 'Nenhum', value: 1 });
+    }
 
     return { 
       totalSales, 
+      salesTrend,
+      salesTrendValue,
       activeOrders, 
       totalOrders: orders.length,
       activeStaff,
@@ -147,10 +220,11 @@ export default function OwnerDashboard() {
       cashFlow,
       netProfit,
       chartData,
-      avgPrepTime: '15m', // Mock
-      loyalty: '85%' // Mock
+      avgPrepTime,
+      loyalty: '85%', // Mock for now as requested
+      paymentMethodsData
     };
-  }, [orders, transactions, employees, tables]);
+  }, [orders, transactions, employees, tables, yesterdaySales]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20 md:pb-8">
@@ -187,7 +261,8 @@ export default function OwnerDashboard() {
             value={formatAOA(metrics.totalSales)} 
             subtitle={`${metrics.totalOrders} pedidos`}
             icon={<DollarSign size={16} className="text-blue-400" />}
-            trend="up"
+            trend={metrics.salesTrend}
+            trendValue={metrics.salesTrendValue}
           />
           <KPICard 
             title="ATIVOS" 
@@ -208,7 +283,6 @@ export default function OwnerDashboard() {
             value={metrics.loyalty} 
             subtitle="retenção"
             icon={<TrendingUp size={16} className="text-purple-500" />}
-            trend="up"
           />
           <KPICard 
             title="PREPARO MÉDIO" 
@@ -247,19 +321,29 @@ export default function OwnerDashboard() {
           />
         </div>
 
-        {/* Navigation Tabs (Visual only as per design, could be functional links) */}
+        {/* Navigation Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar md:justify-start">
-          {['COMANDO', 'ANALYTICS', 'ANÁLISES', 'FINANÇAS', 'SISTEMA', 'ESCALAS', 'RESERVAS'].map((tab, i) => (
-            <button 
-              key={tab}
-              className={`
-                px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-colors
-                ${i === 2 ? 'bg-cyan-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'}
-              `}
-            >
-              {tab}
+            <Link href="/pos" className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                COMANDO
+            </Link>
+            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                ANALYTICS
             </button>
-          ))}
+            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-cyan-500 text-black transition-colors">
+                ANÁLISES
+            </button>
+            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                FINANÇAS
+            </button>
+            <Link href="/settings" className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                SISTEMA
+            </Link>
+            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                ESCALAS
+            </button>
+            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                RESERVAS
+            </button>
         </div>
 
         {/* Charts Section */}
@@ -299,6 +383,7 @@ export default function OwnerDashboard() {
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#fff' }}
                     itemStyle={{ color: '#fff' }}
+                    formatter={(value: number) => formatAOA(value)}
                   />
                   <Legend />
                   <Area 
@@ -325,9 +410,31 @@ export default function OwnerDashboard() {
           {/* Payment Methods Chart */}
           <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm">
              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Métodos de Pagamento</h3>
-             {/* Simple Bar Chart for payment methods */}
-             <div className="h-[300px] w-full flex items-center justify-center text-slate-500 text-sm">
-                <p>Gráfico de métodos em breve...</p>
+             <div className="h-[300px] w-full flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie
+                            data={metrics.paymentMethodsData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            paddingAngle={5}
+                            dataKey="value"
+                        >
+                            {metrics.paymentMethodsData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip 
+                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#fff' }}
+                            itemStyle={{ color: '#fff' }}
+                            formatter={(value: number) => formatAOA(value)}
+                        />
+                        <Legend verticalAlign="bottom" height={36}/>
+                    </PieChart>
+                </ResponsiveContainer>
              </div>
           </div>
         </div>
