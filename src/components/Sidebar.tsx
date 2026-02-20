@@ -69,7 +69,8 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
     { path: '/products', icon: <Package size={24} />, label: 'Produtos' },
     { path: '/categories', icon: <Tags size={24} />, label: 'Categorias' },
-    { path: '/sistema', icon: <Settings size={24} />, label: 'Sistema' },
+    { path: '/sistema', icon: <Monitor size={24} />, label: 'Sistema' },
+    { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
 
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Mesas' },
@@ -147,10 +148,10 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
                 <li key={item.path}>
                     <Link 
                       href={item.path}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                         active 
-                          ? 'bg-primary/10 text-primary border-l-4 border-primary' 
-                          : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                          ? 'bg-gradient-to-br from-slate-100 to-slate-300 text-slate-900 shadow-md transform scale-[1.02]' 
+                          : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
                       }`}
                     >
                       {item.icon}

@@ -1,35 +1,40 @@
 'use client';
 
 import React from 'react';
-import Card from '../../../components/Card';
-import { Settings, Users, Activity } from 'lucide-react';
+import { SystemCard } from '@/components/SystemCard';
+import { Settings, Printer, Save, Globe } from 'lucide-react';
 
-const SistemaGeralPage = () => {
+export default function SistemaGeralPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <h1 className="text-4xl font-bold text-primary mb-8">Configurações Gerais do Sistema</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl">
-        <Card
-          title="Configurações Básicas"
-          description="Ajuste as configurações fundamentais do sistema."
-          icon={<Settings size={48} />}
-          href="/sistema/geral/basicas"
-        />
-        <Card
-          title="Preferências de Usuário"
-          description="Gerencie as preferências de exibição e comportamento."
-          icon={<Users size={48} />}
-          href="/sistema/geral/preferencias"
-        />
-        <Card
-          title="Logs do Sistema"
-          description="Visualize os registros de atividades e eventos."
-          icon={<Activity size={48} />}
-          href="/sistema/geral/logs"
-        />
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <SystemCard
+        title="Configurações Básicas"
+        description="Defina o nome do restaurante, NIF, endereço e contatos principais."
+        icon={Settings}
+        href="/sistema/geral/basico"
+        color="blue"
+      />
+      <SystemCard
+        title="Impressoras e Hardware"
+        description="Configure impressoras de talões, gavetas de dinheiro e outros dispositivos."
+        icon={Printer}
+        href="/sistema/geral/impressoras"
+        color="emerald"
+      />
+      <SystemCard
+        title="Backup e Dados"
+        description="Gerencie backups locais, restauração de dados e limpeza do sistema."
+        icon={Save}
+        href="/sistema/geral/backup"
+        color="amber"
+      />
+      <SystemCard
+        title="Idioma e Região"
+        description="Ajuste o idioma do sistema, fuso horário e formatos de data."
+        icon={Globe}
+        href="/sistema/geral/regiao"
+        color="purple"
+      />
     </div>
   );
-};
-
-export default SistemaGeralPage;
+}
