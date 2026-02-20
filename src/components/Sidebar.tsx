@@ -105,19 +105,19 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
+          className={`fixed inset-0 bg-black/80 z-40 backdrop-blur-sm ${showSidebar ? 'md:hidden' : ''}`}
           onClick={toggleMobileMenu}
         />
       )}
 
       <div className={`
-        fixed md:static inset-y-0 left-0 z-50
+        fixed ${showSidebar ? 'md:static' : ''} inset-y-0 left-0 z-50
         h-full bg-slate-900 text-white flex flex-col border-r border-slate-800 
         transition-all duration-300 ease-in-out
-        ${showSidebar ? 'translate-x-0 w-72' : '-translate-x-full md:w-0'}
+        ${(showSidebar || isMobileMenuOpen) ? 'translate-x-0 w-72' : '-translate-x-full w-0'}
       `}>
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          {showSidebar && (
+          {(showSidebar || isMobileMenuOpen) && (
             <div className="flex items-center gap-3">
               {settings?.appLogoUrl ? (
               <img src={settings.appLogoUrl} alt="App Logo" className="h-10 w-10 object-contain" />
@@ -153,9 +153,10 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
                           ? 'bg-gradient-to-br from-slate-100 to-slate-300 text-slate-900 shadow-md transform scale-[1.02]' 
                           : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
                       }`}
+                      onClick={() => isMobileMenuOpen && toggleMobileMenu()}
                     >
                       {item.icon}
-                      {showSidebar && <span>{item.label}</span>}
+                      {(showSidebar || isMobileMenuOpen) && <span>{item.label}</span>}
                     </Link>
                 </li>
               );
@@ -169,7 +170,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
             className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-400 hover:bg-red-900/20 transition-colors"
           >
             <LogOut size={24} />
-            {showSidebar && <span>Sair</span>}
+            {(showSidebar || isMobileMenuOpen) && <span>Sair</span>}
           </button>
         </div>
       </div>
