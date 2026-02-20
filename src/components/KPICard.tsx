@@ -7,10 +7,11 @@ interface KPICardProps {
   subtitle: string;
   icon: React.ReactNode;
   trend?: 'up' | 'down' | 'neutral';
+  trendValue?: string;
   color?: string;
 }
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, color }) => {
+const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, trendValue, color }) => {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition-colors">
       <div className="flex justify-between items-start mb-2">
@@ -32,7 +33,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, trend, 
               {trend === 'up' && <ArrowUpRight size={12} className="mr-1" />}
               {trend === 'down' && <ArrowDownRight size={12} className="mr-1" />}
               {trend === 'neutral' && <Minus size={12} className="mr-1" />}
-              <span>{trend === 'up' ? '+12%' : trend === 'down' ? '-5%' : '0%'}</span>
+              <span>{trendValue || (trend === 'up' ? '+0%' : trend === 'down' ? '-0%' : '0%')}</span>
             </div>
           )}
         </div>
