@@ -170,9 +170,10 @@ export default function OwnerDashboard() {
     // Hourly Data for Chart
     const hourlyData = Array.from({ length: 24 }, (_, i) => ({ hour: i, sales: 0, profit: 0 }));
     orders.forEach(order => {
-      const dateStr = order.created_at ? (typeof order.created_at === 'string' ? order.created_at : order.created_at.toISOString()) : null;
-      if (!dateStr) return;
-      const hour = new Date(dateStr).getHours();
+      if (!order.created_at) return;
+      const dateObj = new Date(order.created_at);
+      if (isNaN(dateObj.getTime())) return;
+      const hour = dateObj.getHours();
       if (hourlyData[hour]) {
         hourlyData[hour].sales += (order.total || 0);
         // Assume 30% profit margin for simplicity if no expense data per order
