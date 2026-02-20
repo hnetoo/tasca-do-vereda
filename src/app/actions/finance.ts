@@ -1,7 +1,6 @@
-'use server';
 
-import { databaseOperations } from '@/services/database/operations';
-import { executeQuery } from '@/services/database/connection';
+
+import { databaseOperations, executeQuery } from '@/services/database/operations';
 import { CashShift, OrderPayment, UUID } from '@/types';
 import { logger } from '@/services/logger';
 

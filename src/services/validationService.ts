@@ -94,7 +94,7 @@ export const validationService = {
         for (let i = 0; i < orders.length; i++) {
             const order = orders[i];
             if (!order.id) errors.push(`Pedido no índice ${i} sem ID`);
-            if (order.tableId === undefined) errors.push(`Pedido ${order.id || i} sem mesa associada`);
+            if ((order as any).tableId === undefined && !order.table_id) errors.push(`Pedido ${order.id || i} sem mesa associada`);
             if (!Array.isArray(order.items) || order.items.length === 0) {
                 warnings.push(`Pedido ${order.id || i} sem itens`);
             }

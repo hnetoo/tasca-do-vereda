@@ -5,20 +5,20 @@ import { useSearchParams } from 'next/navigation';
 import { listen } from '@tauri-apps/api/event';
 import { useStore } from '@/store/useStore';
 import { ChefHat, ShoppingBasket, Sparkles, CheckCircle2 } from 'lucide-react';
-import { CustomerDisplayEvent, Order, Product, Table, OrderItem } from '@/types';
+import { CustomerDisplayEvent, Order, Dish, Table, OrderItem } from '@/types';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 const CustomerDisplayContent = () => {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('tableId');
-  const { activeOrders, products: menu, settings, tables, addNotification, currentUser } = useStore();
+  const { activeOrders, dishes: menu, settings, tables, addNotification, currentUser } = useStore();
   const [imageErrorMap, setImageErrorMap] = useState<Record<string, boolean>>({});
   const [logoError, setLogoError] = useState(false);
   const [promoIndex, setPromoIndex] = useState(0);
 
   // Derived state for promos (assuming menu items can be promos, or just showing all items)
   // Filtering for items with images as "promos" to display
-  const promoItems = menu.filter((item: Product) => item.imageUrl && item.available);
+  const promoItems = menu.filter((item: Dish) => item.image_url && item.is_active);
   const currentPromo = promoItems[promoIndex] || {};
 
   // Rotate promos
@@ -137,23 +137,25 @@ const CustomerDisplayContent = () => {
                 <p className="text-4xl font-black uppercase tracking-widest italic">Prepare-se para o melhor!</p>
               </div>
             ) : (
-              allItems.map((item: OrderItem, idx: number) => {
-                const dish = menu.find((d: Product) => d.id === item.productId);
+              (allItems.filter(Boolean) as OrderItem[]).map((item: OrderItem, idx: number) => {
+                const dish = menu.find((d: Dish) => d.id === (item.dishId || item.dish_id));
+                const quantity = item.quantity || 0;
+                const unitPrice = item.unitPrice || 0;
                 return (
                   <div key={idx} className="flex items-center justify-between group animate-in slide-in-from-right duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
                     <div className="flex items-center gap-6">
                        <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/5 group-hover:border-primary/30 transition-all shrink-0">
-                          <img src={dish?.image_url} className="w-full h-full object-cover" alt="" />
+                          <img src={dish?.image_url || undefined} className="w-full h-full object-cover" alt="" />
                        </div>
                        <div className="min-w-0">
                           <p className="text-lg font-black text-white uppercase tracking-tighter italic truncate pr-4">{dish?.name}</p>
                           <div className="flex items-center gap-2 mt-1">
-                             <span className="px-2 py-0.5 bg-primary text-black text-[10px] font-black rounded-md">{item.quantity}x</span>
-                             <span className="text-slate-500 font-mono text-xs">{formatKz(item.unitPrice)}</span>
+                             <span className="px-2 py-0.5 bg-primary text-black text-[10px] font-black rounded-md">{quantity}x</span>
+                             <span className="text-slate-500 font-mono text-xs">{formatKz(unitPrice)}</span>
                           </div>
                        </div>
                     </div>
-                    <p className="text-2xl font-mono font-bold text-white group-hover:text-primary transition-colors whitespace-nowrap">{formatKz(item.unitPrice * item.quantity)}</p>
+                    <p className="text-2xl font-mono font-bold text-white group-hover:text-primary transition-colors whitespace-nowrap">{formatKz(unitPrice * quantity)}</p>
                   </div>
                 );
               })
@@ -179,10 +181,10 @@ const CustomerDisplayContent = () => {
         {/* Right Side: Visuals/Ads */}
         <div className="w-1/3 flex flex-col gap-10">
            <div className="flex-1 glass-panel rounded-[4rem] overflow-hidden relative group bg-slate-900 flex items-center justify-center">
-              {currentPromo.image && !imageErrorMap[currentPromo.id as string] ? (
+              {currentPromo.image_url && !imageErrorMap[currentPromo.id as string] ? (
                 <img 
-                  key={currentPromo.image}
-                  src={currentPromo.image} 
+                  key={currentPromo.image_url}
+                  src={currentPromo.image_url} 
                   crossOrigin="anonymous"
                   className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-[10s] animate-in fade-in duration-1000 absolute inset-0" 
                   alt="Ad"

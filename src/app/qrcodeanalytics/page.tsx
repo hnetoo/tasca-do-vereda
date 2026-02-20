@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { MenuAccessStats } from '@/types';
+import { MenuAccessLog, MenuAccessAggregatedStats } from '@/types';
 import {
   QrCode, TrendingUp, Calendar, Eye, BarChart3, Download, Trash2
 } from 'lucide-react';
@@ -14,10 +14,10 @@ const QRCodeAnalytics = () => {
   const [filterType, setFilterType] = useState<FilterType>('ALL');
   const [timeRange, setTimeRange] = useState<TimeRange>('today');
 
-  const stats = getMenuAccessStats() as MenuAccessStats;
+  const stats = getMenuAccessStats();
 
   // Filter logs based on selected filters
-  const filteredLogs = menuAccessLogs.filter((log: MenuAccessStats) => {
+  const filteredLogs = menuAccessLogs.filter((log: MenuAccessLog) => {
     if (filterType !== 'ALL' && log.type !== filterType) return false;
 
     const logDate = new Date(log.timestamp);
@@ -41,7 +41,7 @@ const QRCodeAnalytics = () => {
 
   // Calculate analytics
   const hourlyData = Array.from({ length: 24 }, (_, i) => {
-    const count = filteredLogs.filter((log: MenuAccessStats) => {
+    const count = filteredLogs.filter((log: MenuAccessLog) => {
       const logDate = new Date(log.timestamp);
       return logDate.getHours() === i;
     }).length;

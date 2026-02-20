@@ -17,14 +17,16 @@ const Reservations = () => {
     customerName: string;
     date: string;
     time: string;
-    people: number;
+    guests: number;
     tableId: string;
+    customerPhone: string;
   }>({
     customerName: '',
     date: new Date().toISOString().split('T')[0],
     time: '19:00',
-    people: 2,
-    tableId: ''
+    guests: 2,
+    tableId: '',
+    customerPhone: ''
   });
 
   // Filter Logic
@@ -35,13 +37,13 @@ const Reservations = () => {
   const handleOpenModal = (res?: Reservation) => {
     if (res) {
       setEditingReservation(res);
-      const dateObj = new Date(res.date);
       setForm({
         customerName: res.customerName,
-        date: res.date.split('T')[0],
+        date: new Date(res.date).toISOString().split('T')[0],
         time: res.time,
-        people: res.partySize,
-        tableId: res.tableId ? res.tableId.toString() : ''
+        guests: res.guests,
+        tableId: res.tableId ? res.tableId.toString() : '',
+        customerPhone: res.customerPhone || ''
       });
     } else {
       setEditingReservation(null);
@@ -50,8 +52,9 @@ const Reservations = () => {
         customerName: '',
         date: now.toISOString().split('T')[0],
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        people: 2,
-        tableId: ''
+        guests: 2,
+        tableId: '',
+        customerPhone: ''
       });
     }
     setIsModalOpen(true);
@@ -59,33 +62,34 @@ const Reservations = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // const dateTime = new Date(`${form.date}T${form.time}`); // Removed as we store date and time separately as strings
 
     if (editingReservation) {
       updateReservation({
         ...editingReservation,
         customerName: form.customerName,
-        date: form.date,
+        customerPhone: form.customerPhone,
+        date: new Date(form.date),
         time: form.time,
-        partySize: Number(form.people),
-        tableId: form.tableId ? Number(form.tableId) : undefined
+        guests: Number(form.guests),
+        tableId: form.tableId || undefined
       });
     } else {
       addReservation({
         id: `res-${Date.now()}`,
         customerName: form.customerName,
-        date: form.date,
+        customerPhone: form.customerPhone,
+        date: new Date(form.date),
         time: form.time,
-        partySize: Number(form.people),
-        tableId: form.tableId ? Number(form.tableId) : undefined,
-        status: 'PENDING',
-        createdAt: new Date().toISOString()
+        guests: Number(form.guests),
+        tableId: form.tableId || undefined, // UUID
+        status: 'PENDENTE',
+        createdAt: new Date()
       });
     }
     setIsModalOpen(false);
   };
 
-  const handleStatusChange = (res: Reservation, newStatus: 'CONFIRMED' | 'CANCELLED') => {
+  const handleStatusChange = (res: Reservation, newStatus: 'CONFIRMADA' | 'CANCELADA') => {
     updateReservation({ ...res, status: newStatus });
   };
 
@@ -145,7 +149,7 @@ const Reservations = () => {
                         <h4 className="text-lg font-bold text-white">{res.customerName}</h4>
                         <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                             <span className="flex items-center gap-1"><Clock size={14} /> {res.time}</span>
-                            <span className="flex items-center gap-1"><Users size={14} /> {res.partySize} pax</span>
+                            <span className="flex items-center gap-1"><Users size={14} /> {res.guests} pax</span>
                             {res.tableId && <span className="flex items-center gap-1 text-primary"><TableIcon size={14} /> Mesa {res.tableId}</span>}
                         </div>
                     </div>
@@ -153,17 +157,17 @@ const Reservations = () => {
 
                 <div className="flex items-center gap-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                        ${res.status === 'CONFIRMED' ? 'bg-green-900/30 text-green-400 border border-green-900' : ''}
-                        ${res.status === 'PENDING' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-900' : ''}
-                        ${res.status === 'CANCELLED' ? 'bg-red-900/30 text-red-400 border border-red-900' : ''}
+                        ${res.status === 'CONFIRMADA' ? 'bg-green-900/30 text-green-400 border border-green-900' : ''}
+                        ${res.status === 'PENDENTE' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-900' : ''}
+                        ${res.status === 'CANCELADA' ? 'bg-red-900/30 text-red-400 border border-red-900' : ''}
                     `}>
-                        {res.status === 'CONFIRMED' ? 'CONFIRMADA' : res.status === 'PENDING' ? 'PENDENTE' : res.status === 'CANCELLED' ? 'CANCELADA' : res.status}
+                        {res.status}
                     </span>
 
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {res.status === 'PENDING' && (
+                        {res.status === 'PENDENTE' && (
                             <button 
-                                onClick={() => handleStatusChange(res, 'CONFIRMED')}
+                                onClick={() => handleStatusChange(res, 'CONFIRMADA')}
                                 className="p-2 rounded-lg bg-green-600 text-white hover:bg-green-500" title="Confirmar Chegada"
                             >
                                 <Check size={16} />
@@ -172,8 +176,8 @@ const Reservations = () => {
                         <button onClick={() => handleOpenModal(res)} className="p-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white">
                             <Edit2 size={16} />
                         </button>
-                        {res.status !== 'CANCELLED' && (
-                            <button onClick={() => handleStatusChange(res, 'CANCELLED')} className="p-2 rounded-lg bg-gray-700 text-red-400 hover:bg-red-900/30">
+                        {res.status !== 'CANCELADA' && (
+                            <button onClick={() => handleStatusChange(res, 'CANCELADA')} className="p-2 rounded-lg bg-gray-700 text-red-400 hover:bg-red-900/30">
                                 <X size={16} />
                             </button>
                         )}
@@ -197,15 +201,27 @@ const Reservations = () => {
                 </div>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nome do Cliente</label>
-                        <input 
-                            required
-                            type="text"
-                            className="w-full p-3 bg-gray-900 border border-gray-700 rounded-xl text-white focus:border-primary outline-none"
-                            value={form.customerName}
-                            onChange={e => setForm({...form, customerName: e.target.value})}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nome do Cliente</label>
+                            <input 
+                                required
+                                type="text"
+                                className="w-full p-3 bg-gray-900 border border-gray-700 rounded-xl text-white focus:border-primary outline-none"
+                                value={form.customerName}
+                                onChange={e => setForm({...form, customerName: e.target.value})}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Telefone</label>
+                            <input 
+                                required
+                                type="tel"
+                                className="w-full p-3 bg-gray-900 border border-gray-700 rounded-xl text-white focus:border-primary outline-none"
+                                value={form.customerPhone}
+                                onChange={e => setForm({...form, customerPhone: e.target.value})}
+                            />
+                        </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -239,8 +255,8 @@ const Reservations = () => {
                                 type="number"
                                 min="1"
                                 className="w-full p-3 bg-gray-900 border border-gray-700 rounded-xl text-white focus:border-primary outline-none"
-                                value={form.people}
-                                onChange={e => setForm({...form, people: Number(e.target.value)})}
+                                value={form.guests}
+                                onChange={e => setForm({...form, guests: Number(e.target.value)})}
                             />
                         </div>
                         <div>

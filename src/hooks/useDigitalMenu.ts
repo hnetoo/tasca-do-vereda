@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabaseService } from '../services/supabaseService';
 import { MenuCategory, Product } from '../types';
 
@@ -17,11 +17,11 @@ export const useDigitalMenu = (): MenuData => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      // Don't set loading to true on refresh to avoid flickering
-      if (categories.length === 0) setLoading(true);
+      if (!hasLoadedRef.current) setLoading(true);
       
       const client = supabaseService.getClient();
       if (!client) {
@@ -64,7 +64,7 @@ export const useDigitalMenu = (): MenuData => {
         max_stock_quantity: p.quantidade_maxima,
         unit: p.unidade_medida,
         supplier_id: p.fornecedor_padrao_id
-      }));
+      } as unknown as Product));
 
       setCategories(cats || []);
       setProducts(mappedProducts);
@@ -73,9 +73,10 @@ export const useDigitalMenu = (): MenuData => {
       console.error('Error fetching digital menu:', err);
       setError(err.message);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -106,7 +107,7 @@ export const useDigitalMenu = (): MenuData => {
     return () => {
       client.removeChannel(channel);
     };
-  }, []);
+  }, [fetchData]);
 
   return {
     categories,

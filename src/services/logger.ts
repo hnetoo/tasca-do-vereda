@@ -48,12 +48,30 @@ class LoggerService {
   }
 
   private addLog(level: LogLevel, message: string, data?: unknown, context?: string) {
+    let serializedData = data;
+    if (data instanceof Error) {
+      serializedData = {
+        message: data.message,
+        stack: data.stack,
+        name: data.name,
+        // Add any other relevant properties of the Error object
+      };
+    } else if (data) {
+      // Only stringify if it's not an Error object and it's not undefined/null
+      try {
+        serializedData = JSON.parse(JSON.stringify(data, this.getCircularReplacer()));
+      } catch (e) {
+        console.warn('Failed to serialize log data:', e);
+        serializedData = '[Unserializable Data]';
+      }
+    }
+
     const entry: LogEntry = {
       id: Math.random().toString(36).substring(2, 15), // Generate a simple unique ID
       timestamp: new Date().toISOString(),
       level,
       message,
-      data: data ? JSON.parse(JSON.stringify(data, this.getCircularReplacer())) : undefined,
+      data: serializedData,
       context
     };
 
@@ -159,7 +177,7 @@ class LoggerService {
         severity: (logEntry.level === 'error' ? 'critical' : logEntry.level === 'warn' ? 'medium' : 'low'),
         message: logEntry.message,
         timestamp: new Date(logEntry.timestamp).toISOString(),
-        resolved: false,
+        isResolved: false,
         details: (logEntry.data as Record<string, unknown>) || {},
       }));
   }

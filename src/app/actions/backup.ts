@@ -1,12 +1,8 @@
-'use server';
 
-import { databaseOperations } from '@/services/database/operations';
-import { executeQuery } from '@/services/database/connection';
+import { executeQuery, databaseOperations } from '@/services/database/operations';
+import { dbConfig } from '@/services/database/config';
 import { logger } from '@/services/logger';
-import { BackupData } from '@/services/backupService'; // We might need to move the type definition if it causes cycle, but usually types are fine.
-// Actually BackupData is defined in backupService.ts. If we import it from there, we might import the whole file which imports databaseOperations (if we don't fix it first).
-// Best to move BackupData type to types/index.ts or similar, but for now I will rely on the fact that I will fix backupService.ts shortly.
-// Or better, I'll redefine the interface or import it from types if available.
+// BackupData is defined locally to avoid circular dependencies
 import { MenuCategory, Dish, Order, Expense, Revenue, StockItem, Fornecedor, User, Employee, AttendanceRecord } from '@/types';
 
 // We need to define BackupData here or import it from a shared place that is not backupService.ts to avoid circular deps or importing client code.

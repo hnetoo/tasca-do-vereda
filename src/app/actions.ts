@@ -1,10 +1,8 @@
-'use server';
-
 import { databaseOperations } from '@/services/database/operations';
 import { SystemSettings, Fornecedor, Employee, AttendanceRecord, Dish, MenuCategory, UUID } from '@/types';
 import { logger } from '@/services/logger';
 
-export async function saveSettingsAction(settings: SystemSettings) {
+export async function saveSettingsAction(settings: SystemSettings): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveSettings(settings);
     if (!result.success) {
@@ -12,27 +10,29 @@ export async function saveSettingsAction(settings: SystemSettings) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving settings via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving settings via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveSupplierAction(supplier: Fornecedor) {
+export async function saveSupplierAction(supplier: Fornecedor): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveSupplier(supplier);
-    if (!result.success) {
-      logger.error('Failed to save supplier via server action', { error: result.error }, 'SERVER_ACTION');
-      return { success: false, error: result.error };
+    const success = await databaseOperations.saveSupplier(supplier);
+    if (!success) {
+      logger.error('Failed to save supplier via server action', { error: 'Operation returned false' }, 'SERVER_ACTION');
+      return { success: false, error: 'Operation returned false' };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving supplier via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving supplier via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveEmployeesAction(employees: Employee[]) {
+export async function saveEmployeesAction(employees: Employee[]): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveEmployees(employees);
     if (!result.success) {
@@ -40,27 +40,29 @@ export async function saveEmployeesAction(employees: Employee[]) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving employees via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving employees via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function deleteEmployeeAction(id: string) {
+export async function deleteEmployeeAction(id: string): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.deleteEmployee(id);
-    if (!result.success) {
-      logger.error('Failed to delete employee via server action', { error: result.error }, 'SERVER_ACTION');
-      return { success: false, error: result.error };
+    const success = await databaseOperations.deleteEmployee(id);
+    if (!success) {
+      logger.error('Failed to delete employee via server action', { error: 'Operation returned false' }, 'SERVER_ACTION');
+      return { success: false, error: 'Operation returned false' };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception deleting employee via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception deleting employee via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]) {
+export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveAttendance(attendanceRecords);
     if (!result.success) {
@@ -68,123 +70,147 @@ export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving attendance via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving attendance via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveCategoryAction(category: MenuCategory) {
+export async function saveCategoryAction(category: MenuCategory): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
     const result = await databaseOperations.saveCategory(category);
     if (!result.success) {
-      logger.error('Failed to save category via server action', { error: result.error }, 'SERVER_ACTION');
-      return { success: false, error: result.error };
+      const errorToLog = { message: result.error || 'Operation returned false' };
+      logger.error('Failed to save category via server action', { error: errorToLog }, 'SERVER_ACTION');
+      return { success: false, error: errorToLog };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving category via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception saving category via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   }
 }
 
-export async function deleteCategoryAction(id: UUID) {
+export async function deleteCategoryAction(id: UUID): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
     const result = await databaseOperations.deleteCategory(id);
     if (!result.success) {
-      logger.error('Failed to delete category via server action', { error: result.error }, 'SERVER_ACTION');
-      return { success: false, error: result.error };
+      const errorToLog = { message: result.error || 'Operation returned false' };
+      logger.error('Failed to delete category via server action', { error: errorToLog }, 'SERVER_ACTION');
+      return { success: false, error: errorToLog };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception deleting category via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception deleting category via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   }
 }
 
-export async function saveDishAction(dish: Dish) {
+export async function saveDishAction(dish: Dish): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
     const result = await databaseOperations.saveDish(dish);
     if (!result.success) {
-      logger.error('Failed to save dish via server action', { error: result.error }, 'SERVER_ACTION');
-      return { success: false, error: result.error };
+      const errorToLog = { message: result.error || 'Operation returned false' };
+      logger.error('Failed to save dish via server action', { error: errorToLog }, 'SERVER_ACTION');
+      return { success: false, error: errorToLog };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving dish via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception saving dish via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   }
 }
 
-export async function deleteDishAction(id: UUID) {
+export async function deleteDishAction(id: UUID): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
     const result = await databaseOperations.deleteDish(id);
     if (!result.success) {
-      logger.error('Failed to delete dish via server action', { error: result.error }, 'SERVER_ACTION');
-      return { success: false, error: result.error };
+      const errorToLog = { message: result.error || 'Operation returned false' };
+      logger.error('Failed to delete dish via server action', { error: errorToLog }, 'SERVER_ACTION');
+      return { success: false, error: errorToLog };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception deleting dish via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception deleting dish via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   }
 }
 
-export async function getCategoriesAction(): Promise<{ success: boolean; data?: MenuCategory[]; error?: string }> {
+export async function getCategoriesAction(): Promise<{ success: boolean; data?: MenuCategory[]; error?: { message: string; stack?: string } }> {
   try {
-    const categories = await databaseOperations.getCategories();
-    return { success: true, data: categories };
-  } catch (error: any) {
-    logger.error('Exception getting categories via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+    const result = await databaseOperations.getCategories();
+    if (result.success) {
+        return { success: true, data: result.data };
+    } else {
+        return { success: false, error: { message: result.error || 'Unknown error' }, data: [] };
+    }
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception fetching categories via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog, data: [] };
   }
 }
 
-export async function getDishesAction(): Promise<{ success: boolean; data?: Dish[]; error?: string }> {
+export async function getDishesAction(): Promise<{ success: boolean; data?: Dish[]; error?: { message: string; stack?: string } }> {
   try {
-    const dishes = await databaseOperations.getDishes();
-    return { success: true, data: dishes };
-  } catch (error: any) {
-    logger.error('Exception getting dishes via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+    const result = await databaseOperations.getDishes();
+    if (result.success) {
+        return { success: true, data: result.data };
+    } else {
+        return { success: false, error: { message: result.error || 'Unknown error' }, data: [] };
+    }
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception fetching dishes via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog, data: [] };
   }
 }
 
-export async function recreateMenuSchemaAction(): Promise<{ success: boolean; error?: string }> {
+export async function recreateMenuSchemaAction(): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
     await databaseOperations.recreateMenuSchema();
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception recreating menu schema via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception recreating menu schema via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   }
 }
 
-export async function saveCategoriesAction(categories: MenuCategory[]) {
+export async function saveCategoriesAction(categories: MenuCategory[]): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    const result = await databaseOperations.saveCategories(categories);
-    if (!result.success) {
-      logger.error('Failed to save categories via server action', { error: result.error }, 'SERVER_ACTION');
-      return { success: false, error: result.error };
+    const success = await databaseOperations.saveCategories(categories);
+    if (!success) {
+      const errorToLog = { message: 'Operation returned false' };
+      logger.error('Failed to save categories via server action', { error: errorToLog }, 'SERVER_ACTION');
+      return { success: false, error: errorToLog };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving categories via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception saving categories via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   }
 }
 
-export async function saveDishesAction(dishes: Dish[]) {
+export async function saveDishesAction(dishes: Dish[]): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    const result = await databaseOperations.saveDishes(dishes);
-    if (!result.success) {
-      logger.error('Failed to save dishes via server action', { error: result.error }, 'SERVER_ACTION');
-      return { success: false, error: result.error };
+    const success = await databaseOperations.saveDishes(dishes);
+    if (!success) {
+      const errorToLog = { message: 'Operation returned false' };
+      logger.error('Failed to save dishes via server action', { error: errorToLog }, 'SERVER_ACTION');
+      return { success: false, error: errorToLog };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving dishes via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    logger.error('Exception saving dishes via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   }
 }
 

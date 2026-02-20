@@ -128,11 +128,11 @@ export const createStaffSlice: StateCreator<
       id: `att-${Date.now()}`,
       employeeId,
       date: dateStr,
-      createdAt: now, // Adicionado
+      createdAt: now,
       clockIn: now,
-      clockOut: null, // Adicionado
+      clockOut: undefined, // Use undefined for optional properties not yet set
       clockInMethod: method,
-      clockOutMethod: null, // Adicionado
+      clockOutMethod: undefined,
       totalHours: 0,
       isLate: false,
       lateMinutes: 0,
@@ -141,8 +141,31 @@ export const createStaffSlice: StateCreator<
       source: method,
       status: 'PRESENT'
     };
+
+    const createdAt = newRecord.createdAt instanceof Date ? newRecord.createdAt : new Date(newRecord.createdAt || now);
+    const clockIn = newRecord.clockIn instanceof Date ? newRecord.clockIn : new Date(newRecord.clockIn || now);
+
+    // Create a Supabase-compatible record for persistence
+    const supabaseRecord = {
+      id: newRecord.id,
+      employee_id: newRecord.employeeId,
+      date: newRecord.date,
+      created_at: createdAt.toISOString(),
+      clock_in: clockIn.toISOString(),
+      clock_out: null, // Supabase expects null for unset dates
+      clock_in_method: newRecord.clockInMethod,
+      clock_out_method: null,
+      total_hours: newRecord.totalHours,
+      is_late: newRecord.isLate,
+      late_minutes: newRecord.lateMinutes,
+      overtime_hours: newRecord.overtimeHours,
+      is_absence: newRecord.isAbsence,
+      source: newRecord.source,
+      status: newRecord.status
+    };
+
     set((state: StaffSlice) => ({ attendance: [...state.attendance, newRecord] }));
-    saveAttendanceAction([newRecord]).then(res => {
+    saveAttendanceAction([supabaseRecord]).then(res => {
       if (!res.success) logger.error('Failed to persist clock-in to SQL', { employeeId, error: res.error }, 'DATABASE');
     }).catch((e: any) => 
       logger.error('Failed to persist clock-in to SQL', { employeeId, error: e.message }, 'DATABASE')

@@ -53,12 +53,8 @@ const Analytics = () => {
     TRANSFERENCIA: 'Transferência',
     QR_CODE: 'QR Code',
     CONTA_CORRENTE: 'Conta Corrente',
-    MBWAY: 'MBWay',
-    OUTRO: 'Outros',
-    CASH: 'Dinheiro',
-    CARD: 'Cartão',
-    MULTIBANCO: 'Multibanco',
-    TRANSFER: 'Transferência'
+    SPLIT: 'Split',
+    OTHER: 'Outros',
   };
 
   const extractPayments = (order: typeof activeOrders[number]) => {
@@ -124,12 +120,8 @@ const Analytics = () => {
         TRANSFERENCIA: 0,
         QR_CODE: 0,
         CONTA_CORRENTE: 0,
-        MBWAY: 0,
-        OUTRO: 0,
-        CASH: 0,
-        CARD: 0,
-        MULTIBANCO: 0,
-        TRANSFER: 0
+        SPLIT: 0,
+        OTHER: 0
       };
       closedOrders.forEach((order: any) => {
         const orderDate = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
@@ -529,11 +521,13 @@ const Analytics = () => {
                     </div>
                     <div className="flex-1">
                       <p className="font-bold text-white">{dish.name}</p>
-                      <p className="text-xs text-slate-400">{analytics?.sold || 0} unidades vendidas</p>
+                      <p className="text-xs text-slate-400">{analytics?.quantity || 0} unidades vendidas</p>
                     </div>
                     <div className="text-right">
                       <p className="font-black text-primary">{formatKz(analytics?.revenue || 0)}</p>
-                      <p className="text-xs text-slate-400">{(analytics?.profitMargin || 0).toFixed(0)}% lucro</p>
+                      <p className="text-xs text-slate-400">
+                        {((analytics?.revenue && analytics.revenue > 0) ? ((analytics.profit || 0) / analytics.revenue * 100) : 0).toFixed(0)}% lucro
+                      </p>
                     </div>
                   </div>
                 );

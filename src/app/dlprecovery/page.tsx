@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { disasterRecoveryService, BackupMetadata, DLPComplianceReport } from '@/services/disasterRecoveryService';
 import { 
   Shield, 
   History, 
@@ -28,6 +27,13 @@ import Link from 'next/link';
 import { useStore } from '@/store/useStore';
 import SQLMigrationPanel from '@/components/SQLMigrationPanel';
 import { LogEntry } from '@/services/logger';
+import { 
+  listBackupsAction, 
+  generateComplianceReportAction, 
+  restoreSystemAction, 
+  createFullBackupAction 
+} from './actions';
+import { BackupMetadata, DLPComplianceReport } from '@/services/disasterRecoveryService';
 
 const DLPRecovery = () => {
   const [backups, setBackups] = useState<BackupMetadata[]>([]);
@@ -40,7 +46,7 @@ const DLPRecovery = () => {
 
   const loadBackups = async () => {
     setLoading(true);
-    const list = await disasterRecoveryService.listBackups();
+    const list = await listBackupsAction();
     setBackups(list);
     setLoading(false);
   };
@@ -54,7 +60,7 @@ const DLPRecovery = () => {
 
   const handleGenerateReport = async () => {
     addNotification('info', 'Gerando relatório de conformidade...');
-    const report = await disasterRecoveryService.generateComplianceReport();
+    const report = await generateComplianceReportAction();
     setComplianceReport(report);
     setShowComplianceModal(true);
     addNotification('success', 'Relatório gerado com sucesso.');
@@ -64,7 +70,7 @@ const DLPRecovery = () => {
     if (!window.confirm("ATENÇÃO: Esta operação irá sobrescrever todos os dados atuais do sistema. Deseja continuar?")) return;
     
     setIsRestoring(true);
-    const success = await disasterRecoveryService.restoreSystem(id);
+    const success = await restoreSystemAction(id);
     setIsRestoring(false);
     
     if (success) {
@@ -77,7 +83,7 @@ const DLPRecovery = () => {
 
   const triggerManualBackup = async () => {
     addNotification('info', 'Iniciando snapshot manual...');
-    const meta = await disasterRecoveryService.createFullBackup('MANUAL');
+    const meta = await createFullBackupAction('MANUAL');
     if (meta) {
       addNotification('success', 'Snapshot criado e criptografado com sucesso.');
       loadBackups();

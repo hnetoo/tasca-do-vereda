@@ -38,7 +38,7 @@ const FilterButton = ({ label, status, icon: Icon, count, colorClass, activeFilt
 );
 
 const Kitchen = () => {
-  const { activeOrders, products: menu, updateOrderItemStatus, markOrderAsServed } = useStore();
+  const { activeOrders, dishes: menu, updateOrderItemStatus, markOrderAsServed } = useStore();
   const [activeFilter, setActiveFilter] = useState<KitchenFilter>('TODOS');
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -133,8 +133,8 @@ const Kitchen = () => {
     const prevOpenOrders = prevOrdersRef.current.filter((o: Order) => o.status === 'ABERTO');
 
     // 1. Check for NEW Orders
-    const currentIds = currentOpenOrders.map((o: Order) => o.id);
-    const prevIds = prevOpenOrders.map((o: Order) => o.id);
+    const currentIds = currentOpenOrders.map((o: Order) => o.id).filter((id): id is string => !!id);
+    const prevIds = prevOpenOrders.map((o: Order) => o.id).filter((id): id is string => !!id);
     const hasNewOrder = currentIds.some((id: string) => !prevIds.includes(id));
 
     if (hasNewOrder) {
@@ -265,7 +265,7 @@ const Kitchen = () => {
                 <div className="p-4 bg-gray-800 border-b border-gray-700 flex justify-between items-start">
                   <div>
                     <h3 className="text-xl font-bold text-white">Mesa {order.tableId}</h3>
-                    <p className="text-xs text-gray-400 mt-1 font-mono opacity-70">#{order.id.slice(-4)}</p>
+                    <p className="text-xs text-gray-400 mt-1 font-mono opacity-70">#{(order.id || '').slice(-4)}</p>
                   </div>
                   <div className={`flex items-center gap-2 text-sm bg-gray-900 px-3 py-1.5 rounded-md border border-gray-700 ${timerColor}`}>
                     <Clock size={16} />
@@ -278,6 +278,7 @@ const Kitchen = () => {
                 <div className="p-4 space-y-3 flex-1 overflow-y-auto max-h-[400px]">
                   {(order.items || []).map((item: OrderItem, idx: number) => {
                     const isDone = item.status === 'ENTREGUE';
+                    const dishId = item.dishId || (item as any).productId || (item as any).dish_id;
                     let statusColor = 'bg-gray-700 border-gray-600';
                     if (item.status === 'PENDENTE') statusColor = 'bg-yellow-900/20 border-yellow-700/50';
                     if (item.status === 'PREPARANDO') statusColor = 'bg-blue-900/20 border-blue-700/50';
@@ -286,8 +287,8 @@ const Kitchen = () => {
 
                     return (
                       <div
-                        key={`${item.productId}-${idx}`} 
-                        onClick={() => handleToggleItem(order.id, idx, item.status || 'PENDENTE')}
+                        key={`${dishId}-${idx}`} 
+                        onClick={() => order.id && handleToggleItem(order.id, idx, item.status || 'PENDENTE')}
                         className={`flex items-center justify-between group cursor-pointer p-3 rounded-lg transition-all border select-none relative overflow-hidden
                           ${statusColor}
                           hover:brightness-110
@@ -305,7 +306,7 @@ const Kitchen = () => {
                           </div>
                           <div>
                             <p className={`font-medium transition-colors ${isDone ? 'text-gray-500 line-through' : 'text-gray-100'}`}>
-                              {getDishName(item.productId as string)}
+                              {getDishName(dishId as string)}
                             </p>
                             {item.notes && (
                               <div className="flex items-center gap-1 text-xs text-red-300 mt-1 bg-red-900/30 px-1.5 py-0.5 rounded w-fit border border-red-900/50 animate-pulse">
@@ -331,7 +332,7 @@ const Kitchen = () => {
 
                 {activeFilter !== 'ENTREGUE' && (
                   <button 
-                    onClick={() => handleFinishOrder(order.id)}
+                    onClick={() => order.id && handleFinishOrder(order.id)}
                     className="w-full py-4 bg-gray-700 hover:bg-green-600 text-white font-bold uppercase tracking-wider transition-colors text-sm flex items-center justify-center gap-2 border-t border-gray-600"
                   >
                     <CheckCircle size={18} />

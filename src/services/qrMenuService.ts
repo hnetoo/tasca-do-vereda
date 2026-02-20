@@ -1,4 +1,4 @@
-'use server';
+
 
 /**
  * QR Code Menu Service
@@ -48,9 +48,12 @@ export function generateMenuUrl(
   const { menuBase } = normalizeMenuBase(baseUrl);
   const versionParam = version ? `v=${version}` : '';
   const sessionParam = sessionId ? `session=${sessionId}` : '';
-  const params = [sessionParam, versionParam].filter(Boolean).join('&');
+  const tableParam = tableId ? `table=${tableId}` : 'type=public';
+  
+  const params = [sessionParam, versionParam, tableParam].filter(Boolean).join('&');
   const queryString = params ? `?${params}` : '';
-  const path = tableId ? `/menu/${tableId}` : '/menu/public';
+  const path = '/menu';
+  
   return `${menuBase}${path}${queryString}`;
 }
 
@@ -263,12 +266,13 @@ export function generateMarketingUrl(
   const params = new URLSearchParams({
     utm_source: config.source,
     utm_campaign: config.campaignName,
+    type: 'public'
   });
 
   if (config.discountCode) params.append('promo', config.discountCode);
   if (config.expiresAt) params.append('exp', config.expiresAt.getTime().toString());
 
-  return `${menuBase}/menu/public?${params.toString()}`;
+  return `${menuBase}/menu?${params.toString()}`;
 }
 
 /**
@@ -292,18 +296,4 @@ export async function distributeMarketingLink(
   logger.audit('MARKETING_DISTRIBUTION', { platform, url });
 }
 
-const qrMenuService = {
-  generateMenuUrl,
-  generateQRCodeData,
-  generateMenuSessionId,
-  validateRestaurantUrl,
-  generateShareableMenuLink,
-  generateMenuShortCode,
-  generateMenuAccessToken,
-  downloadQRCodeImage,
-  generateQRCodePDF,
-  generateMarketingUrl,
-  distributeMarketingLink
-};
 
-export default qrMenuService;

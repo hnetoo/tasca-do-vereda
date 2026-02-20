@@ -6,9 +6,10 @@ import {
   Shield, Key, Clock, DollarSign, Edit2, Trash2
 } from 'lucide-react';
 import { Employee, Role } from '@/types';
+import EmployeeModal from '@/components/EmployeeModal';
 
 export default function EmployeesPage() {
-  const { employees, roles, addEmployee, updateEmployee, removeEmployee } = useStore();
+  const { employees, addEmployee, updateEmployee, removeEmployee } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -122,6 +123,12 @@ export default function EmployeesPage() {
           </tbody>
         </table>
       </div>
+
+      <EmployeeModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        employee={editingEmployee}
+      />
     </div>
   );
 }

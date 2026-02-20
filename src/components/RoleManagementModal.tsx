@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Shield, ChevronDown, ChevronRight, Check } from 'lucide-react';
-import { DEFAULT_ROLES, permissionDescriptions } from '@/services/permissionsService';
+import { DEFAULT_ROLES, permissionDescriptions } from '@/constants/permissions';
 import { Permission } from '@/types';
 
 interface Props {

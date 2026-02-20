@@ -30,26 +30,41 @@ const QRScanner = () => {
     setIsScanning(false);
     
     try {
-      if (rawValue.includes('/#/menu/')) {
-        const path = rawValue.split('/#/')[1];
-        router.push(`/${path}`);
-        addNotification('success', 'Menu encontrado!');
+      let targetPath = '';
+
+      if (rawValue.includes('/#/menu')) {
+         const parts = rawValue.split('/#/');
+         if (parts.length > 1) {
+            targetPath = '/' + parts[1];
+         }
+      } else if (rawValue.includes('/menu')) {
+         try {
+            const url = new URL(rawValue);
+            targetPath = url.pathname + url.search;
+         } catch {
+            if (rawValue.startsWith('/')) targetPath = rawValue;
+         }
       } else if (rawValue.includes('/#/customer-display/')) {
-        const path = rawValue.split('/#/')[1];
-        router.push(`/${path}`);
-      } else if (rawValue.includes('/menu/')) {
-        const url = new URL(rawValue);
-        router.push(url.pathname + url.search);
-        addNotification('success', 'Menu encontrado!');
+         const path = rawValue.split('/#/')[1];
+         targetPath = `/${path}`;
       } else if (rawValue.includes('/customer-display/')) {
-        const url = new URL(rawValue);
-        router.push(url.pathname + url.search);
-      } else {
-        // Se for texto simples ou outro código
-        addNotification('info', `Código lido: ${rawValue}`);
-        // Aqui poderia integrar com busca de pedidos, etc.
-        setTimeout(() => setIsScanning(true), 2000);
+         try {
+            const url = new URL(rawValue);
+            targetPath = url.pathname + url.search;
+         } catch {
+            if (rawValue.startsWith('/')) targetPath = rawValue;
+         }
       }
+
+      if (targetPath) {
+         router.push(targetPath);
+         addNotification('success', 'Menu/Display encontrado!');
+         return;
+      }
+
+      // Se for texto simples ou outro código
+      addNotification('info', `Código lido: ${rawValue}`);
+      setTimeout(() => setIsScanning(true), 2000);
     } catch (e: unknown) {
       setError(`Formato inválido: ${e instanceof Error ? e.message : String(e)}`);
       setIsScanning(true);

@@ -25,12 +25,8 @@ const paymentLabels: Record<PaymentMethod, string> = {
   TRANSFERENCIA: 'Transferência',
   QR_CODE: 'QR Code',
   CONTA_CORRENTE: 'Conta Corrente',
-  MBWAY: 'MBWay',
-  OUTROS: 'Outros',
-  Cash: 'Dinheiro',
-  Card: 'Cartão',
-  MBWay: 'MBWay',
-  Other: 'Outros'
+  SPLIT: 'Dividido',
+  OTHER: 'Outro',
 };
 
 const extractPayments = (order: Order) => {
@@ -47,7 +43,7 @@ const extractPayments = (order: Order) => {
 };
 
 const Reports = () => {
-  const { orders, menu } = useStore();
+  const { orders, dishes: menu } = useStore();
   const [activeMetricTab, setActiveMetricTab] = useState<'VENDAS' | 'LUCRO'>('VENDAS');
   const [salesView, setSalesView] = useState<'DIA' | 'SEMANA' | 'MES' | 'ANO'>('MES');
   const [paymentPeriod, setPaymentPeriod] = useState<'DIA' | 'SEMANA' | 'MES' | 'ANO'>('MES');
@@ -64,15 +60,16 @@ const Reports = () => {
   const bestSellersData = useMemo(() => {
     const itemCounts: Record<string, number> = {};
     closedOrders.forEach(order => {
-      order.items.forEach(item => {
-        itemCounts[item.name] = (itemCounts[item.name] || 0) + item.quantity;
+      (order.items || []).forEach(item => {
+        const dishName = item.dish?.name || menu.find(d => d.id === item.dishId)?.name || 'Desconhecido';
+        itemCounts[dishName] = (itemCounts[dishName] || 0) + (item.quantity || 0);
       });
     });
     return Object.entries(itemCounts)
       .map(([name, quantity]) => ({ name, quantity }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5);
-  }, [closedOrders]);
+  }, [closedOrders, menu]);
 
   const monthlyComparison = useMemo(() => {
     const now = new Date();
@@ -83,17 +80,17 @@ const Reports = () => {
 
     const currentTotal = closedOrders
       .filter(o => {
-        const d = new Date(o.createdAt);
+        const d = new Date(o.createdAt || o.created_at || new Date());
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       })
-      .reduce((sum, o) => sum + o.total, 0);
+      .reduce((sum, o) => sum + (o.total || 0), 0);
 
     const prevTotal = closedOrders
       .filter(o => {
-        const d = new Date(o.createdAt);
+        const d = new Date(o.createdAt || o.created_at || new Date());
         return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
       })
-      .reduce((sum, o) => sum + o.total, 0);
+      .reduce((sum, o) => sum + (o.total || 0), 0);
 
     const growth = prevTotal === 0 ? 0 : ((currentTotal - prevTotal) / prevTotal) * 100;
 
@@ -117,7 +114,8 @@ const Reports = () => {
   const generateReport = async () => {
       setLoadingReport(true);
       try {
-          const rep = await generateMonthlyReport(orders, menu);
+          const currentMonth = new Date().toLocaleString('pt-AO', { month: 'long' });
+          const rep = await generateMonthlyReport(orders, menu, currentMonth);
           setReport(rep);
       } catch (error) {
           console.error("Failed to generate report", error);
@@ -348,7 +346,7 @@ const Reports = () => {
                            <td className="px-8 py-6">
                               <div className="flex items-center gap-4">
                                  <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 group-hover:border-primary/50 transition-colors">
-                                    <img src={dish?.image} className="w-full h-full object-cover" />
+                                    <img src={dish?.imageUrl} className="w-full h-full object-cover" />
                                  </div>
                                  <span className="font-bold text-white text-sm">{item.name}</span>
                               </div>

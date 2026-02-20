@@ -8,8 +8,9 @@ export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('[SUPABASE ERROR] Missing environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  console.error('[SUPABASE ERROR] Please check your .env.local file or Vercel environment variables (ensure no quotes or extra spaces).');
+  const errorMessage = '[SUPABASE ERROR] Missing environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. Please check your .env.local file or Vercel environment variables (ensure no quotes or extra spaces).';
+  console.error(errorMessage);
+  throw new Error(errorMessage);
 } else {
   console.log('[SUPABASE CONFIG] URL:', supabaseUrl);
   console.log('[SUPABASE CONFIG] Key:', supabaseAnonKey ? '***DEFINED***' : 'UNDEFINED');

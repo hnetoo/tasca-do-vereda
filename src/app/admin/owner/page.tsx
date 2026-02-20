@@ -105,7 +105,7 @@ export default function OwnerDashboard() {
       .filter(o => o.status === 'FECHADO' || o.status === 'PAID')
       .reduce((acc, o) => acc + Number(o.total || 0), 0);
 
-    const activeOrders = orders.filter(o => ['PENDENTE', 'PREPARANDO', 'PRONTO'].includes(o.status)).length;
+    const activeOrders = orders.filter(o => o.status && ['PENDENTE', 'PREPARANDO', 'PRONTO'].includes(o.status)).length;
     
     // Expenses (Mock if no transactions)
     const totalExpenses = transactions

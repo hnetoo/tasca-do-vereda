@@ -4,9 +4,9 @@ import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { RealtimePayload } from '@/types';
 
-export const useRealtimeSync = (
+export const useRealtimeSync = <T = any>(
   table: string,
-  callback: (payload: RealtimePayload) => void,
+  callback: (payload: RealtimePayload<T>) => void,
   filter?: { column: string; value: string | number }
 ) => {
   useEffect(() => {
@@ -25,7 +25,7 @@ export const useRealtimeSync = (
           },
           (payload) => {
             console.log(`Mudança real-time em ${table} (filtrado por ${filter.column}=${filter.value}):`, payload);
-            callback(payload as unknown as RealtimePayload);
+            callback(payload as unknown as RealtimePayload<T>);
           }
         );
     } else {
@@ -36,7 +36,7 @@ export const useRealtimeSync = (
           { event: '*', schema: 'public', table: table },
           (payload) => {
             console.log(`Mudança real-time em ${table}:`, payload);
-            callback(payload as unknown as RealtimePayload);
+            callback(payload as unknown as RealtimePayload<T>);
           }
         );
     }

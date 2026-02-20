@@ -2,9 +2,9 @@ import { useStore } from '../store/useStore';
 import { logger } from './logger';
 
 export interface CreateOrderDTO {
-  tableId: number;
+  tableId: string;
   items: {
-    productId: string;
+    dishId: string;
     quantity: number;
     notes?: string;
   }[];
@@ -34,7 +34,7 @@ class OrderService {
     const missingItems: string[] = [];
 
     for (const item of items) {
-      const product = store.products.find(d => d.id === item.productId);
+      const product = store.dishes.find(d => d.id === item.dishId);
       if (!product) continue;
 
       if (product.track_stock) {
@@ -71,11 +71,11 @@ class OrderService {
 
       // 2. Create Order in Store (Database)
       // We use the store's action which handles ID generation and state update
-      const orderId = store.createNewOrder(data.tableId, data.customerName);
+      const orderId = store.createNewOrder(data.tableId, data.customerName || '');
       
       // 3. Add Items and Deduct Stock
       for (const item of data.items) {
-        const product = store.products.find(d => d.id === item.productId);
+        const product = store.dishes.find(d => d.id === item.dishId);
         if (product) {
             // Add to order
             store.addToOrder(data.tableId, product, item.quantity, item.notes || '', orderId || '');
@@ -83,7 +83,7 @@ class OrderService {
             // Deduct stock if tracked
             if (product.track_stock) {
                 const newQuantity = Math.max(0, (product.stock_quantity || 0) - item.quantity);
-                store.updateProduct({ ...product, stock_quantity: newQuantity });
+                store.updateDish({ ...product, stock_quantity: newQuantity });
                 logger.info(`Stock deducted for ${product.name}`, { productId: product.id, qty: item.quantity, newStock: newQuantity }, 'OrderService');
             }
         }
@@ -163,8 +163,8 @@ class OrderService {
       const anyPreparing = (order.items || []).some(i => i.status === 'PREPARANDO');
       
       return {
-          id: order.id,
-          status: order.status,
+          id: order.id!,
+          status: order.status || 'PENDENTE',
           kitchenStatus: allReady ? 'PRONTO' : anyPreparing ? 'PREPARANDO' : 'PENDENTE'
       };
   }

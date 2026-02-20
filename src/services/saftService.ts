@@ -26,14 +26,14 @@ export const generateSAFT = async (
 
     const closedOrders = orders.filter(o => 
       o.status === 'FECHADO' && 
-      new Date(o.timestamp).getMonth() === period.month &&
-      new Date(o.timestamp).getFullYear() === period.year
+      new Date(o.timestamp || o.created_at || new Date().toISOString()).getMonth() === period.month &&
+      new Date(o.timestamp || o.created_at || new Date().toISOString()).getFullYear() === period.year
     );
 
     await validationService.yield();
 
     // Filtra clientes únicos que tiveram transações no período
-    const customerIdsInPeriod = new Set(closedOrders.map(o => o.customerId || 'CONSUMIDOR_FINAL'));
+    const customerIdsInPeriod = new Set(closedOrders.map(o => o.customer_id || 'CONSUMIDOR_FINAL'));
     const activeCustomers = customers.filter(c => customerIdsInPeriod.has(c.id));
 
     await validationService.yield();
@@ -76,28 +76,29 @@ export const generateSAFT = async (
     let invoicesXml = '';
     for (let i = 0; i < closedOrders.length; i++) {
       const o = closedOrders[i];
-      const invoiceDate = new Date(o.timestamp).toISOString().split('T')[0];
-      const invoiceTime = new Date(o.timestamp).toISOString();
+      const timestamp = o.timestamp || o.created_at || new Date().toISOString();
+      const invoiceDate = new Date(timestamp).toISOString().split('T')[0];
+      const invoiceTime = new Date(timestamp).toISOString();
       
       let linesXml = '';
       const items = o.items || [];
       for (let j = 0; j < items.length; j++) {
         const item = items[j];
-        const dish = menu.find(m => m.id === item.productId);
+        const dish = menu.find(m => m.id === item.dish_id);
         const taxCode = dish?.tax_code || 'NOR';
         const taxRate = (settings.taxRate as number) || 14;
         linesXml += `
         <Line>
           <LineNumber>${j + 1}</LineNumber>
-          <ProductCode>${item.productId}</ProductCode>
+          <ProductCode>${item.dish_id}</ProductCode>
           <ProductDescription>${dish?.name || 'Item Desconhecido'}</ProductDescription>
-          <Quantity>${item.quantity}</Quantity>
+          <Quantity>${Number(item.quantity || 0)}</Quantity>
           <UnitOfMeasure>Un</UnitOfMeasure>
-          <UnitPrice>${item.unitPrice.toFixed(2)}</UnitPrice>
+          <UnitPrice>${Number(item.unit_price || 0).toFixed(2)}</UnitPrice>
           <TaxPointDate>${invoiceDate}</TaxPointDate>
           <Description>${dish?.name || 'Item Desconhecido'}</Description>
           <DebitAmount>0.00</DebitAmount>
-          <CreditAmount>${(item.quantity * item.unitPrice).toFixed(2)}</CreditAmount>
+          <CreditAmount>${(Number(item.quantity || 0) * Number(item.unit_price || 0)).toFixed(2)}</CreditAmount>
           <Tax>
             <TaxType>IVA</TaxType>
             <TaxCountryRegion>AO</TaxCountryRegion>
@@ -109,7 +110,7 @@ export const generateSAFT = async (
 
       invoicesXml += `
       <Invoice>
-        <InvoiceNo>${o.invoiceNumber}</InvoiceNo>
+        <InvoiceNo>${o.invoice_number}</InvoiceNo>
         <DocumentStatus>
           <InvoiceStatus>N</InvoiceStatus>
           <InvoiceStatusDate>${invoiceTime}</InvoiceStatusDate>
@@ -123,12 +124,12 @@ export const generateSAFT = async (
         <InvoiceDate>${invoiceDate}</InvoiceDate>
         <InvoiceType>FT</InvoiceType>
         <SourceID>1</SourceID>
-        <CustomerID>${o.customerId || 'CONSUMIDOR_FINAL'}</CustomerID>
+        <CustomerID>${o.customer_id || 'CONSUMIDOR_FINAL'}</CustomerID>
          ${linesXml}
          <DocumentTotals>
-           <TaxPayable>${(o.taxTotal || 0).toFixed(2)}</TaxPayable>
-           <NetTotal>${(o.total - (o.taxTotal || 0)).toFixed(2)}</NetTotal>
-           <GrossTotal>${o.total.toFixed(2)}</GrossTotal>
+           <TaxPayable>${(o.tax_total || 0).toFixed(2)}</TaxPayable>
+           <NetTotal>${((o.total || 0) - (o.tax_total || 0)).toFixed(2)}</NetTotal>
+           <GrossTotal>${(o.total || 0).toFixed(2)}</GrossTotal>
          </DocumentTotals>
        </Invoice>`;
 
@@ -184,7 +185,7 @@ export const generateSAFT = async (
     <SalesInvoices>
       <NumberOfEntries>${closedOrders.length}</NumberOfEntries>
       <TotalDebit>0.00</TotalDebit>
-      <TotalCredit>${closedOrders.reduce((acc, o) => acc + o.total, 0).toFixed(2)}</TotalCredit>
+      <TotalCredit>${closedOrders.reduce((acc, o) => acc + (o.total || 0), 0).toFixed(2)}</TotalCredit>
       ${invoicesXml}
     </SalesInvoices>
   </SourceDocuments>

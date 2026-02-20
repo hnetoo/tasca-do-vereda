@@ -1,4 +1,4 @@
-'use server';
+
 
 import { disasterRecoveryService } from '@/services/disasterRecoveryService';
 import { dlpAlertService } from '@/services/dlpAlertService';

@@ -8,10 +8,12 @@ export interface UISlice {
   settings: SystemSettings;
   notifications: Notification[];
   isSidebarCollapsed: boolean;
+  isMobileMenuOpen: boolean;
   addNotification: (type: Notification['type'], message: string) => void;
   removeNotification: (id: string) => void;
   updateSettings: (settings: Partial<SystemSettings>) => void;
   toggleSidebar: () => void;
+  toggleMobileMenu: () => void;
   triggerSync: () => Promise<void>;
 }
 
@@ -54,6 +56,7 @@ export const createUISlice: StateCreator<
   },
   notifications: [],
   isSidebarCollapsed: false,
+  isMobileMenuOpen: false,
   
   addNotification: (type, message) => {
     const id = Math.random().toString(36).substring(7);
@@ -77,6 +80,10 @@ export const createUISlice: StateCreator<
   
   toggleSidebar: () => set((state: StoreState) => ({ 
     isSidebarCollapsed: !state.isSidebarCollapsed 
+  })),
+
+  toggleMobileMenu: () => set((state: StoreState) => ({
+    isMobileMenuOpen: !state.isMobileMenuOpen
   })),
 
   triggerSync: async () => {

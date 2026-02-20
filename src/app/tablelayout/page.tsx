@@ -18,19 +18,24 @@ const TableLayout = () => {
     addNotification, currentUser, activeOrders, saveStatus 
   } = useStore();
   const [isEditMode, setIsEditMode] = useState(false);
-  const [draggedTableId, setDraggedTableId] = useState<number | null>(null);
+  const [draggedTableId, setDraggedTableId] = useState<string | null>(null);
   const [dragOverPos, setDragOverPos] = useState<{x: number, y: number} | null>(null);
   const [activeZone, setActiveZone] = useState<TableZone>('INTERIOR');
-  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Atualizar o tempo a cada minuto para o indicador de ocupação
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
   const isAdmin = currentUser?.role === 'ADMIN';
+
+    useEffect(() => {
+        if (isAdmin && tables.length === 0) {
+            MOCK_TABLES.forEach((t: Table) => addTable(t));
+        }
+    }, [isAdmin, tables, addTable]);
 
   const GRID_SIZE = 10; 
   const GRID_ROWS = 8; 
@@ -44,13 +49,13 @@ const TableLayout = () => {
     maximumFractionDigits: 0 
   }).format(val);
 
-  const getTableStats = (tableId: number) => {
-    const tableOrders = activeOrders.filter(o => o.tableId === tableId && o.status === 'ABERTO');
-    const total = tableOrders.reduce((acc, o) => acc + o.total, 0);
+  const getTableStats = (tableId: string) => {
+    const tableOrders = activeOrders.filter(o => o.table_id === tableId && o.status === 'ABERTO');
+    const total = tableOrders.reduce((acc, o) => acc + (o.total || 0), 0);
     
     let timeElapsed = '';
     if (tableOrders.length > 0) {
-      const earliest = new Date(Math.min(...tableOrders.map(o => new Date(o.timestamp).getTime())));
+      const earliest = new Date(Math.min(...tableOrders.map(o => new Date(o.timestamp || new Date()).getTime())));
       const diffMs = currentTime.getTime() - earliest.getTime();
       const diffMins = Math.floor(diffMs / 60000);
       
@@ -68,7 +73,8 @@ const TableLayout = () => {
 
   const handleAddTable = () => {
     const currentTables = tables || [];
-    const nextId = currentTables.length > 0 ? Math.max(...currentTables.map(t => t.id)) + 1 : 1;
+    const maxId = currentTables.length > 0 ? Math.max(...currentTables.map(t => parseInt(t.id) || 0)) : 0;
+    const nextId = String(maxId + 1);
     
     let foundX = 0, foundY = 0;
     let found = false;
@@ -88,12 +94,22 @@ const TableLayout = () => {
       id: nextId,
       name: activeZone === 'BALCAO' ? `Lugar ${nextId}` : activeZone === 'EXTERIOR' ? `Pátio ${nextId}` : `Mesa ${nextId}`,
       seats: activeZone === 'BALCAO' ? 1 : 4,
-      status: 'LIVRE',
+      status: 'AVAILABLE',
       x: foundX,
       y: foundY,
       zone: activeZone,
       shape: activeZone === 'BALCAO' ? 'RECTANGLE' : 'SQUARE',
-      rotation: activeZone === 'BALCAO' ? 90 : 0
+      rotation: activeZone === 'BALCAO' ? 90 : 0,
+      number: parseInt(nextId),
+      is_active: true,
+      color: null,
+      created_at: new Date().toISOString(),
+      group_id: null,
+      height: null,
+      label: null,
+      updated_at: new Date().toISOString(),
+      user_id: null,
+      width: null,
     };
 
     addTable(newTable);
@@ -101,12 +117,12 @@ const TableLayout = () => {
     addNotification('success', `${activeZone} - Mesa ${nextId} adicionada.`);
   };
 
-  const handleDragStart = (e: React.DragEvent, id: number) => {
+  const handleDragStart = (e: React.DragEvent, id: string) => {
     if (!isEditMode) return;
     e.stopPropagation();
     try {
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', id.toString());
+      e.dataTransfer.setData('text/plain', id);
       e.dataTransfer.setData('application/json', JSON.stringify({ id, type: 'TABLE' }));
     } catch (err) {
       console.error('Drag start error:', err);
@@ -343,7 +359,7 @@ const TableLayout = () => {
                           onClick={() => toggleStatus(table)}
                           style={{ transform: `rotate(${table.rotation}deg)` }}
                           className={`w-full h-full border-2 flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 group relative
-                            ${getStatusColor(table.status)}
+                            ${getStatusColor((table.status || 'AVAILABLE') as TableStatus)}
                             ${isSelected ? 'ring-4 ring-primary ring-offset-4 ring-offset-background z-20 scale-105 shadow-glow' : 'hover:scale-105'}
                             ${isEditMode ? 'cursor-grab active:cursor-grabbing' : ''}
                             ${table.shape === 'CIRCLE' ? 'rounded-full' : table.shape === 'RECTANGLE' ? 'rounded-lg' : 'rounded-2xl'}
@@ -371,7 +387,7 @@ const TableLayout = () => {
                                </div>
                              </div>
                              
-                             {table.status === 'OCUPADO' && !isEditMode && (
+                             {table.status === 'OCCUPIED' && !isEditMode && (
                                <div className="flex flex-col items-center animate-in fade-in duration-500">
                                  <div className="flex items-center gap-1 text-[9px] font-mono font-bold text-white mb-0.5">
                                     <Clock size={10} className="text-primary" /> {timeElapsed}
@@ -382,13 +398,13 @@ const TableLayout = () => {
                                </div>
                              )}
 
-                             {!table.currentOrderId && table.status !== 'OCUPADO' && !table.status.includes('PAGAMENTO') && isEditMode && (
+                             {!table.activeOrderIds?.length && (table.status || 'AVAILABLE') !== 'OCCUPIED' && !(table.status || '').includes('PAGAMENTO') && isEditMode && (
                                <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest bg-black/40 px-1.5 py-0.5 rounded opacity-70">
                                   Editar
                                </div>
                              )}
 
-                             {table.status === 'PAGAMENTO' && !isEditMode && (
+                             {table.status === 'PAYMENT' && !isEditMode && (
                                <div className="flex flex-col items-center">
                                  <div className="text-[10px] font-mono font-black">FECHAR</div>
                                  <div className="text-[9px] font-mono font-bold">{formatKz(total)}</div>
@@ -397,7 +413,7 @@ const TableLayout = () => {
                           </div>
 
                           {/* Hover badge for capacity in occupied mode */}
-                          {table.status === 'OCUPADO' && !isEditMode && (
+                          {table.status === 'OCCUPIED' && !isEditMode && (
                              <div className="absolute -top-1 -right-1 bg-black text-white text-[8px] font-black p-1 rounded-full border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
                                <Users size={8} />
                              </div>
@@ -444,7 +460,7 @@ const TableLayout = () => {
                       <input 
                         type="text" 
                         className="w-full bg-white/5 border border-white/10 p-3 rounded-xl focus:border-primary focus:outline-none text-white font-bold text-sm"
-                        value={selectedTable.name}
+                        value={selectedTable.name || ''}
                         onChange={(e) => handleUpdateProperty('name', e.target.value)}
                       />
                    </div>
@@ -452,9 +468,9 @@ const TableLayout = () => {
                    <div className="space-y-4">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Lugares (PAX)</label>
                       <div className="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-white/10">
-                        <button onClick={() => handleUpdateProperty('seats', Math.max(1, selectedTable.seats - 1))} className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors">-</button>
-                        <span className="flex-1 text-center font-bold text-white">{selectedTable.seats} Lugares</span>
-                        <button onClick={() => handleUpdateProperty('seats', selectedTable.seats + 1)} className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors">+</button>
+                        <button onClick={() => handleUpdateProperty('seats', Math.max(1, (selectedTable.seats || 0) - 1))} className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors">-</button>
+                        <span className="flex-1 text-center font-bold text-white">{selectedTable.seats || 0} Lugares</span>
+                        <button onClick={() => handleUpdateProperty('seats', (selectedTable.seats || 0) + 1)} className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center hover:bg-white/20 transition-colors">+</button>
                       </div>
                    </div>
 
@@ -482,8 +498,8 @@ const TableLayout = () => {
 
                    <div className="space-y-4">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Orientação (Graus)</label>
-                      <button onClick={() => handleUpdateProperty('rotation', (selectedTable.rotation + 90) % 360)} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-3 text-sm font-bold text-white hover:bg-white/10 transition-all">
-                         <RotateCw size={18} className="text-primary" /> Rodar Objeto ({selectedTable.rotation}°)
+                      <button onClick={() => handleUpdateProperty('rotation', ((selectedTable.rotation || 0) + 90) % 360)} className="w-full py-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-3 text-sm font-bold text-white hover:bg-white/10 transition-all">
+                         <RotateCw size={18} className="text-primary" /> Rodar Objeto ({selectedTable.rotation || 0}°)
                       </button>
                    </div>
 
