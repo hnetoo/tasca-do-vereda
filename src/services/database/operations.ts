@@ -1002,7 +1002,17 @@ export const databaseOperations = {
         name: settings.name
       };
       const { error } = await supabase.from('settings').upsert(dbSettings);
-      if (error) throw error;
+      if (error) {
+        // Fallback: If currency column is missing, try saving without it
+        if (error.message?.includes('currency') || error.details?.includes('currency')) {
+            logger.warn('Currency column missing in settings table, retrying without it', { error: error.message }, 'DATABASE');
+            const { currency, ...settingsWithoutCurrency } = dbSettings;
+            const { error: retryError } = await supabase.from('settings').upsert(settingsWithoutCurrency);
+            if (retryError) throw retryError;
+            return true;
+        }
+        throw error;
+      }
       return true;
     }, 'save settings');
   },
