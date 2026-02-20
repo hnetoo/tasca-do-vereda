@@ -69,7 +69,7 @@ export class BackupService {
     /**
      * Restore from a local backup file
      */
-    async restoreFromLocalFile(filepath: string): Promise<{ success: boolean; report: any }> {
+    async restoreFromLocalFile(filepath: string): Promise<{ success: boolean; data: any }> {
         try {
             logger.info(`Restoring from local file: ${filepath}`, {}, 'BACKUP');
             

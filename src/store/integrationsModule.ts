@@ -129,7 +129,8 @@ export function setupIntegrationsModule() {
           });
 
           webhook.lastTriggered = new Date();
-          webhook.failureCount = response.ok ? 0 : webhook.failureCount + 1;
+          const failureCount = webhook.failureCount ?? 0;
+          webhook.failureCount = response.ok ? 0 : failureCount + 1;
 
           integrationsState.addIntegrationLog({
             id: Math.random().toString(36).substring(7),
@@ -142,7 +143,7 @@ export function setupIntegrationsModule() {
             duration: 0
           });
         } catch (error) {
-          webhook.failureCount++;
+          webhook.failureCount = (webhook.failureCount ?? 0) + 1;
           integrationsState.addIntegrationLog({
             id: Math.random().toString(36).substring(7),
             integrationName: `Webhook: ${webhook.name}`,

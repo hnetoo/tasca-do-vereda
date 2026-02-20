@@ -14,7 +14,7 @@ import { formatKz } from '@/services/utils/currencyFormatter';
 import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
-const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE', 'MBWAY', 'OUTRO'];
+const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE', 'SPLIT', 'OTHER'];
 
 const paymentLabels: Record<PaymentMethod, string> = {
   NUMERARIO: 'Numerário',
@@ -22,17 +22,13 @@ const paymentLabels: Record<PaymentMethod, string> = {
   TRANSFERENCIA: 'Transferência',
   QR_CODE: 'QR Code',
   CONTA_CORRENTE: 'Conta Corrente',
-  MBWAY: 'MBWay',
-  OUTRO: 'Outros',
-  CASH: 'Dinheiro',
-  CARD: 'Cartão',
-  MULTIBANCO: 'Multibanco',
-  TRANSFER: 'Transferência'
+  SPLIT: 'Dividido',
+  OTHER: 'Outro',
 };
 
 const Dashboard = () => {
   const { 
-    activeOrders, orders, customers, menu, settings, expenses, revenues,
+    activeOrders, orders, customers, dishes: menu, settings, expenses, revenues,
     getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange, isAuthenticated
   } = useStore();
 
@@ -159,15 +155,12 @@ const Dashboard = () => {
         TRANSFERENCIA: 0,
         QR_CODE: 0,
         CONTA_CORRENTE: 0,
-        MBWAY: 0,
-        OUTRO: 0,
-        CASH: 0,
-        CARD: 0,
-        MULTIBANCO: 0,
-        TRANSFER: 0
+        SPLIT: 0,
+        OTHER: 0,
       };
+
       closed.forEach((order: Order) => {
-        const orderDate = normalizeDate(getOrderDate((order.timestamp || order.createdAt || order.updatedAt) || undefined));
+        const orderDate = normalizeDate(getOrderDate((order.timestamp || order.createdAt || order.updated_at) || undefined));
         if (orderDate.getTime() !== dayKey) return;
         extractPayments(order).forEach(payment => {
           if (salesByMethod[payment.method] !== undefined) {
@@ -223,16 +216,8 @@ const Dashboard = () => {
     title: 'Relatório Executivo - Tasca Do VEREDA'
   };
 
-  const handleExportPayments = async () => {
-    const periodLabel = paymentPeriod === 'ANO'
-      ? `Ano ${paymentYear}`
-      : paymentPeriod === 'MES'
-      ? new Date().toLocaleDateString('pt-AO', { month: 'long', year: 'numeric' })
-      : paymentPeriod === 'SEMANA'
-      ? 'Últimos 7 dias'
-      : 'Hoje';
-
-    const data = paymentDailyData.map(row => {
+  const paymentExportData = useMemo(() => {
+    return paymentDailyData.map(row => {
       const entry: Record<string, unknown> = {
         data: row.date.toLocaleDateString('pt-AO'),
         total: formatKz(row.totalSales),
@@ -243,27 +228,22 @@ const Dashboard = () => {
       });
       return entry;
     });
+  }, [paymentDailyData, paymentMethods, paymentMetric]);
 
-    const columns = [
+  const paymentExportColumns = useMemo(() => {
+    const cols = [
       { header: 'Data', dataKey: 'data' },
       { header: 'Total', dataKey: 'total' },
       { header: 'Lucro', dataKey: 'lucro' },
-      ...paymentMethods.map(method => ({ header: paymentLabels[method], dataKey: paymentLabels[method] }))
     ];
-
-    await exportChartToPDF({
-      fileName: `pagamentos_diarios_${new Date().toISOString().split('T')[0]}`,
-      title: 'Pagamentos por Dia',
-      subtitle: paymentMetric === 'VENDAS' ? 'Vendas por método' : 'Lucro bruto por método',
-      periodLabel,
-      columns,
-      data,
-      chartElement: paymentChartRef.current
+    paymentMethods.forEach(method => {
+      cols.push({ header: paymentLabels[method], dataKey: paymentLabels[method] });
     });
-  };
+    return cols;
+  }, []);
 
   return (
-    <div className="p-4 sm:p-6 h-full overflow-y-auto no-scrollbar bg-slate-950 text-white">
+    <div className="p-6 pb-24 space-y-8 animate-in fade-in duration-500">
       
       {/* Header Section */}
       <header className="flex flex-col md:flex-row justify-between items-center md:items-end mb-8 gap-2 md:gap-4">
@@ -313,11 +293,29 @@ const Dashboard = () => {
         </div>
       </header>
 
+      {aiAnalysis && (
+        <div className="bg-slate-800 backdrop-blur-xl border border-white/5 p-6 rounded-xl mb-6">
+          <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+            <Sparkles size={20} className="text-primary"/> Análise Tática (IA)
+          </h3>
+          <p className="text-slate-300 mb-2">{aiAnalysis.summary}</p>
+          <p className="text-slate-400 text-sm">
+            <span className="font-bold">Recomendação:</span> {aiAnalysis.recommendation}
+          </p>
+          <p className="text-slate-400 text-sm">
+            <span className="font-bold">Tendência:</span>{' '}
+            <span className={`font-bold ${aiAnalysis.trend === 'up' ? 'text-emerald-400' : aiAnalysis.trend === 'down' ? 'text-red-400' : 'text-slate-400'}`}>
+              {aiAnalysis.trend === 'up' ? 'Em Alta' : aiAnalysis.trend === 'down' ? 'Em Baixa' : 'Estável'}
+            </span>
+          </p>
+        </div>
+      )}
+
       {/* Bento Grid Layout */}
-      <div className="flex flex-col md:grid md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6 auto-rows-[minmax(140px,auto)]">
+      <div className="flex flex-col md:grid md:grid-cols-4 lg:grid-cols-4 gap-4 mb-6 auto-rows-[minmax(140px,auto)]">
         
         {/* Total Revenue - Large Card */}
-        <div className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 bg-slate-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-3xl relative overflow-hidden group hover:border-primary/20 transition-colors">
+        <div className="col-span-1 bg-slate-800 backdrop-blur-xl border border-white/5 p-6 rounded-xl relative overflow-hidden group hover:border-primary/20 transition-colors">
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
              <DollarSign size={100} />
           </div>
@@ -336,7 +334,7 @@ const Dashboard = () => {
         </div>
 
         {/* Total Profit - Large Card */}
-        <div className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 bg-slate-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-3xl relative overflow-hidden group hover:border-emerald-500/20 transition-colors">
+        <div className="col-span-1 bg-slate-800 backdrop-blur-xl border border-white/5 p-6 rounded-xl relative overflow-hidden group hover:border-emerald-500/20 transition-colors">
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
              <TrendingUp size={100} />
           </div>
@@ -355,7 +353,7 @@ const Dashboard = () => {
         </div>
 
         {/* Active Orders - Standard Card */}
-        <div className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 bg-slate-900/50 backdrop-blur-xl border border-white/5 p-6 rounded-3xl relative overflow-hidden group hover:border-blue-500/20 transition-colors">
+        <div className="col-span-1 bg-slate-800 backdrop-blur-xl border border-white/5 p-6 rounded-xl relative overflow-hidden group hover:border-blue-500/20 transition-colors">
           <div className="absolute -bottom-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12">
              <ShoppingBag size={100} />
           </div>
@@ -383,7 +381,7 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions / Status - Tall Card */}
-        <div className="col-span-1 md:col-span-2 lg:col-span-2 row-span-2 bg-gradient-to-br from-primary/10 to-slate-900 border border-primary/20 p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between">
+        <div className="col-span-1 row-span-2 bg-slate-800 border border-white/5 p-6 rounded-xl relative overflow-hidden flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 text-white text-xs font-black uppercase tracking-widest mb-6">
               <Sparkles size={14} className="text-primary"/>
@@ -418,6 +416,129 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Performance Chart */}
+        <div className="col-span-3 row-span-2 bg-slate-800 backdrop-blur-xl border border-white/5 p-6 rounded-xl relative overflow-hidden flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-white">Performance Semanal</h3>
+            <select
+              value={performanceRange}
+              onChange={(e) => setPerformanceRange(e.target.value as 'SEMANA' | '30D')}
+              className="bg-slate-800 text-white text-sm rounded-lg px-3 py-1 focus:ring-primary focus:border-primary"
+            >
+              <option value="SEMANA">Esta Semana</option>
+              <option value="30D">Últimos 30 Dias</option>
+            </select>
+          </div>
+          <div className="flex-1 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" stroke="#64748b" tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--background))', border: 'none', borderRadius: '8px' }}
+                  itemStyle={{ color: 'hsl(var(--foreground))' }}
+                  labelStyle={{ color: 'hsl(var(--primary))' }}
+                />
+                <Area type="monotone" dataKey="vendas" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorUv)" />
+                <Area type="monotone" dataKey="lucro" stroke="#82ca9d" fillOpacity={1} fill="url(#colorPv)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Payments by Day */}
+      <div className="bg-slate-900 backdrop-blur-xl border border-white/5 p-6 rounded-xl relative overflow-hidden">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+          <h3 className="text-lg font-bold text-white mb-2 md:mb-0">Pagamentos por Dia</h3>
+          <div className="flex flex-wrap gap-2">
+            <div className="flex rounded-lg border border-slate-700">
+              {['DIA', 'SEMANA', 'MES', 'ANO'].map(period => (
+                <button
+                  key={period}
+                  onClick={() => setPaymentPeriod(period as 'DIA' | 'SEMANA' | 'MES' | 'ANO')}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    paymentPeriod === period
+                      ? 'bg-primary text-slate-950'
+                      : 'text-slate-400 hover:bg-slate-800'
+                  } first:rounded-l-lg last:rounded-r-lg transition-colors`}
+                >
+                  {period}
+                </button>
+              ))}
+            </div>
+            <div className="flex rounded-lg border border-slate-700">
+              {['VENDAS', 'LUCRO'].map(metric => (
+                <button
+                  key={metric}
+                  onClick={() => setPaymentMetric(metric as 'VENDAS' | 'LUCRO')}
+                  className={`px-4 py-2 text-sm font-medium ${
+                    paymentMetric === metric
+                      ? 'bg-primary text-slate-950'
+                      : 'text-slate-400 hover:bg-slate-800'
+                  } first:rounded-l-lg last:rounded-r-lg transition-colors`}
+                >
+                  {metric}
+                </button>
+              ))}
+            </div>
+            {paymentPeriod === 'ANO' && (
+              <select
+                value={paymentYear}
+                onChange={(e) => setPaymentYear(parseInt(e.target.value))}
+                className="bg-slate-800 text-white text-sm rounded-lg px-3 py-1 focus:ring-primary focus:border-primary border border-slate-700"
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            )}
+            <ExportButton 
+              data={paymentExportData}
+              columns={paymentExportColumns}
+              fileName={`pagamentos_${paymentPeriod}_${new Date().toISOString().split('T')[0]}`}
+              title={`Relatório de Pagamentos - ${paymentPeriod}`}
+            />
+          </div>
+        </div>
+        <div ref={paymentChartRef} className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={paymentChartData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+              <XAxis dataKey="name" stroke="#64748b" tickLine={false} axisLine={false} />
+              <YAxis stroke="#64748b" tickLine={false} axisLine={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: 'none', borderRadius: '8px' }}
+                itemStyle={{ color: 'hsl(var(--foreground))' }}
+                labelStyle={{ color: 'hsl(var(--primary))' }}
+                formatter={(value: number) => formatKz(value)}
+              />
+              {paymentMethods.map(method => (
+                <Bar key={method} dataKey={method} stackId="a" fill={
+                  method === 'NUMERARIO' ? '#facc15' : // yellow-400
+                  method === 'TPA' ? '#3b82f6' :      // blue-500
+                  method === 'TRANSFERENCIA' ? '#10b981' : // emerald-500
+                  method === 'QR_CODE' ? '#ef4444' :    // red-500
+                  method === 'CONTA_CORRENTE' ? '#a855f7' : // purple-500
+                  method === 'SPLIT' ? '#ec4899' :     // pink-500
+                  '#64748b' // slate-500
+                } />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

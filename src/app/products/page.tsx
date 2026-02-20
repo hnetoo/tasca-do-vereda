@@ -71,7 +71,7 @@ const Products = () => {
 
   const compressImage = (base64: string): Promise<string> => {
     return new Promise((resolve, reject) => {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
@@ -100,7 +100,7 @@ const Products = () => {
           reject(new Error('Canvas context not available'));
         }
       };
-      img.onerror = (err) => reject(err);
+      img.onerror = (err: any) => reject(err);
       img.src = base64;
     });
   };

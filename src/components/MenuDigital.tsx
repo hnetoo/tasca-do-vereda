@@ -16,7 +16,16 @@ export default function MenuDigital() {
   const mapToProduct = (row: any): Product => {
     if (!row) return {} as Product;
     return {
+      // Base Row properties (snake_case)
+      ...row,
       id: row.id,
+      category_id: row.category_id,
+      image_url: row.image_url || row.image,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      is_active: row.is_active ?? row.is_available ?? true,
+      
+      // Extended properties (camelCase aliases)
       name: row.name,
       description: row.description,
       price: Number(row.price),
@@ -38,7 +47,7 @@ export default function MenuDigital() {
       max_stock_quantity: row.max_stock_quantity ?? row.quantidade_maxima ?? 0,
       unit: row.unit || row.unidade_medida || 'un',
       supplier_id: row.supplier_id || row.fornecedor_padrao_id
-    };
+    } as unknown as Product;
   };
 
   // Initial Data Fetch

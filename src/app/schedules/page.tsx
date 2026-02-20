@@ -12,11 +12,22 @@ const DAYS_OF_WEEK = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado
 
 import ExportButton from '@/components/ExportButton';
 
-const getHoursDifference = (startTime: string, endTime: string) => {
-  if (!startTime || !endTime) return '0.0';
+const formatTime = (t: string | Date | undefined): string => {
+  if (!t) return '00:00';
+  if (t instanceof Date) {
+    return t.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  }
+  return t;
+};
+
+const getHoursDifference = (startTime: string | Date | undefined, endTime: string | Date | undefined) => {
+  const startStr = formatTime(startTime);
+  const endStr = formatTime(endTime);
+  
+  if (!startStr || !endStr) return '0.0';
   try {
-    const [startH, startM] = startTime.split(':').map(Number);
-    const [endH, endM] = endTime.split(':').map(Number);
+    const [startH, startM] = startStr.split(':').map(Number);
+    const [endH, endM] = endStr.split(':').map(Number);
     
     if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return '0.0';
 
@@ -63,7 +74,7 @@ const Schedules = () => {
     if (!workShifts) return [];
     return workShifts.filter(shift => {
       const shiftDate = new Date(currentWeekStart);
-      shiftDate.setDate(currentWeekStart.getDate() + shift.dayOfWeek - 1);
+      shiftDate.setDate(currentWeekStart.getDate() + (shift.dayOfWeek || 1) - 1);
       return shiftDate >= currentWeekStart && shiftDate <= weekEnd;
     });
   }, [workShifts, currentWeekStart, weekEnd]);
@@ -78,7 +89,7 @@ const Schedules = () => {
         employeeName: emp?.name || 'Desconhecido',
         day: DAYS_OF_WEEK[(shift.dayOfWeek || 1) - 1] || 'N/A',
         date: shiftDate.toLocaleDateString('pt-AO'),
-        time: `${shift.startTime} - ${shift.endTime}`,
+        time: `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}`,
         hours: getHoursDifference(shift.startTime, shift.endTime),
         notes: shift.notes || '-'
       };
@@ -351,8 +362,8 @@ const Schedules = () => {
                                   {emp?.name || 'Desconhecido'}
                                 </p>
                                 <p className="text-[10px] text-slate-400 mt-1">
-                                  {shift.startTime} - {shift.endTime}
-                                </p>
+                                {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
+                              </p>
                                 <p className="text-[10px] text-primary font-bold mt-0.5">{hours}h</p>
                               </div>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -451,10 +462,10 @@ const Schedules = () => {
                         >
                           <div className="flex-1">
                             <p className="text-sm font-bold text-white">
-                              {DAYS_OF_WEEK[(shift.dayOfWeek - 1) % 7]}
+                              {DAYS_OF_WEEK[((shift.dayOfWeek || 1) - 1) % 7]}
                             </p>
                             <p className="text-xs text-slate-400 mt-1">
-                              {shift.startTime} - {shift.endTime} ({getHoursDifference(shift.startTime, shift.endTime)}h)
+                              {formatTime(shift.startTime)} - {formatTime(shift.endTime)} ({getHoursDifference(shift.startTime, shift.endTime)}h)
                             </p>
                             {shift.notes && (
                               <p className="text-[10px] text-slate-500 italic mt-2">{shift.notes}</p>
@@ -544,7 +555,7 @@ const Schedules = () => {
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Hora de Início</label>
                 <input
                   type="time"
-                  value={formData.startTime || '09:00'}
+                  value={formatTime(formData.startTime) || '09:00'}
                   onChange={e => setFormData({ ...formData, startTime: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-white/10 text-white focus:border-primary outline-none transition-colors"
                 />
@@ -555,7 +566,7 @@ const Schedules = () => {
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Hora de Fim</label>
                 <input
                   type="time"
-                  value={formData.endTime || '17:00'}
+                  value={formatTime(formData.endTime) || '17:00'}
                   onChange={e => setFormData({ ...formData, endTime: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-white/10 text-white focus:border-primary outline-none transition-colors"
                 />

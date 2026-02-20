@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Dish } from '@/types';
+import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Dish, OrderItemDetail } from '@/types';
 import { logger } from '@/services/logger';
 import { backupService } from '@/services/backupService';
 import { integrationAPIService } from '@/services/integrationAPIService';
@@ -40,6 +40,7 @@ export interface FinanceSlice {
   removePayrollRecord: (id: UUID) => void;
   setOrders: (orders: Order[]) => void;
   setExpenses: (expenses: Expense[]) => void;
+  setRevenues: (revenues: Revenue[]) => void;
   setPayroll: (payroll: PayrollRecord[]) => void;
   getLoyaltyTier: (customerId: UUID) => string;
   processPayroll: (employeeId: UUID, month: number, year: number, paymentMethod: PaymentMethod) => Promise<void>;
@@ -50,14 +51,36 @@ export interface FinanceSlice {
   getDailySalesAnalytics: (days: number) => DailySalesAnalytics[];
   getSalesForDate: (date: Date) => DailySalesAnalytics;
   getMenuAnalytics: (period: 'day' | 'week' | 'month' | number) => MenuAnalytics[];
+  getStockAnalytics: () => Array<{ itemId: string; itemName: string; currentStock: number; minThreshold: number; daysToRunOut: number }>;
+  getEmployeePerformance: () => Array<{ employeeId: string; efficiency: number; rating: number }>;
+  getPeakHours: () => number[];
+  getTopSellingDishes: (limit?: number) => Dish[];
+  getAverageOrderValue: () => number;
+  getCustomerRetention: () => any;
   getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
   syncFinancialMetricsToDashboard: () => Promise<void>;
   fetchRemoteDashboard: () => Promise<void>;
-  handleRealtimeUpdate: (payload: any) => void;
+  handleRealtimeUpdate: (payload: RealtimePayload) => void;
   
   addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID) => void;
   removeFromOrder: (orderId: UUID, itemIndex: number) => void;
   checkoutTable: (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string) => Promise<void>;
+  fireOrderToKitchen: (orderId: UUID) => void;
+  clearDraftOrder: (orderId: UUID) => void;
+  updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => void;
+  markOrderAsServed: (orderId: string) => void;
+}
+
+interface RealtimeDashboardSummaryData {
+  total_revenue: number;
+  total_expenses: number;
+  total_orders: number;
+  active_orders_count: number;
+}
+
+interface RealtimePayload {
+  table: string;
+  new: RealtimeDashboardSummaryData;
 }
 
 export const createFinanceSlice: StateCreator<
@@ -76,7 +99,7 @@ export const createFinanceSlice: StateCreator<
   dashboardSummary: null,
   dashboardAnalytics: null,
   
-  handleRealtimeUpdate: (payload: any) => {
+  handleRealtimeUpdate: (payload: RealtimePayload) => {
     // Handle Supabase Realtime payload
     if (payload.table === 'dashboard_summary') {
       const newData = payload.new;
@@ -93,74 +116,6 @@ export const createFinanceSlice: StateCreator<
       }
     }
   },
-  
-  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID) => {
-    const state = get();
-    const order = state.orders.find(o => o.id === orderId);
-    if (!order) return;
-    
-    // Logic to add item
-     const newItem: any = {
-       id: `temp-${Date.now()}`, // Generate temp ID
-       dishId: dish.id,
-       quantity,
-       unitPrice: dish.price,
-       notes,
-       taxPercentage: dish.taxPercentage || dish.tax_percentage || 14,
-       taxCode: dish.taxCode || dish.tax_code || 'NOR'
-     };
-     
-     // This is a simplified implementation. Real one would handle merging similar items, etc.
-     const updatedItems = [...(order.items || []), newItem];
-     const newTotal = updatedItems.reduce((sum: number, item: any) => sum + (Number(item.unitPrice || 0) * Number(item.quantity || 0)), 0);
-    
-    const updatedOrder = { ...order, items: updatedItems, total: newTotal, updatedAt: new Date().toISOString() };
-    
-    set((state) => ({
-      orders: state.orders.map(o => o.id === orderId ? updatedOrder : o),
-      activeOrders: state.activeOrders.map(o => o.id === orderId ? updatedOrder : o)
-    }));
-  },
-  
-  removeFromOrder: (orderId: UUID, itemIndex: number) => {
-    const state = get();
-    const order = state.orders.find(o => o.id === orderId);
-    if (!order || !order.items) return;
-    
-    const updatedItems = order.items.filter((_, idx) => idx !== itemIndex);
-     const newTotal = updatedItems.reduce((sum: number, item: any) => sum + ((item.unitPrice || 0) * item.quantity), 0);
-     
-     const updatedOrder = { ...order, items: updatedItems, total: newTotal, updatedAt: new Date().toISOString() };
-    
-    set((state) => ({
-      orders: state.orders.map(o => o.id === orderId ? updatedOrder : o),
-      activeOrders: state.activeOrders.map(o => o.id === orderId ? updatedOrder : o)
-    }));
-  },
-
-  checkoutTable: async (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string) => {
-     const state = get();
-     const order = state.orders.find(o => o.id === orderId);
-     if (!order) return;
-     
-     const updatedOrder = {
-       ...order,
-       status: 'FECHADO' as const,
-       payments: payments, // Assuming payments property exists on Order or added via Any
-       paymentMethod: payments[0]?.method, // Primary method
-       subAccountName,
-       customerNif,
-       updatedAt: new Date().toISOString()
-     };
-     
-     set((state) => ({
-       orders: state.orders.map(o => o.id === orderId ? updatedOrder : o),
-       activeOrders: state.activeOrders.filter(o => o.id !== orderId) // Remove from active
-     }));
-     
-     // Log checkout
-     logger.info('Checkout complete', { orderId, total: order.total }, 'FINANCE');
-  },
 
   setActiveOrder: (id: UUID | null) => set({ activeOrderId: id }),
   setDashboardSummary: (summary: DashboardSummary) => set({ dashboardSummary: summary }),
@@ -172,7 +127,7 @@ export const createFinanceSlice: StateCreator<
     set((state) => ({ orders: [...state.orders, order], activeOrders: [...state.activeOrders, order] }));
     get().addAuditLog({
       action: 'ORDER_CREATE',
-      details: `Novo pedido criado: ${order.orderNumber || order.id}`,
+      details: `Novo pedido criado: ${order.order_number || order.id}`,
       metadata: { orderId: order.id, total: order.total },
       userId: get().currentUser?.id
     });
@@ -188,7 +143,7 @@ export const createFinanceSlice: StateCreator<
     if (prevOrder && prevOrder.status !== order.status) {
       get().addAuditLog({
         action: 'ORDER_STATUS_CHANGE',
-        details: `Status do pedido ${order.orderNumber || order.id} alterado para ${order.status}`,
+        details: `Status do pedido ${order.order_number || order.id} alterado para ${order.status}`,
         metadata: { orderId: order.id, oldStatus: prevOrder.status, newStatus: order.status },
         userId: get().currentUser?.id
       });
@@ -217,12 +172,13 @@ export const createFinanceSlice: StateCreator<
         endOfDay.setHours(23, 59, 59, 999);
 
         const dailyOrders = state.orders.filter(order => {
-            const orderDate = new Date(order.createdAt || new Date());
+            const orderDate = new Date(order.created_at || new Date());
             return orderDate >= startOfDay && orderDate <= endOfDay && order.status !== 'cancelled';
         });
 
         let totalRevenue = 0;
         let totalProfit = 0;
+        let totalProductCost = 0;
         let orderCount = dailyOrders.length;
         let averageTicket = 0;
 
@@ -231,10 +187,13 @@ export const createFinanceSlice: StateCreator<
             let orderProfit = 0;
             
             (order.items || []).forEach((item: any) => {
-                const dish = state.dishes?.find(dish => dish.id === item.dishId);
+                const dishId = item.dish_id ?? item.dishId;
+                const dish = state.dishes?.find(dish => dish.id === dishId);
                 const costPrice = 0; 
-                const unitPrice = Number(item.unitPrice || 0);
-                orderProfit += (unitPrice - Number(costPrice)) * Number(item.quantity || 0);
+                const unitPrice = Number(item.unit_price || item.unitPrice || 0);
+                const quantity = Number(item.quantity || 0);
+                orderProfit += (unitPrice - Number(costPrice)) * quantity;
+                totalProductCost += Number(costPrice) * quantity;
             });
 
             totalProfit += orderProfit;
@@ -247,6 +206,7 @@ export const createFinanceSlice: StateCreator<
         return {
             totalRevenue,
             totalProfit,
+            totalProductCost,
             orderCount,
             averageTicket,
             date: startOfDay.toISOString()
@@ -270,11 +230,12 @@ export const createFinanceSlice: StateCreator<
         }
 
         const periodOrders = state.orders.filter(order => {
-            const orderDate = new Date(order.createdAt || new Date());
+            const orderDate = new Date(order.created_at || new Date());
             return orderDate >= startDate && order.status !== 'cancelled';
         });
 
         const dishPerformance = new Map<string, { 
+            id: string;
             name: string; 
             quantity: number; 
             revenue: number; 
@@ -283,10 +244,12 @@ export const createFinanceSlice: StateCreator<
 
         periodOrders.forEach(order => {
             (order.items || []).forEach((item: any) => {
-                const dish = state.dishes?.find(dish => dish.id === item.dishId);
+                const dishId = item.dish_id ?? item.dishId;
+                const dish = state.dishes?.find(dish => dish.id === dishId);
                 if (!dish) return;
 
                 const current = dishPerformance.get(dish.id) || {
+                    id: dish.id,
                     name: dish.name,
                     quantity: 0,
                     revenue: 0,
@@ -294,9 +257,9 @@ export const createFinanceSlice: StateCreator<
                 };
 
                 const costPrice = 0; // TODO: Implement cost tracking
-                const unitPrice = item.unitPrice || 0;
+                const unitPrice = Number(item.unit_price || item.unitPrice || 0);
                 
-                current.quantity += item.quantity;
+                current.quantity += Number(item.quantity || 0);
                 current.revenue += unitPrice * item.quantity;
                 current.profit += (unitPrice - costPrice) * item.quantity;
 
@@ -306,6 +269,84 @@ export const createFinanceSlice: StateCreator<
 
         return Array.from(dishPerformance.values()).sort((a, b) => b.revenue - a.revenue);
     },
+
+  getStockAnalytics: () => {
+    const items = get().stock || [];
+    return items.map((item: any) => {
+      const currentStock = Number(item.stock_quantity ?? item.quantity ?? item.stock ?? 0);
+      const minThreshold = Number(item.min_stock_quantity ?? item.minStockQuantity ?? 0);
+      const averageDailyUse = Number(item.average_daily_use ?? item.averageDailyUse ?? 0);
+      const daysToRunOut = averageDailyUse > 0 ? Math.floor(currentStock / averageDailyUse) : 0;
+      return {
+        itemId: item.id,
+        itemName: item.name || item.itemName || 'Item',
+        currentStock,
+        minThreshold,
+        daysToRunOut
+      };
+    });
+  },
+
+  getEmployeePerformance: () => {
+    const employees = get().employees || [];
+    const attendance = get().attendance || [];
+    return employees.map((emp: any) => {
+      const employeeAttendance = attendance.filter((a: any) => a.employeeId === emp.id);
+      const attendanceCount = employeeAttendance.length;
+      const efficiency = Math.min(100, 60 + attendanceCount * 2);
+      const rating = Math.min(5, 3 + attendanceCount / 10);
+      return {
+        employeeId: emp.id,
+        efficiency,
+        rating
+      };
+    });
+  },
+
+  getPeakHours: () => {
+    const orders = get().orders || [];
+    const counts: Record<number, number> = {};
+    orders.forEach(order => {
+      const date = new Date(order.created_at || order.timestamp || new Date());
+      const hour = date.getHours();
+      counts[hour] = (counts[hour] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([hour]) => Number(hour));
+  },
+
+  getTopSellingDishes: (limit = 10) => {
+    const orders = get().orders || [];
+    const dishCount: Record<string, number> = {};
+    orders.forEach(order => {
+      (order.items || []).forEach((item: any) => {
+        const dishId = item.dish_id || item.product_id;
+        if (!dishId) return;
+        dishCount[dishId] = (dishCount[dishId] || 0) + Number(item.quantity || 0);
+      });
+    });
+    const dishes = get().dishes || [];
+    return [...dishes]
+      .sort((a, b) => (dishCount[b.id] || 0) - (dishCount[a.id] || 0))
+      .slice(0, limit);
+  },
+
+  getAverageOrderValue: () => {
+    const orders = get().orders || [];
+    if (orders.length === 0) return 0;
+    const total = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+    return total / orders.length;
+  },
+
+  getCustomerRetention: () => {
+    return {
+      returningCustomers: 0,
+      totalCustomers: 0,
+      retentionRate: 0
+    };
+  },
 
   getRevenueHistory: (days = 7) => {
     const state = get();
@@ -332,7 +373,7 @@ export const createFinanceSlice: StateCreator<
 
     closedOrders.forEach(order => {
       const date = new Date(order.timestamp!).toISOString().split('T')[0];
-      revenueByDate[date] = (revenueByDate[date] || 0) + order.total;
+      revenueByDate[date] = (revenueByDate[date] || 0) + Number(order.total || 0);
     });
 
     return Object.entries(revenueByDate)
@@ -342,7 +383,7 @@ export const createFinanceSlice: StateCreator<
 
   syncFinancialMetricsToDashboard: async () => {
     const state = get();
-    const totalRevenue = state.revenues.reduce((sum, r) => sum + r.amount, 0) + state.orders.filter(o => o.status === 'FECHADO').reduce((sum, o) => sum + o.total, 0);
+    const totalRevenue = state.revenues.reduce((sum, r) => sum + r.amount, 0) + state.orders.filter(o => o.status === 'FECHADO').reduce((sum, o) => sum + Number(o.total || 0), 0);
     const totalExpenses = state.expenses.reduce((sum, e) => sum + e.amount, 0);
     const totalOrders = state.orders.length;
     const activeOrdersCount = state.activeOrders.length;
@@ -452,12 +493,13 @@ export const createFinanceSlice: StateCreator<
 
   setOrders: (orders: Order[]) => set({ activeOrders: orders }),
   setExpenses: (expenses: Expense[]) => set({ expenses }),
+  setRevenues: (revenues: Revenue[]) => set({ revenues }),
   setPayroll: (payroll: PayrollRecord[]) => set({ payroll }),
   getLoyaltyTier: (customerId: UUID) => {
     // Basic logic for loyalty tier
     const state = get();
-    const customerOrders = state.orders?.filter(o => o.customerId === customerId) || [];
-    const totalSpent = customerOrders.reduce((sum, o) => sum + o.total, 0);
+    const customerOrders = state.orders?.filter(o => o.customer_id === customerId) || [];
+    const totalSpent = customerOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
     
     if (totalSpent > 500000) return 'PLATINUM';
     if (totalSpent > 200000) return 'GOLD';
@@ -696,22 +738,22 @@ export const createFinanceSlice: StateCreator<
 
     // Validação de valor total
     const totalNewPayments = newPayments.reduce((sum, p) => sum + p.amount, 0);
-    if (Math.abs(totalNewPayments - order.total) > 0.01) {
+    if (Math.abs(totalNewPayments - Number(order.total || 0)) > 0.01) {
       get().addNotification('error', 'O valor total dos novos pagamentos deve ser igual ao total do pedido.');
       return false;
     }
 
     try {
-      const previousPayments = order.payments || (order.paymentMethod ? [{
+      const previousPayments = order.payments || (order.payment_method ? [{
         id: `legacy-${order.id}`,
-        method: order.paymentMethod,
-        amount: order.total,
+        method: order.payment_method,
+        amount: Number(order.total || 0),
         timestamp: String(order.timestamp)
       }] : []);
 
       const correction: PaymentCorrection = {
         id: `corr-${Date.now()}`,
-        orderId: order.id,
+        orderId: order.id!,
         timestamp: new Date(),
         userId: currentUser.id,
         userName: currentUser.name,
@@ -726,33 +768,29 @@ export const createFinanceSlice: StateCreator<
       const updatedOrder: Order = {
         ...order,
         payments: newPayments,
-        paymentMethod: newPayments.length === 1 ? newPayments[0].method : undefined,
+        payment_method: newPayments.length === 1 ? newPayments[0].method : undefined,
         paymentCorrectionHistory: [...(order.paymentCorrectionHistory || []), correction]
       };
 
       // 1. Atualizar Breakdown do Turno (Consistência Financeira)
-      if (order.shiftId) {
+      if (order.shift_id) {
         const shifts = [...state.shifts];
-        const shiftIndex = shifts.findIndex(s => s.id === order.shiftId);
+        const shiftIndex = shifts.findIndex(s => s.id === order.shift_id);
         
         if (shiftIndex !== -1) {
           const shift = { ...shifts[shiftIndex] };
-          const breakdown = { ...shift.salesBreakdown };
+        const breakdown: Record<string, number> = { ...(shift.salesBreakdown || {}) };
 
           // Subtrair pagamentos antigos
           previousPayments.forEach(p => {
-            if (breakdown[p.method] !== undefined) {
-              breakdown[p.method] -= p.amount;
-            }
+            const current = breakdown[p.method] ?? 0;
+            breakdown[p.method] = current - (p.amount || 0);
           });
 
           // Adicionar novos pagamentos
           newPayments.forEach(p => {
-            if (breakdown[p.method] !== undefined) {
-              breakdown[p.method] += p.amount;
-            } else {
-              breakdown[p.method] = p.amount;
-            }
+            const current = breakdown[p.method] ?? 0;
+            breakdown[p.method] = current + p.amount;
           });
 
           shift.salesBreakdown = breakdown;
@@ -775,10 +813,10 @@ export const createFinanceSlice: StateCreator<
       // Audit Log imutável
       get().addAuditLog({
         action: isPostPrint ? 'PAYMENT_CORRECTION_POST_PRINT' : 'PAYMENT_CORRECTION_PRE_PRINT',
-        details: `Correção de pagamento para pedido ${order.invoiceNumber || order.id}. Motivo: ${reason}`,
+        details: `Correção de pagamento para pedido ${order.invoice_number || order.id}. Motivo: ${reason}`,
         metadata: {
           orderId: order.id,
-          invoiceNumber: order.invoiceNumber,
+          invoiceNumber: order.invoice_number,
           previousPayments,
           newPayments,
           correctionId: correction.id,
@@ -789,7 +827,7 @@ export const createFinanceSlice: StateCreator<
 
       // Persistência em Banco de Dados (Transação simulada via executeQuery sequencial)
       // Em um ambiente real, usaríamos BEGIN TRANSACTION
-      const result = await correctPaymentAction(order.id, currentUser.id, reason, newPayments);
+      const result = await correctPaymentAction(order.id!, currentUser.id, reason, newPayments);
       if (!result.success) {
         throw new Error(result.error || 'Failed to correct payment');
       }
@@ -805,6 +843,177 @@ export const createFinanceSlice: StateCreator<
       // mas como já chamamos updateOrder, em caso de erro de DB real precisaríamos de rollback.
       return false;
     }
+  },
+
+  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID) => {
+    const state = get();
+    let order = state.activeOrders.find((o) => o.id === orderId);
+
+    if (!order) {
+      // Create new order if it doesn't exist in activeOrders
+      order = {
+        id: orderId,
+        table_id: tableId,
+        status: 'ABERTO',
+        items: [],
+        total: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        payment_method: undefined,
+        payments: []
+      } as unknown as Order;
+      set((state) => ({ activeOrders: [...state.activeOrders, order!] }));
+    }
+
+    const newItem: any = {
+      dish_id: dish.id,
+      product_id: dish.id, // Compat
+      quantity,
+      unit_price: dish.price,
+      total: dish.price * quantity,
+      notes,
+      status: 'PENDENTE'
+    };
+
+    const updatedOrder = {
+      ...order,
+      items: [...(order.items || []), newItem],
+      total: (order.total || 0) + newItem.total,
+      updated_at: new Date().toISOString()
+    };
+
+    get().updateOrder(updatedOrder);
+    
+    get().addAuditLog({
+        action: 'ORDER_ITEM_ADD',
+        details: `Item adicionado: ${dish.name} x${quantity}`,
+        metadata: { orderId, dishId: dish.id, quantity },
+        userId: get().currentUser?.id
+    });
+  },
+
+  removeFromOrder: (orderId: UUID, itemIndex: number) => {
+    const state = get();
+    const order = state.activeOrders.find((o) => o.id === orderId);
+    if (!order || !order.items) return;
+
+    const item = order.items[itemIndex];
+    if (!item) return;
+
+    const newItems = [...order.items];
+    newItems.splice(itemIndex, 1);
+
+    const updatedOrder = {
+      ...order,
+      items: newItems,
+      total: (order.total || 0) - ((item.unit_price || 0) * (item.quantity || 0)),
+      updated_at: new Date().toISOString()
+    };
+
+    get().updateOrder(updatedOrder);
+
+    get().addAuditLog({
+        action: 'ORDER_ITEM_REMOVE',
+        details: `Item removido do pedido ${orderId}`,
+        metadata: { orderId, itemIndex },
+        userId: get().currentUser?.id
+    });
+  },
+
+  checkoutTable: async (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string) => {
+     const state = get();
+     const order = state.activeOrders.find((o) => o.id === orderId);
+     if (!order) throw new Error('Order not found');
+
+     const updatedOrder: Order = {
+         ...order,
+         status: 'FECHADO',
+         closed_at: new Date().toISOString(),
+         payments,
+         payment_method: payments.length === 1 ? payments[0].method : undefined,
+         sub_account_name: subAccountName || undefined,
+         customer_nif: customerNif || null,
+         updated_at: new Date().toISOString()
+     };
+
+     // Move to history? For now just update status in activeOrders (or move to orders list if separate)
+     // FinanceSlice has 'orders' and 'activeOrders'.
+     // Usually activeOrders are subset of orders or separate.
+     // Let's assume we keep it in activeOrders but status CLOSED until shift close clears it.
+     
+     get().updateOrder(updatedOrder);
+     
+     // Add revenue
+     payments.forEach(p => {
+         get().addRevenue({
+             id: `rev-${Date.now()}-${Math.random()}`,
+             amount: p.amount,
+             date: new Date(),
+             paymentMethod: p.method,
+             description: `Venda Mesa ${order.table_id}`,
+             orderId: order.id
+         });
+     });
+
+     get().addAuditLog({
+        action: 'ORDER_CHECKOUT',
+        details: `Mesa ${order.table_id} fechada. Total: ${order.total}`,
+        metadata: { orderId, total: order.total, payments },
+        userId: get().currentUser?.id
+    });
+  },
+
+  fireOrderToKitchen: (orderId: UUID) => {
+    const state = get();
+    const order = state.activeOrders.find((o) => o.id === orderId);
+    if (!order) return;
+    
+    // Logic to send to kitchen (e.g. status update, or move to kitchen queue)
+    const updatedOrder = {
+        ...order,
+        status: 'EM_PREPARO',
+        updatedAt: new Date().toISOString()
+    };
+    get().updateOrder(updatedOrder);
+  },
+
+  updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => {
+    const state = get();
+    const order = state.activeOrders.find((o) => o.id === orderId);
+    if (!order || !order.items) return;
+
+    const updatedItems = [...order.items];
+    if (updatedItems[itemIndex]) {
+        updatedItems[itemIndex] = { ...updatedItems[itemIndex], status };
+    }
+
+    const updatedOrder = {
+        ...order,
+        items: updatedItems,
+        updatedAt: new Date().toISOString()
+    };
+    get().updateOrder(updatedOrder);
+  },
+
+  markOrderAsServed: (orderId: string) => {
+    const state = get();
+    const order = state.activeOrders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    const updatedOrder = {
+        ...order,
+        status: 'ENTREGUE',
+        // Also mark all items as delivered? Optional but good practice
+        items: (order.items || []).map(item => ({ ...item, status: 'ENTREGUE' })),
+        updatedAt: new Date().toISOString()
+    };
+    get().updateOrder(updatedOrder);
+  },
+
+  clearDraftOrder: (orderId: UUID) => {
+    // Just remove from activeOrders if it's draft?
+    // Assume it removes the order.
+    get().removeOrder(orderId);
   },
 
   fetchRemoteDashboard: async () => {
@@ -831,7 +1040,7 @@ export const createFinanceSlice: StateCreator<
          // Using 'as any' because these methods belong to other slices but are available in StoreState
          (state as any).importCloudItems({
             categories: menuResult.data.categories,
-            dishes: menuResult.data.products,
+            dishes: menuResult.data.dishes,
             preferCloud: true
          });
       }

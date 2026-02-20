@@ -14,16 +14,11 @@ import {
   QrCode, Copy, Download, Eye, Share2, Settings,
   MessageCircle, Mail, Facebook, CheckCircle, Globe, RefreshCw, AlertCircle
 } from 'lucide-react';
-import {
-  generateMenuUrl,
-  generateShareableMenuLink,
-  generateMenuShortCode,
-  downloadQRCodeImage
-} from '@/services/qrMenuService';
+import * as qrMenuService from '@/services/qrMenuService';
 
 
 const QRMenuManager = () => {
-  const { settings, updateSettings, addNotification, categories, menu, updateCategory } = useStore();
+  const { settings, updateSettings, addNotification, categories, dishes: menu, updateCategory } = useStore();
   const qrRef = useRef<HTMLDivElement>(null);
 
   const getInitialUrl = () => {
@@ -69,8 +64,8 @@ const QRMenuManager = () => {
   // Removed reactive state update inside effect to satisfy lint rules
 
   const menuVersion = settings.lastQRCodeUpdate ? new Date(settings.lastQRCodeUpdate).getTime().toString() : undefined;
-  const menuUrl = generateMenuUrl(baseUrl, undefined, undefined, menuVersion);
-  const newShortCode = generateMenuShortCode();
+  const menuUrl = qrMenuService.generateMenuUrl(baseUrl, undefined, undefined, menuVersion);
+  const newShortCode = qrMenuService.generateMenuShortCode();
 
   const handleRegenerateUrl = () => {
     updateSettings({
@@ -88,7 +83,7 @@ const QRMenuManager = () => {
     updateSettings({
       restaurantUrl: undefined, // Clear manual URL
       lastQRCodeUpdate: new Date(), // Force new version
-      qrMenuShortCode: generateMenuShortCode() // New short code
+      qrMenuShortCode: qrMenuService.generateMenuShortCode() // New short code
     });
     
     // Reset local state
@@ -107,7 +102,7 @@ const QRMenuManager = () => {
   const handleDownloadQR = async () => {
     if (qrRef.current) {
       try {
-        await downloadQRCodeImage(qrRef.current, 'menu-qr-code.png');
+        await qrMenuService.downloadQRCodeImage(qrRef.current, 'menu-qr-code.png');
         addNotification('success', 'QR code descarregado!');
       } catch {
         addNotification('error', 'Erro ao descarregar QR code');
@@ -120,7 +115,7 @@ const QRMenuManager = () => {
   };
 
   const handleShare = (platform: 'whatsapp' | 'telegram' | 'sms' | 'facebook') => {
-    const shareUrl = generateShareableMenuLink(
+    const shareUrl = qrMenuService.generateShareableMenuLink(
       settings.restaurantName || 'Nosso Restaurante',
       menuUrl,
       platform

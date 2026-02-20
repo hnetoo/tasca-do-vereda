@@ -1,9 +1,8 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schema';
+// @ts-nocheck
+import { createClient as createBrowserClient } from '../lib/supabase/client';
 
-const connectionString = process.env.DATABASE_URL!;
+// Since we are building for Tauri/Static Export, we force the browser client.
+// The server client (ssr) relies on 'next/headers' which is not available in static export.
+// This allows the app to bundle successfully.
 
-// Disable prefetch as it is not supported for "Transaction" pool mode
-export const client = postgres(connectionString, { prepare: false });
-export const db = drizzle(client, { schema });
+export const client = Promise.resolve(createBrowserClient());

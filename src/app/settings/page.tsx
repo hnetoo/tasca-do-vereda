@@ -12,7 +12,7 @@ import {
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { User, MenuCategory, Product, SystemSettings, StoreState, BackupState, FinancialClearanceReport, FullApplicationState } from '@/types';
+import { User, MenuCategory, Product, SystemSettings, StoreState, FinancialClearanceReport, FullApplicationState } from '@/types';
 import UserManagementModal from '@/components/UserManagementModal';
 import QRMenuConfig from '@/components/QRMenuConfig';
 import POSAccessManagement from '@/components/POSAccessManagement';
@@ -53,8 +53,8 @@ const CloudImportPanel = () => {
     }
     setIsLoading(true);
     try {
-      const catsRes = await fetchRemoteCategoriesAction(search);
-      const prodsRes = await fetchRemoteProductsAction(search, categoryFilter);
+      const catsRes = await fetchRemoteCategoriesAction(settings.supabaseConfig, search);
+      const prodsRes = await fetchRemoteProductsAction(settings.supabaseConfig, search, categoryFilter);
       if (catsRes.success && catsRes.data) setRemoteCategories(catsRes.data);
       if (prodsRes.success && prodsRes.data) setRemoteProducts(prodsRes.data);
       addNotification('success', 'Itens carregados da cloud');
@@ -149,7 +149,7 @@ const CloudImportPanel = () => {
   );
 };
 const Settings = () => {
-  const { settings, updateSettings, currentUser, addNotification, categories, products: dishes, hardResetMenu, tables } = useStore();
+  const { settings, updateSettings, currentUser, addNotification, categories, dishes, hardResetMenu, tables } = useStore();
   const [activeTab, setActiveTab] = useState<'general' | 'users' | 'fiscal' | 'tables' | 'qr' | 'integrations' | 'roles' | 'database' | 'agt' | 'dlp' | 'monitoring' | 'cloud' | 'bd'>('general');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isQRMenuConfigOpen, setIsQRMenuConfigOpen] = useState(false);
@@ -215,9 +215,10 @@ const Settings = () => {
     updateSettings({
       ...localSettings,
       supabaseConfig: {
-        ...localSettings.supabaseConfig,
+        enabled: localSettings.supabaseConfig?.enabled || false,
         url: localSettings.supabaseConfig?.url || '',
         key: localSettings.supabaseConfig?.key || '',
+        autoSync: localSettings.supabaseConfig?.autoSync || false,
       }
     });
 
@@ -279,7 +280,8 @@ const Settings = () => {
   const handleSetupRLS = async () => {
     addNotification('info', 'Validando conexão para políticas de segurança...');
     logger.info('Iniciando validação de políticas RLS', null, 'SECURITY');
-    const result = await setupRLSAction();
+    const config = localSettings.supabaseConfig || { enabled: false, url: '', key: '', autoSync: false };
+    const result = await setupRLSAction(config);
     if (result.success) {
       addNotification('success', (result as any).message || 'Políticas validadas com sucesso.');
       logger.info('RLS validado com sucesso', { result }, 'SECURITY');
@@ -292,7 +294,8 @@ const Settings = () => {
   const handleSetupBuckets = async () => {
     addNotification('info', 'Configurando buckets de armazenamento...');
     logger.info('Iniciando configuração de buckets de armazenamento', null, 'STORAGE');
-    const result = await setupBucketsAction();
+    const config = localSettings.supabaseConfig || { enabled: false, url: '', key: '', autoSync: false };
+    const result = await setupBucketsAction(config);
     if (result.success) {
       addNotification('success', (result as any).message || 'Buckets configurados com sucesso.');
       logger.info('Buckets configurados com sucesso', { result }, 'STORAGE');
@@ -384,14 +387,14 @@ const Settings = () => {
              
              cleanMenu = cleanMenu.map((d) => {
                  let effectiveCatId = d.category_id;
-             if (idMap.has(d.category_id)) {
+             if (d.category_id && idMap.has(d.category_id)) {
                  effectiveCatId = idMap.get(d.category_id);
              }
              if (effectiveCatId && validCatIds.has(effectiveCatId)) {
                  return { ...d, category_id: effectiveCatId };
              }
-             if (d.categoryName) {
-                 const normalizedCatName = d.categoryName.trim().toLowerCase();
+             if ((d as any).categoryName) {
+                 const normalizedCatName = (d as any).categoryName.trim().toLowerCase();
                  const matchByName = cleanCategories.find((c) =>
                      c.name.trim().toLowerCase() === normalizedCatName
                  );
@@ -408,21 +411,46 @@ const Settings = () => {
                  return n === 'sem categoria' || n === 'uncategorized' || n === 'outros' || n === 'geral';
              });
              if (existingUncategorized) {
-                cleanMenu = cleanMenu.map(d => d.category_id === 'uncategorized' ? { ...d, category_id: existingUncategorized.id } : d);
+                    cleanMenu = cleanMenu.map(d => d.category_id === 'uncategorized' ? { ...d, category_id: existingUncategorized.id } : d);
                 } else {
-                    cleanCategories.push({ id: 'uncategorized', name: 'Sem Categoria', icon: 'Grid3X3', sort_order: 999, is_active: true });
+                    cleanCategories.push({ 
+                        id: 'uncategorized', 
+                        name: 'Sem Categoria', 
+                        icon: 'Grid3X3', 
+                        sortOrder: 999, 
+                        isActive: true,
+                        created_at: null,
+                        deleted_at: null,
+                        is_available_on_digital_menu: false,
+                        parentId: undefined,
+                        updated_at: null,
+                        availableOnDigitalMenu: false
+                    } as MenuCategory);
                 }
             }
             
             // 4. PRUNE EMPTY CATEGORIES
             const productCounts = new Map<string, number>();
             cleanMenu.forEach(d => {
-                const count = productCounts.get(d.category_id) || 0;
-                productCounts.set(d.category_id, count + 1);
+                const catId = d.category_id || 'uncategorized';
+                const count = productCounts.get(catId) || 0;
+                productCounts.set(catId, count + 1);
             });
             cleanCategories = cleanCategories.filter(c => (productCounts.get(c.id) || 0) > 0);
             if (cleanCategories.length === 0) {
-                cleanCategories.push({ id: 'uncategorized', name: 'Sem Categoria', icon: 'Grid3X3', sort_order: 0, is_active: true });
+                cleanCategories.push({ 
+                    id: 'uncategorized', 
+                    name: 'Sem Categoria', 
+                    icon: 'Grid3X3', 
+                    sortOrder: 0, 
+                    isActive: true,
+                    created_at: null,
+                    deleted_at: null,
+                    is_available_on_digital_menu: false,
+                    parentId: undefined,
+                    updated_at: null,
+                    availableOnDigitalMenu: false
+                } as MenuCategory);
             }
 
              // Update state with sanitized data
@@ -691,23 +719,16 @@ const Settings = () => {
      }
 
      try {
-         // Clear LocalStorage
-         localStorage.removeItem('tasca-vereda-storage-v2');
-         
-         // Clear SQL if active
-         if (dbConfig.type !== 'local_storage') {
-            // Drop tables or delete all rows
-            await executeQuery('DELETE FROM settings');
-            await executeQuery('DELETE FROM users');
-            await executeQuery('DELETE FROM dishes');
-            await executeQuery('DELETE FROM categories');
-            await executeQuery('DELETE FROM orders');
-            await executeQuery('DELETE FROM order_items');
-            // ... etc
+         // Use the server action for full cleanup
+         const result = await hardResetAction();
+         if (result.success) {
+            // Also clear local storage
+            localStorage.removeItem('tasca-vereda-storage-v2');
+            addNotification('success', 'Sistema resetado com sucesso. Reiniciando...');
+            setTimeout(() => window.location.reload(), 1500);
+         } else {
+             throw new Error(result.error);
          }
-
-         addNotification('success', 'Sistema resetado com sucesso. Reiniciando...');
-         setTimeout(() => window.location.reload(), 1500);
      } catch (error) {
          console.error('Erro no factory reset:', error);
          addNotification('error', 'Erro ao resetar sistema.');
@@ -716,7 +737,7 @@ const Settings = () => {
 
   const handleExportSQL = () => {
     try {
-      const sql = generateSQLSchema(categories, menu, settings);
+      const sql = generateSQLSchema(categories, dishes, settings);
       const blob = new Blob([sql], { type: 'text/sql' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -974,37 +995,10 @@ const Settings = () => {
                    <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Driver SQL / Storage</h3>
                 </div>
                 <p className="text-sm text-slate-400 mb-6 font-medium">Configure o adaptador de base de dados para usar SQL Nativo (PostgreSQL, MySQL, SQLite) ou LocalStorage.</p>
-                <div className="flex items-center gap-4">
-                     <div className="flex-1">
-                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Driver Ativo</label>
-                         <div className="p-4 bg-black/40 border border-white/10 rounded-xl text-white font-mono text-sm flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${dbConfig.type === 'local_storage' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
-                            {dbConfig.type}
-                         </div>
-                     </div>
-                     <button 
-                        onClick={async () => {
-                            try {
-                                if (dbConfig.type === 'local_storage') {
-                                    addNotification('info', 'LocalStorage está ativo e funcionando.');
-                                } else {
-                                    await executeQuery('SELECT 1');
-                                    addNotification('success', `Conexão com ${dbConfig.type} estabelecida com sucesso!`);
-                                }
-                            } catch (e) {
-                                addNotification('error', `Falha na conexão: ${e}`);
-                            }
-                        }}
-                        className="px-6 py-4 bg-purple-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-purple-500 transition-all flex items-center gap-2 mt-6 shadow-lg shadow-purple-600/20"
-                     >
-                        <RefreshCw size={16} /> Testar Conexão
-                     </button>
-                </div>
-                <div className="mt-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                    <p className="text-[10px] text-slate-400 italic flex items-center gap-2">
-                        <Terminal size={12} />
-                        Para alterar o driver, edite o arquivo <code className="text-purple-400 font-bold">services/database/config.ts</code> e reinicie a aplicação.
-                    </p>
+                
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-500">
+                    <p className="text-sm font-bold">Funcionalidade em desenvolvimento</p>
+                    <p className="text-xs mt-1">A configuração de driver SQL está temporariamente desativada.</p>
                 </div>
              </div>
 
@@ -1556,7 +1550,13 @@ const Settings = () => {
                           value={localSettings.supabaseConfig?.url || ''}
                           onChange={(e) => setLocalSettings(prev => ({
                             ...prev,
-                            supabaseConfig: { ...prev.supabaseConfig, url: e.target.value }
+                            supabaseConfig: { 
+                              enabled: false,
+                              key: '',
+                              autoSync: false,
+                              ...prev.supabaseConfig, 
+                              url: e.target.value 
+                            }
                           }))}
                           className="w-full p-4 bg-black/40 border border-white/10 rounded-2xl text-white font-mono text-xs focus:border-primary outline-none transition-all" 
                           placeholder="https://your-project.supabase.co"
@@ -1569,7 +1569,13 @@ const Settings = () => {
                           value={localSettings.supabaseConfig?.key || ''}
                           onChange={(e) => setLocalSettings(prev => ({
                             ...prev,
-                            supabaseConfig: { ...prev.supabaseConfig, key: e.target.value }
+                            supabaseConfig: { 
+                              enabled: false,
+                              url: '',
+                              autoSync: false,
+                              ...prev.supabaseConfig, 
+                              key: e.target.value 
+                            }
                           }))}
                           className="w-full p-4 bg-black/40 border border-white/10 rounded-2xl text-white font-mono text-xs focus:border-primary outline-none transition-all" 
                           placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."

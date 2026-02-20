@@ -11,15 +11,16 @@ import { createAuthSlice } from './slices/authSlice';
 import { createOperationalSlice } from './slices/operationalSlice';
 import { createUISlice } from './slices/uiSlice';
 import { 
-  StoreState, 
   IntegrationLog, 
   Dish, 
   Category, 
   DashboardSummary, 
   Order, 
   SystemSettings, 
+  Notification,
   Fornecedor,
-  DailySalesAnalytics
+  DailySalesAnalytics,
+  StoreState
 } from '../types';
 import { MOCK_USERS } from '@/constants';
 
@@ -28,6 +29,9 @@ const customStorage: StateStorage = {
     if (typeof window !== 'undefined') {
       try { return localStorage.getItem(name); } catch { return null; }
     }
+
+
+
     return null;
   },
   setItem: (name: string, value: string): void => {
@@ -77,9 +81,37 @@ export const useStore = create<StoreState>()(
       // Update Settings with Sync Logic
       updateSettings: (newSettings: Partial<SystemSettings>) => {
         const currentSettings = get().settings;
-        set((state: any) => {
+        set((state: StoreState) => {
             const updated = { ...state.settings, ...newSettings };
             saveSettingsAction(updated).catch((e: any) => logger.error('Failed to save settings to DB', { error: (e as Error).message }, 'DATABASE'));
+            
+            logger.info('Supabase config for sync:', { config: updated.supabaseConfig }, 'STORE');
+            logger.info('IntegrationAPIService is connected:', { isConnected: integrationAPIService.isConnected() }, 'STORE');
+
+            // Check if Supabase environment variables are available
+            const isSupabaseConfigured = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+            if (isSupabaseConfigured) {
+                // If configured, ensure enabled and autoSync are true by default if not explicitly set to false
+                if (updated.supabaseConfig) {
+                    updated.supabaseConfig.enabled = updated.supabaseConfig.enabled ?? true;
+                    updated.supabaseConfig.autoSync = updated.supabaseConfig.autoSync ?? true;
+                } else {
+                    // If supabaseConfig is entirely missing but env vars are present, initialize it
+                    updated.supabaseConfig = {
+                        enabled: true,
+                        autoSync: true,
+                        url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                    };
+                }
+            } else {
+                // If Supabase is not configured via env vars, ensure it's disabled in settings
+                if (updated.supabaseConfig) {
+                    updated.supabaseConfig.enabled = false;
+                    updated.supabaseConfig.autoSync = false;
+                }
+            }
             
             if (updated.supabaseConfig?.enabled && updated.supabaseConfig?.autoSync) {
                 if (!integrationAPIService.isConnected()) {
@@ -101,7 +133,7 @@ export const useStore = create<StoreState>()(
       },
       
       isMobileMenuOpen: false,
-      toggleMobileMenu: () => set((state: any) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
+      toggleMobileMenu: () => set((state: StoreState) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
 
       setDailyAnalyticsData: (data: DailySalesAnalytics | null) => set({ dailyAnalyticsData: data }),
       
@@ -121,7 +153,7 @@ export const useStore = create<StoreState>()(
         };
       },
 
-      addIntegrationLog: (log: any) => set((state: any) => {
+      addIntegrationLog: (log: IntegrationLog) => set((state: StoreState) => {
         const newLog: IntegrationLog = {
            id: `log-${Date.now()}`,
            timestamp: new Date().toISOString(),
@@ -136,13 +168,14 @@ export const useStore = create<StoreState>()(
         return { integrationLogs: [newLog, ...currentLogs].slice(0, 100) };
       }),
 
+
       setShifts: (shifts: any[]) => set({ shifts }),
       setAttendance: (records: any[]) => set({ attendance: records }),
       setEmployees: (employees: any[]) => set({ employees }),
       addAuditLog: (log: any) => console.log('Audit log:', log),
-      addNotification: (type: any, message: string, duration?: number) => {
+      addNotification: (type: Notification['type'], message: string, duration?: number) => {
         const newNotification = { id: Date.now().toString(), type, message, duration };
-        set((state: any) => ({ notifications: [...(state.notifications || []), newNotification] }));
+        set((state: StoreState) => ({ notifications: [...(state.notifications || []), newNotification] }));
         if (duration) {
           setTimeout(() => {
             set((state: any) => ({
@@ -154,15 +187,15 @@ export const useStore = create<StoreState>()(
 
       setSuppliers: (suppliers: Fornecedor[]) => set({ suppliers }),
       addSupplier: (supplier: Fornecedor) => {
-        set((state: any) => ({ suppliers: [...(state.suppliers || []), supplier] }));
+        set((state: StoreState) => ({ suppliers: [...(state.suppliers || []), supplier] }));
         saveSupplierAction(supplier);
       },
       updateSupplier: (supplier: Fornecedor) => {
-        set((state: any) => ({ suppliers: (state.suppliers || []).map((s: Fornecedor) => s.id === supplier.id ? supplier : s) }));
+        set((state: StoreState) => ({ suppliers: (state.suppliers || []).map((s: Fornecedor) => s.id === supplier.id ? supplier : s) }));
         saveSupplierAction(supplier);
       },
       removeSupplier: (id: string) => {
-        set((state: any) => ({ suppliers: (state.suppliers || []).filter((s: Fornecedor) => s.id !== id) }));
+        set((state: StoreState) => ({ suppliers: (state.suppliers || []).filter((s: Fornecedor) => s.id !== id) }));
       },
 
       onRealtimeChange: (payload: any) => {
@@ -173,19 +206,16 @@ export const useStore = create<StoreState>()(
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
               const p = payload.new as any;
               const dish: Dish = {
-                id: p.id,
-                name: p.name,
-                description: p.description,
-                price: p.price,
+                ...p, // Spread all properties from payload.new
                 categoryId: p.category_id,
                 imageUrl: p.image_url || p.image,
                 taxCode: p.tax_code,
-                taxPercentage: p.tax_percentage,
                 isActive: p.is_active,
                 available: p.available ?? p.is_available_on_digital_menu,
+                parentId: p.parent_id,
                 createdAt: p.created_at ? new Date(p.created_at) : null,
                 updatedAt: p.updated_at ? new Date(p.updated_at) : null,
-              } as Dish;
+              };
               
               if (payload.eventType === 'INSERT') state.addDish(dish);
               if (payload.eventType === 'UPDATE') state.updateDish(dish);
@@ -197,13 +227,12 @@ export const useStore = create<StoreState>()(
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
               const c = payload.new as any;
               const category: Category = {
-                id: c.id,
-                name: c.name,
-                sortOrder: c.sort_order,
-                isActive: c.is_active,
+                ...c, // Spread all properties from payload.new
+                parentId: c.parent_id,
+                availableOnDigitalMenu: c.is_available_on_digital_menu,
                 createdAt: c.created_at ? new Date(c.created_at) : null,
                 updatedAt: c.updated_at ? new Date(c.updated_at) : null,
-              } as Category;
+              };
               if (payload.eventType === 'INSERT') state.addCategory(category);
               if (payload.eventType === 'UPDATE') state.updateCategory(category);
             }
@@ -214,11 +243,8 @@ export const useStore = create<StoreState>()(
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
               const o = payload.new as any;
               const order: Order = {
-                id: o.id,
+                ...o, // Spread all properties from payload.new
                 tableId: o.table_id,
-                status: o.status,
-                total: o.total,
-                taxTotal: o.tax_total,
                 userId: o.user_id,
                 userName: o.user_name,
                 customerNif: o.customer_nif,
@@ -226,23 +252,20 @@ export const useStore = create<StoreState>()(
                 shiftId: o.shift_id,
                 subAccountName: o.sub_account_name,
                 invoiceNumber: o.invoice_number,
-                hash: o.hash,
                 previousHash: o.previous_hash,
-                signature: o.signature,
                 jwsPayload: o.jws_payload,
                 isSyncedAgt: o.is_synced_agt,
                 agtSubmissionUuid: o.agt_submission_uuid,
                 createdAt: o.created_at ? new Date(o.created_at) : null,
                 updatedAt: o.updated_at ? new Date(o.updated_at) : null,
                 closedAt: o.closed_at ? new Date(o.closed_at) : null,
-                notes: o.notes,
                 paymentMethod: o.payment_method,
                 splitPayments: o.split_payments,
                 customerName: o.customer_name,
                 // Runtime fields
                 items: [],
                 payments: []
-              } as Order;
+              };
               if (payload.eventType === 'INSERT') state.addOrder(order);
               if (payload.eventType === 'UPDATE') state.updateOrder(order);
             }
@@ -267,12 +290,10 @@ export const useStore = create<StoreState>()(
     {
       name: 'tasca-vereda-storage-v2',
       storage: createJSONStorage(() => customStorage),
-      partialize: (state) => ({
-        settings: state.settings,
-        currentUser: state.currentUser,
-        isAuthenticated: state.isAuthenticated,
-        // Add other persisted fields if necessary
-      }),
+       partialize: (state) => {
+         const { isAuthenticated, currentUser, settings, ...rest } = state as StoreState;
+         return { settings };
+       },
     }
   )
 );

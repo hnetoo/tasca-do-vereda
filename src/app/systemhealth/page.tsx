@@ -2,9 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { healthMonitorService, SystemHealthReport, SystemIssue } from '@/services/healthMonitorService';
-import { disasterRecoveryService, StateSnapshot } from '@/services/disasterRecoveryService';
-import { agtService } from '@/services/agtService';
 import { 
   Activity, 
   ShieldCheck, 
@@ -31,9 +28,21 @@ import {
   Loader2
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { 
+  getHealthReportAction, 
+  getMetricsHistoryAction, 
+  getIssueHistoryAction, 
+  listSnapshotsAction,
+  createSnapshotAction,
+  restoreToPointInTimeAction,
+  generateNewKeyPairAction,
+  simulateSaftExportAndValidateChainingAction
+} from './actions';
+import { SystemHealthReport, SystemIssue } from '@/services/healthMonitorService';
+import { StateSnapshot } from '@/services/disasterRecoveryService';
 
 const SystemHealth = () => {
-  const { settings, activeOrders, menu } = useStore();
+  const { settings, activeOrders, dishes } = useStore();
   const [report, setReport] = useState<SystemHealthReport | null>(null);
   const [history, setHistory] = useState<SystemHealthReport[]>([]);
   const [issues, setIssues] = useState<SystemIssue[]>([]);
@@ -58,14 +67,14 @@ const SystemHealth = () => {
     
     try {
       // 1. Get or Generate Key Pair (Simulated for audit)
-      const keys = await agtService.generateNewKeyPair();
+      const keys = await generateNewKeyPairAction();
       
       // 2. Run Simulation
-      const result = await agtService.simulateSaftExportAndValidateChaining(
+      const result = await simulateSaftExportAndValidateChainingAction(
         activeOrders,
         keys.privateKey,
         settings,
-        menu
+        dishes
       );
 
       setAgtAuditLog(result.auditLog);
@@ -84,16 +93,20 @@ const SystemHealth = () => {
 
   useEffect(() => {
     // Carregar dados iniciais no client-side
-    setReport(healthMonitorService.getHealthReport());
-    setHistory(healthMonitorService.getMetricsHistory());
-    setIssues(healthMonitorService.getIssueHistory());
-    setSnapshots(disasterRecoveryService.listSnapshots());
+    const fetchInitialData = async () => {
+      setReport(await getHealthReportAction());
+      setHistory(await getMetricsHistoryAction());
+      setIssues(await getIssueHistoryAction());
+      setSnapshots(await listSnapshotsAction());
+    };
 
-    const interval = setInterval(() => {
-      setReport(healthMonitorService.getHealthReport());
-      setHistory([...healthMonitorService.getMetricsHistory()]);
-      setIssues([...healthMonitorService.getIssueHistory()]);
-      setSnapshots(disasterRecoveryService.listSnapshots());
+    fetchInitialData();
+
+    const interval = setInterval(async () => {
+      setReport(await getHealthReportAction());
+      setHistory(await getMetricsHistoryAction());
+      setIssues(await getIssueHistoryAction());
+      setSnapshots(await listSnapshotsAction());
     }, 5000);
 
   return () => clearInterval(interval);
@@ -102,14 +115,14 @@ const SystemHealth = () => {
   const handleCreateSnapshot = async () => {
     const label = prompt('Etiqueta para o snapshot (ex: Antes de atualização):');
     if (label !== null) {
-      await disasterRecoveryService.createSnapshot(label || 'Snapshot Manual');
-      setSnapshots(disasterRecoveryService.listSnapshots());
+      await createSnapshotAction(label || 'Snapshot Manual');
+      setSnapshots(await listSnapshotsAction());
     }
   };
 
   const handleRestoreSnapshot = async (id: string) => {
     if (confirm('Tem a certeza que deseja restaurar o sistema para este ponto? Todos os dados atuais serão substituídos.')) {
-      const success = await disasterRecoveryService.restoreToPointInTime(id);
+      const success = await restoreToPointInTimeAction(id);
       if (success) {
         alert('Restauração concluída com sucesso!');
         window.location.reload();

@@ -17,6 +17,7 @@ import { logger } from '../../services/logger';
 export interface OperationalSlice {
   tables: Table[];
   activeTableId: string | null;
+  saveStatus: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE';
   customers: Customer[];
   reservations: Reservation[];
   stock: StockItem[];
@@ -28,6 +29,7 @@ export interface OperationalSlice {
   addTable: (table: Table) => void;
   updateTable: (table: Table) => void;
   removeTable: (id: string) => void;
+  updateTableStatus: (id: string, status: string) => void;
   
   addCustomer: (customer: Customer) => void;
   updateCustomer: (customer: Customer) => void;
@@ -56,6 +58,8 @@ export interface OperationalSlice {
   setDeliveries: (deliveries: Delivery[]) => void;
   setShifts: (shifts: CashShift[]) => void;
   addAuditLog: (log: any) => void;
+  auditLogs: any[];
+  settleCustomerDebt: (customerId: UUID, amount: number) => void;
 }
 
 export const createOperationalSlice: StateCreator<
@@ -66,44 +70,97 @@ export const createOperationalSlice: StateCreator<
 > = (set, get) => ({
   tables: [],
   activeTableId: null,
+  saveStatus: 'IDLE',
   customers: [],
   reservations: [],
   stock: [],
   shifts: [],
   currentShiftId: null,
   deliveries: [],
+  auditLogs: [],
   
+  settleCustomerDebt: (customerId: UUID, amount: number) => {
+    const state = get();
+    const customer = state.customers.find(c => c.id === customerId);
+    if (customer) {
+      const newBalance = (customer.balance || 0) - amount;
+      const updatedCustomer = { ...customer, balance: newBalance };
+      state.updateCustomer(updatedCustomer);
+      
+      // Log the transaction
+      state.addAuditLog({
+        id: crypto.randomUUID(),
+        action: 'PAYMENT_RECEIVED',
+        details: { customerId, amount, newBalance },
+        timestamp: new Date().toISOString(),
+        userId: state.currentUser?.id || 'system'
+      });
+    }
+  },
+
   setActiveTable: (id: string | null) => set({ activeTableId: id }),
   
   addTable: (table: Table) => {
+    set({ saveStatus: 'SAVING' });
     set((state: OperationalSlice) => ({ tables: [...state.tables, table] }));
     saveTableAction(table).then(res => {
-      if (!res.success) logger.error('Failed to persist new table to SQL', { id: table.id, error: res.error }, 'DATABASE');
-    }).catch(e => 
+      if (!res.success) {
+        set({ saveStatus: 'ERROR' });
+        logger.error('Failed to persist new table to SQL', { id: table.id, error: res.error }, 'DATABASE');
+      } else {
+        set({ saveStatus: 'SAVED' });
+        setTimeout(() => set({ saveStatus: 'IDLE' }), 2000);
+      }
+    }).catch(e => {
+      set({ saveStatus: 'ERROR' });
       logger.error('Failed to persist new table to SQL', { id: table.id, error: e.message }, 'DATABASE')
-    );
+    });
   },
   
   updateTable: (table: Table) => {
+    set({ saveStatus: 'SAVING' });
     set((state: OperationalSlice) => ({
       tables: state.tables.map((t: Table) => t.id === table.id ? table : t)
     }));
     saveTableAction(table).then(res => {
-      if (!res.success) logger.error('Failed to persist updated table to SQL', { id: table.id, error: res.error }, 'DATABASE');
-    }).catch(e => 
+      if (!res.success) {
+        set({ saveStatus: 'ERROR' });
+        logger.error('Failed to persist updated table to SQL', { id: table.id, error: res.error }, 'DATABASE');
+      } else {
+        set({ saveStatus: 'SAVED' });
+        setTimeout(() => set({ saveStatus: 'IDLE' }), 2000);
+      }
+    }).catch(e => {
+      set({ saveStatus: 'ERROR' });
       logger.error('Failed to persist updated table to SQL', { id: table.id, error: e.message }, 'DATABASE')
-    );
+    });
   },
   
   removeTable: (id: string) => {
+    set({ saveStatus: 'SAVING' });
     set((state: OperationalSlice) => ({
       tables: state.tables.filter((t: Table) => t.id !== id)
     }));
     deleteTableAction(id).then(res => {
-      if (!res.success) logger.error('Failed to delete table from SQL', { id, error: res.error }, 'DATABASE');
-    }).catch(e => 
+      if (!res.success) {
+        set({ saveStatus: 'ERROR' });
+        logger.error('Failed to delete table from SQL', { id, error: res.error }, 'DATABASE');
+      } else {
+        set({ saveStatus: 'SAVED' });
+        setTimeout(() => set({ saveStatus: 'IDLE' }), 2000);
+      }
+    }).catch(e => {
+      set({ saveStatus: 'ERROR' });
       logger.error('Failed to delete table from SQL', { id, error: e.message }, 'DATABASE')
-    );
+    });
+  },
+
+  updateTableStatus: (id: string, status: string) => {
+    const table = get().tables.find((t: Table) => t.id === id);
+    if (table) {
+      const updatedTable = { ...table, status };
+      get().updateTable(updatedTable);
+    }
   },
   
   addCustomer: (customer: Customer) => {
@@ -224,7 +281,7 @@ export const createOperationalSlice: StateCreator<
   
   closeTableWithoutOrders: (tableId: string) => {
     set((state: OperationalSlice) => ({
-      tables: state.tables.map((t: Table) => t.id === tableId ? { ...t, status: 'LIVRE' } : t),
+      tables: state.tables.map((t: Table) => t.id === tableId ? { ...t, status: 'AVAILABLE' } : t),
       activeTableId: state.activeTableId === tableId ? null : state.activeTableId
     }));
   },
@@ -234,8 +291,8 @@ export const createOperationalSlice: StateCreator<
     // Update tables
     set((state: OperationalSlice) => ({
       tables: state.tables.map((t: Table) => {
-        if (t.id === fromTableId) return { ...t, status: 'LIVRE' };
-        if (t.id === toTableId) return { ...t, status: 'OCUPADO' };
+        if (t.id === fromTableId) return { ...t, status: 'AVAILABLE' };
+        if (t.id === toTableId) return { ...t, status: 'OCCUPADO' };
         return t;
       }),
       activeTableId: toTableId
@@ -307,5 +364,16 @@ export const createOperationalSlice: StateCreator<
   setShifts: (shifts: CashShift[]) => set({ shifts }),
   addAuditLog: (log: any) => {
     logger.info('AUDIT LOG', log, 'AUDIT');
+    set((state: OperationalSlice) => ({ 
+      auditLogs: [
+        { 
+          ...log, 
+          id: log.id || `log-${Date.now()}`, 
+          timestamp: new Date().toISOString(),
+          created_at: new Date().toISOString() 
+        }, 
+        ...state.auditLogs
+      ].slice(0, 50) 
+    }));
   }
 });

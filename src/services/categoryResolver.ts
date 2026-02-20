@@ -1,7 +1,7 @@
 import { Dish, MenuCategory } from "../types";
 
-const norm = (s?: string) => String(s || "").trim().toLowerCase();
-const slug = (s?: string) => norm(s).replace(/\s+/g, "_");
+const norm = (s?: string | null) => String(s || "").trim().toLowerCase();
+const slug = (s?: string | null) => norm(s).replace(/\s+/g, "_");
 
 export const resolveCategoryId = (dish: Dish, categories: MenuCategory[]): string | null => {
   const byId = categories.find(c => norm(dish.category_id) === norm(c.id));

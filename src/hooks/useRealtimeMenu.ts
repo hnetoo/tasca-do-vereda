@@ -73,7 +73,7 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
         max_stock_quantity: p.quantidade_maxima,
         unit: p.unidade_medida,
         supplier_id: p.fornecedor_padrao_id
-      }));
+      } as unknown as Product));
 
       setProducts(mappedProducts);
       setCategories(cats || []);

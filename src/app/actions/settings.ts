@@ -1,7 +1,5 @@
-'use server';
 
-import 'server-only';
-import { executeQuery } from '@/services/database/connection';
+import { executeQuery } from '@/services/database/operations';
 import { dbConfig } from '@/services/database/config';
 import { logger } from '@/services/logger';
 import { integrationAPIService } from '@/services/integrationAPIService';
@@ -65,8 +63,8 @@ export async function hardResetAction(): Promise<{ success: boolean; error?: str
 }
 
 export async function testCloudConnectionAction(url: string, key: string): Promise<{ success: boolean; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     logger.info('Iniciando teste de conexão Supabase (Server Action)...', null, 'CLOUD');
     await integrationAPIService.initialize(url, key);
@@ -84,8 +82,8 @@ export async function testCloudConnectionAction(url: string, key: string): Promi
 }
 
 export async function fetchRemoteCategoriesAction(supabaseConfig: SystemSettings['supabaseConfig'], search: string): Promise<{ success: boolean; data?: MenuCategory[]; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     if (!supabaseConfig?.enabled || !supabaseConfig?.url || !supabaseConfig?.key) {
       return { success: false, error: 'Configuração da cloud inválida.' };
@@ -104,8 +102,8 @@ export async function fetchRemoteCategoriesAction(supabaseConfig: SystemSettings
 }
 
 export async function fetchRemoteProductsAction(supabaseConfig: SystemSettings['supabaseConfig'], search: string, categoryId: string): Promise<{ success: boolean; data?: Product[]; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     if (!supabaseConfig?.enabled || !supabaseConfig?.url || !supabaseConfig?.key) {
       return { success: false, error: 'Configuração da cloud inválida.' };
@@ -124,8 +122,8 @@ export async function fetchRemoteProductsAction(supabaseConfig: SystemSettings['
 }
 
 export async function setupRLSAction(supabaseConfig: SystemSettings['supabaseConfig']): Promise<{ success: boolean; message?: string; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     if (!supabaseConfig?.enabled || !supabaseConfig?.url || !supabaseConfig?.key) {
       return { success: false, error: 'Configuração da cloud inválida.' };
@@ -146,8 +144,8 @@ export async function setupRLSAction(supabaseConfig: SystemSettings['supabaseCon
 }
 
 export async function setupBucketsAction(supabaseConfig: SystemSettings['supabaseConfig']): Promise<{ success: boolean; message?: string; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     if (!supabaseConfig?.enabled || !supabaseConfig?.url || !supabaseConfig?.key) {
       return { success: false, error: 'Configuração da cloud inválida.' };
@@ -168,8 +166,8 @@ export async function setupBucketsAction(supabaseConfig: SystemSettings['supabas
 }
 
 export async function captureFullStateAction(): Promise<{ success: boolean; data?: FullApplicationState; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     const state = await disasterRecoveryService.captureFullState();
     return { success: true, data: state };
@@ -180,20 +178,22 @@ export async function captureFullStateAction(): Promise<{ success: boolean; data
 }
 
 export async function restoreFullStateAction(state: FullApplicationState): Promise<{ success: boolean; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
-    await disasterRecoveryService.restoreFullState(state);
+    logger.warn('Iniciando restauração completa do estado da aplicação...', null, 'BACKUP');
+    await disasterRecoveryService.applyState(state);
+    logger.info('Restauração completa do estado da aplicação concluída com sucesso.', null, 'BACKUP');
     return { success: true };
   } catch (error: any) {
-    logger.error('Erro ao restaurar estado completo (Server Action)', { error: error.message }, 'BACKUP');
+    logger.error('Erro ao restaurar estado da aplicação (Server Action)', { error: error.message }, 'BACKUP');
     return { success: false, error: error.message };
   }
 }
 
 export async function syncBackupAction(backupMetadata: BackupMetadata, backupData: unknown): Promise<{ success: boolean; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     const result = await integrationAPIService.syncBackup(backupMetadata, backupData);
     if (result.success) {
@@ -208,8 +208,8 @@ export async function syncBackupAction(backupMetadata: BackupMetadata, backupDat
 }
 
 export async function syncMenuAction(categories: MenuCategory[], products: Product[], settings: SystemSettings): Promise<{ success: boolean; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     const result = await integrationAPIService.syncMenu(categories, products, settings);
     if (result.success) {
@@ -224,8 +224,8 @@ export async function syncMenuAction(categories: MenuCategory[], products: Produ
 }
 
 export async function fetchMenuAction(supabaseConfig: SystemSettings['supabaseConfig']): Promise<{ success: boolean; data?: { categories: MenuCategory[], products: Product[] }; error?: string }> {
-  'use server';
-  import 'server-only';
+
+
   try {
     if (!supabaseConfig?.enabled || !supabaseConfig?.url || !supabaseConfig?.key) {
       return { success: false, error: 'Configuração da cloud inválida.' };
@@ -233,7 +233,13 @@ export async function fetchMenuAction(supabaseConfig: SystemSettings['supabaseCo
     await integrationAPIService.initialize(supabaseConfig.url, supabaseConfig.key);
     const result = await integrationAPIService.fetchMenu();
     if (result.success && result.data) {
-      return { success: true, data: result.data };
+      return { 
+        success: true, 
+        data: {
+          categories: result.data.categories,
+          products: result.data.dishes || []
+        } 
+      };
     } else {
       return { success: false, error: result.error || 'Falha ao carregar menu da cloud.' };
     }

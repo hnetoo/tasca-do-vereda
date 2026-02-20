@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import SmartAlertsPanel from '@/components/SmartAlertsPanel';
+import Breadcrumbs from '@/components/Breadcrumbs'; // Importar o componente Breadcrumbs
 import { useStore } from '@/store/useStore';
 
 const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu'];
@@ -44,7 +45,10 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
           } transition-opacity duration-300`}
         >
           <Sidebar showSidebar={showSidebar} />
-          <main className={`flex-1 min-w-0 ${showSidebar ? 'ml-64' : 'ml-0'}`}>{children}</main>
+          <main className={`flex-1 min-w-0 ${showSidebar ? '' : 'ml-0'}`}>
+            <Breadcrumbs /> {/* Adicionar o componente Breadcrumbs aqui */}
+            {children}
+          </main>
         </div>
         <SmartAlertsPanel />
 

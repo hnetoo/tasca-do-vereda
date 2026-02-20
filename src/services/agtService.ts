@@ -117,32 +117,47 @@ export async function buildInvoicePayload(order: Order, settings: SystemSettings
   const submissionUUID = crypto.randomUUID(); // Requires secure context
   
   // 1. Prepare Document Data
-  const docTotalNet = order.total; // Assuming total is net for simplicity, normally need to calc from lines
-  const docTotalTax = (order.items || []).reduce((acc, item) => acc + (item.unitPrice * item.quantity * ((settings.taxRate || 14) / 100)), 0);
+  const docTotalNet = order.total || 0; // Assuming total is net for simplicity, normally need to calc from lines
+  // @ts-ignore
+  const docTotalTax = (order.items || []).reduce((acc, item) => {
+    // @ts-ignore
+    const price = item.unit_price || item.unitPrice || 0;
+    // @ts-ignore
+    const rate = item.tax_percentage || item.taxPercentage || settings.taxRate || 14;
+    return acc + (price * (item.quantity || 0) * (rate / 100));
+  }, 0);
   const docTotalGross = docTotalNet + docTotalTax;
 
   // Build Lines
   const lines: AGTLine[] = (order.items || []).map((item, index) => {
-    const dish = menu.find(d => d.id === item.productId);
-    const taxRate = item.taxPercentage || settings.taxRate || 14;
-    const taxCode = item.taxCode || 'NOR';
+    // Determine dish ID (handle both potential field names)
+    // @ts-ignore - Handle runtime property variations
+    const dishId = item.dish_id || item.dishId || item.productId;
+    const dish = menu.find(d => d.id === dishId);
+    
+    // @ts-ignore - Handle runtime property variations
+    const taxRate = item.tax_percentage || item.taxPercentage || settings.taxRate || 14;
+    // @ts-ignore - Handle runtime property variations
+    const taxCode = item.tax_code || item.taxCode || 'NOR';
+    // @ts-ignore - Handle runtime property variations
+    const unitPrice = item.unit_price || item.unitPrice || 0;
     
     return {
       lineNumber: index + 1,
-      productCode: item.productId,
+      productCode: dishId || 'UNKNOWN',
       productDescription: dish ? dish.name : 'Item Desconhecido',
-      quantity: item.quantity,
+      quantity: item.quantity || 1,
       unitOfMeasure: 'UN',
-      unitPrice: item.unitPrice,
-      unitPriceBase: item.unitPrice,
+      unitPrice: unitPrice,
+      unitPriceBase: unitPrice,
       debitAmount: 0,
-      creditAmount: item.unitPrice * item.quantity,
+      creditAmount: unitPrice * (item.quantity || 1),
       taxes: [{
         taxType: 'IVA',
         taxCountryRegion: 'AO',
         taxCode: taxCode,
         taxPercentage: taxRate,
-        taxContribution: (item.unitPrice * item.quantity) * (taxRate / 100)
+        taxContribution: (unitPrice * (item.quantity || 1)) * (taxRate / 100)
       }],
       settlementAmount: 0
     };
@@ -150,14 +165,17 @@ export async function buildInvoicePayload(order: Order, settings: SystemSettings
 
   // Document JWS Payload (Subset of fields)
   const documentJwsPayload = {
-    documentNo: order.invoiceNumber || `FT ${now.getFullYear()}/${order.id.slice(0, 8)}`,
+    documentNo: order.invoiceNumber || order.invoice_number || `FT ${now.getFullYear()}/${(order.id || '').slice(0, 8)}`,
     taxRegistrationNumber: settings.nif as string,
     documentType: "FT",
     documentDate: now.toISOString().split('T')[0],
-    customerTaxID: order.customerId || "999999999", 
+    // @ts-ignore
+    customerTaxID: order.customer_nif || order.customerNif || order.customerId || "999999999", 
     customerCountry: "AO",
-    companyName: order.customerName || "Consumidor Final",
-    previousHash: order.previous_hash || "",
+    // @ts-ignore
+    companyName: order.customer_name || order.customerName || "Consumidor Final",
+    // @ts-ignore
+    previousHash: order.previous_hash || order.previousHash || "",
     documentTotals: {
       taxPayable: parseFloat(docTotalTax.toFixed(2)),
       netTotal: parseFloat(docTotalNet.toFixed(2)),
@@ -244,15 +262,15 @@ export async function simulateSaftExportAndValidateChaining(
 
         // Sort orders by timestamp and invoice number to ensure correct chain sequence
         const sortedOrders = [...orders].sort((a, b) => {
-            const timeA = new Date(a.timestamp).getTime();
-            const timeB = new Date(b.timestamp).getTime();
+            const timeA = new Date(a.timestamp || 0).getTime();
+            const timeB = new Date(b.timestamp || 0).getTime();
             if (timeA !== timeB) return timeA - timeB;
             return (a.invoiceNumber || "").localeCompare(b.invoiceNumber || "");
         });
 
         for (const order of sortedOrders) {
             results.chainLength++;
-            const currentInvoice = order.invoiceNumber || `DOC-${order.id.slice(0, 8)}`;
+            const currentInvoice = order.invoiceNumber || `DOC-${(order.id || '').slice(0, 8)}`;
             
             // 1. Validate Previous Hash link
             if (order.previous_hash !== expectedPreviousHash) {

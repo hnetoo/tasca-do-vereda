@@ -37,7 +37,7 @@ export const analyzeBusinessPerformance = async (
   orders: Order[], 
   menu: Product[]
 ): Promise<AIAnalysisResult> => {
-  const salesTotal = orders.reduce((acc, o) => acc + o.total, 0);
+  const salesTotal = orders.reduce((acc, o) => acc + (o.total || 0), 0);
   const orderCount = orders.length;
   const prompt = `
     Atue como um gerente de restaurante experiente. Analise os seguintes dados:
@@ -102,7 +102,7 @@ export const getMenuSuggestion = async (ingredients: string): Promise<string> =>
 }
 
 export const generateMonthlyReport = async (orders: Order[], menu: Product[], monthName: string): Promise<AIMonthlyReport | null> => {
-  const salesTotal = orders.reduce((acc, o) => acc + o.total, 0);
+  const salesTotal = orders.reduce((acc, o) => acc + (o.total || 0), 0);
   const sampleItems = orders.flatMap(o => o.items).length;
   const menuItems = menu.map(m => m.name).join(', ');
 

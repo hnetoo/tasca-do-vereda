@@ -6,7 +6,7 @@ import { Move } from 'lucide-react';
 import { Dish } from '@/types';
 
 const Encomendas = () => {
-    const { menu } = useStore();
+    const { dishes: menu } = useStore();
     const theme = 'dark'; // Defaulting to dark as AppShell sets bg-slate-950
 
     return (

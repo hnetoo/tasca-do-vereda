@@ -13,13 +13,13 @@ import {
   Donut, Martini, Grape, Carrot, Apple, Cherry, RotateCcw, Check, Menu
 } from 'lucide-react';
 import Image from 'next/image';
-import { PaymentMethod, Order, TableZone, Table, OrderPayment, Product, AuditLog, OrderItem } from '@/types';
+import { PaymentMethod, Order, TableZone, Table, OrderPayment, Dish, Product, AuditLog, OrderItem } from '@/types';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { availableMonitors, primaryMonitor } from '@tauri-apps/api/window';
 import ExportButton from '@/components/ExportButton';
 import { logger } from '@/services/logger';
 import { formatKz, formatKzDetailed } from '@/services/utils/currencyFormatter';
-import { normalizeProductImage } from '@/utils/imageUtils';
+import { normalizeDishImage } from '@/utils/imageUtils';
 
 const AVAILABLE_ICONS = [
   { name: 'Utensils', icon: Utensils, label: 'Geral' },
@@ -46,12 +46,12 @@ const AVAILABLE_ICONS = [
 const POS = () => {
   const { 
     tables, activeTableId, setActiveTable, 
-    products: menu, categories, activeOrders, activeOrderId, setActiveOrder, 
+    dishes: menu, categories, activeOrders, activeOrderId, setActiveOrder, 
     createNewOrder, addToOrder, removeFromOrder, 
     checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
     settings, addNotification,
     currentShiftId, openShift, toggleMobileMenu, currentUser,
-    auditLogs, addTable
+    addTable, auditLogs
   } = useStore();
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('TODOS');
@@ -122,7 +122,7 @@ const POS = () => {
       if (tableOrders.length > 0) {
         // If the current activeOrderId is not one of this table's orders, switch to the first one
         if (!activeOrderId || !tableOrders.find((o: Order) => o.id === activeOrderId)) {
-          setActiveOrder(tableOrders[0].id);
+          setActiveOrder(tableOrders[0].id || null);
         }
       } else {
         setActiveOrder(null);
@@ -133,7 +133,7 @@ const POS = () => {
   }, [activeTableId, activeOrders, activeOrderId, setActiveOrder]);
 
   // Handle Product Click (Auto-select Balcão if no table active)
-  const handleProductClick = (product: Product) => {
+  const handleProductClick = (product: Dish) => {
     let targetTableId = activeTableId;
     
     // Auto-select Balcão logic
@@ -146,7 +146,7 @@ const POS = () => {
           id: 'balcao-999',
           name: 'Balcão',
           seats: 100,
-          status: 'LIVRE',
+          status: 'AVAILABLE',
           x: 0,
           y: 0,
           zone: 'INTERIOR',
@@ -173,20 +173,20 @@ const POS = () => {
           // If we have an active order but it's not for this table (shouldn't happen due to effect, but safety check)
           // or if activeOrderId is null
           if (!targetOrderId || !tableOrders.find((o: Order) => o.id === targetOrderId)) {
-             targetOrderId = tableOrders[0].id;
-             setActiveOrder(targetOrderId);
+             targetOrderId = tableOrders[0].id || null;
+             setActiveOrder(targetOrderId || null);
           }
        } else {
           // Create new order
           const tableName = tables.find((t: Table) => t.id === targetTableId)?.name || 'Mesa';
-          targetOrderId = createNewOrder(targetTableId, tableName);
-          setActiveOrder(targetOrderId);
+          targetOrderId = createNewOrder(targetTableId!, tableName);
+          setActiveOrder(targetOrderId || null);
        }
        
        // Now add to order
        // Pass specificOrderId to avoid race conditions
        if (targetOrderId) {
-         addToOrder(targetTableId, product, 1, '', targetOrderId);
+         addToOrder(targetTableId!, product, 1, '', targetOrderId!);
        }
     }
   };
@@ -218,15 +218,15 @@ const POS = () => {
     activeOrders.some((o: Order) => o.tableId === t.id && o.status === 'ABERTO')
   );
 
-  const filteredMenu = menu.filter((item: Product) => {
+  const filteredMenu = menu.filter((item: Dish) => {
     const matchesCategory = selectedCategoryId === 'TODOS' || item.categoryId === selectedCategoryId;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
-  }).sort((a: Product, b: Product) => a.name.localeCompare(b.name));
+  }).sort((a: Dish, b: Dish) => a.name.localeCompare(b.name));
 
 
   
-  const totalWithTax = currentOrder ? currentOrder.total : 0;
+  const totalWithTax = currentOrder?.total || 0;
 
   const getExportConfig = () => {
     const shiftOrders = activeOrders.filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId);
@@ -388,10 +388,12 @@ const POS = () => {
     const customerTaxId = order.customerNif || '999999999';
     
     const itemsHtml = (order.items || []).map(item => {
-      const product = menu.find((p: Product) => p.id === item.productId);
+      const product = menu.find((p: Dish) => p.id === item.dishId);
       const name = product?.name || 'Item Desconhecido';
-      const unitPrice = formatKzDetailed(item.unitPrice);
-      const subTotal = formatKzDetailed(item.unitPrice * item.quantity);
+      const price = item.unitPrice || item.unit_price || 0;
+      const qty = item.quantity || 1;
+      const unitPrice = formatKzDetailed(price);
+      const subTotal = formatKzDetailed(price * qty);
 
       return `
       <div style="margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 6px;">
@@ -525,15 +527,15 @@ const POS = () => {
     const customerTaxId = order.customerNif || '999999999';
     
     const itemsHtml = (order.items || []).map(item => {
-      const product = menu.find((p: Product) => p.id === item.productId);
+      const product = menu.find((p: Product) => p.id === (item.dishId || item.dish_id));
       const name = product?.name || 'Item Desconhecido';
-      const unitPrice = formatKzDetailed(item.unitPrice);
-      const subTotal = formatKzDetailed(item.unitPrice * item.quantity);
+      const unitPrice = formatKzDetailed(item.unitPrice || item.unit_price || 0);
+      const subTotal = formatKzDetailed((item.unitPrice || item.unit_price || 0) * (item.quantity || 0));
 
       return `
       <div style="margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 4px;">
         <div style="font-weight: bold; font-size: 16px; margin-bottom: 2px;">
-          ${item.quantity} x ${name}
+          ${item.quantity || 0} x ${name}
         </div>
         <div style="display: flex; justify-content: space-between; font-size: 13px;">
           <span style="color: #666;">Preço Unit: ${unitPrice}</span>
@@ -549,7 +551,7 @@ const POS = () => {
     const taxAmount = order.taxTotal || 0;
     const grossTotal = (order.total || 0) - taxAmount;
     const finalTotal = order.total || 0;
-    const itemCount = (order.items || []).reduce((acc, item) => acc + item.quantity, 0);
+    const itemCount = (order.items || []).reduce((acc, item) => acc + (item.quantity || 1), 0);
     const formatNumber = (val: number) => new Intl.NumberFormat('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
     const paymentMethodName = order.paymentMethod === 'NUMERARIO' ? 'Numerário' : 
@@ -1075,10 +1077,10 @@ const POS = () => {
                    ${selectedCategoryId === cat.id ? 'bg-primary border-primary text-black shadow-glow' : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'}
                  `}
                  title={cat.name}
-               >
-                 {getCategoryIcon(cat.name, cat.icon)}
-                 <span className="text-[7px] font-black uppercase mt-1 truncate w-full px-1 text-center">{cat.name.split(' ')[0]}</span>
-               </button>
+              >
+                {getCategoryIcon(cat.name, cat.icon || undefined)}
+                <span className="text-[7px] font-black uppercase mt-1 truncate w-full px-1 text-center">{cat.name.split(' ')[0]}</span>
+              </button>
              ))}
          </div>
       </div>
@@ -1150,9 +1152,9 @@ const POS = () => {
                           ${activeTableId === table.id ? 'border-primary bg-primary/10' : 'border-white/5 bg-white/5'}
                           ${showTableBar ? 'p-3 px-4' : 'p-3 justify-center'}
                           `}
-                          title={table.name}
+                          title={table.name || undefined}
                       >
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${table.status === 'LIVRE' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${table.status === 'AVAILABLE' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
                           {showTableBar && <span className="font-bold text-white text-[10px] uppercase truncate">{table.name}</span>}
                       </button>
                       ))}
@@ -1267,7 +1269,7 @@ const POS = () => {
                           >
                               <div className="aspect-square w-full overflow-hidden relative">
                                   <Image 
-                                      src={normalizeProductImage(dish.image_url)} 
+                                      src={normalizeDishImage(dish.image_url || undefined)} 
                                       alt={dish.name} 
                                       fill 
                                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -1313,7 +1315,7 @@ const POS = () => {
                  {openOrdersForTable.map((order: Order) => (
                     <div key={order.id} className="relative group">
                       <button 
-                        onClick={() => setActiveOrder(order.id)}
+                        onClick={() => setActiveOrder(order.id || null)}
                         className={`px-4 py-2 pr-16 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all whitespace-nowrap
                           ${activeOrderId === order.id ? 'bg-primary border-primary text-black shadow-glow' : 'bg-white/5 border-white/10 text-slate-500'}
                         `}
@@ -1325,7 +1327,7 @@ const POS = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setActiveOrder(order.id);
+                              setActiveOrder(order.id || null);
                               setIsPaymentModalOpen(true);
                             }}
                             className={`p-1 rounded-full hover:bg-green-500 hover:text-white transition-colors ${activeOrderId === order.id ? 'text-green-600' : 'text-slate-500'}`}
@@ -1340,7 +1342,7 @@ const POS = () => {
                             if (order.items && order.items.length > 0) {
                               if (!window.confirm('ATENÇÃO: Isto irá APAGAR os itens sem registar pagamento. Deseja continuar?')) return;
                             }
-                            removeOrder(order.id);
+                            removeOrder(order.id!);
                           }}
                           className={`p-1 rounded-full hover:bg-red-500 hover:text-white transition-colors ${activeOrderId === order.id ? 'text-red-400' : 'text-slate-500'}`}
                           title="Remover Subconta"
@@ -1354,32 +1356,32 @@ const POS = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-3">
-                {currentOrder?.items.map((item: OrderItem, idx: number) => { 
-                    const dish = menu.find((d: Product) => d.id === item.productId); 
+                {currentOrder?.items?.map((item: OrderItem, idx: number) => { 
+                    const dish = menu.find((d: Product) => d.id === (item.dishId || item.dish_id)); 
                     if (!dish) return null; 
                     return (
                         <div key={idx} className="flex gap-4 items-center p-3 bg-white/5 rounded-2xl border border-white/5 group animate-in slide-in-from-right-4">
                             <div className="relative w-12 h-12 rounded-xl overflow-hidden">
                                 <Image 
-                                    src={normalizeProductImage(dish.imageUrl)} 
-                                    alt={dish.name} 
+                                    src={normalizeDishImage(dish.imageUrl)} 
+                                    alt={dish.name || 'Prato'} 
                                     fill 
                                     sizes="48px"
                                     className="object-cover" 
                                 />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h4 className="font-bold text-white text-[10px] truncate uppercase tracking-tighter">{dish.name}</h4>
+                                <h4 className="font-bold text-white text-[10px] truncate uppercase tracking-tighter">{dish.name || 'Sem nome'}</h4>
                                 <div className="flex justify-between items-center mt-1">
                                     <span className="text-[10px] font-mono font-bold text-primary/80">{formatKz((dish.price || 0) * (item.quantity || 0))}</span>
                                     <div className="flex items-center gap-2">
                                       <div className="flex items-center gap-3 bg-black/40 p-1 rounded-lg">
-                                          <button onClick={() => addToOrder(activeTableId!, dish, -1, '', currentOrder.id)} className="w-6 h-6 rounded-md bg-white/5 text-slate-400 flex items-center justify-center hover:bg-white/10"><Minus size={12}/></button>
-                                          <span className="text-[10px] font-black text-white w-4 text-center">{item.quantity}</span>
-                                          <button onClick={() => addToOrder(activeTableId!, dish, 1, '', currentOrder.id)} className="w-6 h-6 rounded-md bg-primary text-black flex items-center justify-center"><Plus size={12}/></button>
+                                          <button onClick={() => activeTableId && addToOrder(activeTableId, dish, -1, '', currentOrder.id!)} className="w-6 h-6 rounded-md bg-white/5 text-slate-400 flex items-center justify-center hover:bg-white/10"><Minus size={12}/></button>
+                                          <span className="text-[10px] font-black text-white w-4 text-center">{item.quantity || 0}</span>
+                                          <button onClick={() => activeTableId && addToOrder(activeTableId, dish, 1, '', currentOrder.id!)} className="w-6 h-6 rounded-md bg-primary text-black flex items-center justify-center"><Plus size={12}/></button>
                                       </div>
                                       <button 
-                                        onClick={() => removeFromOrder(currentOrder.id, idx)} 
+                                        onClick={() => removeFromOrder(currentOrder.id!, idx)} 
                                         className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all"
                                         title="Remover Item"
                                       >
@@ -1391,7 +1393,7 @@ const POS = () => {
                         </div>
                     );
                 })}
-                {currentOrder?.items.length === 0 && (
+                {(!currentOrder?.items || currentOrder.items.length === 0) && (
                    <div className="h-full flex flex-col items-center justify-center opacity-20 text-center py-20">
                       <ShoppingBasket size={48} className="mb-4" />
                       <p className="text-xs font-black uppercase tracking-widest leading-relaxed">Carrinho vazio.<br/>Adicione produtos.</p>
@@ -1412,7 +1414,7 @@ const POS = () => {
                     </button>
                     <button 
                       onClick={() => setIsPaymentModalOpen(true)} 
-                      disabled={!currentOrder || currentOrder.items.length === 0}
+                      disabled={!currentOrder || currentOrder.items?.length === 0}
                       className="col-span-3 py-4 rounded-2xl bg-primary text-black font-black uppercase text-xs tracking-widest shadow-glow hover:brightness-110 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
                     >
                       <CreditCard size={18} /> PAGAMENTO
@@ -1494,7 +1496,7 @@ const POS = () => {
                                          </button>
                                          <button 
                                            onClick={() => {
-                                             setCorrectionOrderId(order.id);
+                                             setCorrectionOrderId(order.id || null);
                                              setCurrentPayments(order.payments || (order.paymentMethod ? [{
                                                id: `legacy-${order.id}`,
                                                method: order.paymentMethod,
@@ -1809,14 +1811,14 @@ const POS = () => {
                       className={`p-3 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center gap-1
                         ${transferTargetId === table.id 
                           ? 'bg-primary/20 border-primary text-primary' 
-                          : table.status === 'OCUPADA' 
+                          : table.status === 'OCCUPIED' 
                             ? 'bg-red-500/10 border-red-500/20 text-red-500/50 cursor-not-allowed'
                             : 'bg-slate-800/40 border-white/5 text-slate-300 hover:border-white/20'
                         }`}
-                      disabled={table.status === 'OCUPADA'}
+                      disabled={table.status === 'OCCUPIED'}
                     >
                       <span className="text-xs font-black">{table.name}</span>
-                      <div className={`w-2 h-2 rounded-full ${table.status === 'OCUPADA' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${table.status === 'OCCUPIED' ? 'bg-red-500' : 'bg-green-500'}`}></div>
                     </button>
                   ))}
               </div>

@@ -1,4 +1,4 @@
-import { Product, Table, Customer, Reservation, StockItem, User, MenuCategory } from '@/types';
+import { Product, Table, Customer, Reservation, StockItem, User, MenuCategory, Dish } from '@/types';
 import { Grid3X3, Coffee, Pizza, Beer, IceCream, Utensils } from 'lucide-react';
 
 // Icons available for categories
@@ -23,18 +23,34 @@ export const MOCK_USERS: User[] = [
 export const MOCK_CATEGORIES: MenuCategory[] = [];
 
 // Cardápio Autêntico Angolano
-export const MOCK_MENU: Product[] = [];
+export const MOCK_MENU: Dish[] = [];
 
 // Estoque Inicial
 export const MOCK_STOCK: StockItem[] = [
-  { id: '1', productId: 'Arroz Branco', quantity: 25, unit: 'kg', minQuantity: 10, lastUpdated: new Date() },
-  { id: '2', productId: 'Fuba de Bombó', quantity: 30, unit: 'kg', minQuantity: 10, lastUpdated: new Date() },
+  { 
+    id: '1', 
+    name: 'Arroz Branco', 
+    quantity: 25, 
+    unit: 'kg', 
+    min_threshold: 10, 
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  } as unknown as StockItem,
+  { 
+    id: '2', 
+    name: 'Fuba de Bombó', 
+    quantity: 30, 
+    unit: 'kg', 
+    min_threshold: 10, 
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  } as unknown as StockItem,
 ];
 
 // Mesas
 export const MOCK_TABLES: Table[] = [
   {
-    id: 999,
+    id: '999',
     name: 'Balcão',
     seats: 100,
     status: 'AVAILABLE' as const,
@@ -43,9 +59,19 @@ export const MOCK_TABLES: Table[] = [
     zone: 'INTERIOR' as const,
     shape: 'RECTANGLE' as const,
     rotation: 0,
+    number: 999,
+    is_active: true,
+    color: null,
+    created_at: null,
+    group_id: null,
+    height: null,
+    label: null,
+    updated_at: null,
+    user_id: null,
+    width: null,
   },
   ...Array.from({ length: 8 }, (_, i) => ({
-    id: i + 1,
+    id: String(i + 1),
     name: `Mesa ${i + 1}`,
     seats: 4,
     status: 'AVAILABLE' as const,
@@ -54,6 +80,16 @@ export const MOCK_TABLES: Table[] = [
     zone: 'INTERIOR' as const,
     shape: 'SQUARE' as const,
     rotation: 0,
+    number: i + 1,
+    is_active: true,
+    color: null,
+    created_at: null,
+    group_id: null,
+    height: null,
+    label: null,
+    updated_at: null,
+    user_id: null,
+    width: null,
   })),
 ];
 

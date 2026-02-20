@@ -283,7 +283,7 @@ export class IntegrationAPIService {
                     allItems.push({
                         id: item.id || crypto.randomUUID(),
                         order_id: o.id,
-                        product_id: item.productId || item.product_id,
+                        dish_id: item.dishId || item.dish_id,
                         quantity: item.quantity,
                         unit_price: item.unitPrice || item.unit_price,
                         tax_amount: item.taxAmount || item.tax_amount || 0,

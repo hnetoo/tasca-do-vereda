@@ -1,10 +1,10 @@
-'use server';
+
 
 import { databaseOperations } from '@/services/database/operations';
 import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID } from '@/types';
 import { logger } from '@/services/logger';
 
-export async function saveTableAction(table: Table) {
+export async function saveTableAction(table: Table): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveTable(table);
     if (!result.success) {
@@ -12,13 +12,14 @@ export async function saveTableAction(table: Table) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving table via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving table via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function deleteTableAction(id: string) {
+export async function deleteTableAction(id: string): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.deleteTable(id);
     if (!result.success) {
@@ -26,13 +27,14 @@ export async function deleteTableAction(id: string) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception deleting table via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception deleting table via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveCustomerAction(customer: Customer) {
+export async function saveCustomerAction(customer: Customer): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveCustomer(customer);
     if (!result.success) {
@@ -40,13 +42,14 @@ export async function saveCustomerAction(customer: Customer) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving customer via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving customer via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function deleteCustomerAction(id: UUID) {
+export async function deleteCustomerAction(id: UUID): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.deleteCustomer(id);
     if (!result.success) {
@@ -54,13 +57,14 @@ export async function deleteCustomerAction(id: UUID) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception deleting customer via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception deleting customer via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveReservationAction(reservation: Reservation) {
+export async function saveReservationAction(reservation: Reservation): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveReservation(reservation);
     if (!result.success) {
@@ -68,13 +72,14 @@ export async function saveReservationAction(reservation: Reservation) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving reservation via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving reservation via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function deleteReservationAction(id: UUID) {
+export async function deleteReservationAction(id: UUID): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.deleteReservation(id);
     if (!result.success) {
@@ -82,13 +87,14 @@ export async function deleteReservationAction(id: UUID) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception deleting reservation via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception deleting reservation via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveStockItemAction(item: StockItem) {
+export async function saveStockItemAction(item: StockItem): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveStockItem(item);
     if (!result.success) {
@@ -96,13 +102,14 @@ export async function saveStockItemAction(item: StockItem) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving stock item via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving stock item via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function deleteStockItemAction(id: UUID) {
+export async function deleteStockItemAction(id: UUID): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.deleteStockItem(id);
     if (!result.success) {
@@ -110,13 +117,14 @@ export async function deleteStockItemAction(id: UUID) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception deleting stock item via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception deleting stock item via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveShiftAction(shift: CashShift) {
+export async function saveShiftAction(shift: CashShift): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveShift(shift);
     if (!result.success) {
@@ -124,13 +132,14 @@ export async function saveShiftAction(shift: CashShift) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving shift via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving shift via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function saveDeliveryAction(delivery: Delivery) {
+export async function saveDeliveryAction(delivery: Delivery): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.saveDelivery(delivery);
     if (!result.success) {
@@ -138,13 +147,14 @@ export async function saveDeliveryAction(delivery: Delivery) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception saving delivery via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving delivery via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }
 
-export async function deleteDeliveryAction(id: UUID) {
+export async function deleteDeliveryAction(id: UUID): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const result = await databaseOperations.deleteDelivery(id);
     if (!result.success) {
@@ -152,8 +162,9 @@ export async function deleteDeliveryAction(id: UUID) {
       return { success: false, error: result.error };
     }
     return { success: true };
-  } catch (error: any) {
-    logger.error('Exception deleting delivery via server action', { error: error.message }, 'SERVER_ACTION');
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception deleting delivery via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
   }
 }

@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Dish, MenuCategory, StoreState, IntegrityIssue, UUID } from '@/types';
+import { Dish, MenuCategory, StoreState, IntegrityIssue, UUID, MenuAccessLog, MenuAccessAggregatedStats } from '@/types';
 import { 
   saveCategoryAction, 
   deleteCategoryAction, 
@@ -18,12 +18,14 @@ import { MOCK_MENU, MOCK_CATEGORIES } from '@/constants';
 import { validateDishCategory, resolveCategoryId } from '@/services/categoryResolver';
 import { normalizeDishImage } from '@/utils/imageUtils';
 import { backupService } from '@/services/backupService';
-import { generateUUID } from '@/utils/uuid';
+import { generateUUID, isValidUUID } from '@/utils/uuid';
 
 export interface MenuSlice {
   dishes: Dish[];
   categories: MenuCategory[];
   deletedCategoryIds: UUID[];
+  isDiagnosing: boolean;
+  integrityIssues: IntegrityIssue[];
   
   // Basic CRUD
   setDishes: (dishes: Dish[]) => void;
@@ -62,6 +64,13 @@ export interface MenuSlice {
   runIntegrityDiagnostics: () => Promise<void>;
   performSafeCleanup: () => Promise<boolean>;
   importCloudItems: (data: { categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => Promise<void>;
+  detectCloudConflicts: (data: { categories: MenuCategory[], products: Dish[] }) => { categories: MenuCategory[], products: Dish[] };
+  
+  // Analytics
+  menuAccessLogs: MenuAccessLog[];
+  getMenuAccessStats: () => MenuAccessAggregatedStats;
+  clearMenuAccessLogs: () => void;
+  logMenuAccess: (log: MenuAccessLog) => void;
 }
 
 export const createMenuSlice: StateCreator<
@@ -73,6 +82,37 @@ export const createMenuSlice: StateCreator<
   dishes: MOCK_MENU as Dish[],
   categories: MOCK_CATEGORIES,
   deletedCategoryIds: [],
+  isDiagnosing: false,
+  integrityIssues: [],
+  menuAccessLogs: [],
+  
+  logMenuAccess: (log: MenuAccessLog) => {
+    set((state: MenuSlice) => ({ 
+      menuAccessLogs: [log, ...state.menuAccessLogs].slice(0, 1000) 
+    }));
+  },
+
+  clearMenuAccessLogs: () => set({ menuAccessLogs: [] }),
+
+  getMenuAccessStats: () => {
+      const logs = get().menuAccessLogs || [];
+      const today = new Date().toDateString();
+      const todayLogs = logs.filter((l: MenuAccessLog) => new Date(l.timestamp).toDateString() === today);
+      const publicLogs = logs.filter((l: MenuAccessLog) => l.type === 'public');
+      const tableLogs = logs.filter((l: MenuAccessLog) => l.type === 'table');
+      const uniqueVisitors = new Set(logs.map((l: MenuAccessLog) => l.ip || 'unknown')).size;
+      
+      return {
+          total: logs.length,
+          todayAccesses: todayLogs.length,
+          publicMenus: publicLogs.length,
+          tableMenus: tableLogs.length,
+          uniqueVisitors,
+          averageAccessPerDay: 0,
+          peakAccessTime: 'N/A',
+          mostAccessedMenu: 'N/A'
+      };
+  },
   
   setDishes: (dishes: Dish[]) => set({ dishes }),
   setCategories: (categories: MenuCategory[]) => set({ categories }),
@@ -107,7 +147,7 @@ export const createMenuSlice: StateCreator<
     }
 
     // 2. Validation: ID generation/validation
-    if (!cat.id || cat.id === 'undefined' || cat.id === 'null' || cat.id.trim() === '') {
+    if (!cat.id || !isValidUUID(cat.id)) {
          cat.id = generateUUID();
     }
 
@@ -148,16 +188,13 @@ export const createMenuSlice: StateCreator<
       
       // 4. Persist to SQL (CRITICAL)
       logger.debug('Category object before saving to SQL (updateCategory)', { category: cat }, 'DATABASE');
-      saveCategoryAction(cat).then(result => {
-          if (result.success) {
-              logger.info('Categoria guardada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
-          } else {
-              logger.error('Falha na persistência SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
-              state.addNotification?.('error', 'Erro ao guardar categoria na base de dados local.');
-          }
-      }).catch((e: unknown) => {
-          logger.error('Erro de execução na persistência SQL', { error: (e as Error).message }, 'DATABASE');
-      });
+      const result = await saveCategoryAction(cat);
+      if (result.success) {
+          logger.info('Categoria guardada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
+      } else {
+          logger.error('Falha na persistência SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
+          state.addNotification?.('error', 'Erro ao guardar categoria na base de dados local.');
+      }
 
       state.addAuditLog?.({ 
         type: 'CATEGORY_ADDED', 
@@ -176,6 +213,13 @@ export const createMenuSlice: StateCreator<
   
   updateCategory: async (cat: MenuCategory) => {
     const state = get();
+
+    // 0. Validation: ID must be valid UUID
+    if (!cat.id || !isValidUUID(cat.id)) {
+        state.addNotification?.('error', 'ID da categoria inválido. Não é possível atualizar.');
+        logger.error('Tentativa de atualizar categoria com ID inválido', { category: cat }, 'STORE');
+        return;
+    }
 
     // 1. Validation: Name required
     if (!cat.name || cat.name.trim() === '') {
@@ -212,16 +256,13 @@ export const createMenuSlice: StateCreator<
       get().invalidateMenuCache();
 
       // 6. Persist to SQL (CRITICAL)
-      saveCategoryAction(cat).then(result => {
-          if (result.success) {
-              logger.info('Categoria atualizada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
-          } else {
-              logger.error('Falha na atualização SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
-              state.addNotification?.('error', 'Erro ao atualizar categoria na base de dados local.');
-          }
-      }).catch((e: unknown) => {
-          logger.error('Erro de execução na atualização SQL', { error: (e as Error).message }, 'DATABASE');
-      });
+      const result = await saveCategoryAction(cat);
+      if (result.success) {
+          logger.info('Categoria atualizada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
+      } else {
+          logger.error('Falha na atualização SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
+          state.addNotification?.('error', 'Erro ao atualizar categoria na base de dados local.');
+      }
 
       state.addAuditLog?.({ 
         type: 'CATEGORY_UPDATED', 
@@ -487,7 +528,7 @@ export const createMenuSlice: StateCreator<
     const dishesResult = await getDishesAction();
     
     const categories = categoriesResult.data || [];
-    const dishes = dishesResult.data?.map(p => ({ ...p, imageUrl: normalizeDishImage(p.imageUrl) })) || [];
+    const dishes = dishesResult.data?.map(p => ({ ...p, imageUrl: normalizeDishImage(p.imageUrl ?? undefined) })) || [];
     
     if (categories.length > 0 || dishes.length > 0) {
       set({ 
@@ -521,6 +562,12 @@ export const createMenuSlice: StateCreator<
 
         // Sync Dishes
         const dishResult = await integrationAPIService.syncDishes(dishes);
+        if (dishResult.success) {
+            logger.info('Dishes synced to cloud successfully', { count: dishes.length }, 'SYNC');
+        } else {
+            logger.error('Failed to sync dishes to cloud', { error: dishResult.error }, 'SYNC');
+            get().addNotification?.('error', `Falha ao sincronizar pratos com a cloud: ${dishResult.error}`);
+        }
         if (dishResult.success) {
             // Save to local DB
             for (const dish of dishes) {
@@ -849,5 +896,15 @@ export const createMenuSlice: StateCreator<
     }
     
     get().invalidateMenuCache();
+  },
+
+  detectCloudConflicts: (data: { categories: MenuCategory[], products: Dish[] }) => {
+    const { categories, products } = data;
+    const state = get();
+    
+    const conflictingCats = categories.filter(c => state.categories.some(local => local.id === c.id));
+    const conflictingProds = products.filter(p => state.dishes.some(local => local.id === p.id));
+    
+    return { categories: conflictingCats, products: conflictingProds };
   }
 });

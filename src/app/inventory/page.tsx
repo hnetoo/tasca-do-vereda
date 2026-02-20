@@ -14,13 +14,13 @@ import { AVAILABLE_ICONS } from '@/constants';
 
 const InventoryContent = () => {
   const { 
-    products, 
+    dishes: products = [], 
     categories, 
     stock, 
     suppliers,
-    addProduct, 
-    updateProduct, 
-    removeProduct, 
+    addDish: addProduct, 
+    updateDish: updateProduct, 
+    removeDish: removeProduct, 
     addCategory, 
     removeCategory, 
     updateCategory, 
@@ -28,7 +28,7 @@ const InventoryContent = () => {
     updateStockItem,
     removeStockItem,
     updateStockQuantity,
-    setProducts, 
+    setDishes: setProducts, 
     addNotification, 
     scanAndRecoverCategories, 
     triggerSync,
@@ -896,7 +896,7 @@ const InventoryContent = () => {
                       onChange={e => setProductForm({...productForm, supplier_id: e.target.value})}
                     >
                       <option value="" className="bg-slate-900 text-slate-400">-- Selecione um fornecedor --</option>
-                      {suppliers.filter((s: Supplier) => s.isActive).sort((a: Supplier, b: Supplier) => a.name.localeCompare(b.name)).map((s: Supplier) => (
+                      {suppliers.filter((s: Supplier) => s.is_active).sort((a: Supplier, b: Supplier) => a.name.localeCompare(b.name)).map((s: Supplier) => (
                         <option key={s.id} value={s.id} className="bg-slate-900">
                           {s.name} {s.category ? `(${s.category})` : ''}
                         </option>
@@ -964,7 +964,7 @@ const InventoryContent = () => {
                         type="text" 
                         placeholder="https://exemplo.com/imagem.jpg"
                         className="w-full p-4 pl-12 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary text-xs" 
-                        value={productForm.image_url?.startsWith('data:') ? '' : productForm.image_url} 
+                        value={productForm.image_url?.startsWith('data:') ? '' : productForm.image_url || ''} 
                         onChange={e => setProductForm({...productForm, image_url: e.target.value})} 
                       />
                     </div>
@@ -1011,8 +1011,8 @@ const InventoryContent = () => {
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria Superior (Opcional)</label>
                   <select 
                     className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" 
-                    value={catForm.parentId || ''} 
-                    onChange={e => setCatForm({...catForm, parentId: e.target.value})}
+                    value={catForm.parent_id || ''} 
+                    onChange={e => setCatForm({...catForm, parent_id: e.target.value})}
                   >
                     <option value="" className="bg-slate-900 text-slate-400">-- Sem categoria superior --</option>
                     {categories.filter((c: MenuCategory) => c.id !== editingId).sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
@@ -1045,10 +1045,10 @@ const InventoryContent = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setCatForm({...catForm, availableOnDigitalMenu: !catForm.availableOnDigitalMenu})}
-                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ${catForm.availableOnDigitalMenu ? 'bg-primary shadow-glow' : 'bg-slate-700'}`}
+                    onClick={() => setCatForm({...catForm, is_available_on_digital_menu: !catForm.is_available_on_digital_menu})}
+                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ${catForm.is_available_on_digital_menu ? 'bg-primary shadow-glow' : 'bg-slate-700'}`}
                   >
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${catForm.availableOnDigitalMenu ? 'right-1' : 'left-1'}`} />
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${catForm.is_available_on_digital_menu ? 'right-1' : 'left-1'}`} />
                   </button>
                </div>
 
