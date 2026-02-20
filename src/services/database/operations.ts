@@ -44,9 +44,9 @@ export const databaseOperations = {
       const data = await operation(client);
       return { success: true, data };
     } catch (e: unknown) {
-      const error = e as Error;
-      logger.error(`Failed to ${context}`, { error: error.message }, functionName);
-      return { success: false, error: error.message };
+      const errorMessage = e instanceof Error ? e.message : (typeof e === 'object' && e !== null && 'message' in e ? (e as any).message : JSON.stringify(e));
+      logger.error(`Failed to ${context}`, { error: errorMessage, fullError: e }, functionName);
+      return { success: false, error: errorMessage };
     }
   },
   /**
