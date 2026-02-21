@@ -1,8 +1,36 @@
 
 
 import { databaseOperations } from '@/services/database/operations';
-import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID } from '@/types';
+import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID, Order } from '@/types';
 import { logger } from '@/services/logger';
+import { createClient } from '@/lib/supabase/server';
+
+export async function saveOrderAction(order: Order): Promise<{ success: boolean; error?: string | Error }> {
+  try {
+    const supabase = await createClient();
+    const success = await databaseOperations.saveOrder(order, supabase);
+    if (!success) {
+      logger.error('Failed to save order via server action', { orderId: order.id }, 'SERVER_ACTION');
+      return { success: false, error: 'Operation returned false' };
+    }
+    return { success: true };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception saving order via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
+  }
+}
+
+export async function getTablesAction(): Promise<{ success: boolean; data?: Table[]; error?: string }> {
+  try {
+    const tables = await databaseOperations.getTables();
+    return { success: true, data: tables };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    logger.error('Exception fetching tables via server action', { error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
+  }
+}
 
 export async function saveTableAction(table: Table): Promise<{ success: boolean; error?: string | Error }> {
   try {

@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { User, MenuCategory, Product, SystemSettings, StoreState, FinancialClearanceReport, FullApplicationState, BiometricDevice, APIKey, WebhookConfig } from '@/types';
 import UserManagementModal from '@/components/UserManagementModal';
+import { formatDateInLuanda } from '@/utils/date';
 import QRMenuConfig from '@/components/QRMenuConfig';
 import POSAccessManagement from '@/components/POSAccessManagement';
 import RoleManagementModal from '@/components/RoleManagementModal';
@@ -1597,7 +1598,7 @@ const Settings = () => {
                           <span className={`text-[8px] font-black uppercase tracking-widest ${
                             log.severity === 'CRITICAL' ? 'text-red-400' : 'text-slate-500'
                           }`}>{log.type}</span>
-                          <span className="text-[8px] font-mono text-slate-600">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                          <span className="text-[8px] font-mono text-slate-600">{formatDateInLuanda(log.timestamp, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                         </div>
                         <p className="text-[10px] text-slate-300 font-medium break-words leading-relaxed">{log.message}</p>
                       </div>

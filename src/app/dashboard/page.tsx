@@ -88,7 +88,7 @@ const Dashboard = () => {
   const totalProfit = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailyAnalyticsPayload) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
   const avgMargin = useMemo(() => totalSales > 0 ? (totalProfit / totalSales) * 100 : 0, [totalSales, totalProfit]);
   const chartData = performanceAnalytics.map((d: DailyAnalyticsPayload) => ({
-    name: new Date(d.date).toLocaleDateString('pt-AO', { weekday: 'short' }),
+    name: formatDateInLuanda(d.date, { weekday: 'short' }),
     vendas: d.totalSales,
     lucro: d.totalProfit
   }));
@@ -196,7 +196,7 @@ const Dashboard = () => {
         profitByMethod
       };
     });
-  }, [orders, expenses, revenues, paymentDateRange, paymentMethods]);
+  }, [orders, expenses, revenues, paymentDateRange]);
 
   const paymentChartData = useMemo(() => {
     return paymentDailyData.map((row: PaymentDailyDataRow) => {
@@ -206,7 +206,7 @@ const Dashboard = () => {
       });
       return base;
     });
-  }, [paymentDailyData, paymentMethods, paymentMetric]);
+  }, [paymentDailyData, paymentMetric]);
 
   const exportConfig = {
     data: dailyAnalytics.map((d: DailyAnalyticsPayload) => ({
@@ -238,7 +238,7 @@ const Dashboard = () => {
       });
       return entry;
     });
-  }, [paymentDailyData, paymentMethods, paymentMetric]);
+  }, [paymentDailyData, paymentMetric]);
 
   const paymentExportColumns = useMemo(() => {
     const cols = [

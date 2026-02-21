@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getTodayRevenue, getTodayExpenses, getLatestTransactions } from '@/app/actions/finance-dashboard';
 import { formatKz } from '@/services/utils/currencyFormatter';
 import { RefreshCcw, TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
@@ -12,10 +12,7 @@ export default function FinanceiroPage() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const fetchData = async () => {
-    // Keep loading true only on initial load to avoid flickering on refresh
-    if (transactions.length === 0) setLoading(true);
-    
+  const fetchData = useCallback(async () => {
     try {
       const [rev, exp, txs] = await Promise.all([
         getTodayRevenue(),
@@ -31,13 +28,13 @@ export default function FinanceiroPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 3 * 60 * 1000); // 3 minutes
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
 
   const profit = revenue - expenses;
   const isProfitNegative = profit < 0;
@@ -47,7 +44,7 @@ export default function FinanceiroPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Painel Financeiro</h1>
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>Atualizado às {lastUpdated.toLocaleTimeString()}</span>
+          <span>Atualizado às {formatDateInLuanda(lastUpdated, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
           <button 
             onClick={fetchData} 
             className="p-2 rounded-full hover:bg-gray-200 transition-colors"

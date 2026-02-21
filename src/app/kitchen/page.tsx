@@ -231,7 +231,7 @@ const Kitchen = () => {
                 {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </button>
             <div className="text-gray-400 font-mono text-xl bg-gray-800 px-4 py-2 rounded-lg border border-gray-700 shadow-inner">
-                {currentTime.toLocaleTimeString()}
+                {formatDateInLuanda(currentTime, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
         </div>
       </header>

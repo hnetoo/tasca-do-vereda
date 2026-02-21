@@ -17,3 +17,32 @@ export function getAngolaToday(): string {
 
   return date.toISOString();
 }
+
+/**
+ * Formats a date string or Date object to a readable string in Luanda timezone
+ * @param date - Date string or Date object
+ * @param options - Optional Intl.DateTimeFormatOptions
+ * @returns Formatted date string
+ */
+export function formatDateInLuanda(
+  date: string | Date | undefined | null,
+  options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }
+): string {
+  if (!date) return '';
+  
+  const d = typeof date === 'string' ? new Date(date) : date;
+  
+  if (isNaN(d.getTime())) return '';
+
+  return new Intl.DateTimeFormat('pt-AO', {
+    timeZone: 'Africa/Luanda',
+    ...options
+  }).format(d);
+}

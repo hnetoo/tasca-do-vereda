@@ -7,7 +7,7 @@ import SmartAlertsPanel from '@/components/SmartAlertsPanel';
 import Breadcrumbs from '@/components/Breadcrumbs'; // Importar o componente Breadcrumbs
 import { useStore } from '@/store/useStore';
 
-const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu'];
+const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/admin/owner'];
 const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu', '/admin/owner'];
 
 const AppShell = ({ children }: { children: React.ReactNode }) => {

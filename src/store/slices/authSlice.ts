@@ -17,6 +17,7 @@ export interface AuthSlice {
   removeUser: (id: UUID) => void;
   login: (pin: string, userId?: UUID, rememberMe?: boolean) => Promise<boolean>;
   loginWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  setUserSession: (user: User) => void;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
 }
@@ -222,6 +223,10 @@ export const createAuthSlice: StateCreator<
       return { success: false, error: 'Erro interno' };
     }
   },
+  setUserSession: (user) => {
+    set({ currentUser: user, isAuthenticated: true });
+    logger.auth(`Sessão definida manualmente: ${user.name}`, { userId: user.id, role: user.role });
+  },
   logout: async () => {
       try {
         // Clear pin session cookie
@@ -246,7 +251,7 @@ export const createAuthSlice: StateCreator<
         get().addNotification('info', 'Sessão terminada.');
 
         // Force reload to clear any other state
-        window.location.href = '/login';
+        window.location.href = '/';
 
       } catch (error) {
         logger.error('Erro ao fazer logout', { error: error instanceof Error ? error.message : String(error) }, 'AUTH');
@@ -255,7 +260,7 @@ export const createAuthSlice: StateCreator<
         set({ currentUser: null, isAuthenticated: false });
         localStorage.removeItem('saved_credentials');
         localStorage.removeItem('last_selected_user_id');
-        window.location.href = '/login';
+        window.location.href = '/';
       }
     },
   hasPermission: (permission) => {

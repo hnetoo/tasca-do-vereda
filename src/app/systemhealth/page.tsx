@@ -40,6 +40,7 @@ import {
 } from './actions';
 import { SystemHealthReport, SystemIssue } from '@/services/healthMonitorService';
 import { StateSnapshot } from '@/services/disasterRecoveryService';
+import { formatDateInLuanda } from '@/utils/date';
 
 const SystemHealth = () => {
   const { settings, activeOrders, dishes } = useStore();
@@ -497,7 +498,7 @@ const SystemHealth = () => {
                       <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest group-hover:text-primary transition-colors">ID: {snap.id}</span>
                     </div>
                     <h5 className="text-sm font-black text-white mb-1 uppercase tracking-tight">{snap.label || 'Snapshot Sem Nome'}</h5>
-                    <p className="text-[10px] text-slate-500 font-bold mb-6">{new Date(snap.timestamp).toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-500 font-bold mb-6">{formatDateInLuanda(snap.timestamp, { dateStyle: 'short', timeStyle: 'short' })}</p>
                     
                     <button 
                       onClick={() => handleRestoreSnapshot(snap.id)}

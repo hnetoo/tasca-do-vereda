@@ -10,12 +10,15 @@ import {
   saveStockItemAction,
   deleteStockItemAction,
   saveDeliveryAction,
-  deleteDeliveryAction
+  deleteDeliveryAction,
+  getTablesAction
 } from '@/app/actions/operational';
 import { logger } from '../../services/logger';
+import { generateUUID } from '../../utils/uuid';
 
 export interface OperationalSlice {
   tables: Table[];
+  fetchTables: () => Promise<void>;
   activeTableId: string | null;
   saveStatus: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE';
   customers: Customer[];
@@ -79,6 +82,16 @@ export const createOperationalSlice: StateCreator<
   deliveries: [],
   auditLogs: [],
   
+  fetchTables: async () => {
+    const res = await getTablesAction();
+    if (res.success && res.data) {
+      set({ tables: res.data });
+      logger.info(`Tables fetched successfully: ${res.data.length}`, undefined, 'DATABASE');
+    } else {
+      logger.error('Failed to fetch tables', { error: res.error }, 'DATABASE');
+    }
+  },
+
   settleCustomerDebt: (customerId: UUID, amount: number) => {
     const state = get();
     const customer = state.customers.find(c => c.id === customerId);
@@ -236,7 +249,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   openShift: (amount: number) => {
-    const shiftId = `shift-${Date.now()}`;
+    const shiftId = generateUUID();
     set({ currentShiftId: shiftId });
     get().addNotification?.('success', `Turno aberto com sucesso: ${amount} Kz`);
   },
@@ -253,25 +266,22 @@ export const createOperationalSlice: StateCreator<
   },
 
   createNewOrder: (tableId: string, name: string) => {
-    const orderId = `order-${Date.now()}`;
+    const orderId = generateUUID();
     const newOrder: any = {
       id: orderId,
       tableId,
       customerName: name,
       items: [],
-      status: 'OPEN',
+      status: 'ABERTO',
       total: 0,
       subtotal: 0,
       tax: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      isPaid: false
+      isPaid: false,
+      subAccountName: name
     };
     
-    // Adicionar à lista de pedidos (presumindo que existe no financeSlice ou similar)
-    // Como estamos num slice diferente, usamos o set do StoreState global se necessário,
-    // mas aqui apenas retornamos o ID para quem chamou criar o pedido no local certo
-    // ou usamos get().addOrder se estiver disponível no StoreState
     if ('addOrder' in get()) {
       (get() as any).addOrder(newOrder);
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { BiometricDevice } from '@/types';
+import { formatDateInLuanda } from '@/utils/date';
 import { 
   Smartphone, Plus, Trash2, Edit, CheckCircle, XCircle, 
   RefreshCw, Wifi, Activity, Save, X 
@@ -125,7 +126,7 @@ export const BiometricManager = () => {
                 {device.status}
               </span>
               <span className="text-[10px] text-slate-500">
-                Última Sync: {device.lastSync ? new Date(device.lastSync).toLocaleTimeString() : 'Nunca'}
+                Última Sync: {device.lastSync ? formatDateInLuanda(device.lastSync, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Nunca'}
               </span>
             </div>
           </div>

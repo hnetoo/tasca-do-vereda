@@ -57,14 +57,30 @@ describe('Middleware', () => {
     });
   });
 
-  it('should allow access to admin route for authenticated admin user', async () => {
-    // User is authenticated and admin (default setup)
+  it('should allow access to admin route for authenticated OWNER user', async () => {
+    mockRequest.nextUrl.pathname = '/admin/owner';
+    mockUser.user_metadata.role = 'OWNER';
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
+
+    // User is authenticated and owner
     await middleware(mockRequest);
 
     expect(createServerClient).toHaveBeenCalled();
     expect(mockSupabase.auth.getUser).toHaveBeenCalled();
     // Should proceed
     expect(NextResponse.redirect).not.toHaveBeenCalled();
+  });
+
+  it('should redirect authenticated ADMIN user trying to access admin/owner route to dashboard', async () => {
+    mockRequest.nextUrl.pathname = '/admin/owner';
+    mockUser.user_metadata.role = 'ADMIN';
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
+
+    await middleware(mockRequest);
+
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectUrl = (NextResponse.redirect as jest.Mock).mock.calls[0][0];
+    expect(redirectUrl.pathname).toBe('/dashboard');
   });
 
   it('should redirect unauthenticated user trying to access admin route', async () => {
@@ -77,15 +93,15 @@ describe('Middleware', () => {
     expect(mockRequest.nextUrl.searchParams.get('redirect_to')).toBe('/admin/owner/dashboard');
   });
 
-  it('should redirect unauthorized user (non-admin) trying to access admin route', async () => {
+  it('should redirect unauthorized user (non-owner) trying to access admin route to dashboard', async () => {
     mockUser.user_metadata.role = 'user'; // Not admin/owner
     mockSupabase.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
 
     await middleware(mockRequest);
 
     expect(NextResponse.redirect).toHaveBeenCalled();
-    expect(mockRequest.nextUrl.pathname).toBe('/login');
-    expect(mockRequest.nextUrl.searchParams.get('error')).toBe('unauthorized');
+    const redirectUrl = (NextResponse.redirect as jest.Mock).mock.calls[0][0];
+    expect(redirectUrl.pathname).toBe('/dashboard');
   });
 
   it('should allow access to public routes (e.g. /login)', async () => {
@@ -108,7 +124,7 @@ describe('Middleware', () => {
     expect(mockRequest.nextUrl.searchParams.get('redirect_to')).toBe('/dashboard');
   });
 
-  it('should redirect authenticated ADMIN from /login to /admin/owner', async () => {
+  it('should redirect authenticated ADMIN from /login to /dashboard', async () => {
     mockRequest.nextUrl.pathname = '/login';
     mockUser.user_metadata.role = 'ADMIN';
     mockSupabase.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
@@ -117,7 +133,7 @@ describe('Middleware', () => {
 
     expect(NextResponse.redirect).toHaveBeenCalled();
     const redirectUrl = (NextResponse.redirect as jest.Mock).mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe('/admin/owner');
+    expect(redirectUrl.pathname).toBe('/dashboard');
   });
 
   it('should redirect authenticated USER from /login to /dashboard', async () => {
@@ -132,18 +148,19 @@ describe('Middleware', () => {
     expect(redirectUrl.pathname).toBe('/dashboard');
   });
 
-  it('should redirect PIN authenticated ADMIN from /login to /admin/owner', async () => {
+  it('should redirect PIN authenticated ADMIN from /login to /dashboard', async () => {
     mockRequest.nextUrl.pathname = '/login';
     mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null }, error: null }); // Not logged in via Supabase
     
-    // Simulate PIN session cookie
+    // Simulate PIN session cookie with VALID JSON
     mockRequest.cookies.has.mockReturnValue(true);
-    mockRequest.cookies.get = jest.fn().mockReturnValue({ value: 'pin_session=true; userId=123; userRole=ADMIN' });
+    const sessionData = JSON.stringify({ valid: true, userId: '123', userRole: 'ADMIN' });
+    mockRequest.cookies.get = jest.fn().mockReturnValue({ value: encodeURIComponent(sessionData) });
 
     await middleware(mockRequest);
 
     expect(NextResponse.redirect).toHaveBeenCalled();
     const redirectUrl = (NextResponse.redirect as jest.Mock).mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe('/admin/owner');
+    expect(redirectUrl.pathname).toBe('/dashboard');
   });
 });
