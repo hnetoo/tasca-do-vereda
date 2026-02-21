@@ -4,20 +4,28 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useStore } from '@/store/useStore';
-import { ChefHat, Delete, User, Shield, Wallet, Utensils, ArrowLeft, ChevronRight, Lock, Save, Key } from 'lucide-react';
+import { ChefHat, Delete, User, Shield, Wallet, Utensils, ArrowLeft, ChevronRight, Lock, Save, Key, Mail, Eye, EyeOff } from 'lucide-react';
 import { User as UserType } from '@/types';
 import { CryptoService } from '@/services/cryptoService';
 import { logger } from '@/services/logger';
 
 const Login = () => {
   const router = useRouter();
-  const { login, users, settings, isInitialized, isAuthenticated } = useStore();
+  const { login, loginWithPassword, users, settings, isInitialized, isAuthenticated } = useStore();
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pin, setPin] = useState('');
   const [isLoading, setIsLoading] = useState(!isInitialized);
   const [lastStoredUserId, setLastStoredUserId] = useState<string | null>(null);
+  
+  // Password Login State
+  const [loginMode, setLoginMode] = useState<'pin' | 'password'>('pin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
 
   useEffect(() => {
     // Auth check: redirect to dashboard if already authenticated
@@ -121,6 +129,47 @@ const Login = () => {
     setIsProcessing(false);
   };
 
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (lockoutUntil && new Date() < lockoutUntil) {
+      const waitTime = Math.ceil((lockoutUntil.getTime() - new Date().getTime()) / 1000);
+      logger.warn(`Tentativa de login bloqueada. Aguarde ${waitTime}s`, undefined, 'AUTH');
+      return;
+    }
+
+    if (!email || !password) {
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    // Simulate network delay for better UX and brute force mitigation
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const result = await loginWithPassword(email, password);
+
+    if (!result.success) {
+      const newFailedAttempts = failedAttempts + 1;
+      setFailedAttempts(newFailedAttempts);
+      
+      // Implement progressive lockout
+      if (newFailedAttempts >= 5) {
+        const lockoutDuration = Math.min(30 * Math.pow(2, newFailedAttempts - 5), 3600); // Max 1 hour
+        const lockoutEnd = new Date(new Date().getTime() + lockoutDuration * 1000);
+        setLockoutUntil(lockoutEnd);
+        logger.security(`Bloqueio de login ativado por ${lockoutDuration}s após ${newFailedAttempts} tentativas`, { email });
+      }
+
+      logger.warn(`Falha no login com password: ${result.error}`, { email }, 'AUTH');
+    } else {
+      setFailedAttempts(0);
+      setLockoutUntil(null);
+    }
+    
+    setIsProcessing(false);
+  };
+
   const getRoleIcon = (role: string, size: number = 24) => {
     switch (role) {
       case 'ADMIN': return <Shield size={size} />;
@@ -187,7 +236,80 @@ const Login = () => {
              </div>
  
              <div className="glass-panel rounded-[2rem] p-8 md:p-10 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col justify-center bg-black/40 backdrop-blur-xl">
-               {selectedUser ? (
+              
+              {/* Toggle Mode */}
+              <div className="absolute top-4 right-4 z-20">
+                <button
+                  onClick={() => {
+                    setLoginMode(loginMode === 'pin' ? 'password' : 'pin');
+                    setSelectedUser(null);
+                    setPin('');
+                    setEmail('');
+                    setPassword('');
+                  }}
+                  className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+                  title={loginMode === 'pin' ? "Login com Senha" : "Login com PIN"}
+                >
+                  {loginMode === 'pin' ? <Lock size={20} /> : <User size={20} />}
+                </button>
+              </div>
+
+              {loginMode === 'password' ? (
+                <form onSubmit={handlePasswordSubmit} className="animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="mb-6 text-center">
+                    <h2 className="text-2xl font-bold text-white mb-2">Acesso Administrativo</h2>
+                    <p className="text-slate-400 text-sm">Entre com suas credenciais</p>
+                  </div>
+
+                  {lockoutUntil && (
+                    <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-xs text-center">
+                      Muitas tentativas falhas. Tente novamente em {Math.ceil((lockoutUntil.getTime() - new Date().getTime()) / 1000)}s
+                    </div>
+                  )}
+
+                  <div className="space-y-4 mb-6">
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Email"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                        disabled={isProcessing || !!lockoutUntil}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Senha"
+                        className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                        disabled={isProcessing || !!lockoutUntil}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isProcessing || !email || !password || !!lockoutUntil}
+                    className="w-full py-4 bg-primary text-black rounded-xl font-bold text-base uppercase tracking-wider shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessing ? 'Verificando...' : 'Entrar'}
+                    {!isProcessing && <ChevronRight size={20} />}
+                  </button>
+                </form>
+              ) : selectedUser ? (
                  <form onSubmit={handlePinSubmit} className="animate-in fade-in slide-in-from-right-4 duration-500">
                    <div className="mb-6 text-center">
                      <h2 className="text-2xl font-bold text-white mb-2">Bem-vindo, {selectedUser.name}!</h2>

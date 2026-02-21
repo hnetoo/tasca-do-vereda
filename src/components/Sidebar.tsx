@@ -12,14 +12,12 @@ import {
   Settings, 
   FileText,
   DollarSign,
-  Package,
   Calendar,
   LogOut,
   ChevronLeft,
   ClipboardList,
   LayoutGrid,
   CalendarCheck,
-  Tags,
   Warehouse,
   UserCog,
   QrCode,
@@ -67,8 +65,6 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   const generalMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { path: '/products', icon: <Package size={24} />, label: 'Produtos' },
-    { path: '/categories', icon: <Tags size={24} />, label: 'Categorias' },
     { path: '/sistema', icon: <Monitor size={24} />, label: 'Sistema' },
     { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
 
@@ -94,13 +90,15 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   return (
     <>
       {/* Mobile Toggle Button */}
-      <button 
-        onClick={toggleMobileMenu}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-lg shadow-lg border border-slate-800"
-        aria-label="Toggle Menu"
-      >
-        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+      {showSidebar && (
+        <button 
+          onClick={toggleMobileMenu}
+          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-lg shadow-lg border border-slate-800"
+          aria-label="Toggle Menu"
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      )}
 
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (

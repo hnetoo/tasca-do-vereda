@@ -1,13 +1,31 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { Move } from 'lucide-react';
+import { Move, AlertCircle } from 'lucide-react';
 import { Dish } from '@/types';
 
 const Encomendas = () => {
-    const { dishes: menu } = useStore();
+    const { dishes: menu, isInitialized } = useStore();
     const theme = 'dark'; // Defaulting to dark as AppShell sets bg-slate-950
+
+    useEffect(() => {
+        console.log('Encomendas page mounted. Dishes:', menu?.length);
+    }, [menu]);
+
+    if (!isInitialized) {
+         return <div className="p-6 text-white">Carregando menu...</div>;
+    }
+
+    if (!menu || menu.length === 0) {
+        return (
+            <div className="p-6 text-white flex flex-col items-center justify-center h-64">
+                <AlertCircle size={48} className="mb-4 text-slate-500" />
+                <h2 className="text-xl font-bold">Nenhum prato encontrado</h2>
+                <p className="text-slate-400">Verifique se existem pratos cadastrados no banco de dados ou se o carregamento falhou.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6">

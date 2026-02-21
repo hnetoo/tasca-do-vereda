@@ -79,17 +79,17 @@ export const databaseOperations = {
   recreateMenuSchema: async (): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
       // 1. Drop existing tables
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS dishes');
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu_categories');
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS suppliers');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS dishes CASCADE');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu_categories CASCADE');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS suppliers CASCADE');
       
       // Also drop old tables if they exist
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS products');
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS categories');
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu');
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu_items');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS products CASCADE');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS categories CASCADE');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu CASCADE');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu_items CASCADE');
       
-      // 2. Recreate Menu Categories Table
+      // 2. Recreate Menu Categories Table (Postgres syntax)
       await executeQuery(supabase, `
         CREATE TABLE IF NOT EXISTS menu_categories (
             id TEXT PRIMARY KEY,
@@ -99,9 +99,9 @@ export const databaseOperations = {
             is_active BOOLEAN DEFAULT TRUE,
             parent_id TEXT,
             is_available_on_digital_menu BOOLEAN DEFAULT TRUE,
-            deleted_at TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            deleted_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
         )
       `);
 
@@ -116,8 +116,8 @@ export const databaseOperations = {
             address TEXT,
             category TEXT,
             is_active BOOLEAN DEFAULT TRUE,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
         )
       `);
 
@@ -127,30 +127,30 @@ export const databaseOperations = {
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             description TEXT,
-            price REAL NOT NULL,
-            cost_price REAL DEFAULT 0,
+            price NUMERIC NOT NULL,
+            cost_price NUMERIC DEFAULT 0,
             category_id TEXT,
             image_url TEXT,
             tax_code TEXT,
-            tax_percentage DECIMAL(5,2),
+            tax_percentage NUMERIC(5,2),
             preparation_time INTEGER,
             is_active BOOLEAN DEFAULT TRUE,
             available BOOLEAN DEFAULT TRUE,
             is_available_on_digital_menu BOOLEAN DEFAULT TRUE,
             track_stock BOOLEAN DEFAULT FALSE,
-            stock_quantity REAL DEFAULT 0,
-            min_stock_quantity REAL DEFAULT 0,
-            max_stock_quantity REAL,
+            stock_quantity NUMERIC DEFAULT 0,
+            min_stock_quantity NUMERIC DEFAULT 0,
+            max_stock_quantity NUMERIC,
             unit TEXT DEFAULT 'unidade',
             supplier_id TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
             FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
         )
       `);
       
-      logger.info('Database menu schema recreated successfully.', undefined, 'DATABASE');
+      logger.info('Database menu schema recreated successfully (Postgres).', undefined, 'DATABASE');
       return true;
     }, 'recreate menu schema', 'DATABASE');
     return result.success;
@@ -273,70 +273,65 @@ export const databaseOperations = {
 
   getCategories: async (): Promise<{ success: boolean; data: MenuCategory[]; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        const rows = await selectQuery<MenuCategory>(supabase, 'SELECT * FROM menu_categories ORDER BY sort_order ASC');
-        return rows.map(r => ({
+        logger.debug('Fetching categories from Supabase', undefined, 'DATABASE');
+        const { data, error } = await supabase
+            .from('menu_categories')
+            .select('*')
+            .order('sort_order', { ascending: true });
+        
+        if (error) throw error;
+        
+        logger.debug(`Fetched ${data?.length || 0} categories`, undefined, 'DATABASE');
+        
+        return (data || []).map(r => ({
             id: r.id,
             name: r.name,
             icon: r.icon,
-            sortOrder: r.sortOrder || (r as any).sort_order || 0,
-            isActive: r.isActive || (r as any).is_active || true,
-            parentId: r.parentId || (r as any).parent_id || null,
-            isAvailableOnDigitalMenu: r.isAvailableOnDigitalMenu || (r as any).is_available_on_digital_menu || true
+            sortOrder: r.sort_order || 0,
+            isActive: r.is_active ?? true,
+            parentId: r.parent_id || null,
+            isAvailableOnDigitalMenu: r.is_available_on_digital_menu ?? true
         }));
     }, 'get categories', 'DATABASE') as Promise<{ success: boolean; data: MenuCategory[]; error?: string }>;
   },
 
   saveProduct: async (product: Dish): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        await executeQuery(supabase, `
-            CREATE TABLE IF NOT EXISTS dishes (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT,
-                price REAL NOT NULL,
-                cost_price REAL DEFAULT 0,
-                category_id TEXT,
-                image_url TEXT,
-                tax_code TEXT,
-                tax_percentage DECIMAL(5,2),
-                preparation_time INTEGER,
-                is_active BOOLEAN DEFAULT TRUE,
-                available BOOLEAN DEFAULT TRUE,
-                is_available_on_digital_menu BOOLEAN DEFAULT TRUE,
-                track_stock BOOLEAN DEFAULT FALSE,
-                stock_quantity REAL DEFAULT 0,
-                min_stock_quantity REAL DEFAULT 0,
-                max_stock_quantity REAL,
-                unit TEXT DEFAULT 'unidade',
-                supplier_id TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        await executeQuery(supabase, 
-            'INSERT OR REPLACE INTO dishes (id, name, description, price, cost_price, category_id, image_url, tax_code, tax_percentage, preparation_time, is_active, available, is_available_on_digital_menu, track_stock, stock_quantity, min_stock_quantity, max_stock_quantity, unit, supplier_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                product.id,
-                product.name,
-                product.description || null,
-                product.price,
-                product.costPrice || (product as any).cost_price || 0,
-                product.categoryId || (product as any).category_id || null,
-                product.image || (product as any).image_url || null,
-                product.taxCode || (product as any).tax_code || null,
-                product.taxPercentage || (product as any).tax_percentage || null,
-                product.preparationTime || (product as any).preparation_time || null,
-                product.isActive ? 1 : 0,
-                product.available ? 1 : 0,
-                product.isAvailableOnDigitalMenu ? 1 : 0,
-                product.trackStock ? 1 : 0,
-                product.stockQuantity || (product as any).stock_quantity || 0,
-                product.minStockQuantity || (product as any).min_stock_quantity || 0,
-                product.maxStockQuantity || (product as any).max_stock_quantity || null,
-                product.unit || 'unidade',
-                product.supplierId || (product as any).supplier_id || null
-            ]
-        );
+        logger.debug(`Saving product ${product.id}`, { product }, 'DATABASE');
+        
+        const dbProduct = {
+            id: product.id,
+            name: product.name,
+            description: product.description || null,
+            price: product.price,
+            cost_price: product.costPrice || 0,
+            category_id: product.categoryId || null,
+            image_url: product.image || null,
+            tax_code: product.taxCode || null,
+            tax_percentage: product.taxPercentage || null,
+            preparation_time: product.preparationTime || null,
+            is_active: product.isActive ?? true,
+            available: product.available ?? true,
+            is_available_on_digital_menu: product.isAvailableOnDigitalMenu ?? true,
+            track_stock: product.trackStock ?? false,
+            stock_quantity: product.stockQuantity || 0,
+            min_stock_quantity: product.minStockQuantity || 0,
+            max_stock_quantity: product.maxStockQuantity || null,
+            unit: product.unit || 'unidade',
+            supplier_id: product.supplierId || null,
+            updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+            .from('dishes')
+            .upsert(dbProduct);
+
+        if (error) {
+            logger.error(`Error saving product ${product.id}`, { error }, 'DATABASE');
+            throw error;
+        }
+        
+        logger.info(`Product ${product.id} saved successfully`, undefined, 'DATABASE');
         return true;
     }, `save product ${product.id}`, 'DATABASE');
   },
@@ -346,45 +341,59 @@ export const databaseOperations = {
   
   saveCategory: async (category: MenuCategory): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        await executeQuery(supabase, `
-            CREATE TABLE IF NOT EXISTS menu_categories (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                icon TEXT,
-                sort_order INTEGER DEFAULT 0,
-                is_active BOOLEAN DEFAULT TRUE,
-                parent_id TEXT,
-                is_available_on_digital_menu BOOLEAN DEFAULT TRUE,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        await executeQuery(supabase, 
-            'INSERT OR REPLACE INTO menu_categories (id, name, icon, sort_order, is_active, parent_id, is_available_on_digital_menu) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [
-                category.id,
-                category.name,
-                category.icon,
-                category.sortOrder || (category as any).sort_order || 0,
-                category.isActive ? 1 : 0,
-                category.parentId || (category as any).parent_id || null,
-                category.isAvailableOnDigitalMenu ? 1 : 0
-            ]
-        );
+        logger.debug(`Saving category ${category.id}`, { category }, 'DATABASE');
+        
+        const dbCategory = {
+            id: category.id,
+            name: category.name,
+            icon: category.icon,
+            sort_order: category.sortOrder || 0,
+            is_active: category.isActive ?? true,
+            parent_id: category.parentId || null,
+            is_available_on_digital_menu: category.isAvailableOnDigitalMenu ?? true,
+            updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+            .from('menu_categories')
+            .upsert(dbCategory);
+
+        if (error) {
+            logger.error(`Error saving category ${category.id}`, { error }, 'DATABASE');
+            throw error;
+        }
+
+        logger.info(`Category ${category.id} saved successfully`, undefined, 'DATABASE');
         return true;
     }, `save category ${category.id}`, 'DATABASE');
   },
 
   deleteDish: async (id: string): Promise<{ success: boolean; error?: string }> => {
       return databaseOperations._handleDatabaseOperation(async (supabase) => {
-          await executeQuery(supabase, 'DELETE FROM dishes WHERE id = ?', [id]);
+          logger.debug(`Deleting dish ${id}`, undefined, 'DATABASE');
+          const { error } = await supabase
+              .from('dishes')
+              .delete()
+              .eq('id', id);
+          
+          if (error) throw error;
+          
+          logger.info(`Dish ${id} deleted successfully`, undefined, 'DATABASE');
           return true;
       }, `delete dish ${id}`, 'DATABASE');
   },
 
   deleteCategory: async (id: string): Promise<{ success: boolean; error?: string }> => {
       return databaseOperations._handleDatabaseOperation(async (supabase) => {
-          await executeQuery(supabase, 'DELETE FROM menu_categories WHERE id = ?', [id]);
+          logger.debug(`Deleting category ${id}`, undefined, 'DATABASE');
+          const { error } = await supabase
+              .from('menu_categories')
+              .delete()
+              .eq('id', id);
+          
+          if (error) throw error;
+          
+          logger.info(`Category ${id} deleted successfully`, undefined, 'DATABASE');
           return true;
       }, `delete category ${id}`, 'DATABASE');
   },
@@ -407,62 +416,62 @@ export const databaseOperations = {
 
   getDishes: async (): Promise<{ success: boolean; data: Dish[]; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        const rows = await selectQuery<Dish>(supabase, 'SELECT * FROM dishes');
-        return rows.map(r => ({
+        logger.debug('Fetching dishes from Supabase', undefined, 'DATABASE');
+        const { data, error } = await supabase
+            .from('dishes')
+            .select('*');
+        
+        if (error) throw error;
+
+        logger.debug(`Fetched ${data?.length || 0} dishes`, undefined, 'DATABASE');
+
+        return (data || []).map(r => ({
             id: r.id,
             name: r.name,
             description: r.description,
             price: r.price,
-            costPrice: r.costPrice || (r as any).cost_price || 0,
-            categoryId: r.categoryId || (r as any).category_id,
-            image: r.image || (r as any).image_url,
-            taxCode: r.taxCode || (r as any).tax_code,
-            taxPercentage: r.taxPercentage || (r as any).tax_percentage,
-            preparationTime: r.preparationTime || (r as any).preparation_time,
-            isActive: r.isActive || (r as any).is_active || true,
-            available: r.available || true,
-            isAvailableOnDigitalMenu: r.isAvailableOnDigitalMenu || (r as any).is_available_on_digital_menu || true,
-            trackStock: r.trackStock || (r as any).track_stock || false,
-            stockQuantity: r.stockQuantity || (r as any).stock_quantity || 0,
-            minStockQuantity: r.minStockQuantity || (r as any).min_stock_quantity || 0,
-            maxStockQuantity: r.maxStockQuantity || (r as any).max_stock_quantity,
+            costPrice: r.cost_price || 0,
+            categoryId: r.category_id,
+            imageUrl: r.image_url,
+            taxCode: r.tax_code,
+            taxPercentage: r.tax_percentage,
+            preparationTime: r.preparation_time,
+            isActive: r.is_active ?? true,
+            available: r.available ?? true,
+            isAvailableOnDigitalMenu: r.is_available_on_digital_menu ?? true,
+            trackStock: r.track_stock ?? false,
+            stockQuantity: r.stock_quantity || 0,
+            minStockQuantity: r.min_stock_quantity || 0,
+            maxStockQuantity: r.max_stock_quantity,
             unit: r.unit || 'unidade',
-            supplierId: r.supplierId || (r as any).supplier_id
+            supplierId: r.supplier_id
         }));
     }, 'get dishes', 'DATABASE') as Promise<{ success: boolean; data: Dish[]; error?: string }>;
   },
 
   saveExpense: async (expense: Expense): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        await executeQuery(supabase, `
-            CREATE TABLE IF NOT EXISTS expenses (
-                id TEXT PRIMARY KEY,
-                description TEXT,
-                amount REAL,
-                date DATETIME,
-                category TEXT,
-                payment_method TEXT,
-                supplier_id TEXT,
-                paid BOOLEAN DEFAULT TRUE,
-                notes TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        await executeQuery(supabase, 
-            'INSERT OR REPLACE INTO expenses (id, description, amount, date, category, payment_method, supplier_id, paid, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                expense.id,
-                expense.description,
-                expense.amount,
-                (expense.date as any) instanceof Date ? (expense.date as Date).toISOString() : expense.date,
-                expense.category,
-                expense.paymentMethod || (expense as any).payment_method || null,
-                expense.supplierId || (expense as any).supplier_id || null,
-                expense.paid ? 1 : 0,
-                expense.notes || null
-            ]
-        );
+        logger.debug(`Saving expense ${expense.id}`, undefined, 'DATABASE');
+        
+        const dbExpense = {
+            id: expense.id,
+            description: expense.description,
+            amount: expense.amount,
+            date: (expense.date as any) instanceof Date ? (expense.date as Date).toISOString() : expense.date,
+            category: expense.category,
+            payment_method: expense.paymentMethod || (expense as any).payment_method || null,
+            supplier_id: expense.supplierId || (expense as any).supplier_id || null,
+            paid: expense.paid ?? true,
+            notes: expense.notes || null,
+            updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+            .from('expenses')
+            .upsert(dbExpense);
+
+        if (error) throw error;
+        
         return true;
     }, `save expense ${expense.id}`, 'DATABASE');
   },
@@ -477,29 +486,24 @@ export const databaseOperations = {
 
   saveRevenue: async (revenue: Revenue): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        await executeQuery(supabase, `
-            CREATE TABLE IF NOT EXISTS revenues (
-                id TEXT PRIMARY KEY,
-                description TEXT,
-                amount REAL,
-                date DATETIME,
-                category TEXT,
-                payment_method TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        await executeQuery(supabase, 
-            'INSERT OR REPLACE INTO revenues (id, description, amount, date, category, payment_method) VALUES (?, ?, ?, ?, ?, ?)',
-            [
-                revenue.id,
-                revenue.description,
-                revenue.amount,
-                revenue.date instanceof Date ? revenue.date.toISOString() : revenue.date,
-                revenue.category,
-                revenue.paymentMethod || (revenue as any).payment_method || null
-            ]
-        );
+        logger.debug(`Saving revenue ${revenue.id}`, undefined, 'DATABASE');
+        
+        const dbRevenue = {
+            id: revenue.id,
+            description: revenue.description,
+            amount: revenue.amount,
+            date: revenue.date instanceof Date ? revenue.date.toISOString() : revenue.date,
+            category: revenue.category,
+            payment_method: revenue.paymentMethod || (revenue as any).payment_method || null,
+            updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+            .from('revenues')
+            .upsert(dbRevenue);
+
+        if (error) throw error;
+
         return true;
     }, `save revenue ${revenue.id}`, 'DATABASE');
   },
@@ -514,93 +518,51 @@ export const databaseOperations = {
 
   saveOrder: async (order: Order): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
-        // Ensure table exists with correct schema before saving
-        await executeQuery(supabase, `
-            CREATE TABLE IF NOT EXISTS orders (
-                id TEXT PRIMARY KEY,
-                table_id TEXT,
-                status TEXT DEFAULT 'ABERTO',
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                total REAL DEFAULT 0,
-                tax_total REAL DEFAULT 0,
-                payment_method TEXT,
-                customer_id TEXT,
-                shift_id TEXT,
-                sub_account_name TEXT,
-                invoice_number TEXT,
-                hash TEXT,
-                previous_hash TEXT,
-                signature TEXT,
-                jws_payload TEXT,
-                is_synced_agt INTEGER DEFAULT 0,
-                agt_submission_uuid TEXT,
-                user_id TEXT,
-                user_name TEXT
-            )
-        `);
+        const dbOrder = {
+            id: order.id,
+            table_id: (order as any).table_id || order.tableId,
+            status: order.status,
+            timestamp: order.timestamp instanceof Date ? order.timestamp.toISOString() : order.timestamp,
+            total: order.total,
+            tax_total: (order as any).tax_total || order.taxTotal || 0,
+            payment_method: (order as any).payment_method || order.paymentMethod || null,
+            customer_id: (order as any).customer_id || order.customerId || null,
+            shift_id: (order as any).shift_id || order.shiftId || null,
+            sub_account_name: (order as any).sub_account_name || order.subAccountName || null,
+            invoice_number: (order as any).invoice_number || order.invoiceNumber || null,
+            hash: order.hash || null,
+            previous_hash: order.previous_hash || null,
+            signature: (order as any).signature || null,
+            jws_payload: order.jws_payload ? (typeof order.jws_payload === 'string' ? order.jws_payload : JSON.stringify(order.jws_payload)) : null,
+            is_synced_agt: order.is_synced_agt ? 1 : 0,
+            agt_submission_uuid: order.agt_submission_uuid || null,
+            user_id: (order as any).user_id || order.userId || null,
+            user_name: (order as any).user_name || order.userName || null
+        };
 
-        await executeQuery(supabase, 
-            'INSERT OR REPLACE INTO orders (id, table_id, status, timestamp, total, tax_total, payment_method, customer_id, shift_id, sub_account_name, invoice_number, hash, previous_hash, signature, jws_payload, is_synced_agt, agt_submission_uuid, user_id, user_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                order.id, 
-                (order as any).table_id, 
-                order.status, 
-                order.timestamp instanceof Date ? order.timestamp.toISOString() : order.timestamp, 
-                order.total, 
-                (order as any).tax_total || 0,
-                (order as any).payment_method || null,
-                (order as any).customer_id || null,
-                (order as any).shift_id || null,
-                (order as any).sub_account_name || null, 
-                (order as any).invoice_number || null,
-                order.hash || null,
-                order.previous_hash || null,
-                (order as any).signature || null,
-                order.jws_payload ? (typeof order.jws_payload === 'string' ? order.jws_payload : JSON.stringify(order.jws_payload)) : null,
-                order.is_synced_agt ? 1 : 0,
-                order.agt_submission_uuid || null,
-                (order as any).user_id || null,
-                (order as any).user_name || null
-            ]
-        );
+        const { error } = await supabase.from('orders').upsert(dbOrder);
+        if (error) throw error;
 
         if (order.items && order.items.length > 0) {
-            // Ensure order_items table exists with correct schema
-            await executeQuery(supabase, `
-                CREATE TABLE IF NOT EXISTS order_items (
-                    id TEXT PRIMARY KEY,
-                    order_id TEXT NOT NULL,
-                    dish_id TEXT NOT NULL,
-                    quantity INTEGER DEFAULT 1,
-                    unit_price REAL NOT NULL,
-                    tax_amount REAL DEFAULT 0,
-                    tax_percentage REAL DEFAULT 14.0,
-                    tax_code TEXT DEFAULT 'NOR',
-                    notes TEXT,
-                    status TEXT DEFAULT 'PENDENTE',
-                    FOREIGN KEY(order_id) REFERENCES orders(id)
-                )
-            `);
+            // Delete existing items to ensure clean state (replace behavior)
+            const { error: delError } = await supabase.from('order_items').delete().eq('order_id', order.id);
+            if (delError) logger.warn('Failed to clear old order items', { error: delError }, 'DATABASE');
 
-            // Clear existing items for this order to avoid duplicates on replace
-            await executeQuery(supabase, 'DELETE FROM order_items WHERE order_id = ?', [order.id]);
-            for (const item of order.items) {
-                await executeQuery(supabase, 
-                    'INSERT INTO order_items (id, order_id, dish_id, quantity, unit_price, tax_amount, tax_percentage, tax_code, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    [
-                      item.id || generateUUID(),
-                    order.id, 
-                    (item as any).dish_id, 
-                    item.quantity, 
-                    (item as any).unit_price || 0, 
-                    (item as any).tax_amount || 0, 
-                    (item as any).tax_percentage || 14, 
-                    (item as any).tax_code || 'NOR', 
-                    item.notes || null, 
-                    item.status || 'PENDENTE'
-                    ]
-                );
-            }
+            const dbItems = order.items.map(item => ({
+                id: item.id || generateUUID(),
+                order_id: order.id,
+                dish_id: (item as any).dish_id || item.dishId,
+                quantity: item.quantity,
+                unit_price: (item as any).unit_price || item.unitPrice || item.price || 0,
+                tax_amount: (item as any).tax_amount || item.taxAmount || 0,
+                tax_percentage: (item as any).tax_percentage || item.taxPercentage || 14,
+                tax_code: (item as any).tax_code || item.taxCode || 'NOR',
+                notes: item.notes || null,
+                status: item.status || 'PENDENTE'
+            }));
+
+            const { error: itemsError } = await supabase.from('order_items').upsert(dbItems);
+            if (itemsError) throw itemsError;
         }
         return true;
     }, `save order ${order.id}`, 'DATABASE');
@@ -611,103 +573,10 @@ export const databaseOperations = {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
       if (orders.length === 0) return true;
 
-      await executeQuery(supabase, `
-          CREATE TABLE IF NOT EXISTS orders (
-              id TEXT PRIMARY KEY,
-              table_id TEXT,
-              status TEXT DEFAULT 'ABERTO',
-              timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-              total REAL DEFAULT 0,
-              tax_total REAL DEFAULT 0,
-              payment_method TEXT,
-              customer_id TEXT,
-              shift_id TEXT,
-              sub_account_name TEXT,
-              invoice_number TEXT,
-              hash TEXT,
-              previous_hash TEXT,
-              signature TEXT,
-              jws_payload TEXT,
-              is_synced_agt INTEGER DEFAULT 0,
-              agt_submission_uuid TEXT,
-              user_id TEXT,
-              user_name TEXT
-          )
-      `);
-
-      await executeQuery(supabase, `
-          CREATE TABLE IF NOT EXISTS order_items (
-              id TEXT PRIMARY KEY,
-              order_id TEXT NOT NULL,
-              dish_id TEXT NOT NULL,
-              quantity INTEGER DEFAULT 1,
-              unit_price REAL NOT NULL,
-              tax_amount REAL DEFAULT 0,
-              tax_percentage REAL DEFAULT 14.0,
-              tax_code TEXT DEFAULT 'NOR',
-              notes TEXT,
-              status TEXT DEFAULT 'PENDENTE',
-              FOREIGN KEY(order_id) REFERENCES orders(id)
-          )
-      `);
-
-      await executeQuery(supabase, 'BEGIN TRANSACTION');
-      try {
-        for (const order of orders) {
-          await executeQuery(supabase, 
-            'INSERT OR REPLACE INTO orders (id, table_id, status, timestamp, total, tax_total, payment_method, customer_id, shift_id, sub_account_name, invoice_number, hash, previous_hash, signature, jws_payload, is_synced_agt, agt_submission_uuid, user_id, user_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [
-                order.id, 
-                order.tableId || (order as any).table_id, 
-                order.status, 
-                order.timestamp instanceof Date ? order.timestamp.toISOString() : order.timestamp, 
-                order.total, 
-                order.taxTotal || (order as any).tax_total || 0,
-                order.paymentMethod || (order as any).payment_method || null,
-                order.customerId || (order as any).customer_id || null,
-                order.shiftId || (order as any).shift_id || null,
-                order.subAccountName || (order as any).sub_account_name || null, 
-                order.invoiceNumber || (order as any).invoice_number || null,
-                order.hash || null,
-                order.previous_hash || null,
-                (order as any).signature || null,
-                order.jws_payload ? (typeof order.jws_payload === 'string' ? order.jws_payload : JSON.stringify(order.jws_payload)) : null,
-                order.is_synced_agt ? 1 : 0,
-                order.agt_submission_uuid || null,
-                order.userId || (order as any).user_id || null,
-                order.userName || (order as any).user_name || null
-            ]
-          );
-
-          // Clear existing items
-          await executeQuery(supabase, 'DELETE FROM order_items WHERE order_id = ?', [order.id]);
-          
-          if (order.items && order.items.length > 0) {
-            for (const item of order.items) {
-                await executeQuery(supabase, 
-                    'INSERT INTO order_items (id, order_id, dish_id, quantity, unit_price, tax_amount, tax_percentage, tax_code, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          item.id || generateUUID(),
-          order.id, 
-          item.dishId || (item as any).dish_id, 
-          item.quantity, 
-          item.price || (item as any).unit_price || (item as any).price || 0, 
-          item.taxAmount || (item as any).tax_amount || 0, 
-          item.taxPercentage || (item as any).tax_percentage || 14, 
-          item.taxCode || (item as any).tax_code || 'NOR', 
-          item.notes || null, 
-          item.status || 'PENDENTE'
-        ]
-                );
-            }
-          }
-        }
-        await executeQuery(supabase, 'COMMIT');
-        return true;
-      } catch (e: unknown) {
-        await executeQuery(supabase, 'ROLLBACK');
-        throw e;
+      for (const order of orders) {
+          await databaseOperations.saveOrder(order);
       }
+      return true;
     }, `save ${orders.length} orders batch`, 'DATABASE');
     return result.success;
   },

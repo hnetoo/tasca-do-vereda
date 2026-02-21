@@ -8,7 +8,7 @@ import Breadcrumbs from '@/components/Breadcrumbs'; // Importar o componente Bre
 import { useStore } from '@/store/useStore';
 
 const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu'];
-const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu', '/admin/owner'];
+const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu'];
 
 const AppShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
