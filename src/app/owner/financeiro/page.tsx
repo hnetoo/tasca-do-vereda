@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getTodayRevenue, getTodayExpenses, getLatestTransactions } from '@/app/actions/finance-dashboard';
 import { formatKz } from '@/services/utils/currencyFormatter';
+import { formatDateInLuanda } from '@/utils/date';
 import { RefreshCcw, TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 
 export default function FinanceiroPage() {
