@@ -35,6 +35,28 @@ const nextConfig = {
 
     return config;
   },
+
+  async redirects() {
+    return [
+      {
+        source: '/menu-digital',
+        destination: '/menu',
+        permanent: true,
+      },
+      {
+        source: '/',
+        destination: '/menu',
+        permanent: false, // Pode ser alterado para true se for definitivo
+        has: [
+          {
+            type: 'header',
+            key: 'x-menu-mode',
+            value: 'true',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -24,6 +24,7 @@ import {
   StoreState
 } from '../types';
 import { MOCK_USERS } from '@/constants';
+import { supabaseService } from '@/services/supabaseService';
 
 const customStorage: StateStorage = {
   getItem: (name: string): string | null => {
@@ -72,7 +73,7 @@ export const useStore = create<StoreState>()(
       attendance: [],
       employees: [],
       notifications: [],
-      users: MOCK_USERS,
+      // users: MOCK_USERS, // Users will be fetched from Supabase during initialization
       payroll: [],
       loyaltyRewards: [],
       dailyAnalyticsData: null,
@@ -138,6 +139,17 @@ export const useStore = create<StoreState>()(
                 state.addNotification?.('error', 'Falha ao carregar menu. Tente recarregar a página.', 10000);
              }
           }
+
+          // Fetch users from Supabase
+          const { success: usersSuccess, data: fetchedUsers, error: usersError } = await supabaseService.fetchUsers();
+          if (usersSuccess && fetchedUsers) {
+            set({ users: fetchedUsers });
+            logger.info('Users fetched from Supabase and updated in store.', { count: fetchedUsers.length }, 'STORE');
+          } else {
+            logger.error('Failed to fetch users from Supabase.', { error: usersError }, 'STORE');
+            get().addNotification('error', 'Falha ao carregar utilizadores. A aplicação pode não funcionar corretamente.');
+          }
+
         } catch (error) {
           logger.error('Error during store initialization', { error }, 'STORE');
         } finally {
