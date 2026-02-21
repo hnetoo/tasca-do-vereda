@@ -22,6 +22,7 @@ import {
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { formatDateInLuanda } from '@/utils/date';
 
 ChartJS.register(
   CategoryScale,
@@ -214,11 +215,11 @@ export default function FinancePage() {
               <tr key={order.id} className="hover:bg-slate-50">
                 <td className="px-6 py-4 font-medium text-slate-800">#{order.id.slice(0, 8)}</td>
                 <td className="px-6 py-4 text-slate-500">
-                  {format(new Date(order.createdAt), "dd MMM HH:mm", { locale: pt })}
+                  {formatDateInLuanda(order.createdAt, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </td>
                 <td className="px-6 py-4 text-slate-500">Mesa {order.tableId}</td>
                 <td className="px-6 py-4 font-medium text-slate-800">
-                  {order.total.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                  {formatKz(order.total)}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${

@@ -1,10 +1,12 @@
 import { databaseOperations } from '@/services/database/operations';
 import { SystemSettings, Fornecedor, Employee, AttendanceRecord, Dish, MenuCategory, UUID } from '@/types';
 import { logger } from '@/services/logger';
+import { createClient } from '@/lib/supabase/server';
 
 export async function saveSettingsAction(settings: SystemSettings): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveSettings(settings);
+    const supabase = await createClient();
+    const result = await databaseOperations.saveSettings(settings, supabase);
     if (!result.success) {
       logger.error('Failed to save settings via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -19,7 +21,8 @@ export async function saveSettingsAction(settings: SystemSettings): Promise<{ su
 
 export async function saveSupplierAction(supplier: Fornecedor): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const success = await databaseOperations.saveSupplier(supplier);
+    const supabase = await createClient();
+    const success = await databaseOperations.saveSupplier(supplier, supabase);
     if (!success) {
       logger.error('Failed to save supplier via server action', { error: 'Operation returned false' }, 'SERVER_ACTION');
       return { success: false, error: 'Operation returned false' };
@@ -34,7 +37,8 @@ export async function saveSupplierAction(supplier: Fornecedor): Promise<{ succes
 
 export async function saveEmployeesAction(employees: Employee[]): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveEmployees(employees);
+    const supabase = await createClient();
+    const result = await databaseOperations.saveEmployees(employees, supabase);
     if (!result.success) {
       logger.error('Failed to save employees via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -49,7 +53,8 @@ export async function saveEmployeesAction(employees: Employee[]): Promise<{ succ
 
 export async function deleteEmployeeAction(id: string): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const success = await databaseOperations.deleteEmployee(id);
+    const supabase = await createClient();
+    const success = await databaseOperations.deleteEmployee(id, supabase);
     if (!success) {
       logger.error('Failed to delete employee via server action', { error: 'Operation returned false' }, 'SERVER_ACTION');
       return { success: false, error: 'Operation returned false' };
@@ -64,7 +69,8 @@ export async function deleteEmployeeAction(id: string): Promise<{ success: boole
 
 export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveAttendance(attendanceRecords);
+    const supabase = await createClient();
+    const result = await databaseOperations.saveAttendance(attendanceRecords, supabase);
     if (!result.success) {
       logger.error('Failed to save attendance via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -79,7 +85,8 @@ export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]
 
 export async function saveCategoryAction(category: MenuCategory): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    const result = await databaseOperations.saveCategory(category);
+    const supabase = await createClient();
+    const result = await databaseOperations.saveCategory(category, supabase);
     if (!result.success) {
       const errorToLog = { message: result.error || 'Operation returned false' };
       logger.error('Failed to save category via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -95,7 +102,8 @@ export async function saveCategoryAction(category: MenuCategory): Promise<{ succ
 
 export async function deleteCategoryAction(id: UUID): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    const result = await databaseOperations.deleteCategory(id);
+    const supabase = await createClient();
+    const result = await databaseOperations.deleteCategory(id, supabase);
     if (!result.success) {
       const errorToLog = { message: result.error || 'Operation returned false' };
       logger.error('Failed to delete category via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -111,7 +119,8 @@ export async function deleteCategoryAction(id: UUID): Promise<{ success: boolean
 
 export async function saveDishAction(dish: Dish): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    const result = await databaseOperations.saveDish(dish);
+    const supabase = await createClient();
+    const result = await databaseOperations.saveDish(dish, supabase);
     if (!result.success) {
       const errorToLog = { message: result.error || 'Operation returned false' };
       logger.error('Failed to save dish via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -127,7 +136,8 @@ export async function saveDishAction(dish: Dish): Promise<{ success: boolean; er
 
 export async function deleteDishAction(id: UUID): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    const result = await databaseOperations.deleteDish(id);
+    const supabase = await createClient();
+    const result = await databaseOperations.deleteDish(id, supabase);
     if (!result.success) {
       const errorToLog = { message: result.error || 'Operation returned false' };
       logger.error('Failed to delete dish via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -184,7 +194,8 @@ export async function recreateMenuSchemaAction(): Promise<{ success: boolean; er
 
 export async function saveCategoriesAction(categories: MenuCategory[]): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    const success = await databaseOperations.saveCategories(categories);
+    const supabase = await createClient();
+    const success = await databaseOperations.saveCategories(categories, supabase);
     if (!success) {
       const errorToLog = { message: 'Operation returned false' };
       logger.error('Failed to save categories via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -200,7 +211,8 @@ export async function saveCategoriesAction(categories: MenuCategory[]): Promise<
 
 export async function saveDishesAction(dishes: Dish[]): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    const success = await databaseOperations.saveDishes(dishes);
+    const supabase = await createClient();
+    const success = await databaseOperations.saveDishes(dishes, supabase);
     if (!success) {
       const errorToLog = { message: 'Operation returned false' };
       logger.error('Failed to save dishes via server action', { error: errorToLog }, 'SERVER_ACTION');

@@ -77,18 +77,6 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   const generalMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { path: '/products', icon: <Package size={24} />, label: 'Produtos' },
-    { path: '/categories', icon: <Tags size={24} />, label: 'Categorias' },
-    { 
-      path: '/sistema', 
-      icon: <Monitor size={24} />, 
-      label: 'Sistema',
-      subItems: [
-        { path: '/sistema/dlp-recovery', icon: <Shield size={20} />, label: 'DLP Recovery' },
-        { path: '/sistema/agt', icon: <Activity size={20} />, label: 'AGT' },
-        { path: '/sistema/nuvem-db', icon: <Cloud size={20} />, label: 'Nuvem.db' },
-      ]
-    },
     { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
 
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },

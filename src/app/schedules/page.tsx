@@ -7,6 +7,7 @@ import {
   Copy, Save
 } from 'lucide-react';
 import { WorkShift } from '@/types';
+import { formatDateInLuanda } from '@/utils/date';
 
 const DAYS_OF_WEEK = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
@@ -15,7 +16,7 @@ import ExportButton from '@/components/ExportButton';
 const formatTime = (t: string | Date | undefined): string => {
   if (!t) return '00:00';
   if (t instanceof Date) {
-    return t.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+    return formatDateInLuanda(t, { hour: '2-digit', minute: '2-digit' });
   }
   return t;
 };
@@ -88,7 +89,7 @@ const Schedules = () => {
       return {
         employeeName: emp?.name || 'Desconhecido',
         day: DAYS_OF_WEEK[(shift.dayOfWeek || 1) - 1] || 'N/A',
-        date: shiftDate.toLocaleDateString('pt-AO'),
+        date: formatDateInLuanda(shiftDate, { day: '2-digit', month: '2-digit', year: 'numeric' }),
         time: `${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}`,
         hours: getHoursDifference(shift.startTime, shift.endTime),
         notes: shift.notes || '-'
@@ -118,8 +119,8 @@ const Schedules = () => {
         { header: 'Horas', dataKey: 'hours' },
         { header: 'Notas', dataKey: 'notes' }
       ],
-      fileName: `escalas_semana_${currentWeekStart.toLocaleDateString('pt-AO').replace(/\//g, '-')}`,
-      title: `Escalas: ${currentWeekStart.toLocaleDateString('pt-AO')} - ${weekEnd.toLocaleDateString('pt-AO')}`
+      fileName: `escalas_semana_${formatDateInLuanda(currentWeekStart, { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}`,
+      title: `Escalas: ${formatDateInLuanda(currentWeekStart, { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${formatDateInLuanda(weekEnd, { day: '2-digit', month: '2-digit', year: 'numeric' })}`
     };
   };
 

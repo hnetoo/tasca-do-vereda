@@ -34,16 +34,16 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Define public routes that don't require authentication
-  const publicPrefixes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/auth'];
-  const isPublicRoute = publicPrefixes.some(prefix => path.startsWith(prefix));
+  const publicPrefixes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/auth', '/admin/owner'];
+  const isPublicRoute = publicPrefixes.some(prefix => path.startsWith(prefix)) || path === '/';
 
-  // If the route is not public and the user is not authenticated, redirect to login
+  // If the route is not public and the user is not authenticated, redirect to root (PIN login)
   // We check for either a Supabase session OR a valid PIN session cookie
   const hasPinSession = request.cookies.has('pin_session');
   
   if (!isPublicRoute && !user && !hasPinSession) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/'
     url.searchParams.set('redirect_to', path)
     return NextResponse.redirect(url)
   }
@@ -73,34 +73,36 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Strict access control: Only OWNER can access /admin/owner
-    // ADMIN users stay in the main app
-    if (!userRole || userRole !== 'OWNER') {
-       // If not OWNER, redirect to dashboard (or login if not auth)
-       const url = request.nextUrl.clone()
-       if (user || hasPinSession) {
-         url.pathname = '/dashboard'
-       } else {
-         url.pathname = '/login'
-         url.searchParams.set('error', 'unauthorized')
-       }
-       return NextResponse.redirect(url)
+    // If authenticated, check strict access control: Only OWNER or ADMIN
+    if (userRole) {
+      if (userRole !== 'OWNER' && userRole !== 'ADMIN') {
+        // If not OWNER/ADMIN, redirect to dashboard
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
     }
+    // If not authenticated, we allow access so the page can render the login form
   }
 
-  // Redireciona usuário logado fora da página de login se tentar acessar login
-  if (request.nextUrl.pathname === '/login') {
+  // Redireciona usuário logado fora da página de login se tentar acessar login ou a raiz
+  if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/') {
     let authenticatedRole: string | undefined;
+    let isAuthenticated = false;
 
     if (user) {
       authenticatedRole = (user.user_metadata?.role || '').toUpperCase();
+      isAuthenticated = true;
     } else if (hasPinSession) {
       const pinSessionCookie = request.cookies.get('pin_session');
       if (pinSessionCookie) {
         try {
           const session = JSON.parse(decodeURIComponent(pinSessionCookie.value));
-          if (session && session.userRole) {
-            authenticatedRole = session.userRole.toUpperCase();
+          if (session && session.valid) {
+            isAuthenticated = true;
+            if (session.userRole) {
+              authenticatedRole = session.userRole.toUpperCase();
+            }
           }
         } catch (e) {
           // Fallback/Ignore invalid JSON
@@ -108,8 +110,8 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    if (authenticatedRole) {
-      // Redirect all authenticated users to dashboard, regardless of role
+    if (isAuthenticated) {
+      // Redirect all authenticated users to dashboard
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }

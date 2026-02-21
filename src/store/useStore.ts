@@ -9,6 +9,7 @@ import { createStaffSlice } from './slices/staffSlice';
 import { createFinanceSlice } from './slices/financeSlice';
 import { createAuthSlice } from './slices/authSlice';
 import { createOperationalSlice } from './slices/operationalSlice';
+import { getTablesAction } from '@/app/actions/operational';
 import { createUISlice } from './slices/uiSlice';
 import { createIntegrationsSlice } from './slices/integrationsSlice';
 import { 
@@ -138,6 +139,19 @@ export const useStore = create<StoreState>()(
              if (state.categories.length === 0) {
                 state.addNotification?.('error', 'Falha ao carregar menu. Tente recarregar a página.', 10000);
              }
+          }
+
+          // Fetch tables from SQL
+          try {
+             const tablesResult = await getTablesAction();
+             if (tablesResult.success && tablesResult.data) {
+                set({ tables: tablesResult.data });
+                logger.info('Tables loaded from SQL', { count: tablesResult.data.length }, 'STORE');
+             } else {
+                logger.error('Failed to load tables from SQL', { error: tablesResult.error }, 'STORE');
+             }
+          } catch (err) {
+             logger.error('Exception loading tables', { error: err }, 'STORE');
           }
 
           // Fetch users from Supabase

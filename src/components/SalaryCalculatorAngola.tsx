@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { calculateIRT, calculateINSS } from '../services/salaryCalculatorAngola';
 import { Calculator } from 'lucide-react';
+import { formatKz } from '@/services/utils/currencyFormatter';
 
 const SalaryCalculatorAngola = () => {
   const [baseSalary, setBaseSalary] = useState<number>(0);
@@ -33,11 +34,11 @@ const SalaryCalculatorAngola = () => {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="p-2 bg-gray-50 rounded">
             <span className="text-gray-500">INSS (3%)</span>
-            <p className="font-bold">{inss.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
+            <p className="font-bold">{formatKz(inss)}</p>
           </div>
           <div className="p-2 bg-gray-50 rounded">
             <span className="text-gray-500">IRT</span>
-            <p className="font-bold">{irt.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
+            <p className="font-bold">{formatKz(irt)}</p>
           </div>
         </div>
 
@@ -45,7 +46,7 @@ const SalaryCalculatorAngola = () => {
           <div className="flex justify-between items-center">
             <span className="font-bold">Salário Líquido:</span>
             <span className="text-xl font-bold text-green-600">
-              {liquid.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+              {formatKz(liquid)}
             </span>
           </div>
         </div>

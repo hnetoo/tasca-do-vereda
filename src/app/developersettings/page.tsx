@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { IntegrationLog } from '@/types';
+import { formatDateInLuanda } from '@/utils/date';
 import {
   Copy, Eye, EyeOff, Trash2, Plus, TestTube, AlertCircle, CheckCircle,
   Webhook, Key, FileText, Code, Play, Save
@@ -96,7 +97,7 @@ const DeveloperSettings = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-xl font-black text-white">{key.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1">Criada em {new Date(key.createdAt).toLocaleDateString('pt-AO')}</p>
+                    <p className="text-xs text-slate-400 mt-1">Criada em {formatDateInLuanda(key.createdAt, { dateStyle: 'short' })}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold">Ativa</span>
@@ -155,7 +156,7 @@ const DeveloperSettings = () => {
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Último uso: {new Date(key.lastUsed).toLocaleDateString('pt-AO')} às {new Date(key.lastUsed).toLocaleTimeString('pt-AO')}</span>
+                  <span className="text-slate-400">Último uso: {formatDateInLuanda(key.lastUsed, { dateStyle: 'short' })} às {formatDateInLuanda(key.lastUsed, { timeStyle: 'medium' })}</span>
                   <button className="text-primary hover:text-primary/80 font-bold">Revogar</button>
                 </div>
               </div>
@@ -343,9 +344,7 @@ const DeveloperSettings = () => {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-slate-400">
-                        {(l as any).timestamp instanceof Date 
-                          ? (l as any).timestamp.toLocaleTimeString('pt-AO') 
-                          : new Date((l as any).timestamp).toLocaleTimeString('pt-AO')}
+                        {formatDateInLuanda((l as any).timestamp, { timeStyle: 'medium' })}
                       </td>
                       <td className="py-3 px-4 text-slate-400">
                         {(l.request as any)?.details ? JSON.stringify((l.request as any).details).substring(0, 30) + '...' : '-'}

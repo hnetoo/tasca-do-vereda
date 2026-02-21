@@ -13,6 +13,7 @@ import {
   Donut, Martini, Grape, Carrot, Apple, Cherry, RotateCcw, Check, Menu
 } from 'lucide-react';
 import Image from 'next/image';
+import { saveOrderAction } from '@/app/actions/operational';
 import { PaymentMethod, Order, TableZone, Table, OrderPayment, Dish, Product, AuditLog, OrderItem } from '@/types';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { availableMonitors, primaryMonitor } from '@tauri-apps/api/window';
@@ -20,6 +21,8 @@ import ExportButton from '@/components/ExportButton';
 import { logger } from '@/services/logger';
 import { formatKz, formatKzDetailed } from '@/services/utils/currencyFormatter';
 import { normalizeDishImage } from '@/utils/imageUtils';
+import { formatDateInLuanda } from '@/utils/date';
+import { useTables } from '@/hooks/useTables';
 
 const AVAILABLE_ICONS = [
   { name: 'Utensils', icon: Utensils, label: 'Geral' },
@@ -44,8 +47,11 @@ const AVAILABLE_ICONS = [
 ];
 
 const POS = () => {
+  // Enable realtime table updates
+  useTables();
+
   const { 
-    tables, activeTableId, setActiveTable, 
+    tables, activeTableId, setActiveTable, fetchTables,
     dishes: menu, categories, activeOrders, activeOrderId, setActiveOrder, 
     createNewOrder, addToOrder, removeFromOrder, 
     checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
@@ -233,7 +239,7 @@ const POS = () => {
           return {
             data: shiftOrders.map((o: Order) => ({
               id: o.invoiceNumber || o.id,
-              time: o.createdAt ? new Date(o.createdAt).toLocaleTimeString('pt-AO') : '',
+              time: o.createdAt ? formatDateInLuanda(o.createdAt, { hour: '2-digit', minute: '2-digit' }) : '',
               total: formatKz(o.total || 0),
               payment: o.paymentMethod || 'N/A',
               items: o.items?.length || 0
@@ -245,7 +251,7 @@ const POS = () => {
         { header: 'Pagamento', dataKey: 'payment' },
         { header: 'Items', dataKey: 'items' }
       ],
-      fileName: `fecho_caixa_${new Date().toISOString().split('T')[0]}`,
+      fileName: `fecho_caixa_${formatDateInLuanda(new Date(), { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')}`,
       title: `Relatório de Vendas - Turno Atual`
     };
   };
@@ -263,13 +269,36 @@ const POS = () => {
     setOpeningAmount('');
   };
 
-  const handleCreateSubAccount = () => {
+  const handleCreateSubAccount = async () => {
     if (!activeTableId) return;
     const name = subAccountName || `Subconta ${openOrdersForTable.length + 1}`;
-    createNewOrder(activeTableId, name);
+    const newOrderId = createNewOrder(activeTableId, name);
+    
+    // Sync with database immediately
+    // We need to find the newly created order in the store state
+    // Since state updates might be async/batched, we might need to rely on the fact that createNewOrder is synchronous in Zustand
+    const state = useStore.getState();
+    const newOrder = state.activeOrders.find((o: Order) => o.id === newOrderId);
+    
+    if (newOrder) {
+      try {
+        const result = await saveOrderAction(newOrder);
+        if (!result.success) {
+           addNotification('error', `Erro ao salvar subconta: ${result.error}`);
+           logger.error('Failed to sync new sub-account', { error: result.error }, 'POS');
+        } else {
+           addNotification('success', `Subconta "${name}" criada e sincronizada.`);
+        }
+      } catch (err) {
+         logger.error('Exception syncing new sub-account', { error: err }, 'POS');
+      }
+      
+      // Switch to the new order immediately
+      setActiveOrder(newOrderId);
+    }
+
     setIsSubAccountModalOpen(false);
     setSubAccountName('');
-    addNotification('success', `Subconta "${name}" criada.`);
   };
 
   const emitRouteUpdateWithBackoff = async (label: string, path: string, maxRetries = 5) => {
@@ -408,9 +437,8 @@ const POS = () => {
       </div>`;
     }).join('');
 
-    const now = new Date(order.createdAt || '');
-    const dateStr = now.toLocaleDateString('pt-AO', { year: 'numeric', month: '2-digit', day: '2-digit' });
-    const timeStr = now.toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = formatDateInLuanda(order.createdAt, { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const timeStr = formatDateInLuanda(order.createdAt, { hour: '2-digit', minute: '2-digit' });
     
     const taxAmount = order.taxTotal || 0;
     const grossTotal = (order.total || 0) - taxAmount;

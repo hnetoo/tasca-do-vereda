@@ -34,6 +34,7 @@ import {
   createFullBackupAction 
 } from './actions';
 import { BackupMetadata, DLPComplianceReport } from '@/services/disasterRecoveryService';
+import { formatDateInLuanda } from '@/utils/date';
 
 const DLPRecovery = () => {
   const [backups, setBackups] = useState<BackupMetadata[]>([]);
@@ -192,7 +193,7 @@ const DLPRecovery = () => {
                   {complianceReport.complianceLogs.slice(0, 10).map((log: LogEntry, idx: number) => (
                     <div key={idx} className="p-3 bg-slate-900/30 rounded-lg border border-white/5 text-[11px]">
                       <div className="flex justify-between text-slate-500 mb-1">
-                        <span>{new Date(log.timestamp).toLocaleString()}</span>
+                        <span>{formatDateInLuanda(log.timestamp, { dateStyle: 'short', timeStyle: 'medium' })}</span>
                         <span className="text-primary font-bold">{log.level}</span>
                       </div>
                       <div className="text-slate-300">{log.message}</div>
@@ -296,7 +297,7 @@ const DLPRecovery = () => {
                       <div className="flex flex-col">
                         <span className="text-white font-mono font-bold text-sm">{backup.id}</span>
                         <span className="text-slate-500 text-xs flex items-center gap-1">
-                          <Clock size={12} /> {new Date(backup.timestamp).toLocaleString('pt-PT')}
+                          <Clock size={12} /> {formatDateInLuanda(backup.timestamp)}
                         </span>
                       </div>
                     </td>
