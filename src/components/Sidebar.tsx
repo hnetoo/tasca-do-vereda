@@ -38,8 +38,7 @@ import {
   Menu,
   X,
   Tags,
-  Package,
-  Shield
+  Package
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { SystemSettings } from '@/types';
