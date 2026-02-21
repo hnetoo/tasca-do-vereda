@@ -11,6 +11,7 @@ import Image from 'next/image';
 import ExportButton from '@/components/ExportButton';
 import { exportChartToPDF } from '@/services/exportService';
 import { formatKz } from '@/services/utils/currencyFormatter';
+import { formatDateInLuanda } from '@/utils/date';
 import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 

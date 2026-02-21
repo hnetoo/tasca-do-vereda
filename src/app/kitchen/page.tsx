@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
 import { Clock, CheckCircle, AlertCircle, Filter, Flame, ChefHat, Bell, CheckSquare, Volume2, VolumeX, Timer, Zap } from 'lucide-react';
 import { OrderItem, Order } from '@/types';
+import { formatDateInLuanda } from '@/utils/date';
 
 type KitchenFilter = 'TODOS' | 'PENDENTE' | 'PREPARANDO' | 'PRONTO' | 'ENTREGUE';
 

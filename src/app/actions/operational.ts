@@ -1,5 +1,7 @@
 
 
+'use server';
+
 import { databaseOperations } from '@/services/database/operations';
 import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID, Order } from '@/types';
 import { logger } from '@/services/logger';

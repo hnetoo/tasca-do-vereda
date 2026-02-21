@@ -623,7 +623,7 @@ const Settings = () => {
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        const img = new Image();
+        const img = new (window as any).Image(0, 0) as HTMLImageElement;
         img.src = reader.result as string;
         img.onload = () => {
             const canvas = document.createElement('canvas');

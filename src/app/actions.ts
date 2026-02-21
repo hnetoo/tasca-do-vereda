@@ -1,3 +1,5 @@
+'use server';
+
 import { databaseOperations } from '@/services/database/operations';
 import { SystemSettings, Fornecedor, Employee, AttendanceRecord, Dish, MenuCategory, UUID } from '@/types';
 import { logger } from '@/services/logger';
