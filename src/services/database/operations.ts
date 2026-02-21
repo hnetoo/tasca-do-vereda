@@ -558,7 +558,7 @@ export const databaseOperations = {
                 id: item.id || generateUUID(),
                 order_id: orderId,
                 dish_id: (item as any).dish_id || item.dishId,
-                quantity: item.quantity,
+                quantity: item.quantity || 1, // Ensure quantity defaults to 1 if undefined
                 unit_price: (item as any).unit_price || item.unitPrice || item.price || 0,
                 tax_amount: (item as any).tax_amount || item.taxAmount || 0,
                 tax_percentage: (item as any).tax_percentage || item.taxPercentage || 14,
