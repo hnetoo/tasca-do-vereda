@@ -7,6 +7,20 @@ import { disasterRecoveryService } from '@/services/disasterRecoveryService';
 import { SystemSettings, MenuCategory, Product, FullApplicationState } from '@/types';
 import { BackupMetadata } from '@/services/integrationAPIService';
 
+export async function clearMenuAction(): Promise<{ success: boolean; error?: string }> {
+  try {
+    logger.warn('Iniciando limpeza do menu (Categorias e Pratos)...', null, 'DATABASE_RESET');
+    await executeQuery('DELETE FROM dishes');
+    await executeQuery('DELETE FROM menu_categories');
+    
+    logger.info('Limpeza do menu concluída com sucesso.', null, 'DATABASE_RESET');
+    return { success: true };
+  } catch (error: any) {
+    logger.error('Erro ao limpar menu', { error: error.message }, 'DATABASE_RESET');
+    return { success: false, error: error.message };
+  }
+}
+
 export async function clearAllDataAction(): Promise<{ success: boolean; error?: string }> {
   try {
     logger.warn('Iniciando limpeza completa de dados...', null, 'DATABASE_RESET');

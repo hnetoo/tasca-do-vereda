@@ -15,9 +15,9 @@ export async function executeQuery(supabaseOrSql: SupabaseClient<Database> | str
     if (typeof supabaseOrSql === 'string') {
         // Handle case where first arg is sql string (legacy compatibility: executeQuery(sql, params))
         const sql = supabaseOrSql;
-        // const parameters = Array.isArray(sqlOrParams) ? sqlOrParams : [];
+        const parameters = Array.isArray(sqlOrParams) ? sqlOrParams : [];
         const client = await supabaseClientPromise;
-        const { error } = await (client as any).rpc('execute_sql', { sql_query: sql }); // Note: parameters are currently ignored by execute_sql RPC wrapper in this codebase
+        const { error } = await (client as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
             if (error) {
             logger.error(`Error fetching categories from Supabase`, { error }, 'DATABASE');
             throw error;
@@ -28,9 +28,9 @@ export async function executeQuery(supabaseOrSql: SupabaseClient<Database> | str
     // Handle standard case: executeQuery(supabase, sql, params)
     const supabase = supabaseOrSql;
     const sql = sqlOrParams as string;
-    // params is the third argument
+    const parameters = params || [];
     
-    const { error } = await (supabase as any).rpc('execute_sql', { sql_query: sql });
+    const { error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
     if (error) throw error;
 }
 
@@ -317,7 +317,7 @@ export const databaseOperations = {
             price: product.price,
             cost_price: product.costPrice || 0,
             category_id: product.categoryId || null,
-            image_url: product.image || null,
+            image_url: product.imageUrl || null,
             tax_code: product.taxCode || null,
             tax_percentage: product.taxPercentage || null,
             preparation_time: product.preparationTime || null,
@@ -544,10 +544,10 @@ export const databaseOperations = {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
         const dbOrder = {
             id: orderId,
-            table_id: (order as any).table_id || order.tableId,
-            status: order.status,
-            timestamp: order.timestamp instanceof Date ? order.timestamp.toISOString() : order.timestamp,
-            total: order.total,
+            table_id: (order as any).table_id || order.tableId || null,
+            status: order.status || 'PENDENTE',
+            timestamp: order.timestamp instanceof Date ? order.timestamp.toISOString() : (order.timestamp || new Date().toISOString()),
+            total: order.total || 0,
             tax_total: (order as any).tax_total || order.taxTotal || 0,
             payment_method: (order as any).payment_method || order.paymentMethod || null,
             customer_id: (order as any).customer_id || order.customerId || null,
@@ -697,23 +697,23 @@ export const databaseOperations = {
               dish.name,
               dish.description,
               dish.price,
-              (dish as any).cost_price || 0,
-              (dish as any).category_id,
-              (dish as any).image_url,
-              (dish as any).tax_code,
-              (dish as any).tax_percentage,
-              (dish as any).preparation_time,
-              dish.is_active,
+              dish.costPrice || 0,
+              dish.categoryId,
+              dish.imageUrl,
+              dish.taxCode,
+              dish.taxPercentage,
+              dish.preparationTime,
+              dish.isActive,
               dish.available,
-              dish.is_available_on_digital_menu,
-              dish.track_stock,
-              dish.stock_quantity,
-              dish.min_stock_quantity,
-              dish.max_stock_quantity,
+              dish.isAvailableOnDigitalMenu,
+              dish.trackStock,
+              dish.stockQuantity,
+              dish.minStockQuantity,
+              dish.maxStockQuantity,
               dish.unit,
-              (dish as any).supplier_id,
-              (dish.created_at as any) instanceof Date ? (dish.created_at as any).toISOString() : dish.created_at,
-              (dish.updated_at as any) instanceof Date ? (dish.updated_at as any).toISOString() : dish.updated_at,
+              dish.supplierId,
+              dish.createdAt instanceof Date ? dish.createdAt.toISOString() : dish.createdAt,
+              dish.updatedAt instanceof Date ? dish.updatedAt.toISOString() : dish.updatedAt,
             ]
           );
         }

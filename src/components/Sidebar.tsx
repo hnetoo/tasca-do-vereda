@@ -148,7 +148,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
                       href={item.path}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                         active 
-                          ? 'bg-gradient-to-br from-slate-100 to-slate-300 text-slate-900 shadow-md transform scale-[1.02]' 
+                          ? 'bg-gradient-to-r from-gray-700 to-gray-600 text-white shadow-md transform scale-[1.02] border border-gray-600' 
                           : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
                       }`}
                       onClick={() => isMobileMenuOpen && toggleMobileMenu()}

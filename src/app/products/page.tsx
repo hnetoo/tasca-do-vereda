@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { logger } from '@/services/logger';
-import { Product } from '@/types';
+import { Product, MenuCategory } from '@/types';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Utensils, Copy } from 'lucide-react';
 import { Dish } from '@/types';
 import Image from 'next/image';
+import { formatKz } from '@/services/utils/currencyFormatter';
 
 const Products = () => {
   const { dishes, categories, addDish, updateDish, removeDish, setDishes } = useStore();
@@ -23,11 +24,11 @@ const Products = () => {
     name: '',
     description: '',
     price: 0,
-    category_id: '',
-    image_url: '',
-    is_available_on_digital_menu: true,
-    tax_code: 'NOR',
-    is_active: true
+    categoryId: '',
+    imageUrl: '',
+    isAvailableOnDigitalMenu: true,
+    taxCode: 'NOR',
+    isActive: true
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +42,7 @@ const Products = () => {
 
   const filteredProducts = dishes.filter((dish: Dish) => {
     const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'TODOS' || String(dish.category_id) === String(selectedCategory);
+    const matchesCategory = selectedCategory === 'TODOS' || String(dish.categoryId) === String(selectedCategory);
     return matchesSearch && matchesCategory;
   }).sort((a: Dish, b: Dish) => a.name.localeCompare(b.name));
 
@@ -50,8 +51,8 @@ const Products = () => {
       setEditingId(dish.id);
       setProductForm({
         ...dish,
-        is_available_on_digital_menu: dish.is_available_on_digital_menu !== false,
-        category_id: dish.category_id // Ensure category_id is used when editing
+        isAvailableOnDigitalMenu: dish.isAvailableOnDigitalMenu !== false,
+        categoryId: dish.categoryId // Ensure categoryId is used when editing
       });
     } else {
       setEditingId(null);
@@ -59,11 +60,11 @@ const Products = () => {
         name: '',
         description: '',
         price: 0,
-        category_id: categories[0]?.id || '',
-        image_url: '',
-        is_available_on_digital_menu: true,
-        tax_code: 'NOR',
-        is_active: true
+        categoryId: categories[0]?.id || '',
+        imageUrl: '',
+        isAvailableOnDigitalMenu: true,
+        taxCode: 'NOR',
+        isActive: true
       });
     }
     setIsProductModalOpen(true);
@@ -123,43 +124,53 @@ const Products = () => {
        }
     }
 
-    const selectedCat = categories.find((c: any) => c.id === productForm.category_id);
+    const selectedCat = categories.find((c: MenuCategory) => c.id === productForm.categoryId);
     const dishData = {
       ...productForm,
-      image_url: finalImage,
+      imageUrl: finalImage,
       price: Number(productForm.price),
-      is_available_on_digital_menu: productForm.is_available_on_digital_menu ?? true,
+      isAvailableOnDigitalMenu: productForm.isAvailableOnDigitalMenu ?? true,
     } as Dish;
 
     if (editingId) {
       const existing = dishes.find((d: Dish) => d.id === editingId);
-      const changedCategory = existing && existing.category_id !== dishData.category_id;
+      const changedCategory = existing && existing.categoryId !== dishData.categoryId;
       if (changedCategory) {
         const ok = confirm(`Confirma mover "${existing?.name}" para a categoria "${selectedCat?.name}"?`);
         if (!ok) return;
       }
-      updateDish(dishData);
-      setIsProductModalOpen(false);
+      const success = await updateDish(dishData);
+      if (success) {
+        useStore.getState().addNotification?.('success', 'Produto atualizado com sucesso!');
+        setIsProductModalOpen(false);
+      } else {
+        useStore.getState().addNotification?.('error', 'Falha ao atualizar o produto.');
+      }
     } else {
       const newDish: Dish = {
         ...dishData,
         id: dishData.id || Math.random().toString(36).substr(2, 9),
-        is_active: true,
+        isActive: true,
         name: dishData.name || '',
         price: dishData.price || 0,
       };
-      addDish(newDish);
-      setIsProductModalOpen(false);
-      setProductForm({
-        name: '',
-        description: '',
-        price: 0,
-        category_id: productForm.category_id, 
-        image_url: '',
-        is_available_on_digital_menu: true,
-        tax_code: 'NOR',
-        is_active: true
-      });
+      const success = await addDish(newDish);
+      if (success) {
+        useStore.getState().addNotification?.('success', 'Produto adicionado com sucesso!');
+        setIsProductModalOpen(false);
+        setProductForm({
+          name: '',
+          description: '',
+          price: 0,
+          categoryId: productForm.categoryId, 
+          imageUrl: '',
+          isAvailableOnDigitalMenu: true,
+          taxCode: 'NOR',
+          isActive: true
+        });
+      } else {
+        useStore.getState().addNotification?.('error', 'Falha ao adicionar o produto.');
+      }
     }
   };
 
@@ -177,7 +188,7 @@ const Products = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProductForm(prev => ({ ...prev, image_url: reader.result as string }));
+        setProductForm(prev => ({ ...prev, imageUrl: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
@@ -191,36 +202,37 @@ const Products = () => {
     
     try {
       const updatedDishes = await Promise.all(dishes.map(async (dish: Dish) => {
-        if (dish.image_url && dish.image_url.startsWith('data:image') && dish.image_url.length > 200000) {
+        if (dish.imageUrl && dish.imageUrl.startsWith('data:image') && dish.imageUrl.length > 200000) {
            try {
-             const compressed = await compressImage(dish.image_url);
-             if (compressed.length < dish.image_url.length) {
-               count++;
-               return { ...dish, image_url: compressed };
+             const compressed = await compressImage(dish.imageUrl);
+             if (compressed.length < dish.imageUrl.length) {
+               return { ...dish, imageUrl: compressed };
              }
            } catch (e) {
-             console.error(`Error compressing image for ${dish.name}`, e);
+             console.error(`Failed to compress image for ${dish.name}`, e);
            }
         }
         return dish;
       }));
+
+      // Find changed dishes
+      const changed = updatedDishes.filter((d, i) => d.imageUrl !== dishes[i].imageUrl);
+      count = changed.length;
       
       if (count > 0) {
         setDishes(updatedDishes);
-        alert(`${count} imagens foram otimizadas com sucesso! O menu digital deve sincronizar mais rápido agora.`);
-      } else {
-        alert('As imagens já estão otimizadas.');
+        // Persist changes
+        for (const dish of changed) {
+          await updateDish(dish);
+        }
       }
     } catch (error) {
-      console.error("Optimization failed", error);
-      alert('Erro ao otimizar imagens.');
+      console.error('Optimization failed', error);
+      useStore.getState().addNotification?.('error', 'Falha na otimização de imagens.');
     } finally {
       setIsOptimizing(false);
+      useStore.getState().addNotification?.('success', `Otimização concluída. ${count} imagens otimizadas.`);
     }
-  };
-
-  const formatKz = (value: number) => {
-    return new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA' }).format(value);
   };
 
   return (
@@ -272,7 +284,7 @@ const Products = () => {
             onChange={e => setSelectedCategory(e.target.value)}
           >
             <option value="TODOS" className="bg-slate-900 text-slate-300">Todas as Categorias</option>
-            {categories.map((cat: any, index: number) => (
+            {categories.map((cat: MenuCategory, index: number) => (
               <option key={`${cat.id}-${index}`} value={cat.id} className="bg-slate-900">{cat.name}</option>
             ))}
           </select>
@@ -283,9 +295,9 @@ const Products = () => {
             <div key={`${dish.id}-${index}`} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
               <div className="flex items-start gap-4">
                 <div className="w-20 h-20 rounded-2xl bg-black/30 overflow-hidden shrink-0 border border-white/5 relative">
-                  {dish.image_url ? (
+                  {dish.imageUrl ? (
                     <Image 
-                      src={dish.image_url} 
+                      src={dish.imageUrl} 
                       alt={dish.name} 
                       fill 
                       sizes="80px"
@@ -296,10 +308,10 @@ const Products = () => {
                       <Utensils size={24} />
                     </div>
                   )}
-                  {!dish.is_available_on_digital_menu && (
-                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
-                        <span className="text-[8px] font-black text-white uppercase bg-red-500/80 px-2 py-1 rounded">Oculto</span>
-                     </div>
+                  {!dish.isAvailableOnDigitalMenu && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+                       <span className="text-[8px] font-black text-white uppercase bg-red-500/80 px-2 py-1 rounded">Oculto</span>
+                    </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -350,9 +362,9 @@ const Products = () => {
                       onClick={() => fileInputRef.current?.click()}
                       className="aspect-square rounded-2xl border-2 border-dashed border-white/20 hover:border-primary/50 cursor-pointer flex flex-col items-center justify-center gap-2 bg-black/20 group transition-all overflow-hidden relative"
                     >
-                      {productForm.image_url ? (
+                      {productForm.imageUrl ? (
                         <Image 
-                          src={productForm.image_url} 
+                          src={productForm.imageUrl} 
                           alt="Preview" 
                           fill 
                           sizes="100%"
@@ -407,11 +419,11 @@ const Products = () => {
                         <select 
                           required
                           className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-primary focus:bg-white/10 outline-none transition-all appearance-none cursor-pointer"
-                          value={productForm.category_id || ''}
-                          onChange={e => setProductForm({...productForm, category_id: e.target.value})}
+                          value={productForm.categoryId || ''}
+                          onChange={e => setProductForm({...productForm, categoryId: e.target.value})}
                         >
                           <option value="" disabled>Selecione...</option>
-                          {categories.map((cat: any) => (
+                          {categories.map((cat: MenuCategory) => (
                             <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                           ))}
                         </select>
@@ -439,8 +451,8 @@ const Products = () => {
                     <input 
                       type="checkbox" 
                       className="sr-only peer"
-                      checked={productForm.is_available_on_digital_menu ?? false}
-                      onChange={e => setProductForm({...productForm, is_available_on_digital_menu: e.target.checked})}
+                      checked={productForm.isAvailableOnDigitalMenu ?? false}
+                      onChange={e => setProductForm({...productForm, isAvailableOnDigitalMenu: e.target.checked})}
                     />
                     <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>

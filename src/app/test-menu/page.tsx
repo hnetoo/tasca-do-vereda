@@ -12,9 +12,9 @@ export default function TestMenuPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        console.log('TestMenu: Starting fetch from products table...');
+        console.log('TestMenu: Starting fetch from dishes table...');
         const { data, error } = await supabase
-          .from('products')
+          .from('dishes')
           .select('*');
 
         if (error) {
@@ -22,7 +22,28 @@ export default function TestMenuPage() {
           setError(error.message);
         } else {
           console.log('TestMenu: Success! Products fetched:', data);
-          setProducts(data || []);
+          const mappedProducts: Product[] = (data || []).map((item: any) => ({
+             id: item.id,
+             name: item.name,
+             description: item.description,
+             price: item.price,
+             categoryId: item.category_id,
+             imageUrl: item.image_url,
+             taxCode: item.tax_code,
+             taxPercentage: item.tax_percentage,
+             isActive: item.is_active,
+             isAvailableOnDigitalMenu: item.is_available_on_digital_menu,
+             preparationTime: item.preparation_time,
+             trackStock: item.track_stock,
+             stockQuantity: item.stock_quantity,
+             minStockQuantity: item.min_stock_quantity,
+             maxStockQuantity: item.max_stock_quantity,
+             unit: item.unit,
+             supplierId: item.supplier_id,
+             createdAt: item.created_at ? new Date(item.created_at) : undefined,
+             updatedAt: item.updated_at ? new Date(item.updated_at) : undefined
+          }));
+          setProducts(mappedProducts);
         }
       } catch (err: any) {
         console.error('TestMenu: Unexpected error:', err);
@@ -63,10 +84,10 @@ export default function TestMenuPage() {
                   <p className="text-sm text-gray-600">ID: {product.id}</p>
                   <p className="text-green-600 font-bold">{product.price} Kz</p>
                   <p className="text-xs text-gray-500">
-                    Disponível Digital: {product.is_available_on_digital_menu ? 'Sim' : 'Não'}
+                    Disponível Digital: {product.isAvailableOnDigitalMenu ? 'Sim' : 'Não'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Imagem: {product.image_url || 'Sem imagem'}
+                    Imagem: {product.imageUrl || 'Sem imagem'}
                   </p>
                 </div>
               ))}

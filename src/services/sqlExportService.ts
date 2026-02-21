@@ -70,10 +70,10 @@ export const generateSQLSchema = (
 
   // Categories
   if (categories.length > 0) {
-    sql += `-- Data: categories\n`;
-    sql += `INSERT INTO categories (id, name, sort_order, is_active) VALUES\n`;
+    sql += `-- Data: menu_categories\n`;
+    sql += `INSERT INTO menu_categories (id, name, icon, sort_order, is_active) VALUES\n`;
     const catValues = categories.map((cat, index) => {
-      return `  ('${cat.id}', '${escapeSQL(cat.name)}', ${index}, 1)`;
+      return `  ('${cat.id}', '${escapeSQL(cat.name)}', '${escapeSQL(cat.icon || '')}', ${cat.sortOrder || index}, ${cat.isActive !== false ? 1 : 0})`;
     });
     sql += catValues.join(',\n') + ';\n\n';
   }
@@ -83,7 +83,7 @@ export const generateSQLSchema = (
     sql += `-- Data: products\n`;
     sql += `INSERT INTO products (id, category_id, name, price, description, image_url, is_available, is_available_on_digital_menu, tax_percentage) VALUES\n`;
     const productValues = products.map(product => {
-      return `  ('${product.id}', '${product.category_id}', '${escapeSQL(product.name)}', ${product.price}, '${escapeSQL(product.description || '')}', '${escapeSQL(product.image_url || '')}', 1, ${product.is_available_on_digital_menu !== false ? 1 : 0}, ${product.tax_percentage || settings.taxRate || 0})`;
+      return `  ('${product.id}', '${product.categoryId}', '${escapeSQL(product.name)}', ${product.price}, '${escapeSQL(product.description || '')}', '${escapeSQL(product.imageUrl || '')}', ${product.available !== false ? 1 : 0}, ${product.isAvailableOnDigitalMenu !== false ? 1 : 0}, ${product.taxPercentage || (settings as any).taxRate || 0})`;
     });
     sql += productValues.join(',\n') + ';\n\n';
   }

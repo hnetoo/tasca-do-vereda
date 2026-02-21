@@ -1,5 +1,5 @@
 warning: unused config key `build.strip` in `C:\Users\hneto\tasca-do-vereda---gestão_msi_vscode\.cargo\config.toml`
 warning: unused config key `build.opt-level` in `C:\Users\hneto\tasca-do-vereda---gestão_msi_vscode\.cargo\config.toml`
-warning: unused config key `build.lto` in `C:\Users\hneto\tasca-do-vereda---gestão_msi_vscode\.cargo\config.toml`
 warning: unused config key `build.codegen-units` in `C:\Users\hneto\tasca-do-vereda---gestão_msi_vscode\.cargo\config.toml`
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.30s
+warning: unused config key `build.lto` in `C:\Users\hneto\tasca-do-vereda---gestão_msi_vscode\.cargo\config.toml`
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.43s

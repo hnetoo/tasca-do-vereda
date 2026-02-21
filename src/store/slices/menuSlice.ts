@@ -17,7 +17,6 @@ import { integrationAPIService } from '@/services/integrationAPIService';
 import { MOCK_MENU, MOCK_CATEGORIES } from '@/constants';
 import { validateDishCategory, resolveCategoryId } from '@/services/categoryResolver';
 import { normalizeDishImage } from '@/utils/imageUtils';
-import { backupService } from '@/services/backupService';
 import { generateUUID, isValidUUID } from '@/utils/uuid';
 
 export interface MenuSlice {
@@ -44,8 +43,9 @@ export interface MenuSlice {
   scanAndRecoverCategories: () => Promise<void>;
   
   // Dish Management
-  addDish: (dish: Dish) => void;
-  updateDish: (dish: Dish) => void;
+  addDish: (dish: Dish) => Promise<boolean>;
+  updateDish: (dish: Dish) => Promise<boolean>;
+  batchUpdateDishes: (updates: { id: UUID; changes: Partial<Dish> }[]) => Promise<boolean>;
   removeDish: (id: UUID) => void;
   
   // Utilities
@@ -390,19 +390,19 @@ export const createMenuSlice: StateCreator<
       state.addNotification?.('info', 'Funcionalidade de recuperação em manutenção.');
   },
 
-  addDish: async (dish: Dish) => {
+  addDish: async (dish: Dish): Promise<boolean> => {
     const state = get();
     const previousDishes = state.dishes;
     
     // 1. Basic Validation
     if (!dish.name || dish.name.trim() === '') {
       state.addNotification?.('error', 'Nome do prato é obrigatório.');
-      return;
+      return false;
     }
 
     if (dish.price < 0) {
       state.addNotification?.('error', 'Preço do prato não pode ser negativo.');
-      return;
+      return false;
     }
 
     // 2. Category Validation
@@ -411,7 +411,7 @@ export const createMenuSlice: StateCreator<
     if (!valid) {
       state.addNotification?.('error', reason || 'Categoria inválida');
       logger.error('Falha ao adicionar prato: Categoria inválida', { dish, reason }, 'STORE');
-      return;
+      return false;
     }
 
     const finalDish: Dish = { 
@@ -447,33 +447,36 @@ export const createMenuSlice: StateCreator<
           } as any);
           
           get().triggerSync?.();
+          return true;
       } else {
           // Revert on failure
           set({ dishes: previousDishes });
           logger.error('Falha na persistência SQL do prato', { dish: finalDish, error: result.error }, 'DATABASE');
           state.addNotification?.('error', 'Erro ao guardar prato na base de dados local. A operação foi revertida.');
+          return false;
       }
     } catch (e: unknown) {
       // Revert on exception
       set({ dishes: previousDishes });
       logger.error('Critical error adding dish', { error: (e as Error).message }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao adicionar prato.');
+      return false;
     }
   },
 
-  updateDish: async (dish: Dish) => {
+  updateDish: async (dish: Dish): Promise<boolean> => {
     const state = get();
     const previousDishes = state.dishes;
 
     // 1. Basic Validation
     if (!dish.name || dish.name.trim() === '') {
       state.addNotification?.('error', 'Nome do prato é obrigatório.');
-      return;
+      return false;
     }
 
     if (dish.price < 0) {
       state.addNotification?.('error', 'Preço do prato não pode ser negativo.');
-      return;
+      return false;
     }
 
     // 2. Category Validation
@@ -482,7 +485,7 @@ export const createMenuSlice: StateCreator<
     if (!valid) {
       state.addNotification?.('error', reason || 'Categoria inválida');
       logger.error('Falha ao atualizar prato: Categoria inválida', { dish, reason }, 'STORE');
-      return;
+      return false;
     }
 
     const finalDish: Dish = { 
@@ -519,21 +522,69 @@ export const createMenuSlice: StateCreator<
           } as any);
           
           get().triggerSync?.();
+          return true;
       } else {
           // Revert on failure
           set({ dishes: previousDishes });
           logger.error('Falha na atualização SQL do prato', { dish: finalDish, error: result.error }, 'DATABASE');
           state.addNotification?.('error', 'Erro ao atualizar prato na base de dados local. A operação foi revertida.');
+          return false;
       }
     } catch (e: unknown) {
       // Revert on exception
       set({ dishes: previousDishes });
       logger.error('Critical error updating dish', { error: (e as Error).message }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao atualizar prato.');
+      return false;
     }
   },
 
-  removeDish: async (id: UUID) => {
+  batchUpdateDishes: async (updates: { id: UUID; changes: Partial<Dish> }[]) => {
+        const { dishes, addNotification, invalidateMenuCache, addAuditLog, triggerSync } = get();
+        const previousDishes = [...dishes];
+
+        // Optimistic Update
+        const nextDishes = dishes.map(d => {
+            const update = updates.find(u => u.id === d.id);
+            if (update) return { ...d, ...update.changes };
+            return d;
+        });
+
+        set({ dishes: nextDishes });
+        invalidateMenuCache();
+
+        const updatedDishes = nextDishes.filter(d => updates.some(u => u.id === d.id));
+
+        try {
+            const result = await saveDishesAction(updatedDishes);
+            
+            if (result.success) {
+                logger.info(`Batch updated ${updatedDishes.length} dishes`, { count: updatedDishes.length }, 'DATABASE');
+                
+                addAuditLog?.({ 
+                  type: 'DISH_BATCH_UPDATED', 
+                  entityType: 'Dish', 
+                  entityId: 'BATCH', 
+                  details: { count: updatedDishes.length } 
+                } as any);
+                
+                triggerSync?.();
+                return true;
+            } else {
+                set({ dishes: previousDishes });
+                logger.error('Falha na atualização SQL em massa', { error: result.error }, 'DATABASE');
+                addNotification?.('error', 'Erro ao atualizar pratos em massa.');
+                return false;
+            }
+        } catch (e: unknown) {
+            set({ dishes: previousDishes });
+            logger.error('Critical error batch updating dishes', { error: (e as Error).message }, 'STORE');
+            addNotification?.('error', 'Erro interno ao atualizar pratos.');
+            return false;
+        }
+    },
+
+    removeDish: async (id: UUID) => {
     const state = get();
     const previousDishes = state.dishes;
     const dishToRemove = state.dishes.find((d: Dish) => d.id === id);
@@ -699,10 +750,10 @@ export const createMenuSlice: StateCreator<
       if (dishIds.has(d.id)) issues.push(createIssue(`ID de prato duplicado: ${d.id} (${d.name}).`, 'DISH', d.id, 'high'));
       dishIds.add(d.id);
 
-      if (!d.category_id) {
+      if (!d.categoryId) {
         issues.push(createIssue(`Prato "${d.name}" sem categoria associada.`, 'DISH', d.id, 'medium'));
-      } else if (!catIds.has(d.category_id)) {
-        issues.push(createIssue(`Prato "${d.name}" refere categoria inexistente (ID: ${d.category_id}).`, 'DISH', d.id, 'high'));
+      } else if (!catIds.has(d.categoryId)) {
+        issues.push(createIssue(`Prato "${d.name}" refere categoria inexistente (ID: ${d.categoryId}).`, 'DISH', d.id, 'high'));
       }
 
       if (d.price < 0) issues.push(createIssue(`Prato "${d.name}" com preço negativo.`, 'DISH', d.id, 'high'));
@@ -762,7 +813,7 @@ export const createMenuSlice: StateCreator<
       }
 
       // 3. Verificar pratos sem imagem
-      const noImageDishes = state.dishes.filter((d: Dish) => !d.image_url);
+      const noImageDishes = state.dishes.filter((d: Dish) => !d.imageUrl);
       if (noImageDishes.length > 0) {
         issues.push({
           id: `issue-img-${Date.now()}`,

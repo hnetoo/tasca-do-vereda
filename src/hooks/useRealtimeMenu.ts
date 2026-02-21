@@ -32,7 +32,7 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
     try {
       // Fetch Categories
       const { data: cats, error: catsError } = await client
-        .from('categories')
+        .from('menu_categories')
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
@@ -40,12 +40,12 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
       if (catsError) throw catsError;
 
       // Fetch Products
-      const query = client.from('products').select('*');
+      const query = client.from('dishes').select('*');
       
       let data: any[] = [];
       if (!isOwner) {
         // Consumer view: only available items
-        const { data: d, error } = await query.eq('is_available', true);
+        const { data: d, error } = await query.eq('is_active', true);
         if (error) throw error;
         data = d || [];
       } else {
@@ -60,19 +60,19 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
         name: p.name,
         description: p.description,
         price: p.price,
-        category_id: p.category_id,
-        image_url: p.image,
-        tax_code: p.tax_code,
-        tax_percentage: p.tax_percentage,
-        is_active: p.is_available,
-        is_available_on_digital_menu: p.is_available_on_digital_menu,
-        preparation_time: p.tempo_preparo,
-        track_stock: p.controla_estoque,
-        stock_quantity: p.quantidade_estoque,
-        min_stock_quantity: p.quantidade_minima,
-        max_stock_quantity: p.quantidade_maxima,
-        unit: p.unidade_medida,
-        supplier_id: p.fornecedor_padrao_id
+        categoryId: p.category_id,
+        imageUrl: p.image_url,
+        taxCode: p.tax_code,
+        taxPercentage: p.tax_percentage,
+        isActive: p.is_active,
+        isAvailableOnDigitalMenu: p.is_available_on_digital_menu,
+        preparationTime: p.preparation_time,
+        trackStock: p.track_stock,
+        stockQuantity: p.stock_quantity,
+        minStockQuantity: p.min_stock_quantity,
+        maxStockQuantity: p.max_stock_quantity,
+        unit: p.unit,
+        supplierId: p.supplier_id
       } as unknown as Product));
 
       setProducts(mappedProducts);
@@ -97,7 +97,7 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
       .channel('realtime_menu')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'categories' },
+        { event: '*', schema: 'public', table: 'menu_categories' },
         (payload) => {
           logger.info('Realtime category update', payload, 'MENU_SYNC');
           fetchMenu();
@@ -105,7 +105,7 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'products' },
+        { event: '*', schema: 'public', table: 'dishes' },
         (payload) => {
           logger.info('Realtime product update', payload, 'MENU_SYNC');
           // Optimistic update could be done here, but fetching ensures consistency
@@ -127,11 +127,11 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
 
     try {
       // Optimistic update
-      setProducts(prev => prev.map(p => p.id === productId ? { ...p, is_active: available } : p));
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, isActive: available } : p));
 
       const { error } = await client
-        .from('products')
-        .update({ is_available: available })
+        .from('dishes')
+        .update({ is_active: available })
         .eq('id', productId);
 
       if (error) throw error;

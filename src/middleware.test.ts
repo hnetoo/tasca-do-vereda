@@ -24,6 +24,7 @@ describe('Middleware', () => {
     jest.clearAllMocks();
 
     mockRequest = {
+      url: 'http://localhost:3000/admin/owner/dashboard',
       nextUrl: {
         pathname: '/admin/owner/dashboard',
         clone: jest.fn().mockReturnThis(),
@@ -33,6 +34,7 @@ describe('Middleware', () => {
         getAll: jest.fn(),
         set: jest.fn(),
         has: jest.fn(() => false),
+        get: jest.fn(),
       },
     };
 
@@ -106,12 +108,42 @@ describe('Middleware', () => {
     expect(mockRequest.nextUrl.searchParams.get('redirect_to')).toBe('/dashboard');
   });
 
-  it('should allow authenticated user to access protected route (e.g. /dashboard)', async () => {
-    mockRequest.nextUrl.pathname = '/dashboard';
-    // User is authenticated (default setup)
+  it('should redirect authenticated ADMIN from /login to /admin/owner', async () => {
+    mockRequest.nextUrl.pathname = '/login';
+    mockUser.user_metadata.role = 'ADMIN';
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
 
     await middleware(mockRequest);
 
-    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectUrl = (NextResponse.redirect as jest.Mock).mock.calls[0][0];
+    expect(redirectUrl.pathname).toBe('/admin/owner');
+  });
+
+  it('should redirect authenticated USER from /login to /dashboard', async () => {
+    mockRequest.nextUrl.pathname = '/login';
+    mockUser.user_metadata.role = 'USER';
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: mockUser }, error: null });
+
+    await middleware(mockRequest);
+
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectUrl = (NextResponse.redirect as jest.Mock).mock.calls[0][0];
+    expect(redirectUrl.pathname).toBe('/dashboard');
+  });
+
+  it('should redirect PIN authenticated ADMIN from /login to /admin/owner', async () => {
+    mockRequest.nextUrl.pathname = '/login';
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null }, error: null }); // Not logged in via Supabase
+    
+    // Simulate PIN session cookie
+    mockRequest.cookies.has.mockReturnValue(true);
+    mockRequest.cookies.get = jest.fn().mockReturnValue({ value: 'pin_session=true; userId=123; userRole=ADMIN' });
+
+    await middleware(mockRequest);
+
+    expect(NextResponse.redirect).toHaveBeenCalled();
+    const redirectUrl = (NextResponse.redirect as jest.Mock).mock.calls[0][0];
+    expect(redirectUrl.pathname).toBe('/admin/owner');
   });
 });

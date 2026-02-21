@@ -85,7 +85,7 @@ export const generateSAFT = async (
       for (let j = 0; j < items.length; j++) {
         const item = items[j];
         const dish = menu.find(m => m.id === item.dish_id);
-        const taxCode = dish?.tax_code || 'NOR';
+        const taxCode = dish?.taxCode || 'NOR';
         const taxRate = (settings.taxRate as number) || 14;
         linesXml += `
         <Line>

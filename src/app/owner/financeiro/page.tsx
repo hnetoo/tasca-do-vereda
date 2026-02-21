@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getTodayRevenue, getTodayExpenses, getLatestTransactions } from '@/app/actions/finance-dashboard';
+import { formatKz } from '@/services/utils/currencyFormatter';
 import { RefreshCcw, TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 
 export default function FinanceiroPage() {
@@ -65,7 +66,7 @@ export default function FinanceiroPage() {
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">Total de Vendas (Hoje)</p>
               <h3 className="text-2xl font-bold text-green-600">
-                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(revenue)}
+                {formatKz(revenue)}
               </h3>
             </div>
             <div className="p-2 bg-green-50 rounded-lg text-green-600">
@@ -80,7 +81,7 @@ export default function FinanceiroPage() {
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">Total de Custos (Hoje)</p>
               <h3 className="text-2xl font-bold text-red-600">
-                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(expenses)}
+                {formatKz(expenses)}
               </h3>
             </div>
             <div className="p-2 bg-red-50 rounded-lg text-red-600">
@@ -95,7 +96,7 @@ export default function FinanceiroPage() {
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">Lucro Líquido</p>
               <h3 className={`text-2xl font-bold ${isProfitNegative ? 'text-red-600' : 'text-blue-600'}`}>
-                {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(profit)}
+                {formatKz(profit)}
               </h3>
             </div>
             <div className={`p-2 rounded-lg ${isProfitNegative ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
@@ -143,7 +144,7 @@ export default function FinanceiroPage() {
                       </span>
                     </td>
                     <td className={`p-4 text-right font-bold ${tx.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(tx.amount)}
+                      {formatKz(tx.amount)}
                     </td>
                   </tr>
                 ))

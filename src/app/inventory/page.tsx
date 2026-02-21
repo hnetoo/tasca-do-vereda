@@ -68,23 +68,23 @@ const InventoryContent = () => {
     name: '',
     description: '',
     price: 0,
-    category_id: '',
-    image_url: '',
-    is_available_on_digital_menu: true,
-    is_active: true,
-    tax_code: 'NOR',
-    supplier_id: '',
-    track_stock: false,
-    stock_quantity: 0,
-    min_stock_quantity: 5,
+    categoryId: '',
+    imageUrl: '',
+    isAvailableOnDigitalMenu: true,
+    isActive: true,
+    taxCode: 'NOR',
+    supplierId: '',
+    trackStock: false,
+    stockQuantity: 0,
+    minStockQuantity: 5,
     unit: 'un'
   });
 
   const [catForm, setCatForm] = useState<Partial<MenuCategory>>({
     name: '',
     icon: 'Grid3X3',
-    parent_id: '',
-    is_available_on_digital_menu: true
+    parentId: '',
+    isAvailableOnDigitalMenu: true
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -111,7 +111,7 @@ const InventoryContent = () => {
   // Filtered lists
   const filteredProducts = products.filter((product: Product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'TODOS' || String(product.category_id) === String(selectedCategory);
+    const matchesCategory = selectedCategory === 'TODOS' || String(product.categoryId) === String(selectedCategory);
     return matchesSearch && matchesCategory;
   }).sort((a: Product, b: Product) => a.name.localeCompare(b.name));
 
@@ -120,15 +120,15 @@ const InventoryContent = () => {
       name: '',
       description: '',
       price: 0,
-      category_id: categories[0]?.id || '',
-      image_url: '',
-      is_available_on_digital_menu: false,
-      is_active: true,
-      tax_code: 'NOR',
-      supplier_id: '',
-      track_stock: true,
-      stock_quantity: 0,
-      min_stock_quantity: 5,
+      categoryId: categories[0]?.id || '',
+      imageUrl: '',
+      isAvailableOnDigitalMenu: false,
+      isActive: true,
+      taxCode: 'NOR',
+      supplierId: '',
+      trackStock: true,
+      stockQuantity: 0,
+      minStockQuantity: 5,
       unit: 'un'
     });
     setIsStockModalOpen(true);
@@ -139,11 +139,11 @@ const InventoryContent = () => {
       setEditingId(product.id);
       setProductForm({
         ...product,
-        is_available_on_digital_menu: product.is_available_on_digital_menu !== false,
-        supplier_id: product.supplier_id || '',
-        track_stock: product.track_stock || false,
-        stock_quantity: product.stock_quantity || 0,
-        min_stock_quantity: product.min_stock_quantity || 5,
+        isAvailableOnDigitalMenu: product.isAvailableOnDigitalMenu !== false,
+        supplierId: product.supplierId || '',
+        trackStock: product.trackStock || false,
+        stockQuantity: product.stockQuantity || 0,
+        minStockQuantity: product.minStockQuantity || 5,
         unit: product.unit || 'un'
       });
     } else {
@@ -152,14 +152,14 @@ const InventoryContent = () => {
         name: '',
         description: '',
         price: 0,
-        category_id: categories[0]?.id || '',
-        image_url: '',
-        is_available_on_digital_menu: true,
-        tax_code: 'NOR',
-        supplier_id: '',
-        track_stock: false,
-        stock_quantity: 0,
-        min_stock_quantity: 5,
+        categoryId: categories[0]?.id || '',
+        imageUrl: '',
+        isAvailableOnDigitalMenu: true,
+        taxCode: 'NOR',
+        supplierId: '',
+        trackStock: false,
+        stockQuantity: 0,
+        minStockQuantity: 5,
         unit: 'un'
       });
     }
@@ -171,21 +171,21 @@ const InventoryContent = () => {
       setEditingId(cat.id);
       setCatForm({
         ...cat,
-        parent_id: cat.parent_id || '',
-        is_available_on_digital_menu: cat.is_available_on_digital_menu !== false
+        parentId: cat.parentId || '',
+        isAvailableOnDigitalMenu: cat.isAvailableOnDigitalMenu ?? true
       });
     } else {
       setEditingId(null);
-      setCatForm({ name: '', icon: 'Grid3X3', parent_id: '', is_available_on_digital_menu: true });
+      setCatForm({ name: '', icon: 'Grid3X3', parentId: '', isAvailableOnDigitalMenu: true });
     }
     setIsCatModalOpen(true);
   };
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productForm.name || !productForm.price || !productForm.category_id) return;
+    if (!productForm.name || !productForm.price || !productForm.categoryId) return;
 
-    let finalImage = productForm.image_url;
+    let finalImage = productForm.imageUrl;
 
     // Auto-compress image if it's a new large base64 string
     if (finalImage && finalImage.startsWith('data:image') && finalImage.length > 200000) {
@@ -199,24 +199,24 @@ const InventoryContent = () => {
        }
     }
 
-    const selectedCat = categories.find((c: MenuCategory) => c.id === productForm.category_id);
+    const selectedCat = categories.find((c: MenuCategory) => c.id === productForm.categoryId);
     const productData = {
       ...productForm,
       id: editingId || productForm.id,
-      image_url: finalImage,
+      imageUrl: finalImage,
       price: Number(productForm.price),
-      is_available_on_digital_menu: productForm.is_available_on_digital_menu ?? true,
-      category_id: selectedCat?.id || '',
-      supplier_id: productForm.supplier_id || '',
-      track_stock: productForm.track_stock || false,
-      stock_quantity: Number(productForm.stock_quantity || 0),
-      min_stock_quantity: Number(productForm.min_stock_quantity || 0),
+      isAvailableOnDigitalMenu: productForm.isAvailableOnDigitalMenu ?? true,
+      categoryId: selectedCat?.id || '',
+      supplierId: productForm.supplierId || '',
+      trackStock: productForm.trackStock || false,
+      stockQuantity: Number(productForm.stockQuantity || 0),
+      minStockQuantity: Number(productForm.minStockQuantity || 0),
       unit: productForm.unit || 'un'
     } as Product;
 
     if (editingId) {
       const existing = products.find((p: Product) => p.id === editingId);
-      const changedCategory = existing && existing.category_id !== productData.category_id;
+      const changedCategory = existing && existing.categoryId !== productData.categoryId;
       if (changedCategory) {
         const ok = confirm(`Confirma mover "${existing?.name}" para a categoria "${selectedCat?.name}"?`);
         if (!ok) return;
@@ -237,14 +237,14 @@ const InventoryContent = () => {
         name: '',
         description: '',
         price: 0,
-        category_id: productForm.category_id, 
-        image_url: '',
-        is_available_on_digital_menu: true,
-        tax_code: 'NOR',
-        supplier_id: '',
-        track_stock: false,
-        stock_quantity: 0,
-        min_stock_quantity: 5,
+        categoryId: productForm.categoryId, 
+        imageUrl: '',
+        isAvailableOnDigitalMenu: true,
+        taxCode: 'NOR',
+        supplierId: '',
+        trackStock: false,
+        stockQuantity: 0,
+        minStockQuantity: 5,
         unit: 'un'
       });
     }
@@ -256,12 +256,12 @@ const InventoryContent = () => {
 
     const catData = {
       ...catForm,
-      parent_id: catForm.parent_id === '' ? undefined : catForm.parent_id
+      parentId: catForm.parentId === '' ? undefined : catForm.parentId
     } as Record<string, any>;
 
     if (editingId) {
       updateCategory({ ...catData, id: editingId } as MenuCategory);
-      logger.info('Categoria atualizada', { id: editingId, name: catData.name, parent_id: catData.parent_id }, 'Inventory');
+      logger.info('Categoria atualizada', { id: editingId, name: catData.name, parentId: catData.parentId }, 'Inventory');
     } else {
       // Ensure ID generation for new categories
       const newCategory = {
@@ -269,7 +269,7 @@ const InventoryContent = () => {
         id: Math.random().toString(36).substring(2, 11)
       } as MenuCategory;
       addCategory(newCategory);
-      logger.info('Nova categoria adicionada', { name: newCategory.name, parent_id: newCategory.parent_id }, 'Inventory');
+      logger.info('Nova categoria adicionada', { name: newCategory.name, parentId: newCategory.parentId }, 'Inventory');
     }
     setIsCatModalOpen(false);
   };
@@ -288,7 +288,7 @@ const InventoryContent = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProductForm(prev => ({ ...prev, image_url: reader.result as string }));
+        setProductForm(prev => ({ ...prev, imageUrl: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
@@ -349,13 +349,13 @@ const InventoryContent = () => {
     
     try {
       const updatedProducts = await Promise.all(products.map(async (product: Product) => {
-        if (product.image_url && product.image_url.startsWith('data:image') && product.image_url.length > 200000) {
+        if (product.imageUrl && product.imageUrl.startsWith('data:image') && product.imageUrl.length > 200000) {
            try {
-             const compressed = await compressImage(product.image_url);
+             const compressed = await compressImage(product.imageUrl);
              // Only update if compression actually reduced size
-             if (compressed.length < product.image_url.length) {
+             if (compressed.length < product.imageUrl.length) {
                count++;
-               return { ...product, image_url: compressed };
+               return { ...product, imageUrl: compressed };
              }
            } catch (e) {
              console.error(`Error compressing image for ${product.name}`, e);
@@ -537,14 +537,14 @@ const InventoryContent = () => {
               <div key={product.id} className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col gap-4 group hover:border-primary/30 transition-all">
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-2xl bg-black/30 overflow-hidden shrink-0 border border-white/5 relative">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-600">
                         <Utensils size={24} />
                       </div>
                     )}
-                    {!product.is_available_on_digital_menu && (
+                    {!product.isAvailableOnDigitalMenu && (
                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                           <span className="text-[8px] font-black text-white uppercase bg-red-500/80 px-2 py-1 rounded">Oculto</span>
                        </div>
@@ -579,7 +579,7 @@ const InventoryContent = () => {
 
       {activeTab === 'categories' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.slice().sort((a: MenuCategory, b: MenuCategory) => (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name)).map((cat: MenuCategory) => {
+          {categories.slice().sort((a: MenuCategory, b: MenuCategory) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.name.localeCompare(b.name)).map((cat: MenuCategory) => {
             const iconObj = AVAILABLE_ICONS.find(i => i.name === cat.icon);
             const IconComp = iconObj ? iconObj.icon : Grid3X3;
             return (
@@ -591,7 +591,7 @@ const InventoryContent = () => {
                 <div>
                    <h3 className="font-bold text-white text-lg tracking-tight leading-none">{cat.name}</h3>
                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                      {products.filter((d: Product) => d.category_id === cat.id).length} Produtos
+                      {products.filter((d: Product) => d.categoryId === cat.id).length} Produtos
                    </p>
                 </div>
               </div>
@@ -761,7 +761,7 @@ const InventoryContent = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
-            {products.filter((p: Product) => p.track_stock).filter((item: Product) => item.name.toLowerCase().includes(searchTerm.toLowerCase())).sort((a: Product, b: Product) => a.name.localeCompare(b.name)).map((item: Product) => (
+            {products.filter((p: Product) => p.trackStock).filter((item: Product) => item.name.toLowerCase().includes(searchTerm.toLowerCase())).sort((a: Product, b: Product) => a.name.localeCompare(b.name)).map((item: Product) => (
               <div key={item.id} className="glass-panel p-6 rounded-[2rem] border border-white/5 flex flex-col gap-4 hover:border-primary/40 transition-all group">
                 <div className="flex justify-between items-start">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
@@ -775,8 +775,8 @@ const InventoryContent = () => {
                 <div>
                   <h3 className="font-bold text-white text-lg truncate mb-1">{item.name}</h3>
                   <div className="flex items-end gap-2">
-                    <span className={`text-2xl font-black ${(item.stock_quantity || 0) <= (item.min_stock_quantity || 0) ? 'text-red-500' : 'text-primary'}`}>
-                      {item.stock_quantity || 0}
+                    <span className={`text-2xl font-black ${(item.stockQuantity || 0) <= (item.minStockQuantity || 0) ? 'text-red-500' : 'text-primary'}`}>
+                      {item.stockQuantity || 0}
                     </span>
                     <span className="text-slate-500 font-bold uppercase text-[10px] mb-1.5">{item.unit}</span>
                   </div>
@@ -785,18 +785,18 @@ const InventoryContent = () => {
                 <div className="pt-4 border-t border-white/5 flex flex-col gap-3">
                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                     <span className="text-slate-500">Mínimo Crítico</span>
-                    <span className="text-white">{item.min_stock_quantity || 0} {item.unit}</span>
+                    <span className="text-white">{item.minStockQuantity || 0} {item.unit}</span>
                   </div>
                   
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => updateProduct({...item, stock_quantity: Math.max(0, (item.stock_quantity || 0) - 1)})}
+                      onClick={() => updateProduct({...item, stockQuantity: Math.max(0, (item.stockQuantity || 0) - 1)})}
                       className="flex-1 py-2 bg-white/5 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-xl transition-all font-black text-lg"
                     >
                       -
                     </button>
                     <button 
-                      onClick={() => updateProduct({...item, stock_quantity: (item.stock_quantity || 0) + 1})}
+                      onClick={() => updateProduct({...item, stockQuantity: (item.stockQuantity || 0) + 1})}
                       className="flex-1 py-2 bg-white/5 hover:bg-green-500/20 text-slate-400 hover:text-green-500 rounded-xl transition-all font-black text-lg"
                     >
                       +
@@ -805,7 +805,7 @@ const InventoryContent = () => {
                 </div>
               </div>
             ))}
-            {products.filter((p: Product) => p.track_stock).length === 0 && (
+            {products.filter((p: Product) => p.trackStock).length === 0 && (
               <div className="col-span-full py-20 text-center">
                 <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-500">
                   <Box size={32} />
@@ -845,7 +845,7 @@ const InventoryContent = () => {
                     </div>
                     <div className="space-y-4">
                       <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
-                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.category_id || ''} onChange={e => setProductForm({...productForm, category_id: e.target.value})}>
+                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.categoryId || ''} onChange={e => setProductForm({...productForm, categoryId: e.target.value})}>
                       {categories.slice().sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
                         <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                       ))}
@@ -856,24 +856,24 @@ const InventoryContent = () => {
                   <div className="space-y-4">
                      <div 
                         className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer hover:bg-white/10 transition-all select-none"
-                        onClick={() => setProductForm(prev => ({...prev, track_stock: !prev.track_stock}))}
+                        onClick={() => setProductForm(prev => ({...prev, trackStock: !prev.trackStock}))}
                      >
-                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${productForm.track_stock ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
-                           {productForm.track_stock && <Check size={14} />}
+                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${productForm.trackStock ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
+                           {productForm.trackStock && <Check size={14} />}
                         </div>
                         <span className="text-xs font-bold text-white uppercase tracking-wide">Controlar Estoque</span>
                      </div>
                   </div>
 
-                  {productForm.track_stock && (
+                  {productForm.trackStock && (
                     <div className="grid grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2">
                       <div className="space-y-4">
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Qtd</label>
-                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.stock_quantity || 0} onChange={e => setProductForm({...productForm, stock_quantity: Number(e.target.value)})} />
+                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.stockQuantity || 0} onChange={e => setProductForm({...productForm, stockQuantity: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-4">
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Mín</label>
-                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.min_stock_quantity || 0} onChange={e => setProductForm({...productForm, min_stock_quantity: Number(e.target.value)})} />
+                        <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.minStockQuantity || 0} onChange={e => setProductForm({...productForm, minStockQuantity: Number(e.target.value)})} />
                       </div>
                       <div className="space-y-4">
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Un</label>
@@ -892,8 +892,8 @@ const InventoryContent = () => {
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Fornecedor Padrão</label>
                     <select 
                       className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" 
-                      value={productForm.supplier_id || ''} 
-                      onChange={e => setProductForm({...productForm, supplier_id: e.target.value})}
+                      value={productForm.supplierId || ''} 
+                      onChange={e => setProductForm({...productForm, supplierId: e.target.value})}
                     >
                       <option value="" className="bg-slate-900 text-slate-400">-- Selecione um fornecedor --</option>
                       {suppliers.filter((s: Supplier) => s.is_active).sort((a: Supplier, b: Supplier) => a.name.localeCompare(b.name)).map((s: Supplier) => (
@@ -907,10 +907,10 @@ const InventoryContent = () => {
                   <div className="space-y-4">
                      <div 
                         className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10 cursor-pointer hover:bg-white/10 transition-all select-none"
-                        onClick={() => setProductForm(prev => ({...prev, is_available_on_digital_menu: !prev.is_available_on_digital_menu}))}
+                        onClick={() => setProductForm(prev => ({...prev, isAvailableOnDigitalMenu: !prev.isAvailableOnDigitalMenu}))}
                      >
-                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${productForm.is_available_on_digital_menu ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
-                           {productForm.is_available_on_digital_menu && <Check size={14} />}
+                        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${productForm.isAvailableOnDigitalMenu ? 'bg-primary border-primary text-black' : 'border-slate-600'}`}>
+                           {productForm.isAvailableOnDigitalMenu && <Check size={14} />}
                         </div>
                         <span className="text-xs font-bold text-white uppercase tracking-wide">Visível no Menu Digital</span>
                      </div>
@@ -921,12 +921,12 @@ const InventoryContent = () => {
                  <div className="space-y-4 mb-6">
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Imagem do Produto</label>
                     <div className="aspect-video rounded-3xl bg-black/40 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-all">
-                        {productForm.image_url ? (
+                        {productForm.imageUrl ? (
                           <>
-                            <img src={productForm.image_url} alt="Preview" className="w-full h-full object-cover" />
+                            <img src={productForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                             <button 
                               type="button"
-                              onClick={(e) => { e.preventDefault(); setProductForm({...productForm, image_url: ''}); }}
+                              onClick={(e) => { e.preventDefault(); setProductForm({...productForm, imageUrl: ''}); }}
                               className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-red-500 transition-colors"
                             >
                               <X size={14} />
@@ -964,8 +964,8 @@ const InventoryContent = () => {
                         type="text" 
                         placeholder="https://exemplo.com/imagem.jpg"
                         className="w-full p-4 pl-12 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary text-xs" 
-                        value={productForm.image_url?.startsWith('data:') ? '' : productForm.image_url || ''} 
-                        onChange={e => setProductForm({...productForm, image_url: e.target.value})} 
+                        value={productForm.imageUrl?.startsWith('data:') ? '' : productForm.imageUrl || ''} 
+                        onChange={e => setProductForm({...productForm, imageUrl: e.target.value})} 
                       />
                     </div>
                  </div>
@@ -1011,8 +1011,8 @@ const InventoryContent = () => {
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria Superior (Opcional)</label>
                   <select 
                     className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" 
-                    value={catForm.parent_id || ''} 
-                    onChange={e => setCatForm({...catForm, parent_id: e.target.value})}
+                    value={catForm.parentId || ''}
+                    onChange={e => setCatForm({...catForm, parentId: e.target.value})}
                   >
                     <option value="" className="bg-slate-900 text-slate-400">-- Sem categoria superior --</option>
                     {categories.filter((c: MenuCategory) => c.id !== editingId).sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
@@ -1045,10 +1045,10 @@ const InventoryContent = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setCatForm({...catForm, is_available_on_digital_menu: !catForm.is_available_on_digital_menu})}
-                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ${catForm.is_available_on_digital_menu ? 'bg-primary shadow-glow' : 'bg-slate-700'}`}
+                    onClick={() => setCatForm({...catForm, isAvailableOnDigitalMenu: !catForm.isAvailableOnDigitalMenu})}
+                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ${catForm.isAvailableOnDigitalMenu ? 'bg-primary shadow-glow' : 'bg-slate-700'}`}
                   >
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${catForm.is_available_on_digital_menu ? 'right-1' : 'left-1'}`} />
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${catForm.isAvailableOnDigitalMenu ? 'right-1' : 'left-1'}`} />
                   </button>
                </div>
 
@@ -1073,8 +1073,8 @@ const InventoryContent = () => {
                 addProduct({
                     ...productForm,
                     id: crypto.randomUUID(),
-                    track_stock: true,
-                    is_active: true
+                    trackStock: true,
+                    isActive: true
                 } as Product);
                 setIsStockModalOpen(false);
                 addNotification('success', 'Item de estoque adicionado com sucesso');
@@ -1098,8 +1098,8 @@ const InventoryContent = () => {
                         type="number" 
                         min="0"
                         className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" 
-                        value={productForm.stock_quantity || 0} 
-                        onChange={e => setProductForm({...productForm, stock_quantity: Number(e.target.value)})} 
+                        value={productForm.stockQuantity || 0} 
+                        onChange={e => setProductForm({...productForm, stockQuantity: Number(e.target.value)})} 
                       />
                    </div>
                    <div className="space-y-4 text-left">
@@ -1108,8 +1108,8 @@ const InventoryContent = () => {
                         type="number" 
                         min="0"
                         className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary" 
-                        value={productForm.min_stock_quantity || 0} 
-                        onChange={e => setProductForm({...productForm, min_stock_quantity: Number(e.target.value)})} 
+                        value={productForm.minStockQuantity || 0} 
+                        onChange={e => setProductForm({...productForm, minStockQuantity: Number(e.target.value)})} 
                       />
                    </div>
                </div>

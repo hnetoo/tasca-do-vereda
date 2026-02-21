@@ -17,7 +17,7 @@ jest.mock('../store/useStore', () => ({
 describe('Sidebar Component', () => {
   beforeEach(() => {
     (usePathname as jest.Mock).mockReturnValue('/dashboard');
-    (useStore as jest.Mock).mockReturnValue({
+    (useStore as unknown as jest.Mock).mockReturnValue({
       logout: jest.fn(),
       settings: { appLogoUrl: '' },
       isMobileMenuOpen: false,

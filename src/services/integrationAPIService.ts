@@ -121,7 +121,7 @@ export class IntegrationAPIService {
 
     // Sync Categories
     if (categories.length > 0) {
-        const { error: catError } = await this.client.from('categories').upsert(categories.map(c => ({
+        const { error: catError } = await this.client.from('menu_categories').upsert(categories.map(c => ({
             id: c.id,
             name: c.name,
             icon: c.icon,
@@ -139,24 +139,24 @@ export class IntegrationAPIService {
 
     // Sync Dishes
     if (dishes.length > 0) {
-        const { error: prodError } = await this.client.from('products').upsert(dishes.map(p => ({
+        const { error: prodError } = await this.client.from('dishes').upsert(dishes.map(p => ({
             id: p.id,
             name: p.name,
             description: p.description,
             price: p.price,
-            category_id: p.category_id,
-            image: p.image_url,
-            is_available: p.is_active,
-            is_available_on_digital_menu: p.is_available_on_digital_menu,
-            tax_percentage: p.tax_percentage,
-            tax_code: p.tax_code,
-            tempo_preparo: p.preparation_time,
-            controla_estoque: p.track_stock,
-            quantidade_estoque: p.stock_quantity,
-            quantidade_minima: p.min_stock_quantity,
-            quantidade_maxima: p.max_stock_quantity,
-            unidade_medida: p.unit,
-            fornecedor_padrao_id: p.supplier_id
+            category_id: p.category_id || p.categoryId,
+            image_url: p.image_url || p.imageUrl,
+            is_active: p.is_active ?? p.isActive,
+            is_available_on_digital_menu: p.is_available_on_digital_menu ?? p.isAvailableOnDigitalMenu,
+            tax_percentage: p.tax_percentage || p.taxPercentage,
+            tax_code: p.tax_code || p.taxCode,
+            preparation_time: p.preparation_time || p.preparationTime,
+            track_stock: p.track_stock ?? p.trackStock,
+            stock_quantity: p.stock_quantity ?? p.stockQuantity,
+            min_stock_quantity: p.min_stock_quantity ?? p.minStockQuantity,
+            max_stock_quantity: p.max_stock_quantity ?? p.maxStockQuantity,
+            unit: p.unit,
+            supplier_id: p.supplier_id || p.supplierId
         })), { onConflict: 'id' });
 
         if (prodError) {
@@ -591,7 +591,7 @@ export class IntegrationAPIService {
   async createCategory(category: MenuCategory): Promise<SupabaseResponse<MenuCategory>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('categories').insert({
+          const { data, error } = await this.client.from('menu_categories').insert({
               id: category.id,
               name: category.name,
               icon: category.icon,
@@ -623,7 +623,7 @@ export class IntegrationAPIService {
   async updateCategory(category: MenuCategory): Promise<SupabaseResponse<MenuCategory>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('categories').update({
+          const { data, error } = await this.client.from('menu_categories').update({
               name: category.name,
               icon: category.icon,
               sort_order: category.sort_order,
@@ -654,7 +654,7 @@ export class IntegrationAPIService {
   async deleteCategory(categoryId: string): Promise<SupabaseResponse<null>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { error } = await this.client.from('categories').delete().eq('id', categoryId);
+          const { error } = await this.client.from('menu_categories').delete().eq('id', categoryId);
           if (error) throw error;
           return { success: true, data: null };
       } catch (error: any) {
@@ -666,9 +666,9 @@ export class IntegrationAPIService {
   async fetchCategories(): Promise<SupabaseResponse<MenuCategory[]>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('categories').select('*');
+          const { data, error } = await this.client.from('menu_categories').select('*');
           if (error) throw error;
-          const categories = data.map((c: SupabaseCategory) => ({
+          const categories = data.map((c: any) => ({
               id: c.id,
               name: c.name,
               icon: c.icon,
@@ -688,51 +688,29 @@ export class IntegrationAPIService {
   async createProduct(product: Product): Promise<SupabaseResponse<Product>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('products').insert({
+          const { data, error } = await this.client.from('dishes').insert({
               id: product.id,
               name: product.name,
               description: product.description,
               price: product.price,
-              category_id: product.category_id,
-              image: product.image_url,
-              is_available: product.is_active,
-              is_available_on_digital_menu: product.is_available_on_digital_menu,
-              tax_percentage: product.tax_percentage,
-              tax_code: product.tax_code,
-              tempo_preparo: product.preparation_time,
-              controla_estoque: product.track_stock,
-              quantidade_estoque: product.stock_quantity,
-              quantidade_minima: product.min_stock_quantity,
-              quantidade_maxima: product.max_stock_quantity,
-              unidade_medida: product.unit,
-              fornecedor_padrao_id: product.supplier_id
+              category_id: product.categoryId || product.category_id,
+              image_url: product.imageUrl || product.image_url,
+              is_active: product.isActive ?? true,
+              is_available_on_digital_menu: product.isAvailableOnDigitalMenu ?? true,
+              tax_percentage: product.taxPercentage || product.tax_percentage,
+              tax_code: product.taxCode || product.tax_code,
+              preparation_time: product.preparationTime || product.preparation_time
           }).select().single();
-
+          
           if (error) throw error;
-
+          
           return { success: true, data: {
+              ...product,
               id: data.id,
-              name: data.name,
-              description: data.description,
-              price: data.price,
-              category_id: data.category_id,
-              image_url: data.image,
-              is_active: data.is_available,
-              is_available_on_digital_menu: data.is_available_on_digital_menu,
-              tax_percentage: data.tax_percentage,
-              tax_code: data.tax_code,
-              preparation_time: data.tempo_preparo,
-              track_stock: data.controla_estoque,
-              stock_quantity: data.quantidade_estoque,
-              min_stock_quantity: data.quantidade_minima,
-              max_stock_quantity: data.quantidade_maxima,
-              unit: data.unidade_medida,
-              supplier_id: data.fornecedor_padrao_id,
-              created_at: data.created_at,
-              updated_at: data.updated_at
-          }};
+              // Map back if needed, but returning product is usually fine if ID matches
+          } as Product };
       } catch (error: any) {
-          logger.error('Failed to create product', { error: error.message }, 'IntegrationAPIService');
+          logger.error('Failed to create product (dish)', { error: error.message }, 'IntegrationAPIService');
           return { success: false, error: error.message };
       }
   }
@@ -740,48 +718,25 @@ export class IntegrationAPIService {
   async updateProduct(product: Product): Promise<SupabaseResponse<Product>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('products').update({
+          const { data, error } = await this.client.from('dishes').update({
               name: product.name,
               description: product.description,
               price: product.price,
-              category_id: product.category_id,
-              image: product.image_url,
-              is_available: product.is_active,
-              is_available_on_digital_menu: product.is_available_on_digital_menu,
-              tax_percentage: product.tax_percentage,
-              tax_code: product.tax_code,
-              tempo_preparo: product.preparation_time,
-              controla_estoque: product.track_stock,
-              quantidade_estoque: product.stock_quantity,
-              quantidade_minima: product.min_stock_quantity,
-              quantidade_maxima: product.max_stock_quantity,
-              unidade_medida: product.unit,
-              fornecedor_padrao_id: product.supplier_id
+              category_id: product.categoryId || product.category_id,
+              image_url: product.imageUrl || product.image_url,
+              is_active: product.isActive ?? true,
+              is_available_on_digital_menu: product.isAvailableOnDigitalMenu ?? true,
+              tax_percentage: product.taxPercentage || product.tax_percentage,
+              tax_code: product.taxCode || product.tax_code,
+              preparation_time: product.preparationTime || product.preparation_time
           }).eq('id', product.id).select().single();
 
           if (error) throw error;
 
           return { success: true, data: {
+              ...product,
               id: data.id,
-              name: data.name,
-              description: data.description,
-              price: data.price,
-              category_id: data.category_id,
-              image_url: data.image,
-              is_active: data.is_available,
-              is_available_on_digital_menu: data.is_available_on_digital_menu,
-              tax_percentage: data.tax_percentage,
-              tax_code: data.tax_code,
-              preparation_time: data.tempo_preparo,
-              track_stock: data.controla_estoque,
-              stock_quantity: data.quantidade_estoque,
-              min_stock_quantity: data.quantidade_minima,
-              max_stock_quantity: data.quantidade_maxima,
-              unit: data.unidade_medida,
-              supplier_id: data.fornecedor_padrao_id,
-              created_at: data.created_at,
-              updated_at: data.updated_at
-          }};
+          } as Product };
       } catch (error: any) {
           logger.error('Failed to update product', { error: error.message }, 'IntegrationAPIService');
           return { success: false, error: error.message };
@@ -791,7 +746,7 @@ export class IntegrationAPIService {
   async deleteProduct(productId: string): Promise<SupabaseResponse<null>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { error } = await this.client.from('products').delete().eq('id', productId);
+          const { error } = await this.client.from('dishes').delete().eq('id', productId);
           if (error) throw error;
           return { success: true, data: null };
       } catch (error: any) {
@@ -803,27 +758,20 @@ export class IntegrationAPIService {
   async fetchProducts(): Promise<SupabaseResponse<Product[]>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('products').select('*');
+          const { data, error } = await this.client.from('dishes').select('*');
           if (error) throw error;
-          const products = data.map((p: SupabaseProduct) => ({
+          const products = data.map((p: any) => ({
               id: p.id,
               name: p.name,
               description: p.description,
               price: p.price,
-              category_id: p.category_id,
-              image_url: p.image,
-              is_active: p.is_available,
-              is_available_on_digital_menu: p.is_available_on_digital_menu,
-              tax_percentage: p.tax_percentage,
-              tax_code: p.tax_code,
-              preparation_time: p.tempo_preparo,
-              track_stock: p.controla_estoque,
-              stock_quantity: p.quantidade_estoque,
-              min_stock_quantity: p.quantidade_minima,
-              max_stock_quantity: p.quantidade_maxima,
-              unit: p.unidade_medida,
-              supplier_id: p.fornecedor_padrao_id,
-              updated_at: p.updated_at
+              categoryId: p.category_id,
+              imageUrl: p.image_url,
+              isActive: p.is_active,
+              isAvailableOnDigitalMenu: p.is_available_on_digital_menu,
+              taxPercentage: p.tax_percentage,
+              taxCode: p.tax_code,
+              preparationTime: p.preparation_time
           }));
           return { success: true, data: products };
       } catch (error: any) {

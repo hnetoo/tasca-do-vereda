@@ -79,10 +79,28 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redireciona usuário logado fora da página de login se tentar acessar login
-  if (request.nextUrl.pathname === '/login' && user) {
-      // Opcional: Redirecionar para dashboard se já estiver logado
-      // return NextResponse.redirect(new URL('/dashboard', request.url))
-      // Manter comportamento atual (deixar acessar, o client-side redireciona se necessário)
+  if (request.nextUrl.pathname === '/login') {
+    let authenticatedRole: string | undefined;
+
+    if (user) {
+      authenticatedRole = (user.user_metadata?.role || '').toUpperCase();
+    } else if (hasPinSession) {
+      const pinSessionCookie = request.cookies.get('pin_session');
+      if (pinSessionCookie) {
+        const roleMatch = /userRole=([^;]+)/.exec(pinSessionCookie.value);
+        if (roleMatch && roleMatch[1]) {
+          authenticatedRole = roleMatch[1].toUpperCase();
+        }
+      }
+    }
+
+    if (authenticatedRole) {
+      if (authenticatedRole === 'ADMIN' || authenticatedRole === 'OWNER') {
+        return NextResponse.redirect(new URL('/admin/owner', request.url));
+      } else {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
   }
 
   return supabaseResponse

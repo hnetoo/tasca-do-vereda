@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useStore } from '@/store/useStore';
 import { ChefHat, Delete, User, Shield, Wallet, Utensils, ArrowLeft, ChevronRight, Lock, Save, Key, Mail, Eye, EyeOff } from 'lucide-react';
@@ -9,9 +9,10 @@ import { User as UserType } from '@/types';
 import { CryptoService } from '@/services/cryptoService';
 import { logger } from '@/services/logger';
 
-const Login = () => {
+const LoginForm = () => {
   const router = useRouter();
-  const { login, loginWithPassword, users, settings, isInitialized, isAuthenticated } = useStore();
+  const searchParams = useSearchParams();
+  const { login, loginWithPassword, users, settings, isInitialized, isAuthenticated, currentUser } = useStore();
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -27,13 +28,34 @@ const Login = () => {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null);
 
-  useEffect(() => {
-    // Auth check: redirect to dashboard if already authenticated
-    // Fix: Ensure isAuthenticated is properly checked from store
-    if (isAuthenticated) {
+  // Helper function for strict role-based redirection
+  const performRedirect = (user: UserType) => {
+    const redirectTo = searchParams.get('redirect_to');
+    
+    // If there is a specific redirect request, prioritize it (unless it's to login itself)
+    if (redirectTo && redirectTo !== '/login') {
+      logger.info(`Redirecionando usuário ${user.name} para rota solicitada: ${redirectTo}`, { role: user.role });
+      router.push(redirectTo);
+      return;
+    }
+
+    // Strict Role-Based Routing
+    const role = (user.role || '').toUpperCase();
+    if (role === 'ADMIN' || role === 'OWNER') {
+      logger.info(`Redirecionando Administrador/Proprietário ${user.name} para Dashboard Admin`, { role });
+      router.push('/admin/owner');
+    } else {
+      logger.info(`Redirecionando Staff ${user.name} para Interface Operacional`, { role });
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  };
+
+  useEffect(() => {
+    // Auth check: redirect based on role if already authenticated
+    if (isAuthenticated && currentUser) {
+      performRedirect(currentUser);
+    }
+  }, [isAuthenticated, currentUser, router]);
 
   useEffect(() => {
     // Fallback de segurança: Se a loja não inicializar em 8s, forçar a exibição do login
@@ -437,5 +459,15 @@ const Login = () => {
 );
 };
 
-export default Login;
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-xl font-bold animate-pulse">Carregando Sistema...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
+}
 

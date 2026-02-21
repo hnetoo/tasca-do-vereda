@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, BarChart, Bar } from 'recharts';
 import { DollarSign, ShoppingBag, Users, TrendingUp, Sparkles, Loader2, Activity, ChefHat, QrCode, ArrowRight, Utensils, Clock, Download } from 'lucide-react';
@@ -199,7 +199,7 @@ const Dashboard = () => {
   }, [orders, expenses, revenues, paymentDateRange, paymentMethods]);
 
   const paymentChartData = useMemo(() => {
-    return paymentDailyData.map(row => {
+    return paymentDailyData.map((row: PaymentDailyDataRow) => {
       const base: Record<string, number | string> = { name: row.label };
       paymentMethods.forEach(method => {
         base[method] = paymentMetric === 'VENDAS' ? row.salesByMethod[method] : row.profitByMethod[method];

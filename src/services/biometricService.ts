@@ -311,11 +311,13 @@ export class BiometricIntegrationService {
 
   // Storage helpers
   private saveDevicesToStorage(): void {
+    if (typeof window === 'undefined') return;
     const devicesArray = Array.from(this.devices.values());
     localStorage.setItem('biometric_devices', JSON.stringify(devicesArray));
   }
 
   private loadDevicesFromStorage(): void {
+    if (typeof window === 'undefined') return;
     try {
       const stored = localStorage.getItem('biometric_devices');
       if (stored) {

@@ -4,6 +4,10 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star } from 'lucide-react';
 import { Product, MenuCategory } from '@/types';
+import { Database } from '@/types/supabase';
+
+type MenuCategoryRow = Database['public']['Tables']['menu_categories']['Row'];
+type DishRow = Database['public']['Tables']['dishes']['Row'];
 
 export default function MenuDigital() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,41 +17,33 @@ export default function MenuDigital() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper to map DB row to Product interface
-  const mapToProduct = (row: any): Product => {
+  const mapToProduct = (row: DishRow | any): Product => {
     if (!row) return {} as Product;
+    const r = row as any; // Temporary cast to access properties that might differ in case or exist in joined views
     return {
-      // Base Row properties (snake_case)
-      ...row,
-      id: row.id,
-      category_id: row.category_id,
-      image_url: row.image_url || row.image,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-      is_active: row.is_active ?? row.is_available ?? true,
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      price: Number(r.price),
+      categoryId: r.category_id,
+      imageUrl: r.image_url || r.image, // Support both column names
+      taxCode: r.tax_code || 'NOR',
+      taxPercentage: r.tax_percentage || 0,
+      isActive: r.is_active ?? r.is_available ?? true,
+      isAvailableOnDigitalMenu: r.is_available_on_digital_menu ?? true,
+      available: r.available ?? r.is_available ?? true, // Schema has 'available'
+      createdAt: r.created_at ? new Date(r.created_at) : undefined,
+      updatedAt: r.updated_at ? new Date(r.updated_at) : undefined,
       
-      // Extended properties (camelCase aliases)
-      name: row.name,
-      description: row.description,
-      price: Number(row.price),
-      categoryId: row.category_id,
-      imageUrl: row.image_url || row.image, // Support both column names
-      taxCode: row.tax_code || 'NOR',
-      taxPercentage: row.tax_percentage || 0,
-      isActive: row.is_active ?? row.is_available ?? true,
-      available: row.available ?? row.is_available ?? true, // Schema has 'available'
-      createdAt: row.created_at ? new Date(row.created_at) : undefined,
-      updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
-      
-      // Legacy / Runtime extensions
-      is_available_on_digital_menu: row.is_available_on_digital_menu ?? true,
-      preparation_time: row.preparation_time || row.tempo_preparo,
-      track_stock: row.track_stock ?? row.controla_estoque ?? false,
-      stock_quantity: row.stock_quantity ?? row.quantidade_estoque ?? 0,
-      min_stock_quantity: row.min_stock_quantity ?? row.quantidade_minima ?? 0,
-      max_stock_quantity: row.max_stock_quantity ?? row.quantidade_maxima ?? 0,
-      unit: row.unit || row.unidade_medida || 'un',
-      supplier_id: row.supplier_id || row.fornecedor_padrao_id
-    } as unknown as Product;
+      // Additional properties
+      preparationTime: r.preparation_time || r.tempo_preparo,
+      trackStock: r.track_stock ?? r.controla_estoque ?? false,
+      stockQuantity: r.stock_quantity ?? r.quantidade_estoque ?? 0,
+      minStockQuantity: r.min_stock_quantity ?? r.quantidade_minima ?? 0,
+      maxStockQuantity: r.max_stock_quantity ?? r.quantidade_maxima ?? 0,
+      unit: r.unit || r.unidade_medida || 'un',
+      supplierId: r.supplier_id || r.fornecedor_padrao_id
+    } as Product;
   };
 
   // Initial Data Fetch
@@ -70,13 +66,17 @@ export default function MenuDigital() {
 
         if (cats) {
           // Client-side sort
-          const sortedCats = (cats as any[]).map(c => ({
-            ...c,
-            // Map snake_case to camelCase for internal use if needed, or rely on Product type aliases
+          const sortedCats = (cats as MenuCategoryRow[]).map(c => ({
             id: c.id,
             name: c.name,
             sortOrder: c.sort_order,
-            isActive: c.is_active
+            isActive: c.is_active,
+            parentId: c.parent_id,
+            isAvailableOnDigitalMenu: c.is_available_on_digital_menu,
+            availableOnDigitalMenu: c.is_available_on_digital_menu,
+            createdAt: c.created_at ? new Date(c.created_at) : undefined,
+            updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
+            deletedAt: c.deleted_at
           } as MenuCategory)).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
           setCategories(sortedCats);
         }
@@ -143,16 +143,27 @@ export default function MenuDigital() {
              name: c.name,
              sortOrder: c.sort_order,
              isActive: c.is_active,
-             // ... other fields
+             parentId: c.parent_id,
+             isAvailableOnDigitalMenu: c.is_available_on_digital_menu,
+             availableOnDigitalMenu: c.is_available_on_digital_menu,
+             createdAt: c.created_at ? new Date(c.created_at) : undefined,
+             updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
+             deletedAt: c.deleted_at
           } as MenuCategory;
           setCategories(prev => [...prev, newCat].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
         } else if (payload.eventType === 'UPDATE') {
-           const c = payload.new as any;
+           const c = payload.new as MenuCategoryRow;
            const updatedCat: MenuCategory = {
              id: c.id,
              name: c.name,
              sortOrder: c.sort_order,
              isActive: c.is_active,
+             parentId: c.parent_id,
+             isAvailableOnDigitalMenu: c.is_available_on_digital_menu,
+             availableOnDigitalMenu: c.is_available_on_digital_menu,
+             createdAt: c.created_at ? new Date(c.created_at) : undefined,
+             updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
+             deletedAt: c.deleted_at
           } as MenuCategory;
           setCategories(prev => prev.map(cat => cat.id === updatedCat.id ? updatedCat : cat).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
         } else if (payload.eventType === 'DELETE') {
@@ -170,7 +181,7 @@ export default function MenuDigital() {
   // Filtering Logic
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
-      const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
+      const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (product.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
@@ -184,13 +195,13 @@ export default function MenuDigital() {
     }
     const grouped: Record<string, Product[]> = {};
     categories.forEach(cat => {
-      const catProducts = filteredProducts.filter(p => p.category_id === cat.id);
+      const catProducts = filteredProducts.filter(p => p.categoryId === cat.id);
       if (catProducts.length > 0) {
         grouped[cat.id] = catProducts;
       }
     });
     // Add products without category or with unknown category
-    const uncategorized = filteredProducts.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id));
+    const uncategorized = filteredProducts.filter(p => !p.categoryId || !categories.find(c => c.id === p.categoryId));
     if (uncategorized.length > 0) {
       grouped['uncategorized'] = uncategorized;
     }
@@ -306,9 +317,9 @@ export default function MenuDigital() {
                   >
                     {/* Image */}
                     <div className="w-24 h-24 sm:w-full sm:h-48 rounded-xl overflow-hidden flex-shrink-0 bg-slate-800 relative">
-                       {product.image_url ? (
+                       {product.imageUrl ? (
                          <img 
-                           src={product.image_url} 
+                           src={product.imageUrl} 
                            alt={product.name} 
                            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                            onError={(e) => {
