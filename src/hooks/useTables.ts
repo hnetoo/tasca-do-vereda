@@ -52,7 +52,7 @@ export const useTables = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []); // Empty dependency array to run once on mount
+  }, [fetchTables, addTable, updateTable, removeTable, supabase]); // Adicionadas dependências para ESLint
 
   return { tables };
 };

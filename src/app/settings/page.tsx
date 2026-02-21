@@ -2,6 +2,7 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useStore } from '@/store/useStore';
 import {
   Settings as SettingsIcon, Users, Save, Shield,
@@ -920,7 +921,7 @@ const Settings = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                         <div className="aspect-square w-full rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center relative overflow-hidden group">
                             {localSettings.appLogoUrl ? (
-                                <img src={localSettings.appLogoUrl} alt="Logo Preview" className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-110" />
+                                <Image src={localSettings.appLogoUrl} alt="Logo Preview" className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-110" width={100} height={100} />
                             ) : (
                                 <ChefHat className="text-slate-700" size={48} />
                             )}
@@ -1371,7 +1372,7 @@ const Settings = () => {
                        {/* Preview Column */}
                        <div className="lg:col-span-1 flex justify-center">
                            <div className="bg-white p-6 rounded-[2.5rem] shadow-glow relative group">
-                               <img src={generateQRUrl(`${getBaseAppUrl()}/menu-digital`)} alt="QR Menu Digital" className="w-48 h-48 group-hover:scale-105 transition-transform duration-500" />
+                               <Image src={generateQRUrl(`${getBaseAppUrl()}/menu-digital`)} alt="QR Menu Digital" className="w-48 h-48 group-hover:scale-105 transition-transform duration-500" width={200} height={200} />
                                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-primary text-black px-4 py-1.5 rounded-full font-black text-[8px] uppercase tracking-widest shadow-lg whitespace-nowrap">
                                   Pré-visualização Geral
                                </div>

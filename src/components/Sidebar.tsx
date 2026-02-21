@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
   Home, 
@@ -129,7 +130,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
           {(showSidebar || isMobileMenuOpen) && (
             <div className="flex items-center gap-3">
               {settings?.appLogoUrl ? (
-              <img src={settings.appLogoUrl} alt="App Logo" className="h-10 w-10 object-contain" />
+              <Image src={settings.appLogoUrl} alt="App Logo" className="h-10 w-10 object-contain" width={40} height={40} />
             ) : (
               <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
                  <ChefHat className="text-primary" size={24} />
