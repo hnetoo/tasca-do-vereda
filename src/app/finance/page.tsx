@@ -41,7 +41,8 @@ export default function FinancePage() {
     dishes, 
     generateFinancialReport,
     activeShift,
-    shifts 
+    shifts,
+    settings
   } = useStore();
 
   const [dateRange, setDateRange] = useState('today'); // today, week, month, year
@@ -53,8 +54,9 @@ export default function FinancePage() {
   const calculateMetrics = () => {
     // Mock data for now based on orders
     const completedOrders = orders.filter(o => o.status === 'FECHADO');
-    const totalRevenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
-    const avgTicket = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
+    const currentRevenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
+    const totalRevenue = currentRevenue + (settings.legacyTotalRevenue || 0);
+    const avgTicket = completedOrders.length > 0 ? currentRevenue / completedOrders.length : 0;
     
     return {
       totalRevenue,

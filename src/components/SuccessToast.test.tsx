@@ -27,7 +27,7 @@ describe('SuccessToast', () => {
 
   test('calls onClose when the close button is clicked', () => {
     render(<SuccessToast message={successMessage} onClose={mockOnClose} />);
-    const closeButton = screen.getByRole('button', { name: /close/i }); // Assuming the X icon is accessible as a close button
+    const closeButton = screen.getByRole('button', { name: /Fechar/i }); // Assuming the X icon is accessible as a close button
     fireEvent.click(closeButton);
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });

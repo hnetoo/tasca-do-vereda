@@ -18,7 +18,10 @@ export async function executeQuery(supabaseOrSql: SupabaseClient<Database> | str
         // const parameters = Array.isArray(sqlOrParams) ? sqlOrParams : [];
         const client = await supabaseClientPromise;
         const { error } = await (client as any).rpc('execute_sql', { sql_query: sql }); // Note: parameters are currently ignored by execute_sql RPC wrapper in this codebase
-        if (error) throw error;
+            if (error) {
+            logger.error(`Error fetching categories from Supabase`, { error }, 'DATABASE');
+            throw error;
+        }
         return;
     }
     
@@ -101,7 +104,8 @@ export const databaseOperations = {
             is_available_on_digital_menu BOOLEAN DEFAULT TRUE,
             deleted_at TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(parent_id) REFERENCES menu_categories(id) ON DELETE SET NULL
         )
       `);
 
@@ -279,9 +283,16 @@ export const databaseOperations = {
             .select('*')
             .order('sort_order', { ascending: true });
         
-        if (error) throw error;
+        if (error) {
+            logger.error(`Error fetching categories from Supabase`, { error }, 'DATABASE');
+            throw error;
+        }
         
-        logger.debug(`Fetched ${data?.length || 0} categories`, undefined, 'DATABASE');
+        if (!data || data.length === 0) {
+            logger.debug('No categories found in Supabase.', undefined, 'DATABASE');
+        } else {
+            logger.debug(`Fetched ${data.length} categories`, undefined, 'DATABASE');
+        }
         
         return (data || []).map(r => ({
             id: r.id,
@@ -376,7 +387,7 @@ export const databaseOperations = {
               .delete()
               .eq('id', id);
           
-          if (error) throw error;
+                if (error) throw error;
           
           logger.info(`Dish ${id} deleted successfully`, undefined, 'DATABASE');
           return true;
@@ -421,9 +432,16 @@ export const databaseOperations = {
             .from('dishes')
             .select('*');
         
-        if (error) throw error;
+        if (error) {
+            logger.error(`Error fetching dishes from Supabase`, { error }, 'DATABASE');
+            throw error;
+        }
 
-        logger.debug(`Fetched ${data?.length || 0} dishes`, undefined, 'DATABASE');
+        if (!data || data.length === 0) {
+            logger.debug('No dishes found in Supabase.', undefined, 'DATABASE');
+        } else {
+            logger.debug(`Fetched ${data.length} dishes`, undefined, 'DATABASE');
+        }
 
         return (data || []).map(r => ({
             id: r.id,
@@ -1000,6 +1018,47 @@ export const databaseOperations = {
       }, 'save payrolls');
   },
   
+  applyDatabaseOptimizations: async (): Promise<{ success: boolean; error?: string }> => {
+    return databaseOperations._handleDatabaseOperation(async (supabase) => {
+        // 1. Indexes for menu_categories
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_categories_sort_order ON menu_categories(sort_order)`);
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_categories_is_active ON menu_categories(is_active)`);
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_categories_parent_id ON menu_categories(parent_id)`);
+
+        // 2. Indexes for dishes
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_dishes_category_id ON dishes(category_id)`);
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_dishes_supplier_id ON dishes(supplier_id)`);
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_dishes_is_active ON dishes(is_active)`);
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_dishes_available ON dishes(available)`);
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_dishes_is_available_on_digital_menu ON dishes(is_available_on_digital_menu)`);
+
+        // 3. Enable RLS
+        await executeQuery(supabase, `ALTER TABLE menu_categories ENABLE ROW LEVEL SECURITY`);
+        await executeQuery(supabase, `ALTER TABLE dishes ENABLE ROW LEVEL SECURITY`);
+
+        // 4. RLS Policies (using DO block if supported, otherwise separate statements)
+        // Note: 'execute_sql' might not support DO blocks or multi-statement well depending on implementation.
+        // We'll use separate statements and ignore 'policy already exists' errors by dropping first.
+
+        // Policies for menu_categories
+        await executeQuery(supabase, `DROP POLICY IF EXISTS "Public categories are viewable by everyone" ON menu_categories`);
+        await executeQuery(supabase, `CREATE POLICY "Public categories are viewable by everyone" ON menu_categories FOR SELECT USING (true)`);
+        
+        await executeQuery(supabase, `DROP POLICY IF EXISTS "Authenticated users can modify categories" ON menu_categories`);
+        await executeQuery(supabase, `CREATE POLICY "Authenticated users can modify categories" ON menu_categories FOR ALL USING (auth.role() = 'authenticated')`);
+
+        // Policies for dishes
+        await executeQuery(supabase, `DROP POLICY IF EXISTS "Public dishes are viewable by everyone" ON dishes`);
+        await executeQuery(supabase, `CREATE POLICY "Public dishes are viewable by everyone" ON dishes FOR SELECT USING (true)`);
+
+        await executeQuery(supabase, `DROP POLICY IF EXISTS "Authenticated users can modify dishes" ON dishes`);
+        await executeQuery(supabase, `CREATE POLICY "Authenticated users can modify dishes" ON dishes FOR ALL USING (auth.role() = 'authenticated')`);
+
+        logger.info('Database optimizations and RLS policies applied successfully.', undefined, 'DATABASE');
+        return true;
+    }, 'apply database optimizations', 'DATABASE');
+  },
+
   clearAllData: async (): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         const tables = [

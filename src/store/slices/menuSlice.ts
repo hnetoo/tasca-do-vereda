@@ -631,7 +631,16 @@ export const createMenuSlice: StateCreator<
 
   loadFromSQLExclusively: async () => {
     try {
-      const result = await getMenuData();
+      // Create a timeout promise that rejects after 8 seconds
+      const timeoutPromise = new Promise<{ success: boolean; error: string }>((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout loading menu data')), 8000);
+      });
+
+      // Race the actual data fetching against the timeout
+      const result = await Promise.race([
+        getMenuData(),
+        timeoutPromise
+      ]) as { success: boolean; categories?: MenuCategory[]; dishes?: Dish[]; error?: string };
 
       if (!result.success) {
         logger.error('Failed to load menu exclusively from SQL via Server Action', { error: result.error }, 'DATABASE');

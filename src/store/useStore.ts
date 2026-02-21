@@ -127,9 +127,20 @@ export const useStore = create<StoreState>()(
 
       isInitialized: false,
       initializeStore: async () => {
-        // Load menu data from server actions
-        await get().loadFromSQLExclusively();
-        set({ isInitialized: true });
+        try {
+          // Load menu data from server actions
+          const success = await get().loadFromSQLExclusively();
+          if (!success) {
+             const state = get();
+             if (state.categories.length === 0) {
+                state.addNotification?.('error', 'Falha ao carregar menu. Tente recarregar a página.', 10000);
+             }
+          }
+        } catch (error) {
+          logger.error('Error during store initialization', { error }, 'STORE');
+        } finally {
+          set({ isInitialized: true });
+        }
       },
       
       isMobileMenuOpen: false,
@@ -200,6 +211,10 @@ export const useStore = create<StoreState>()(
 
       onRealtimeChange: (payload: any) => {
         logger.info(`Realtime change received for table: ${payload.tableName}, event: ${payload.eventType}`, payload, 'STORE');
+        // Add a specific log for orders to confirm reception
+        if (payload.tableName === 'orders') {
+          logger.info(`Realtime ORDER change received: ${payload.eventType}`, payload, 'STORE_ORDERS');
+        }
         const state = get();
         switch (payload.tableName) {
           case 'dishes':

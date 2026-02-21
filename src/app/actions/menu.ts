@@ -1,11 +1,16 @@
 
 
+'use server';
+
 import { databaseOperations } from "@/services/database/operations";
 import { logger } from "@/services/logger";
 import { MenuCategory, Product } from "@/types";
 
 export async function getMenuData(): Promise<{ success: boolean; categories?: MenuCategory[]; dishes?: Product[]; error?: string }> {
   try {
+    // Optimization removed for stability - running on every fetch is dangerous
+    // await databaseOperations.applyDatabaseOptimizations();
+
     const [categoriesResult, dishesResult] = await Promise.all([
       databaseOperations.getCategories(),
       databaseOperations.getDishes(),

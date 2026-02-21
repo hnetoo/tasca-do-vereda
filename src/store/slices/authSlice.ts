@@ -85,6 +85,11 @@ export const createAuthSlice: StateCreator<
       }
       
       if (user) {
+        // Set a cookie for middleware validation (valid for 24 hours)
+        if (typeof document !== 'undefined') {
+          document.cookie = `pin_session=true; userId=${user.id}; userRole=${user.role}; path=/; max-age=86400; SameSite=Lax`;
+        }
+
         set({ currentUser: user, isAuthenticated: true });
         get().addNotification('success', `Bem-vindo, ${user.name}`);
 
@@ -203,35 +208,41 @@ export const createAuthSlice: StateCreator<
     }
   },
   logout: async () => {
-    const user = get().currentUser;
-    const supabase = createClient();
-    await supabase.auth.signOut();
-
-    if (user) {
-      logger.auth(`Utilizador terminou sessão: ${user.name}`, { 
-        userId: user.id, 
-        role: user.role
-      });
-      get().addAuditLog({
-        action: 'USER_LOGOUT',
-        details: `Utilizador ${user.name} terminou sessão com sucesso.`,
-        metadata: { 
-          userId: user.id, 
-          role: user.role,
-          timestamp: new Date().toISOString()
+      try {
+        // Clear pin session cookie
+        if (typeof document !== 'undefined') {
+          document.cookie = 'pin_session=; Max-Age=0; path=/;';
         }
-      });
-      
-      logger.audit('SECURITY_EVENT', { 
-        event: 'LOGOUT', 
-        userId: user.id,
-        timestamp: new Date().toISOString() 
-      });
-    }
 
-    set({ currentUser: null, isAuthenticated: false });
-    localStorage.removeItem('saved_credentials');
-  },
+        // Sign out from Supabase
+        const supabase = createClient();
+        await supabase.auth.signOut();
+
+        set({ currentUser: null, isAuthenticated: false });
+        localStorage.removeItem('saved_credentials');
+        localStorage.removeItem('last_selected_user_id');
+        
+        logger.auth('Logout bem-sucedido', { userId: get().currentUser?.id });
+        get().addAuditLog({
+          action: 'USER_LOGOUT',
+          details: `Utilizador ${get().currentUser?.name || 'desconhecido'} terminou sessão.`,
+          metadata: { timestamp: new Date().toISOString() }
+        });
+        get().addNotification('info', 'Sessão terminada.');
+
+        // Force reload to clear any other state
+        window.location.href = '/login';
+
+      } catch (error) {
+        logger.error('Erro ao fazer logout', { error: error instanceof Error ? error.message : String(error) }, 'AUTH');
+        get().addNotification('error', 'Erro ao terminar sessão.');
+        // Even if Supabase logout fails, ensure local state is cleared and redirect happens for a consistent user experience.
+        set({ currentUser: null, isAuthenticated: false });
+        localStorage.removeItem('saved_credentials');
+        localStorage.removeItem('last_selected_user_id');
+        window.location.href = '/login';
+      }
+    },
   hasPermission: (permission) => {
     const state = get();
     if (!state.currentUser) return false;

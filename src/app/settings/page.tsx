@@ -101,6 +101,8 @@ const CloudImportPanel = () => {
         >
           {isLoading ? 'A Carregar...' : 'Carregar da Cloud'}
         </button>
+
+
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
@@ -150,11 +152,32 @@ const CloudImportPanel = () => {
 };
 const Settings = () => {
   const { settings, updateSettings, currentUser, addNotification, categories, dishes, hardResetMenu, tables } = useStore();
-  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'fiscal' | 'tables' | 'qr' | 'integrations' | 'roles' | 'database' | 'agt' | 'dlp' | 'monitoring' | 'cloud' | 'bd'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'fiscal' | 'tables' | 'qr' | 'system'>('general');
+  const [activeSystemSubTab, setActiveSystemSubTab] = useState<'users' | 'integrations' | 'roles' | 'database' | 'agt' | 'dlp' | 'monitoring' | 'cloud' | 'bd' | 'history'>('users');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isQRMenuConfigOpen, setIsQRMenuConfigOpen] = useState(false);
   const [isRoleManagementOpen, setIsRoleManagementOpen] = useState(false);
   const [localSettings, setLocalSettings] = useState<SystemSettings>(settings);
+  
+  const mainTabs = [
+    { id: 'general', label: 'Geral', icon: <SettingsIcon size={16} /> },
+    { id: 'fiscal', label: 'Fiscal', icon: <DollarSign size={16} /> },
+    { id: 'tables', label: 'Mesas', icon: <ChefHat size={16} /> },
+    { id: 'qr', label: 'Menu QR', icon: <QrCode size={16} /> },
+    { id: 'system', label: 'Sistema', icon: <MonitorPlay size={16} /> },
+  ];
+
+  const systemSubTabs = [
+    { id: 'users', label: 'Utilizadores', icon: <Users size={16} /> },
+    { id: 'roles', label: 'Cargos', icon: <Shield size={16} /> },
+    { id: 'integrations', label: 'Integrações', icon: <Share2 size={16} /> },
+    { id: 'monitoring', label: 'Monitorização', icon: <Terminal size={16} /> },
+    { id: 'cloud', label: 'Nuvem / App', icon: <UploadCloud size={16} /> },
+    { id: 'bd', label: 'Backup / Restore', icon: <Database size={16} /> },
+    { id: 'agt', label: 'AGT', icon: <ShieldCheck size={16} /> },
+    { id: 'dlp', label: 'DLP', icon: <Lock size={16} /> },
+    { id: 'history', label: 'Histórico', icon: <DollarSign size={16} /> },
+  ];
   
   // Cloud State (managed within localSettings)
   const [isTestingCloud, setIsTestingCloud] = useState(false);
@@ -166,7 +189,7 @@ const Settings = () => {
   const [recentLogs, setRecentLogs] = useState<SystemIssue[]>([]);
 
   useEffect(() => {
-    if (activeTab === 'monitoring') {
+    if (activeTab === 'system' && activeSystemSubTab === 'monitoring') {
       const updateMetrics = () => {
         setHealthReport(healthMonitorService.getHealthReport());
         setMetricsHistory(healthMonitorService.getMetricsHistory());
@@ -177,7 +200,7 @@ const Settings = () => {
       const interval = setInterval(updateMetrics, 3000);
       return () => clearInterval(interval);
     }
-  }, [activeTab]);
+  }, [activeTab, activeSystemSubTab]);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   
@@ -764,23 +787,13 @@ const Settings = () => {
       </header>
 
       <div className="flex gap-4 mb-8 border-b border-white/5 overflow-x-auto no-scrollbar">
-        {([
-          { id: 'general', label: 'Geral', icon: SettingsIcon },
-          { id: 'fiscal', label: 'Fiscal (AGT)', icon: ShieldCheck },
-          { id: 'roles', label: 'Cargos', icon: Shield },
-          { id: 'users', label: 'Acessos POS', icon: Users },
-          { id: 'qr', label: 'Ementa Digital', icon: QrCode },
-          { id: 'integrations', label: 'Integrações (Hardware)', icon: Share2 },
-          { id: 'monitoring', label: 'Monitorização', icon: Terminal },
-          { id: 'cloud', label: 'Nuvem / App', icon: UploadCloud },
-          { id: 'bd', label: 'Backup / Restore', icon: Database }
-        ] as const).map(tab => (
+        {mainTabs.map(tab => (
           <button 
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
             className={`pb-4 px-6 font-black uppercase text-[10px] tracking-[0.2em] transition-all relative flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id ? 'text-primary' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            <tab.icon size={16} />
+            {tab.icon}
             {tab.label}
             {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-full shadow-glow"></div>}
           </button>
@@ -790,6 +803,21 @@ const Settings = () => {
       <div className="glass-panel rounded-[2.5rem] p-8 min-h-[500px] border border-white/5 shadow-2xl relative overflow-hidden">
         {/* Decorative background element */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+        {activeTab === 'system' && (
+          <div className="flex flex-wrap gap-2 mb-8 bg-black/20 p-2 rounded-2xl border border-white/5">
+            {systemSubTabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSystemSubTab(tab.id as any)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeSystemSubTab === tab.id ? 'bg-primary text-black shadow-glow' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {activeTab === 'general' && (
           <form onSubmit={handleSaveSettings} className="max-w-xl space-y-8 animate-in fade-in duration-500">
@@ -986,10 +1014,10 @@ const Settings = () => {
             </div>
           </div>
           )}
-        {activeTab === 'bd' && (
+        {activeTab === 'system' && activeSystemSubTab === 'bd' && (
           <div className="space-y-12 animate-in fade-in duration-500">
              {/* Driver SQL / Storage */}
-             <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+             <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5"> 
                 <div className="flex items-center gap-3 mb-6">
                    <div className="p-2.5 bg-purple-500/20 rounded-xl text-purple-500"><Database size={22} /></div>
                    <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Driver SQL / Storage</h3>
@@ -1148,11 +1176,123 @@ const Settings = () => {
         )}
 
 
-        {activeTab === 'users' && (
+        {activeTab === 'system' && activeSystemSubTab === 'cloud' && (
+          <CloudImportPanel />
+        )}
+
+        {activeTab === 'system' && activeSystemSubTab === 'bd' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-purple-500/20 rounded-xl text-purple-500"><Database size={22} /></div>
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Backup & Restauro</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button
+                  onClick={handleBackup}
+                  className="p-6 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-2xl text-left transition-all group"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <DownloadCloud size={24} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                    <Save size={16} className="text-blue-400 opacity-50" />
+                  </div>
+                  <p className="text-xs font-black text-blue-100 uppercase tracking-widest mb-1">Gerar Backup Completo</p>
+                  <p className="text-[10px] text-slate-400">Exporta todos os dados da aplicação (SQL + Local).</p>
+                </button>
+
+                <label className="p-6 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-2xl text-left transition-all group cursor-pointer">
+                  <input type="file" accept=".json" className="hidden" onChange={handleRestore} />
+                  <div className="flex justify-between items-start mb-2">
+                    <UploadCloud size={24} className="text-green-400 group-hover:scale-110 transition-transform" />
+                    <RefreshCw size={16} className="text-green-400 opacity-50" />
+                  </div>
+                  <p className="text-xs font-black text-green-100 uppercase tracking-widest mb-1">Restaurar Backup</p>
+                  <p className="text-[10px] text-slate-400">Importa dados de um ficheiro de backup (.json).</p>
+                </label>
+              </div>
+            </div>
+
+            {/* CSV/XML Import Section */}
+            <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-orange-500/20 rounded-xl text-orange-500"><FileText size={22} /></div>
+                <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Importar Dados (CSV/XML)</h3>
+              </div>
+              <p className="text-sm text-slate-400 mb-4">
+                Importe dados de categorias, produtos e clientes a partir de ficheiros CSV ou XML.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <label className="p-6 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 rounded-2xl text-left transition-all group cursor-pointer">
+                  <input type="file" accept=".csv" className="hidden" onChange={(e) => addNotification('info', 'Funcionalidade de importação CSV em desenvolvimento.')} />
+                  <div className="flex justify-between items-start mb-2">
+                    <FileText size={24} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                    <Upload size={16} className="text-yellow-400 opacity-50" />
+                  </div>
+                  <p className="text-xs font-black text-yellow-100 uppercase tracking-widest mb-1">Importar CSV</p>
+                  <p className="text-[10px] text-slate-400">Categorias, Produtos, Clientes</p>
+                </label>
+                <label className="p-6 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-2xl text-left transition-all group cursor-pointer">
+                  <input type="file" accept=".xml" className="hidden" onChange={(e) => addNotification('info', 'Funcionalidade de importação XML em desenvolvimento.')} />
+                  <div className="flex justify-between items-start mb-2">
+                    <FileText size={24} className="text-red-400 group-hover:scale-110 transition-transform" />
+                    <Upload size={16} className="text-red-400 opacity-50" />
+                  </div>
+                  <p className="text-xs font-black text-red-100 uppercase tracking-widest mb-1">Importar XML</p>
+                  <p className="text-[10px] text-slate-400">Categorias, Produtos, Clientes</p>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'system' && activeSystemSubTab === 'agt' && (
+            <div className="flex flex-col items-center justify-center h-full gap-10 animate-in zoom-in duration-500">
+                <div className="bg-primary/10 border-2 border-primary rounded-[3rem] p-12 flex items-center justify-center">
+                    <ShieldCheck size={80} className="text-primary" />
+                </div>
+                <div className="text-center space-y-4">
+                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Autoridade Geral Tributária (AGT)</h3>
+                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-md">
+                        Gerencie as configurações e integrações com a Autoridade Geral Tributária.
+                    </p>
+                </div>
+                {/* Add AGT specific content or buttons here */}
+                <button 
+                    onClick={() => addNotification('info', 'Funcionalidade AGT em desenvolvimento.')}
+                    className="px-10 py-5 bg-primary text-black rounded-3xl font-black uppercase text-xs tracking-widest flex items-center gap-3 hover:brightness-110 transition-all shadow-glow"
+                >
+                    <ShieldCheck size={20} /> Gerenciar AGT
+                </button>
+            </div>
+        )}
+
+        {activeTab === 'system' && activeSystemSubTab === 'dlp' && (
+            <div className="flex flex-col items-center justify-center h-full gap-10 animate-in zoom-in duration-500">
+                <div className="bg-primary/10 border-2 border-primary rounded-[3rem] p-12 flex items-center justify-center">
+                    <Lock size={80} className="text-primary" />
+                </div>
+                <div className="text-center space-y-4">
+                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Prevenção de Perda de Dados (DLP)</h3>
+                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-md">
+                        Configure políticas de prevenção de perda de dados para proteger informações sensíveis.
+                    </p>
+                </div>
+                {/* Add DLP specific content or buttons here */}
+                <button 
+                    onClick={() => addNotification('info', 'Funcionalidade DLP em desenvolvimento.')}
+                    className="px-10 py-5 bg-primary text-black rounded-3xl font-black uppercase text-xs tracking-widest flex items-center gap-3 hover:brightness-110 transition-all shadow-glow"
+                >
+                    <Lock size={20} /> Gerenciar DLP
+                </button>
+            </div>
+        )}
+
+        {activeTab === 'system' && activeSystemSubTab === 'users' && (
             <POSAccessManagement />
         )}
 
-        {activeTab === 'roles' && (
+        {activeTab === 'system' && activeSystemSubTab === 'roles' && (
             <div className="flex flex-col items-center justify-center h-full gap-10 animate-in zoom-in duration-500">
                 <div className="bg-primary/10 border-2 border-primary rounded-[3rem] p-12 flex items-center justify-center">
                     <Shield size={80} className="text-primary" />
@@ -1229,7 +1369,7 @@ const Settings = () => {
             </div>
         )}
 
-        {activeTab === 'integrations' && (
+        {activeTab === 'system' && activeSystemSubTab === 'integrations' && (
             <div className="space-y-8 animate-in fade-in duration-500">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-500">
@@ -1282,7 +1422,7 @@ const Settings = () => {
             </div>
         )}
 
-        {activeTab === 'monitoring' && (
+        {activeTab === 'system' && activeSystemSubTab === 'monitoring' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header com Status em Tempo Real */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -1514,9 +1654,9 @@ const Settings = () => {
           </div>
         )}
 
-        {activeTab === 'cloud' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-             <div className="flex items-center gap-4 mb-8">
+        {activeTab === 'system' && activeSystemSubTab === 'cloud' && (
+           <div className="space-y-8 animate-in fade-in duration-500">
+              <div className="flex items-center gap-4 mb-8">
                 <div className="p-3 bg-blue-500/20 text-blue-500 rounded-2xl">
                   <UploadCloud size={28} />
                 </div>
@@ -1721,6 +1861,48 @@ const Settings = () => {
                 </div>
              </div>
           </div>
+        )}
+
+        {activeTab === 'system' && activeSystemSubTab === 'history' && (
+           <div className="space-y-8 animate-in fade-in duration-500">
+              <div className="flex items-center gap-4 mb-8">
+                 <div className="p-3 bg-emerald-500/20 text-emerald-500 rounded-2xl">
+                   <DollarSign size={28} />
+                 </div>
+                 <div>
+                   <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Histórico Financeiro</h3>
+                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Sincronização de Receita Legada</p>
+                 </div>
+              </div>
+
+              <div className="bg-slate-900/50 p-8 rounded-[2.5rem] border border-white/5 max-w-2xl">
+                 <form onSubmit={handleSaveSettings} className="space-y-6">
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Receita Total Acumulada (Legado)</label>
+                        <div className="relative">
+                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-emerald-500 font-bold text-lg">Kz</span>
+                            <input 
+                                type="number" 
+                                value={localSettings.legacyTotalRevenue || 0}
+                                onChange={e => setLocalSettings({...localSettings, legacyTotalRevenue: Number(e.target.value)})}
+                                className="w-full pl-16 pr-6 py-6 bg-black/40 border border-white/10 rounded-2xl text-white text-2xl font-mono font-bold focus:border-emerald-500 outline-none transition-all"
+                                placeholder="0.00"
+                            />
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-4 leading-relaxed">
+                            Este valor será somado à receita atual do sistema para apresentar o <strong>Faturamento Total</strong> nos dashboards (Comando, Finanças, Analytics). 
+                            Utilize este campo para migrar o histórico financeiro de versões anteriores.
+                        </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/5">
+                        <button type="submit" className="w-full py-5 bg-emerald-500 text-black rounded-2xl font-black uppercase tracking-widest shadow-glow hover:brightness-110 transition-all flex items-center justify-center gap-3">
+                            <Save size={20} /> Sincronizar em Todos os Painéis
+                        </button>
+                    </div>
+                 </form>
+              </div>
+           </div>
         )}
 
       </div>

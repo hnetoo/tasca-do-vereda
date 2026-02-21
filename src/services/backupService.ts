@@ -5,6 +5,7 @@ import { integrationAPIService } from './integrationAPIService';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { calculateHash } from '@/utils/crypto';
 
+export const CURRENT_BACKUP_VERSION = '2.0'; // Define a versão atual do formato de backup
 
 export const AUTO_BACKUP_KEY = 'tasca_auto_backup_v1';
 export const FINANCIAL_BACKUP_KEY = 'tasca_financial_backup_v1';
@@ -131,7 +132,7 @@ export class BackupService {
         try {
             const backupPackage = {
                 metadata: {
-                    version: '1.0',
+                    version: CURRENT_BACKUP_VERSION,
                     timestamp: new Date().toISOString(),
                     totals: this.calculateFinancialTotals(data),
                     checksum: await this.generateChecksum({ financial: data })
@@ -218,7 +219,7 @@ export class BackupService {
         // If 'nif', 'nome', likely Supplier/User
         
         const result: BackupData = {
-            version: '1.0',
+            version: CURRENT_BACKUP_VERSION, // Default to current version for CSV imports
             timestamp: new Date().toISOString(),
             source: 'tasca-do-vereda-system',
             data: {}
@@ -235,7 +236,7 @@ export class BackupService {
              result.data.generic = data;
         }
 
-        return result;
+        return this.migrateSchema(result); // Apply schema migration after initial parsing
     }
 
     private parseXML(content: string): BackupData {
@@ -248,7 +249,7 @@ export class BackupService {
 
         // Generic XML to JSON
         const result: BackupData = {
-            version: '1.0',
+            version: CURRENT_BACKUP_VERSION, // Default to current version for XML imports
             timestamp: new Date().toISOString(),
             source: 'tasca-do-vereda-system',
             data: {}
@@ -270,20 +271,28 @@ export class BackupService {
         
         // ... similar for other types
         
-        return result;
+        return this.migrateSchema(result); // Apply schema migration after initial parsing
     }
 
     private migrateSchema(data: any): BackupData {
-        // Mapping dynamic schema old -> new
+        let backupVersion = data.version || '1.0'; // Assume '1.0' if no version is specified
+
+        // If the backup version is already the current version, no migration needed
+        if (backupVersion === CURRENT_BACKUP_VERSION) {
+            return data as BackupData;
+        }
+
+        logger.info(`Migrating backup from version ${backupVersion} to ${CURRENT_BACKUP_VERSION}`, {}, 'BACKUP');
+
         const migrated: BackupData = {
-            version: '2.0', // Target version
+            version: CURRENT_BACKUP_VERSION, // Target version
             timestamp: data.timestamp || new Date().toISOString(),
             source: 'tasca-do-vereda-system',
             data: { ...data.data }
         };
 
-        // Example migration: 'pratos' -> 'menu'
-        if (data.data?.pratos && !data.data.menu) {
+        // Example migration: 'pratos' -> 'menu' for versions < 2.0
+        if (backupVersion < '2.0' && data.data?.pratos && !data.data.menu) {
             migrated.data.menu = data.data.pratos.map((p: any) => ({
                 id: p.id,
                 name: p.nome || p.name,
@@ -293,7 +302,11 @@ export class BackupService {
                 // ... map other fields
                 available: p.disponivel !== false
             }));
+            delete migrated.data.pratos; // Remove old field
         }
+
+        // Add more migration steps here for future versions
+        // if (backupVersion < '3.0') { ... }
 
         return migrated;
     }
@@ -339,7 +352,7 @@ export class BackupService {
             // Create backup package
             const backupPackage = {
                 metadata: {
-                    version: '1.0',
+                    version: CURRENT_BACKUP_VERSION,
                     timestamp: new Date().toISOString(),
                     userId,
                     totals,

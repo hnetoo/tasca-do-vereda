@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, BarChart, Bar } from 'recharts';
 import { DollarSign, ShoppingBag, Users, TrendingUp, Sparkles, Loader2, Activity, ChefHat, QrCode, ArrowRight, Utensils, Clock, Download } from 'lucide-react';
@@ -13,6 +13,15 @@ import { exportChartToPDF } from '@/services/exportService';
 import { formatKz } from '@/services/utils/currencyFormatter';
 import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+
+interface PaymentDailyDataRow {
+  date: Date;
+  label: string;
+  totalSales: number;
+  totalProfit: number;
+  salesByMethod: Record<PaymentMethod, number>;
+  profitByMethod: Record<PaymentMethod, number>;
+}
 
 const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE', 'SPLIT', 'OTHER'];
 
@@ -75,6 +84,7 @@ const Dashboard = () => {
   const todayStats = useMemo(() => dailyAnalytics[dailyAnalytics.length - 1] || { totalSales: 0, totalProfit: 0, totalOrders: 0 }, [dailyAnalytics]);
   
   const totalSales = useMemo(() => closedOrders.reduce((acc: number, o: Order) => acc + (o.total || 0), 0), [closedOrders]);
+  const totalRevenueWithLegacy = useMemo(() => totalSales + (settings.legacyTotalRevenue || 0), [totalSales, settings.legacyTotalRevenue]);
   const totalProfit = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailyAnalyticsPayload) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
   const avgMargin = useMemo(() => totalSales > 0 ? (totalProfit / totalSales) * 100 : 0, [totalSales, totalProfit]);
   const chartData = performanceAnalytics.map((d: DailyAnalyticsPayload) => ({
@@ -217,7 +227,7 @@ const Dashboard = () => {
   };
 
   const paymentExportData = useMemo(() => {
-    return paymentDailyData.map(row => {
+    return paymentDailyData.map((row: PaymentDailyDataRow) => {
       const entry: Record<string, unknown> = {
         data: row.date.toLocaleDateString('pt-AO'),
         total: formatKz(row.totalSales),
@@ -325,7 +335,7 @@ const Dashboard = () => {
               Receita Total
             </div>
             <div>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-mono font-bold text-white tracking-tighter">{formatKz(totalSales)}</p>
+              <p className="text-2xl sm:text-3xl md:text-4xl font-mono font-bold text-white tracking-tighter">{formatKz(totalRevenueWithLegacy)}</p>
               <div className="mt-2 text-xs text-emerald-400 flex items-center gap-1 font-bold bg-emerald-400/10 w-fit px-2 py-1 rounded-lg">
                  <TrendingUp size={12} /> +12.5% vs ontem
               </div>
