@@ -654,6 +654,7 @@ export interface SystemSettings {
   qr_menu_cloud_url?: string;
   logo_url?: string;
   name?: string;
+  legacyTotalRevenue?: number;
   
   [key: string]: any;
 }

@@ -146,6 +146,7 @@ describe('AuthSlice', () => {
         get.mockReturnValue({
             currentUser: user,
             addAuditLog: jest.fn(),
+            addNotification: jest.fn(),
         });
 
         await authSlice.logout();

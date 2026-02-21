@@ -53,6 +53,7 @@ export const createUISlice: StateCreator<
     taxPercentage: 14,
     timezone: "Africa/Luanda",
     language: "pt-AO",
+    legacyTotalRevenue: 0,
   },
   notifications: [],
   isSidebarCollapsed: false,

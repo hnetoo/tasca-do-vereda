@@ -16,11 +16,20 @@ import { PaymentMethod, DailySalesAnalytics } from '@/types';
 import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
+interface PaymentDailyDataRow {
+  date: Date;
+  label: string;
+  totalSales: number;
+  totalProfit: number;
+  salesByMethod: Record<PaymentMethod, number>;
+  profitByMethod: Record<PaymentMethod, number>;
+}
+
 const Analytics = () => {
   const {
     getDailySalesAnalytics, getMenuAnalytics, getStockAnalytics,
     getEmployeePerformance, getPeakHours, getTopSellingDishes,
-    getAverageOrderValue, getCustomerRetention, activeOrders, employees, expenses, revenues
+    getAverageOrderValue, getCustomerRetention, activeOrders, employees, expenses, revenues, settings
   } = useStore();
 
   const [selectedPeriod, setSelectedPeriod] = useState<30 | 7 | 90>(30);
@@ -40,7 +49,7 @@ const Analytics = () => {
   const avgOrderValue = useMemo(() => getAverageOrderValue(), [getAverageOrderValue]);
   const retention = useMemo(() => getCustomerRetention(), [getCustomerRetention]);
 
-  const totalRevenue = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + d.totalRevenue, 0), [dailyAnalytics]);
+  const totalRevenue = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + d.totalRevenue, 0) + (settings?.legacyTotalRevenue || 0), [dailyAnalytics, settings?.legacyTotalRevenue]);
   const totalProfit = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
   const totalOrders = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + d.orderCount, 0), [dailyAnalytics]);
   const avgDaily = useMemo(() => totalRevenue / (selectedPeriod || 1), [totalRevenue, selectedPeriod]);
@@ -242,7 +251,7 @@ const Analytics = () => {
       ? 'Últimos 7 dias'
       : 'Hoje';
 
-    const data = paymentDailyData.map(row => {
+    const data = paymentDailyData.map((row: PaymentDailyDataRow) => {
       const entry: Record<string, unknown> = {
         data: row.date.toLocaleDateString('pt-AO'),
         total: formatKz(row.totalSales),

@@ -38,19 +38,39 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicPrefixes.some(prefix => path.startsWith(prefix));
 
   // If the route is not public and the user is not authenticated, redirect to login
-  if (!isPublicRoute && !user) {
+  // We check for either a Supabase session OR a valid PIN session cookie
+  const hasPinSession = request.cookies.has('pin_session');
+  
+  if (!isPublicRoute && !user && !hasPinSession) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirect_to', path)
     return NextResponse.redirect(url)
   }
 
+  // Allow authenticated users to access inventory and other system pages
+  if ((user || hasPinSession) && (path.startsWith('/inventory') || path.startsWith('/sistema') || path.startsWith('/dashboard'))) {
+     return supabaseResponse;
+  }
+
   // Rota de Admin/Owner protegida
   if (path.startsWith('/admin/owner')) {
-    // 2. Verifica permissões (Role)
-    const role = (user!.user_metadata?.role || '').toUpperCase()
-    if (role !== 'ADMIN' && role !== 'OWNER') {
-       // Se não for admin/owner, redireciona para dashboard ou login
+    let userRole: string | undefined;
+
+    if (user) {
+      userRole = (user.user_metadata?.role || '').toUpperCase();
+    } else if (hasPinSession) {
+      const pinSessionCookie = request.cookies.get('pin_session');
+      if (pinSessionCookie) {
+        const roleMatch = /userRole=([^;]+)/.exec(pinSessionCookie.value);
+        if (roleMatch && roleMatch[1]) {
+          userRole = roleMatch[1].toUpperCase();
+        }
+      }
+    }
+
+    if (!userRole || (userRole !== 'ADMIN' && userRole !== 'OWNER')) {
+       // Se não for admin/owner (via Supabase ou PIN), redireciona para login
        const url = request.nextUrl.clone()
        url.pathname = '/login'
        url.searchParams.set('error', 'unauthorized')

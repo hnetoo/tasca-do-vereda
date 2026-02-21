@@ -24,6 +24,7 @@ const SuccessToast: React.FC<SuccessToastProps> = ({ message, onClose }) => {
       <button
         onClick={onClose}
         className="opacity-50 hover:opacity-100"
+        aria-label="Fechar"
       >
         <X size={14} />
       </button>

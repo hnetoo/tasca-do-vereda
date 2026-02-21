@@ -2,6 +2,7 @@
 import { executeQuery, databaseOperations } from '@/services/database/operations';
 import { dbConfig } from '@/services/database/config';
 import { logger } from '@/services/logger';
+import { CURRENT_BACKUP_VERSION } from '@/services/backupService';
 // BackupData is defined locally to avoid circular dependencies
 import { MenuCategory, Dish, Order, Expense, Revenue, StockItem, Fornecedor, User, Employee, AttendanceRecord } from '@/types';
 
@@ -32,7 +33,7 @@ export interface BackupData {
 }
 
 export async function importBackupAction(backup: BackupData): Promise<{ success: boolean; report: any }> {
-    logger.info('Starting backup import via Server Action...', { version: backup.version }, 'BACKUP');
+    logger.info('Starting backup import via Server Action...', { version: backup.version, currentVersion: CURRENT_BACKUP_VERSION }, 'BACKUP');
     
     const report = {
         totalRecords: 0,
@@ -42,21 +43,32 @@ export async function importBackupAction(backup: BackupData): Promise<{ success:
         endTime: 0
     };
 
+    // Version validation
+    if (backup.version && backup.version > CURRENT_BACKUP_VERSION) {
+        const errorMessage = `Backup version (${backup.version}) is newer than current system version (${CURRENT_BACKUP_VERSION}). Import aborted to prevent data corruption.`;
+        logger.error(errorMessage, {}, 'BACKUP');
+        report.errors.push(errorMessage);
+        report.endTime = Date.now();
+        return { success: false, report };
+    }
+
     try {
         // Start Transaction
         await executeQuery('BEGIN TRANSACTION');
 
         // 1. Import Categories
-        if (backup.data.categories) {
+        if (backup.data.categories && backup.data.categories.length > 0) {
+            logger.info(`Importing ${backup.data.categories.length} categories...`, {}, 'BACKUP');
             for (const cat of backup.data.categories) {
                 await databaseOperations.saveCategory(cat);
                 report.processed++;
             }
+            logger.info(`Finished importing ${backup.data.categories.length} categories.`, {}, 'BACKUP');
         }
 
         // 2. Import Menu (Dishes)
-        if (backup.data.menu) {
-            // Checkpoints every 1000 records
+        if (backup.data.menu && backup.data.menu.length > 0) {
+            logger.info(`Importing ${backup.data.menu.length} dishes...`, {}, 'BACKUP');
             let count = 0;
             for (const dish of backup.data.menu) {
                 await databaseOperations.saveProduct(dish);
@@ -66,10 +78,12 @@ export async function importBackupAction(backup: BackupData): Promise<{ success:
                     logger.info(`Checkpoint: Processed ${count} dishes`, {}, 'BACKUP');
                 }
             }
+            logger.info(`Finished importing ${backup.data.menu.length} dishes.`, {}, 'BACKUP');
         }
 
         // 3. Import Orders (and Order Items)
-        if (backup.data.orders) {
+        if (backup.data.orders && backup.data.orders.length > 0) {
+            logger.info(`Importing ${backup.data.orders.length} orders...`, {}, 'BACKUP');
             let count = 0;
             for (const order of backup.data.orders) {
                 await databaseOperations.saveOrder(order);
@@ -79,21 +93,26 @@ export async function importBackupAction(backup: BackupData): Promise<{ success:
                         logger.info(`Checkpoint: Processed ${count} orders`, {}, 'BACKUP');
                 }
             }
+            logger.info(`Finished importing ${backup.data.orders.length} orders.`, {}, 'BACKUP');
         }
         
         // 4. Import Financials (Revenues/Expenses)
-        if (backup.data.expenses) {
+        if (backup.data.expenses && backup.data.expenses.length > 0) {
+                logger.info(`Importing ${backup.data.expenses.length} expenses...`, {}, 'BACKUP');
                 for (const exp of backup.data.expenses) {
                     await databaseOperations.saveExpense(exp);
                     report.processed++;
                 }
+                logger.info(`Finished importing ${backup.data.expenses.length} expenses.`, {}, 'BACKUP');
         }
         
-        if (backup.data.revenues) {
+        if (backup.data.revenues && backup.data.revenues.length > 0) {
+                logger.info(`Importing ${backup.data.revenues.length} revenues...`, {}, 'BACKUP');
                 for (const rev of backup.data.revenues) {
                     await databaseOperations.saveRevenue(rev);
                     report.processed++;
                 }
+                logger.info(`Finished importing ${backup.data.revenues.length} revenues.`, {}, 'BACKUP');
         }
 
         // Commit Transaction

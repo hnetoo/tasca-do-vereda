@@ -48,6 +48,9 @@ describe('Sidebar Component', () => {
     (usePathname as jest.Mock).mockReturnValue('/dashboard');
     render(<Sidebar showSidebar={true} />);
     expect(screen.getByText('Comando')).toBeInTheDocument();
+    expect(screen.getByText('Inventário')).toBeInTheDocument();
     expect(screen.getByText('Encomendas')).toBeInTheDocument();
+    expect(screen.queryByText('Categorias')).not.toBeInTheDocument();
+    expect(screen.queryByText('Produtos')).not.toBeInTheDocument();
   });
 });

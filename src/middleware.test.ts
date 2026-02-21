@@ -32,6 +32,7 @@ describe('Middleware', () => {
       cookies: {
         getAll: jest.fn(),
         set: jest.fn(),
+        has: jest.fn(() => false),
       },
     };
 

@@ -64,8 +64,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
 
   const generalMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
-    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { path: '/sistema', icon: <Monitor size={24} />, label: 'Sistema' },
+
     { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
 
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
@@ -76,6 +75,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/employees', icon: <Users size={24} />, label: 'Gestão de Staff' },
     { path: '/schedules', icon: <CalendarCheck size={24} />, label: 'Escalas' },
     { path: '/inventory', icon: <Warehouse size={24} />, label: 'Inventário' },
+    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
     { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
     { path: '/customers', icon: <Users size={24} />, label: 'Clientes' },
     { path: '/reservations', icon: <Calendar size={24} />, label: 'Reservas' },
