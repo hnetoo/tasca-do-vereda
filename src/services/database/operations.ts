@@ -517,9 +517,15 @@ export const databaseOperations = {
   },
 
   saveOrder: async (order: Order): Promise<boolean> => {
+    const orderId = order.id;
+    if (!orderId) {
+        logger.error('Cannot save order without ID', { order }, 'DATABASE');
+        return false;
+    }
+
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
         const dbOrder = {
-            id: order.id,
+            id: orderId,
             table_id: (order as any).table_id || order.tableId,
             status: order.status,
             timestamp: order.timestamp instanceof Date ? order.timestamp.toISOString() : order.timestamp,
@@ -545,12 +551,12 @@ export const databaseOperations = {
 
         if (order.items && order.items.length > 0) {
             // Delete existing items to ensure clean state (replace behavior)
-            const { error: delError } = await supabase.from('order_items').delete().eq('order_id', order.id);
+            const { error: delError } = await supabase.from('order_items').delete().eq('order_id', orderId);
             if (delError) logger.warn('Failed to clear old order items', { error: delError }, 'DATABASE');
 
             const dbItems = order.items.map(item => ({
                 id: item.id || generateUUID(),
-                order_id: order.id,
+                order_id: orderId,
                 dish_id: (item as any).dish_id || item.dishId,
                 quantity: item.quantity,
                 unit_price: (item as any).unit_price || item.unitPrice || item.price || 0,
@@ -565,7 +571,7 @@ export const databaseOperations = {
             if (itemsError) throw itemsError;
         }
         return true;
-    }, `save order ${order.id}`, 'DATABASE');
+    }, `save order ${orderId}`, 'DATABASE');
     return result.success;
   },
 
