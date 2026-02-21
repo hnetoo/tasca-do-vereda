@@ -103,11 +103,8 @@ export async function middleware(request: NextRequest) {
     }
 
     if (authenticatedRole) {
-      if (authenticatedRole === 'ADMIN' || authenticatedRole === 'OWNER') {
-        return NextResponse.redirect(new URL('/admin/owner', request.url));
-      } else {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
-      }
+      // Redirect all authenticated users to dashboard, regardless of role
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 

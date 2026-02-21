@@ -11,12 +11,8 @@ export default async function Home() {
     try {
       const session = JSON.parse(decodeURIComponent(pinSession.value));
       if (session && session.valid) {
-        const role = (session.userRole || '').toUpperCase();
-        if (role === 'ADMIN' || role === 'OWNER') {
-          target = '/admin/owner';
-        } else {
-          target = '/dashboard';
-        }
+        // Always redirect to dashboard, regardless of role
+        target = '/dashboard';
       }
     } catch (e) {
       // ignore parse errors
