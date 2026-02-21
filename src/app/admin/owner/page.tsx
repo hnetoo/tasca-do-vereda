@@ -32,8 +32,9 @@ export default function OwnerDashboard() {
   // Admin Verification
   useEffect(() => {
     if (currentUser) {
-       if (currentUser.role !== 'ADMIN' && currentUser.role !== 'OWNER' && currentUser.role !== 'MANAGER') {
-          router.push('/pos'); 
+       // Strict access: Only OWNER allowed. ADMINs go to dashboard.
+       if (currentUser.role !== 'OWNER') {
+          router.push('/dashboard'); 
        }
     }
   }, [currentUser, router]);

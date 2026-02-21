@@ -73,11 +73,17 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    if (!userRole || (userRole !== 'ADMIN' && userRole !== 'OWNER')) {
-       // Se não for admin/owner (via Supabase ou PIN), redireciona para login
+    // Strict access control: Only OWNER can access /admin/owner
+    // ADMIN users stay in the main app
+    if (!userRole || userRole !== 'OWNER') {
+       // If not OWNER, redirect to dashboard (or login if not auth)
        const url = request.nextUrl.clone()
-       url.pathname = '/login'
-       url.searchParams.set('error', 'unauthorized')
+       if (user || hasPinSession) {
+         url.pathname = '/dashboard'
+       } else {
+         url.pathname = '/login'
+         url.searchParams.set('error', 'unauthorized')
+       }
        return NextResponse.redirect(url)
     }
   }
