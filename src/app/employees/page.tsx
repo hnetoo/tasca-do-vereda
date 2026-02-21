@@ -20,11 +20,11 @@ export default function EmployeesPage() {
   );
 
   return (
-    <div className="p-8 h-full overflow-y-auto bg-slate-50">
+    <div className="p-8 h-full overflow-y-auto bg-slate-950">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Funcionários</h1>
-          <p className="text-slate-500">Gestão de equipa e permissões</p>
+          <h1 className="text-3xl font-bold text-white">Funcionários</h1>
+          <p className="text-slate-400">Gestão de equipa e permissões</p>
         </div>
         
         <button 
@@ -32,33 +32,33 @@ export default function EmployeesPage() {
             setEditingEmployee(null);
             setShowModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors"
         >
           <UserPlus size={20} />
           Novo Funcionário
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex gap-4">
+      <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+        <div className="p-4 border-b border-slate-800 flex gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input 
               type="text" 
               placeholder="Buscar funcionário..." 
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg outline-none focus:border-primary"
+              className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg outline-none focus:border-primary text-white"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+          <button className="flex items-center gap-2 px-4 py-2 border border-slate-800 rounded-lg text-slate-400 hover:bg-slate-800">
             <Filter size={20} />
             Filtrar
           </button>
         </div>
 
         <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-500">
+          <thead className="bg-slate-950 text-slate-400">
             <tr>
               <th className="px-6 py-3 font-medium">Nome</th>
               <th className="px-6 py-3 font-medium">Cargo</th>
@@ -67,31 +67,31 @@ export default function EmployeesPage() {
               <th className="px-6 py-3 font-medium text-right">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-800">
             {filteredEmployees.map(employee => (
-              <tr key={employee.id} className="hover:bg-slate-50">
+              <tr key={employee.id} className="hover:bg-slate-800/50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                       {employee.name.charAt(0)}
                     </div>
                     <div>
-                      <div className="font-medium text-slate-800">{employee.name}</div>
+                      <div className="font-medium text-white">{employee.name}</div>
                       <div className="text-xs text-slate-400">{employee.email || 'Sem email'}</div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-slate-600">
+                <td className="px-6 py-4 text-slate-400">
                   <span className="flex items-center gap-2">
-                    <Shield size={16} className="text-slate-400" />
+                    <Shield size={16} className="text-slate-500" />
                     {employee.role}
                   </span>
                 </td>
-                <td className="px-6 py-4 font-mono text-slate-600">
+                <td className="px-6 py-4 font-mono text-slate-400">
                   ***{employee.pin?.slice(-1)}
                 </td>
                 <td className="px-6 py-4">
-                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  <span className="px-2 py-1 bg-green-900/20 text-green-400 rounded-full text-xs font-medium">
                     Ativo
                   </span>
                 </td>
@@ -102,7 +102,7 @@ export default function EmployeesPage() {
                         setEditingEmployee(employee);
                         setShowModal(true);
                       }}
-                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
                     >
                       <Edit2 size={18} />
                     </button>
@@ -112,7 +112,7 @@ export default function EmployeesPage() {
                           removeEmployee(employee.id);
                         }
                       }}
-                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />
                     </button>

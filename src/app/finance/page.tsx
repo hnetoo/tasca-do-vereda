@@ -96,22 +96,22 @@ export default function FinancePage() {
   };
 
   return (
-    <div className="p-8 h-full overflow-y-auto bg-slate-50">
+    <div className="p-8 h-full overflow-y-auto bg-slate-950">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Finanças</h1>
-          <p className="text-slate-500">Gestão financeira e relatórios de vendas</p>
+          <h1 className="text-3xl font-bold text-white">Finanças</h1>
+          <p className="text-slate-400">Gestão financeira e relatórios de vendas</p>
         </div>
         
         <div className="flex gap-3">
           <button 
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-400 hover:bg-slate-800"
           >
             <Filter size={20} />
             Filtros
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90">
             <Download size={20} />
             Exportar Relatório
           </button>
@@ -120,71 +120,71 @@ export default function FinancePage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-green-100 rounded-lg">
-              <DollarSign className="text-green-600" size={24} />
+            <div className="p-3 bg-green-900/20 rounded-lg">
+              <DollarSign className="text-green-500" size={24} />
             </div>
-            <span className="flex items-center text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded">
+            <span className="flex items-center text-green-500 text-sm font-medium bg-green-900/10 px-2 py-1 rounded">
               <ArrowUpRight size={16} className="mr-1" />
               +12.5%
             </span>
           </div>
-          <h3 className="text-slate-500 text-sm font-medium mb-1">Receita Total</h3>
-          <p className="text-2xl font-bold text-slate-800">{metrics.totalRevenue.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
+          <h3 className="text-slate-400 text-sm font-medium mb-1">Receita Total</h3>
+          <p className="text-2xl font-bold text-white">{metrics.totalRevenue.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <TrendingUp className="text-blue-600" size={24} />
+            <div className="p-3 bg-blue-900/20 rounded-lg">
+              <TrendingUp className="text-blue-500" size={24} />
             </div>
-            <span className="flex items-center text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded">
+            <span className="flex items-center text-green-500 text-sm font-medium bg-green-900/10 px-2 py-1 rounded">
               <ArrowUpRight size={16} className="mr-1" />
               +5.2%
             </span>
           </div>
-          <h3 className="text-slate-500 text-sm font-medium mb-1">Ticket Médio</h3>
-          <p className="text-2xl font-bold text-slate-800">{metrics.avgTicket.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
+          <h3 className="text-slate-400 text-sm font-medium mb-1">Ticket Médio</h3>
+          <p className="text-2xl font-bold text-white">{metrics.avgTicket.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <CreditCard className="text-purple-600" size={24} />
+            <div className="p-3 bg-purple-900/20 rounded-lg">
+              <CreditCard className="text-purple-500" size={24} />
             </div>
-            <span className="flex items-center text-red-600 text-sm font-medium bg-red-50 px-2 py-1 rounded">
+            <span className="flex items-center text-red-500 text-sm font-medium bg-red-900/10 px-2 py-1 rounded">
               <ArrowDownRight size={16} className="mr-1" />
               -2.1%
             </span>
           </div>
-          <h3 className="text-slate-500 text-sm font-medium mb-1">Total Pedidos</h3>
-          <p className="text-2xl font-bold text-slate-800">{metrics.orderCount}</p>
+          <h3 className="text-slate-400 text-sm font-medium mb-1">Total Pedidos</h3>
+          <p className="text-2xl font-bold text-white">{metrics.orderCount}</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <PieChart className="text-orange-600" size={24} />
+            <div className="p-3 bg-orange-900/20 rounded-lg">
+              <PieChart className="text-orange-500" size={24} />
             </div>
             <span className="text-slate-400 text-xs">Hoje</span>
           </div>
-          <h3 className="text-slate-500 text-sm font-medium mb-1">Turno Atual</h3>
-          <p className="text-lg font-bold text-slate-800">{activeShift ? 'Aberto' : 'Fechado'}</p>
+          <h3 className="text-slate-400 text-sm font-medium mb-1">Turno Atual</h3>
+          <p className="text-lg font-bold text-white">{activeShift ? 'Aberto' : 'Fechado'}</p>
         </div>
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Evolução de Vendas</h3>
+        <div className="lg:col-span-2 bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
+          <h3 className="text-lg font-bold text-white mb-6">Evolução de Vendas</h3>
           <div className="h-[300px]">
             <Line options={{ maintainAspectRatio: false }} data={revenueData} />
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Métodos de Pagamento</h3>
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
+          <h3 className="text-lg font-bold text-white mb-6">Métodos de Pagamento</h3>
           <div className="h-[300px] flex justify-center">
             <Doughnut options={{ maintainAspectRatio: false }} data={paymentMethodsData} />
           </div>
@@ -192,9 +192,9 @@ export default function FinancePage() {
       </div>
 
       {/* Recent Transactions */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="text-lg font-bold text-slate-800">Transações Recentes</h3>
+      <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+          <h3 className="text-lg font-bold text-white">Transações Recentes</h3>
           <button className="text-primary text-sm font-medium hover:underline">Ver todas</button>
         </div>
         <table className="w-full text-sm text-left">

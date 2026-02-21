@@ -228,9 +228,6 @@ export default function MenuDigital() {
               </div>
             </div>
             
-            <button className="p-2 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-600 transition-all shadow-lg">
-               <ShoppingBag size={20} />
-            </button>
           </div>
 
           {/* Search Bar */}

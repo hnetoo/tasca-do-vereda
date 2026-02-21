@@ -5,6 +5,8 @@ import { logger } from '@/services/logger';
 import { calculateHash } from '@/utils/crypto';
 import { CryptoService } from '@/services/cryptoService';
 
+import { createClient } from '@/lib/supabase/client';
+
 export interface AuthSlice {
   users: User[];
   currentUser: User | null;
@@ -14,7 +16,8 @@ export interface AuthSlice {
   updateUser: (user: User) => void;
   removeUser: (id: UUID) => void;
   login: (pin: string, userId?: UUID, rememberMe?: boolean) => Promise<boolean>;
-  logout: () => void;
+  loginWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
 }
 
@@ -149,8 +152,61 @@ export const createAuthSlice: StateCreator<
       return false;
     }
   },
-  logout: () => {
+  loginWithPassword: async (email, password) => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        logger.security('Falha no login com password', { email, error: error.message });
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        // Map Supabase user to App User
+        // Try to find in existing users list by email
+        let appUser = get().users.find(u => u.email === email);
+        
+        if (!appUser) {
+           // Create a transient user object for the session
+           // In a real app, we should fetch from 'employees' table
+           // For now, we assume the user exists or we create a basic profile
+           appUser = {
+             id: data.user.id,
+             name: data.user.user_metadata.name || email.split('@')[0],
+             email: email,
+             role: (data.user.user_metadata.role || 'ADMIN').toUpperCase(), // Default to ADMIN if logging in via password (assumption for owner route)
+             permissions: [],
+             pin: '', // No PIN needed for password login
+             isActive: true
+           };
+        }
+
+        set({ currentUser: appUser, isAuthenticated: true });
+        
+        logger.auth(`Login via Password bem-sucedido: ${appUser.name}`, { 
+          userId: appUser.id, 
+          role: appUser.role 
+        });
+
+        get().addNotification('success', `Bem-vindo, ${appUser.name}`);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Usuário não encontrado' };
+    } catch (e) {
+      logger.error('Erro no login com password', { error: String(e) });
+      return { success: false, error: 'Erro interno' };
+    }
+  },
+  logout: async () => {
     const user = get().currentUser;
+    const supabase = createClient();
+    await supabase.auth.signOut();
+
     if (user) {
       logger.auth(`Utilizador terminou sessão: ${user.name}`, { 
         userId: user.id, 

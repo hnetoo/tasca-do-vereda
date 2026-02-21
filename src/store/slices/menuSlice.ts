@@ -183,29 +183,39 @@ export const createMenuSlice: StateCreator<
     }
 
     try {
+      // Optimistic update
       set((state: MenuSlice) => ({ categories: [...state.categories, cat] }));
       get().invalidateMenuCache();
       
       // 4. Persist to SQL (CRITICAL)
-      logger.debug('Category object before saving to SQL (updateCategory)', { category: cat }, 'DATABASE');
+      logger.debug('Category object before saving to SQL (addCategory)', { category: cat }, 'DATABASE');
       const result = await saveCategoryAction(cat);
+      
       if (result.success) {
           logger.info('Categoria guardada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
+          
+          state.addAuditLog?.({ 
+            type: 'CATEGORY_ADDED', 
+            entityType: 'MenuCategory', 
+            entityId: cat.id, 
+            details: { message: `Categoria adicionada: ${cat.name}` } 
+          } as any);
+
+          // Auto-sync to cloud if configured
+          get().triggerSync?.();
       } else {
+          // Revert on failure
+          set((state: MenuSlice) => ({ 
+              categories: state.categories.filter(c => c.id !== cat.id) 
+          }));
           logger.error('Falha na persistência SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
-          state.addNotification?.('error', 'Erro ao guardar categoria na base de dados local.');
+          state.addNotification?.('error', 'Erro ao guardar categoria na base de dados local. A operação foi revertida.');
       }
-
-      state.addAuditLog?.({ 
-        type: 'CATEGORY_ADDED', 
-        entityType: 'MenuCategory', 
-        entityId: cat.id, 
-        details: { message: `Categoria adicionada: ${cat.name}` } 
-      } as any);
-
-      // Auto-sync to cloud if configured
-      get().triggerSync?.();
     } catch (e: unknown) {
+      // Revert on exception
+      set((state: MenuSlice) => ({ 
+          categories: state.categories.filter(c => c.id !== cat.id) 
+      }));
       logger.error('Critical error adding category', { error: (e as Error).message }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao adicionar categoria.');
     }
@@ -213,6 +223,7 @@ export const createMenuSlice: StateCreator<
   
   updateCategory: async (cat: MenuCategory) => {
     const state = get();
+    const previousCategories = state.categories;
 
     // 0. Validation: ID must be valid UUID
     if (!cat.id || !isValidUUID(cat.id)) {
@@ -249,6 +260,7 @@ export const createMenuSlice: StateCreator<
     }
 
     try {
+      // Optimistic update
       set((state: MenuSlice) => ({
         categories: state.categories.map((c: MenuCategory) => c.id === cat.id ? cat : c)
       }));
@@ -257,22 +269,27 @@ export const createMenuSlice: StateCreator<
 
       // 6. Persist to SQL (CRITICAL)
       const result = await saveCategoryAction(cat);
+      
       if (result.success) {
           logger.info('Categoria atualizada em SQL com sucesso', { category_id: cat.id }, 'DATABASE');
+          
+          state.addAuditLog?.({ 
+            type: 'CATEGORY_UPDATED', 
+            entityType: 'MenuCategory', 
+            entityId: cat.id, 
+            details: { message: `Categoria atualizada: ${cat.name}` } 
+          } as any);
+          
+          get().triggerSync?.();
       } else {
+          // Revert on failure
+          set({ categories: previousCategories });
           logger.error('Falha na atualização SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
-          state.addNotification?.('error', 'Erro ao atualizar categoria na base de dados local.');
+          state.addNotification?.('error', 'Erro ao atualizar categoria na base de dados local. A operação foi revertida.');
       }
-
-      state.addAuditLog?.({ 
-        type: 'CATEGORY_UPDATED', 
-        entityType: 'MenuCategory', 
-        entityId: cat.id, 
-        details: { message: `Categoria atualizada: ${cat.name}` } 
-      } as any);
-      
-      get().triggerSync?.();
     } catch (e: unknown) {
+      // Revert on exception
+      set({ categories: previousCategories });
       logger.error('Critical error updating category', { error: (e as Error).message }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao atualizar categoria.');
     }
@@ -280,6 +297,8 @@ export const createMenuSlice: StateCreator<
   
   removeCategory: async (id: UUID) => {
     const state = get();
+    const previousCategories = state.categories;
+    const previousDeleted = state.deletedCategoryIds;
     
     // 1. Check for active dishes first
     const hasDishes = state.dishes.some((d: Dish) => d.categoryId === id);
@@ -301,30 +320,44 @@ export const createMenuSlice: StateCreator<
          return;
       }
 
+      // Optimistic update
       set((state: MenuSlice) => ({
         categories: newCategories,
         deletedCategoryIds: [...(state.deletedCategoryIds || []), id]
       }));
 
       // Delete from SQL
-      deleteCategoryAction(id).catch((e: unknown) => {
-        logger.error('Failed to delete category from SQL', { error: (e as Error).message, id }, 'DATABASE');
-      });
-
-      // Log the deletion for recovery
-      const deletedAt = new Date().toISOString();
-      logger.info(`Categoria removida: ${categoryToRemove.name}`, { category: categoryToRemove, deletedAt }, 'STORE');
+      const result = await deleteCategoryAction(id);
       
-      state.addAuditLog?.({ 
-        type: 'CATEGORY_DELETED', 
-        entityType: 'MenuCategory', 
-        entityId: categoryToRemove.id, 
-        details: { message: `Categoria "${categoryToRemove.name}" (${id}) removida pelo utilizador.`, category: { ...categoryToRemove, deletedAt } } 
-      } as any);
+      if (result.success) {
+          // Log the deletion for recovery
+          const deletedAt = new Date().toISOString();
+          logger.info(`Categoria removida: ${categoryToRemove.name}`, { category: categoryToRemove, deletedAt }, 'STORE');
+          
+          state.addAuditLog?.({ 
+            type: 'CATEGORY_DELETED', 
+            entityType: 'MenuCategory', 
+            entityId: categoryToRemove.id, 
+            details: { message: `Categoria "${categoryToRemove.name}" (${id}) removida pelo utilizador.`, category: { ...categoryToRemove, deletedAt } } 
+          } as any);
 
-      get().invalidateMenuCache();
-      get().triggerSync?.();
+          get().invalidateMenuCache();
+          get().triggerSync?.();
+      } else {
+          // Revert on failure
+          set({ 
+              categories: previousCategories,
+              deletedCategoryIds: previousDeleted
+          });
+          logger.error('Failed to delete category from SQL', { error: result.error, id }, 'DATABASE');
+          state.addNotification?.('error', 'Erro ao remover categoria da base de dados. A operação foi revertida.');
+      }
     } catch (e: unknown) {
+      // Revert on exception
+      set({ 
+          categories: previousCategories,
+          deletedCategoryIds: previousDeleted
+      });
       logger.error('Critical error removing category', { error: (e as Error).message, id }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao remover categoria.');
     }
@@ -359,6 +392,7 @@ export const createMenuSlice: StateCreator<
 
   addDish: async (dish: Dish) => {
     const state = get();
+    const previousDishes = state.dishes;
     
     // 1. Basic Validation
     if (!dish.name || dish.name.trim() === '') {
@@ -394,30 +428,34 @@ export const createMenuSlice: StateCreator<
     }
 
     try {
+      // Optimistic update
       set((state: MenuSlice) => ({ dishes: [...state.dishes, finalDish] }));
       get().invalidateMenuCache();
 
       // 4. Persist to SQL (CRITICAL)
-      logger.debug('Dish object before saving to SQL (updateDish)', { dish: finalDish }, 'DATABASE');
-      saveDishAction(finalDish).then(result => {
-          if (result.success) {
-              logger.info('Prato guardado em SQL com sucesso', { dishId: finalDish.id }, 'DATABASE');
-          } else {
-              logger.error('Falha na persistência SQL do prato', { dish: finalDish, error: result.error }, 'DATABASE');
-              state.addNotification?.('error', 'Erro ao guardar prato na base de dados local.');
-          }
-      }).catch((e: unknown) => {
-          logger.error('Erro de execução na persistência SQL', { error: (e as Error).message }, 'DATABASE');
-      });
-
-      state.addAuditLog?.({ 
-        type: 'DISH_ADDED', 
-        entityType: 'Dish', 
-        entityId: finalDish.id, 
-        details: { message: `Prato adicionado: ${finalDish.name}`, categoryId: finalDish.categoryId } 
-      } as any);
-      get().triggerSync?.();
+      logger.debug('Dish object before saving to SQL (addDish)', { dish: finalDish }, 'DATABASE');
+      const result = await saveDishAction(finalDish);
+      
+      if (result.success) {
+          logger.info('Prato guardado em SQL com sucesso', { dishId: finalDish.id }, 'DATABASE');
+          
+          state.addAuditLog?.({ 
+            type: 'DISH_ADDED', 
+            entityType: 'Dish', 
+            entityId: finalDish.id, 
+            details: { message: `Prato adicionado: ${finalDish.name}`, categoryId: finalDish.categoryId } 
+          } as any);
+          
+          get().triggerSync?.();
+      } else {
+          // Revert on failure
+          set({ dishes: previousDishes });
+          logger.error('Falha na persistência SQL do prato', { dish: finalDish, error: result.error }, 'DATABASE');
+          state.addNotification?.('error', 'Erro ao guardar prato na base de dados local. A operação foi revertida.');
+      }
     } catch (e: unknown) {
+      // Revert on exception
+      set({ dishes: previousDishes });
       logger.error('Critical error adding dish', { error: (e as Error).message }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao adicionar prato.');
     }
@@ -425,6 +463,7 @@ export const createMenuSlice: StateCreator<
 
   updateDish: async (dish: Dish) => {
     const state = get();
+    const previousDishes = state.dishes;
 
     // 1. Basic Validation
     if (!dish.name || dish.name.trim() === '') {
@@ -460,31 +499,35 @@ export const createMenuSlice: StateCreator<
     }
 
     try {
+      // Optimistic update
       set((state: MenuSlice) => ({
         dishes: nextDishes
       }));
       get().invalidateMenuCache();
 
       // 4. Persist to SQL (CRITICAL)
-      saveDishAction(finalDish).then(result => {
-          if (result.success) {
-              logger.info('Prato atualizado em SQL com sucesso', { dishId: finalDish.id }, 'DATABASE');
-          } else {
-              logger.error('Falha na atualização SQL do prato', { dish: finalDish, error: result.error }, 'DATABASE');
-              state.addNotification?.('error', 'Erro ao atualizar prato na base de dados local.');
-          }
-      }).catch((e: unknown) => {
-          logger.error('Erro de execução na atualização SQL', { error: (e as Error).message }, 'DATABASE');
-      });
-
-      state.addAuditLog?.({ 
-        type: 'DISH_UPDATED', 
-        entityType: 'Dish', 
-        entityId: finalDish.id, 
-        details: { message: `Prato atualizado: ${finalDish.name}` } 
-      } as any);
-      get().triggerSync?.();
+      const result = await saveDishAction(finalDish);
+      
+      if (result.success) {
+          logger.info('Prato atualizado em SQL com sucesso', { dishId: finalDish.id }, 'DATABASE');
+          
+          state.addAuditLog?.({ 
+            type: 'DISH_UPDATED', 
+            entityType: 'Dish', 
+            entityId: finalDish.id, 
+            details: { message: `Prato atualizado: ${finalDish.name}` } 
+          } as any);
+          
+          get().triggerSync?.();
+      } else {
+          // Revert on failure
+          set({ dishes: previousDishes });
+          logger.error('Falha na atualização SQL do prato', { dish: finalDish, error: result.error }, 'DATABASE');
+          state.addNotification?.('error', 'Erro ao atualizar prato na base de dados local. A operação foi revertida.');
+      }
     } catch (e: unknown) {
+      // Revert on exception
+      set({ dishes: previousDishes });
       logger.error('Critical error updating dish', { error: (e as Error).message }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao atualizar prato.');
     }
@@ -492,32 +535,39 @@ export const createMenuSlice: StateCreator<
 
   removeDish: async (id: UUID) => {
     const state = get();
+    const previousDishes = state.dishes;
     const dishToRemove = state.dishes.find((d: Dish) => d.id === id);
     
     if (!dishToRemove) return;
 
     try {
+      // Optimistic update
       set((state: MenuSlice) => ({
         dishes: state.dishes.filter((d: Dish) => d.id !== id),
       }));
       
       get().invalidateMenuCache();
 
-      await deleteDishAction(id).catch((e: unknown) => {
-          logger.error('Falha ao eliminar prato no SQL', { id, error: (e as Error).message }, 'DATABASE');
-      });
-
-      state.addAuditLog?.({ 
-        type: 'DISH_DELETED', 
-        entityType: 'Dish', 
-        entityId: id, 
-        details: { message: `Prato removido: ${dishToRemove.name}`, dishName: dishToRemove.name } 
-      } as any);
-
-      get().triggerSync?.();
-      logger.info(`Prato removido com sucesso: ${dishToRemove.name}`, { id }, 'STORE');
+      const result = await deleteDishAction(id);
+      
+      if (result.success) {
+          state.addAuditLog?.({ 
+            type: 'DISH_DELETED', 
+            entityType: 'Dish', 
+            entityId: id, 
+            details: { message: `Prato removido: ${dishToRemove.name}`, dishName: dishToRemove.name } 
+          } as any);
+          get().triggerSync?.();
+      } else {
+          // Revert on failure
+          set({ dishes: previousDishes });
+          logger.error('Falha ao eliminar prato no SQL', { id, error: result.error }, 'DATABASE');
+          state.addNotification?.('error', 'Erro ao remover prato da base de dados local. A operação foi revertida.');
+      }
     } catch (e: unknown) {
-      logger.error('Erro crítico ao remover prato', { id, error: (e as Error).message }, 'STORE');
+      // Revert on exception
+      set({ dishes: previousDishes });
+      logger.error('Critical error removing dish', { error: (e as Error).message, id }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao remover prato.');
     }
   },
