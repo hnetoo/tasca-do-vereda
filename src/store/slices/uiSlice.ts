@@ -54,6 +54,12 @@ export const createUISlice: StateCreator<
     timezone: "Africa/Luanda",
     language: "pt-AO",
     legacyTotalRevenue: 0,
+    supabaseConfig: {
+      enabled: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      autoSync: true
+    }
   },
   notifications: [],
   isSidebarCollapsed: false,
@@ -62,7 +68,7 @@ export const createUISlice: StateCreator<
   addNotification: (type, message) => {
     const id = Math.random().toString(36).substring(7);
     set((state: StoreState) => ({ notifications: [...state.notifications, { id, type, message }] }));
-    setTimeout(() => get().removeNotification(id), 3000);
+    setTimeout(() => get().removeNotification(id), 2500);
   },
   
   removeNotification: (id) => set((state: StoreState) => ({
@@ -88,8 +94,25 @@ export const createUISlice: StateCreator<
   })),
 
   triggerSync: async () => {
-    const { syncMenuWithCloud, settings } = get();
-    if (settings.supabaseConfig?.enabled) {
+    const { syncMenuWithCloud, settings, updateSettings } = get();
+    
+    // Auto-detect Supabase config from env if missing in settings
+    if (!settings.supabaseConfig?.enabled && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+       const newConfig = {
+         enabled: true,
+         url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+         key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+         autoSync: true
+       };
+       updateSettings({ supabaseConfig: newConfig });
+       logger.info('Supabase auto-configured from environment variables', undefined, 'CLOUD');
+    }
+
+    // Re-read settings after potential update (though updateSettings updates store, local var might be stale if not careful, but we use get() inside if needed or just use the new object)
+    // Actually, updateSettings updates the store. We can just use the newConfig if we created it, or access get().settings again.
+    const currentSettings = get().settings;
+
+    if (currentSettings.supabaseConfig?.enabled) {
       logger.info('Sincronização manual acionada...', undefined, 'CLOUD');
       try {
         await syncMenuWithCloud();

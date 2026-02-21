@@ -37,8 +37,8 @@ class OrderService {
       const product = store.dishes.find(d => d.id === item.dishId);
       if (!product) continue;
 
-      if (product.track_stock) {
-        const currentStock = product.stock_quantity || 0;
+      if (product.trackStock) {
+        const currentStock = product.stockQuantity || 0;
         if (currentStock < item.quantity) {
             missingItems.push(`${product.name} (Disponível: ${currentStock})`);
         }
@@ -81,9 +81,9 @@ class OrderService {
             store.addToOrder(data.tableId, product, item.quantity, item.notes || '', orderId || '');
             
             // Deduct stock if tracked
-            if (product.track_stock) {
-                const newQuantity = Math.max(0, (product.stock_quantity || 0) - item.quantity);
-                store.updateDish({ ...product, stock_quantity: newQuantity });
+            if (product.trackStock) {
+                const newQuantity = Math.max(0, (product.stockQuantity || 0) - item.quantity);
+                store.updateDish({ ...product, stockQuantity: newQuantity });
                 logger.info(`Stock deducted for ${product.name}`, { productId: product.id, qty: item.quantity, newStock: newQuantity }, 'OrderService');
             }
         }

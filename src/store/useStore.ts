@@ -10,6 +10,7 @@ import { createFinanceSlice } from './slices/financeSlice';
 import { createAuthSlice } from './slices/authSlice';
 import { createOperationalSlice } from './slices/operationalSlice';
 import { createUISlice } from './slices/uiSlice';
+import { createIntegrationsSlice } from './slices/integrationsSlice';
 import { 
   IntegrationLog, 
   Dish, 
@@ -55,6 +56,7 @@ export const useStore = create<StoreState>()(
       ...createAuthSlice(set, get, api),
       ...createOperationalSlice(set, get, api),
       ...createUISlice(set, get, api),
+      ...createIntegrationsSlice(set, get, api),
 
       // Legacy/Root State Initializers
       supabaseSyncStatus: {
@@ -185,15 +187,15 @@ export const useStore = create<StoreState>()(
       setEmployees: (employees: any[]) => set({ employees }),
       addAuditLog: (log: any) => console.log('Audit log:', log),
       addNotification: (type: Notification['type'], message: string, duration?: number) => {
-        const newNotification = { id: Date.now().toString(), type, message, duration };
+        const autoDismissDuration = duration || 2500; // Reduced to 2.5s for faster dismissal
+        const newNotification = { id: Date.now().toString(), type, message, duration: autoDismissDuration };
         set((state: StoreState) => ({ notifications: [...(state.notifications || []), newNotification] }));
-        if (duration) {
-          setTimeout(() => {
-            set((state: any) => ({
-              notifications: (state.notifications || []).filter((n: any) => n.id !== newNotification.id)
-            }));
-          }, duration);
-        }
+        
+        setTimeout(() => {
+          set((state: any) => ({
+            notifications: (state.notifications || []).filter((n: any) => n.id !== newNotification.id)
+          }));
+        }, autoDismissDuration);
       },  
 
       setSuppliers: (suppliers: Fornecedor[]) => set({ suppliers }),
@@ -306,8 +308,15 @@ export const useStore = create<StoreState>()(
       name: 'tasca-vereda-storage-v2',
       storage: createJSONStorage(() => customStorage),
        partialize: (state) => {
-         const { isAuthenticated, currentUser, settings, ...rest } = state as StoreState;
-         return { settings };
+         // Persist critical data, exclude transient UI state
+         const { 
+            notifications, 
+            isMobileMenuOpen, 
+            isInitialized, 
+            dailyAnalyticsData,
+            ...persistedState 
+         } = state as StoreState;
+         return persistedState;
        },
     }
   )

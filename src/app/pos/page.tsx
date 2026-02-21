@@ -1269,7 +1269,7 @@ const POS = () => {
                           >
                               <div className="aspect-square w-full overflow-hidden relative">
                                   <Image 
-                                      src={normalizeDishImage(dish.image_url || undefined)} 
+                                      src={normalizeDishImage(dish.imageUrl || undefined)} 
                                       alt={dish.name} 
                                       fill 
                                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

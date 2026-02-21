@@ -18,7 +18,7 @@ const CustomerDisplayContent = () => {
 
   // Derived state for promos (assuming menu items can be promos, or just showing all items)
   // Filtering for items with images as "promos" to display
-  const promoItems = menu.filter((item: Dish) => item.image_url && item.is_active);
+  const promoItems = menu.filter((item: Dish) => item.imageUrl && item.isActive);
   const currentPromo = promoItems[promoIndex] || {};
 
   // Rotate promos
@@ -145,7 +145,7 @@ const CustomerDisplayContent = () => {
                   <div key={idx} className="flex items-center justify-between group animate-in slide-in-from-right duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
                     <div className="flex items-center gap-6">
                        <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/5 group-hover:border-primary/30 transition-all shrink-0">
-                          <img src={dish?.image_url || undefined} className="w-full h-full object-cover" alt="" />
+                          <img src={dish?.imageUrl || undefined} className="w-full h-full object-cover" alt="" />
                        </div>
                        <div className="min-w-0">
                           <p className="text-lg font-black text-white uppercase tracking-tighter italic truncate pr-4">{dish?.name}</p>
@@ -181,10 +181,10 @@ const CustomerDisplayContent = () => {
         {/* Right Side: Visuals/Ads */}
         <div className="w-1/3 flex flex-col gap-10">
            <div className="flex-1 glass-panel rounded-[4rem] overflow-hidden relative group bg-slate-900 flex items-center justify-center">
-              {currentPromo.image_url && !imageErrorMap[currentPromo.id as string] ? (
+              {currentPromo.imageUrl && !imageErrorMap[currentPromo.id as string] ? (
                 <img 
-                  key={currentPromo.image_url}
-                  src={currentPromo.image_url} 
+                  key={currentPromo.imageUrl}
+                  src={currentPromo.imageUrl} 
                   crossOrigin="anonymous"
                   className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-[10s] animate-in fade-in duration-1000 absolute inset-0" 
                   alt="Ad"

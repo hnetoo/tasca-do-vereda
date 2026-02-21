@@ -10,7 +10,7 @@
     "build": "next build",
     "build:tauri": "set TAURI_BUILD=true&& next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "tauri": "set TAURI_BUILD=true && tauri",
     "type-check": "tsc --noEmit",
     "check-branch": "echo 'Checking branch skipped'",

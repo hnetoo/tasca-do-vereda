@@ -14,6 +14,7 @@ import {
 export interface FinanceSlice {
   orders: Order[];
   activeOrders: Order[];
+  activeOrderIds: UUID[];
   expenses: Expense[];
   fixedExpenses: FixedExpense[];
   revenues: Revenue[];
@@ -90,6 +91,7 @@ export const createFinanceSlice: StateCreator<
   FinanceSlice
 > = (set, get) => ({
   activeOrders: [],
+  activeOrderIds: [],
   orders: [],
   expenses: [],
   fixedExpenses: [],
@@ -123,8 +125,12 @@ export const createFinanceSlice: StateCreator<
 
   addOrder: (order: Order) => {
     const exists = get().orders.some(o => o.id === order.id);
-    if (exists) return;
-    set((state) => ({ orders: [...state.orders, order], activeOrders: [...state.activeOrders, order] }));
+    if (exists || !order.id) return;
+    set((state) => ({ 
+        orders: [...state.orders, order], 
+        activeOrders: [...state.activeOrders, order],
+        activeOrderIds: [...state.activeOrderIds, order.id as string] 
+    }));
     get().addAuditLog({
       action: 'ORDER_CREATE',
       details: `Novo pedido criado: ${order.order_number || order.id}`,
@@ -136,7 +142,12 @@ export const createFinanceSlice: StateCreator<
   updateOrder: (order: Order) => {
     set((state) => ({
       orders: state.orders.map((o) => o.id === order.id ? order : o),
-      activeOrders: state.activeOrders.map((o) => o.id === order.id ? order : o)
+      activeOrders: state.activeOrders.map((o) => o.id === order.id ? order : o),
+      // Update activeOrderIds if status changes to closed? Or keep it?
+      // Assuming activeOrderIds tracks IDs of active orders, if order closes, we should remove it?
+      // But activeOrders array seems to just update the object.
+      // If activeOrders is meant to be ONLY active orders, then updateOrder should remove it if status is closed.
+      // But currently it just maps.
     }));
     // Log only if status changed or it's a critical update
     const prevOrder = get().orders.find(o => o.id === order.id);

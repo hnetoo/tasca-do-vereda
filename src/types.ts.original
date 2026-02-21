@@ -4,7 +4,6 @@ import { MenuSlice } from './store/slices/menuSlice';
 import { StaffSlice } from './store/slices/staffSlice';
 import { FinanceSlice } from './store/slices/financeSlice';
 import { AuthSlice } from './store/slices/authSlice';
-import { IntegrationsSlice } from './store/slices/integrationsSlice';
 
 
 
@@ -12,64 +11,43 @@ import { Database } from './types/supabase';
 
 export type AnyRecord = any;
 
-type DishRow = Database['public']['Tables']['dishes']['Row'];
-
-export type Dish = Omit<Partial<DishRow>, 
-  'image_url' | 
-  'category_id' | 
-  'supplier_id' | 
-  'tax_code' | 
-  'tax_percentage' | 
-  'preparation_time' | 
-  'is_active' | 
-  'is_available_on_digital_menu' | 
-  'track_stock' | 
-  'stock_quantity' | 
-  'min_stock_quantity' | 
-  'max_stock_quantity' |
-  'created_at' |
-  'updated_at' |
-  'cost_price'
-> & {
+export type Dish = Partial<Database['public']['Tables']['dishes']['Row']> & {
   id: string; // Ensure ID is always present
   name: string; // Ensure name is always present
   price: number; // Ensure price is always present
-  
-  // CamelCase overrides
-  imageUrl?: string;
-  categoryId?: string;
-  supplierId?: string;
-  taxCode?: string;
-  taxPercentage?: number;
-  preparationTime?: number;
-  isActive?: boolean;
-  isAvailableOnDigitalMenu?: boolean;
-  trackStock?: boolean;
-  stockQuantity?: number;
-  minStockQuantity?: number;
-  maxStockQuantity?: number;
-
-  // Additional fields
+  track_stock?: boolean;
+  stock_quantity?: number;
   stock?: number;
+  min_stock_quantity?: number;
+  max_stock_quantity?: number;
   unit?: string;
+  supplier_id?: string;
+  preparation_time?: number;
+  is_available_on_digital_menu?: boolean;
   costPrice?: number;
+  supplierId?: string;
+  taxPercentage?: number;
+
+  categoryId?: string;
+  imageUrl?: string;
+  image?: string; // Alias for imageUrl/image_url
+  taxCode?: string;
+  isActive?: boolean;
   available?: boolean;
   parentId?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  trackStock?: boolean;
+  stockQuantity?: number;
+  minStockQuantity?: number;
+  maxStockQuantity?: number;
+  preparationTime?: number;
+  isAvailableOnDigitalMenu?: boolean;
 };
 
 export type Product = Dish;
 
-export type MenuCategory = Omit<Partial<Database['public']['Tables']['menu_categories']['Row']>,
-  'created_at' |
-  'deleted_at' |
-  'is_active' |
-  'is_available_on_digital_menu' |
-  'parent_id' |
-  'sort_order' |
-  'updated_at'
-> & {
+export type MenuCategory = Partial<Database['public']['Tables']['menu_categories']['Row']> & {
   id: string; // Ensure ID is always present
   name: string; // Ensure name is always present
   parentId?: string;
@@ -553,13 +531,10 @@ export interface BiometricDevice {
   type: string;
   ipAddress: string;
   port: number;
-  location?: string;
   apiKey?: string;
   status?: 'CONNECTED' | 'DISCONNECTED' | string;
-  lastSync?: Date | string | null;
+  lastSync?: Date | string;
   syncInterval?: number;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
 }
 
 export interface MobileSession {
@@ -586,7 +561,7 @@ export interface BiometricClockEvent {
   processedAt?: Date | string;
   linkedAttendanceId?: string;
 }
-export interface StoreState extends MenuSlice, StaffSlice, FinanceSlice, AuthSlice, UISlice, OperationalSlice, IntegrationsSlice {
+export interface StoreState extends MenuSlice, StaffSlice, FinanceSlice, AuthSlice, UISlice, OperationalSlice {
   addAuditLog: (log: any) => void;
   suppliers: Fornecedor[];
   supabaseSyncStatus: SupabaseSyncStatus;

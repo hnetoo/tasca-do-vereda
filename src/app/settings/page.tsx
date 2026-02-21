@@ -7,16 +7,21 @@ import {
   Settings as SettingsIcon, Users, Save, Shield,
   CheckCircle, ShieldCheck, QrCode, Share2, Terminal, Smartphone,
   Database, ChefHat, Upload, Link as LinkIcon, MonitorPlay, ToggleRight, ToggleLeft, Rocket, FileText, DownloadCloud, Download, KeyRound, Wifi, Cpu, RefreshCw, Trash2, DollarSign, AlertCircle, Printer, UploadCloud,
-  Activity, Zap, Server, Globe, Lock, HardDrive, BarChart3, Bug
+  Activity, Zap, Server, Globe, Lock, HardDrive, BarChart3, Bug, Plus, Edit
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
-import { User, MenuCategory, Product, SystemSettings, StoreState, FinancialClearanceReport, FullApplicationState } from '@/types';
+import { User, MenuCategory, Product, SystemSettings, StoreState, FinancialClearanceReport, FullApplicationState, BiometricDevice, APIKey, WebhookConfig } from '@/types';
 import UserManagementModal from '@/components/UserManagementModal';
 import QRMenuConfig from '@/components/QRMenuConfig';
 import POSAccessManagement from '@/components/POSAccessManagement';
 import RoleManagementModal from '@/components/RoleManagementModal';
+import { BiometricManager } from '@/components/BiometricManager';
+import { ApiManager } from '@/components/ApiManager';
+import { DataImportManager } from '@/components/DataImportManager';
+import { AgtManager } from '@/components/AgtManager';
+import { DlpManager } from '@/components/DlpManager';
 
 import { downloadManual } from '@/services/manualService';
 import { generateSQLSchema } from '@/services/sqlExportService';
@@ -75,6 +80,8 @@ const CloudImportPanel = () => {
     setSelectedProductIds(new Set());
   };
 
+
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -117,7 +124,7 @@ const CloudImportPanel = () => {
                   <input type="checkbox" checked={selectedCatIds.has(c.id)} onChange={() => toggleSet(setSelectedCatIds, c.id)} />
                   <span className="text-xs text-white">{c.name}</span>
                 </div>
-                <span className="text-[10px] text-slate-500">#{c.sort_order || 0}</span>
+                <span className="text-[10px] text-slate-500">#{c.sortOrder || 0}</span>
               </label>
             ))}
           </div>
@@ -151,13 +158,32 @@ const CloudImportPanel = () => {
   );
 };
 const Settings = () => {
-  const { settings, updateSettings, currentUser, addNotification, categories, dishes, hardResetMenu, tables } = useStore();
+  const { 
+    settings, updateSettings, currentUser, addNotification, categories, dishes, hardResetMenu, tables, removeTable, addTable, updateTable,
+    biometricDevices, registerBiometricDevice, removeBiometricDevice, updateBiometricDevice,
+    apiKeys, generateApiKey, revokeApiKey,
+    webhooks, registerWebhook, removeWebhook
+  } = useStore();
   const [activeTab, setActiveTab] = useState<'general' | 'fiscal' | 'tables' | 'qr' | 'system'>('general');
   const [activeSystemSubTab, setActiveSystemSubTab] = useState<'users' | 'integrations' | 'roles' | 'database' | 'agt' | 'dlp' | 'monitoring' | 'cloud' | 'bd' | 'history'>('users');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isQRMenuConfigOpen, setIsQRMenuConfigOpen] = useState(false);
   const [isRoleManagementOpen, setIsRoleManagementOpen] = useState(false);
+  
+  // Integrations State
+  const [isBioModalOpen, setIsBioModalOpen] = useState(false);
+  const [editingBioDevice, setEditingBioDevice] = useState<BiometricDevice | null>(null);
+  const [bioDeviceForm, setBioDeviceForm] = useState<Partial<BiometricDevice>>({ name: '', ipAddress: '', port: 4370, type: 'ZKTECO' });
+  const [isApiModalOpen, setIsApiModalOpen] = useState(false);
+  const [newWebhookUrl, setNewWebhookUrl] = useState('');
+  const [webhookEvents, setWebhookEvents] = useState<string[]>(['order.created']);
+
   const [localSettings, setLocalSettings] = useState<SystemSettings>(settings);
+
+  // Table Management State
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [editingTable, setEditingTable] = useState<any>(null);
+  const [newTableData, setNewTableData] = useState({ name: '', seats: 4, zone: 'Interior' });
   
   const mainTabs = [
     { id: 'general', label: 'Geral', icon: <SettingsIcon size={16} /> },
@@ -222,6 +248,66 @@ const Settings = () => {
 
 
 
+
+  const handleSaveTable = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTableData.name) return;
+
+    if (editingTable) {
+      updateTable({
+        ...editingTable,
+        name: newTableData.name,
+        seats: newTableData.seats,
+        zone: newTableData.zone
+      });
+      addNotification('success', 'Mesa atualizada com sucesso');
+    } else {
+      addTable({
+        id: crypto.randomUUID(),
+        name: newTableData.name,
+        seats: newTableData.seats,
+        zone: newTableData.zone,
+        status: 'AVAILABLE',
+        x: 0,
+        y: 0,
+        activeOrderIds: [],
+        number: tables.length + 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        group_id: null,
+        height: 100,
+        width: 100,
+        is_active: true,
+        label: newTableData.name,
+        rotation: 0,
+        shape: 'RECTANGLE',
+        user_id: null,
+        color: null
+      });
+      addNotification('success', 'Mesa criada com sucesso');
+    }
+    setIsTableModalOpen(false);
+    setEditingTable(null);
+    setNewTableData({ name: '', seats: 4, zone: 'Interior' });
+  };
+
+  const handleDeleteTable = (id: string) => {
+    if (confirm('Tem certeza que deseja remover esta mesa?')) {
+      removeTable(id);
+      addNotification('success', 'Mesa removida com sucesso');
+    }
+  };
+
+  const openTableModal = (table?: any) => {
+    if (table) {
+      setEditingTable(table);
+      setNewTableData({ name: table.name, seats: table.seats, zone: table.zone });
+    } else {
+      setEditingTable(null);
+      setNewTableData({ name: '', seats: 4, zone: 'Interior' });
+    }
+    setIsTableModalOpen(true);
+  };
 
   const handleDownloadManual = async (type: 'TECNICO' | 'UTILIZADOR' | 'ADMIN') => {
     try {
@@ -408,33 +494,33 @@ const Settings = () => {
              let cleanMenu = (Array.isArray(state.products || state.menu) ? (state.products || state.menu) : []) as Product[];
              const validCatIds = new Set(cleanCategories.map((c) => c.id));
              
-             cleanMenu = cleanMenu.map((d) => {
-                 let effectiveCatId = d.category_id;
-             if (d.category_id && idMap.has(d.category_id)) {
-                 effectiveCatId = idMap.get(d.category_id);
+             cleanMenu = cleanMenu.map((d: any) => {
+                 let effectiveCatId = d.categoryId || d.category_id;
+             if (effectiveCatId && idMap.has(effectiveCatId)) {
+                 effectiveCatId = idMap.get(effectiveCatId);
              }
              if (effectiveCatId && validCatIds.has(effectiveCatId)) {
-                 return { ...d, category_id: effectiveCatId };
+                 return { ...d, categoryId: effectiveCatId, category_id: undefined };
              }
-             if ((d as any).categoryName) {
-                 const normalizedCatName = (d as any).categoryName.trim().toLowerCase();
+             if (d.categoryName) {
+                 const normalizedCatName = d.categoryName.trim().toLowerCase();
                  const matchByName = cleanCategories.find((c) =>
                      c.name.trim().toLowerCase() === normalizedCatName
                  );
-                 if (matchByName) return { ...d, category_id: matchByName.id };
+                 if (matchByName) return { ...d, categoryId: matchByName.id, category_id: undefined };
              }
-             return { ...d, category_id: 'uncategorized' };
+             return { ...d, categoryId: 'uncategorized', category_id: undefined };
          });
          
          // 3. Ensure 'uncategorized' exists if needed
-         const hasUncategorizedItems = cleanMenu.some((d) => d.category_id === 'uncategorized');
+         const hasUncategorizedItems = cleanMenu.some((d: any) => d.categoryId === 'uncategorized');
          if (hasUncategorizedItems && !validCatIds.has('uncategorized')) {
              const existingUncategorized = cleanCategories.find(c => {
                  const n = c.name.trim().toLowerCase();
                  return n === 'sem categoria' || n === 'uncategorized' || n === 'outros' || n === 'geral';
              });
              if (existingUncategorized) {
-                    cleanMenu = cleanMenu.map(d => d.category_id === 'uncategorized' ? { ...d, category_id: existingUncategorized.id } : d);
+                    cleanMenu = cleanMenu.map((d: any) => d.categoryId === 'uncategorized' ? { ...d, categoryId: existingUncategorized.id } : d);
                 } else {
                     cleanCategories.push({ 
                         id: 'uncategorized', 
@@ -442,11 +528,11 @@ const Settings = () => {
                         icon: 'Grid3X3', 
                         sortOrder: 999, 
                         isActive: true,
-                        created_at: null,
-                        deleted_at: null,
-                        is_available_on_digital_menu: false,
+                        createdAt: undefined,
+                        deletedAt: undefined,
+                        isAvailableOnDigitalMenu: false,
                         parentId: undefined,
-                        updated_at: null,
+                        updatedAt: undefined,
                         availableOnDigitalMenu: false
                     } as MenuCategory);
                 }
@@ -454,8 +540,8 @@ const Settings = () => {
             
             // 4. PRUNE EMPTY CATEGORIES
             const productCounts = new Map<string, number>();
-            cleanMenu.forEach(d => {
-                const catId = d.category_id || 'uncategorized';
+            cleanMenu.forEach((d: any) => {
+                const catId = d.categoryId || 'uncategorized';
                 const count = productCounts.get(catId) || 0;
                 productCounts.set(catId, count + 1);
             });
@@ -467,11 +553,11 @@ const Settings = () => {
                     icon: 'Grid3X3', 
                     sortOrder: 0, 
                     isActive: true,
-                    created_at: null,
-                    deleted_at: null,
-                    is_available_on_digital_menu: false,
+                    createdAt: undefined,
+                    deletedAt: undefined,
+                    isAvailableOnDigitalMenu: false,
                     parentId: undefined,
-                    updated_at: null,
+                    updatedAt: undefined,
                     availableOnDigitalMenu: false
                 } as MenuCategory);
             }
@@ -494,7 +580,8 @@ const Settings = () => {
                 shifts: state.shifts || state.workShifts || [],
                 payrollRecords: state.payrollRecords || state.payroll || [],
                 settings: state.settings || settings,
-                activeOrders: state.activeOrders || [],
+                activeOrderIds: state.activeOrderIds || [],
+                activeOrders: [], // Will be derived from orders on hydration or next action
                 tables: state.tables || [],
                 users: state.users || [],
                 attendance: state.attendance || [],
@@ -1110,6 +1197,9 @@ const Settings = () => {
                 </div>
              </div>
 
+            {/* CSV/XML Import Section */}
+            <DataImportManager />
+
              {/* Danger Zone */}
              <div className="pt-8 border-t border-white/5">
                 <div className="flex items-center gap-3 mb-8">
@@ -1176,116 +1266,69 @@ const Settings = () => {
         )}
 
 
-        {activeTab === 'system' && activeSystemSubTab === 'cloud' && (
-          <CloudImportPanel />
-        )}
-
-        {activeTab === 'system' && activeSystemSubTab === 'bd' && (
+        {activeTab === 'tables' && (
           <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2.5 bg-purple-500/20 rounded-xl text-purple-500"><Database size={22} /></div>
-                <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Backup & Restauro</h3>
-              </div>
+             <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+                <div className="flex items-center justify-between mb-8">
+                   <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-primary/20 rounded-xl text-primary"><ChefHat size={22} /></div>
+                      <div>
+                          <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Gestão de Mesas</h3>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Configure o layout e capacidade</p>
+                      </div>
+                   </div>
+                   <button 
+                      onClick={() => openTableModal()}
+                      className="px-6 py-3 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest shadow-glow hover:brightness-110 transition-all flex items-center gap-2"
+                   >
+                      <Plus size={16} /> Nova Mesa
+                   </button>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button
-                  onClick={handleBackup}
-                  className="p-6 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-2xl text-left transition-all group"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <DownloadCloud size={24} className="text-blue-400 group-hover:scale-110 transition-transform" />
-                    <Save size={16} className="text-blue-400 opacity-50" />
-                  </div>
-                  <p className="text-xs font-black text-blue-100 uppercase tracking-widest mb-1">Gerar Backup Completo</p>
-                  <p className="text-[10px] text-slate-400">Exporta todos os dados da aplicação (SQL + Local).</p>
-                </button>
-
-                <label className="p-6 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-2xl text-left transition-all group cursor-pointer">
-                  <input type="file" accept=".json" className="hidden" onChange={handleRestore} />
-                  <div className="flex justify-between items-start mb-2">
-                    <UploadCloud size={24} className="text-green-400 group-hover:scale-110 transition-transform" />
-                    <RefreshCw size={16} className="text-green-400 opacity-50" />
-                  </div>
-                  <p className="text-xs font-black text-green-100 uppercase tracking-widest mb-1">Restaurar Backup</p>
-                  <p className="text-[10px] text-slate-400">Importa dados de um ficheiro de backup (.json).</p>
-                </label>
-              </div>
-            </div>
-
-            {/* CSV/XML Import Section */}
-            <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2.5 bg-orange-500/20 rounded-xl text-orange-500"><FileText size={22} /></div>
-                <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Importar Dados (CSV/XML)</h3>
-              </div>
-              <p className="text-sm text-slate-400 mb-4">
-                Importe dados de categorias, produtos e clientes a partir de ficheiros CSV ou XML.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <label className="p-6 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 rounded-2xl text-left transition-all group cursor-pointer">
-                  <input type="file" accept=".csv" className="hidden" onChange={(e) => addNotification('info', 'Funcionalidade de importação CSV em desenvolvimento.')} />
-                  <div className="flex justify-between items-start mb-2">
-                    <FileText size={24} className="text-yellow-400 group-hover:scale-110 transition-transform" />
-                    <Upload size={16} className="text-yellow-400 opacity-50" />
-                  </div>
-                  <p className="text-xs font-black text-yellow-100 uppercase tracking-widest mb-1">Importar CSV</p>
-                  <p className="text-[10px] text-slate-400">Categorias, Produtos, Clientes</p>
-                </label>
-                <label className="p-6 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-2xl text-left transition-all group cursor-pointer">
-                  <input type="file" accept=".xml" className="hidden" onChange={(e) => addNotification('info', 'Funcionalidade de importação XML em desenvolvimento.')} />
-                  <div className="flex justify-between items-start mb-2">
-                    <FileText size={24} className="text-red-400 group-hover:scale-110 transition-transform" />
-                    <Upload size={16} className="text-red-400 opacity-50" />
-                  </div>
-                  <p className="text-xs font-black text-red-100 uppercase tracking-widest mb-1">Importar XML</p>
-                  <p className="text-[10px] text-slate-400">Categorias, Produtos, Clientes</p>
-                </label>
-              </div>
-            </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {tables.map(table => (
+                        <div key={table.id} className="bg-slate-800 p-4 rounded-2xl border border-white/5 relative group hover:border-primary/50 transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="px-2 py-1 bg-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-400">{table.zone}</span>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => openTableModal(table)} className="p-1.5 bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-colors">
+                                        <Edit size={12} />
+                                    </button>
+                                    <button onClick={() => handleDeleteTable(table.id)} className="p-1.5 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors">
+                                        <Trash2 size={12} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="text-center py-2">
+                                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2 text-primary">
+                                    <ChefHat size={24} />
+                                </div>
+                                <h4 className="font-black text-white text-lg">{table.name}</h4>
+                                <p className="text-xs text-slate-500 font-bold">{table.seats} Lugares</p>
+                            </div>
+                        </div>
+                    ))}
+                    
+                    <button 
+                        onClick={() => openTableModal()}
+                        className="bg-slate-800/50 p-4 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary/5 transition-all group min-h-[140px]"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-primary group-hover:text-black transition-colors">
+                            <Plus size={20} />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-primary">Adicionar Mesa</span>
+                    </button>
+                </div>
+             </div>
           </div>
         )}
 
         {activeTab === 'system' && activeSystemSubTab === 'agt' && (
-            <div className="flex flex-col items-center justify-center h-full gap-10 animate-in zoom-in duration-500">
-                <div className="bg-primary/10 border-2 border-primary rounded-[3rem] p-12 flex items-center justify-center">
-                    <ShieldCheck size={80} className="text-primary" />
-                </div>
-                <div className="text-center space-y-4">
-                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Autoridade Geral Tributária (AGT)</h3>
-                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-md">
-                        Gerencie as configurações e integrações com a Autoridade Geral Tributária.
-                    </p>
-                </div>
-                {/* Add AGT specific content or buttons here */}
-                <button 
-                    onClick={() => addNotification('info', 'Funcionalidade AGT em desenvolvimento.')}
-                    className="px-10 py-5 bg-primary text-black rounded-3xl font-black uppercase text-xs tracking-widest flex items-center gap-3 hover:brightness-110 transition-all shadow-glow"
-                >
-                    <ShieldCheck size={20} /> Gerenciar AGT
-                </button>
-            </div>
+            <AgtManager />
         )}
 
         {activeTab === 'system' && activeSystemSubTab === 'dlp' && (
-            <div className="flex flex-col items-center justify-center h-full gap-10 animate-in zoom-in duration-500">
-                <div className="bg-primary/10 border-2 border-primary rounded-[3rem] p-12 flex items-center justify-center">
-                    <Lock size={80} className="text-primary" />
-                </div>
-                <div className="text-center space-y-4">
-                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Prevenção de Perda de Dados (DLP)</h3>
-                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-md">
-                        Configure políticas de prevenção de perda de dados para proteger informações sensíveis.
-                    </p>
-                </div>
-                {/* Add DLP specific content or buttons here */}
-                <button 
-                    onClick={() => addNotification('info', 'Funcionalidade DLP em desenvolvimento.')}
-                    className="px-10 py-5 bg-primary text-black rounded-3xl font-black uppercase text-xs tracking-widest flex items-center gap-3 hover:brightness-110 transition-all shadow-glow"
-                >
-                    <Lock size={20} /> Gerenciar DLP
-                </button>
-            </div>
+            <DlpManager />
         )}
 
         {activeTab === 'system' && activeSystemSubTab === 'users' && (
@@ -1381,31 +1424,13 @@ const Settings = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-slate-900/50 p-6 rounded-[2rem] border border-white/5 space-y-4">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
-                                <Smartphone size={20} />
-                            </div>
-                            <h4 className="font-bold text-white uppercase text-xs tracking-widest">Dispositivos Biométricos</h4>
-                        </div>
-                        <p className="text-xs text-slate-400">Configure leitores de impressão digital ZKTeco para controlo de assiduidade.</p>
-                        <button className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10">
-                            Gerir Dispositivos
-                        </button>
+                <div className="space-y-8">
+                    <div className="bg-slate-900/50 p-6 rounded-[2rem] border border-white/5">
+                        <BiometricManager />
                     </div>
-
-                    <div className="bg-slate-900/50 p-6 rounded-[2rem] border border-white/5 space-y-4">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-purple-500/10 text-purple-500 rounded-lg">
-                                <KeyRound size={20} />
-                            </div>
-                            <h4 className="font-bold text-white uppercase text-xs tracking-widest">API & Webhooks</h4>
-                        </div>
-                        <p className="text-xs text-slate-400">Gere chaves de API para integrações externas e configure webhooks de eventos.</p>
-                        <button className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10">
-                            Configurar API
-                        </button>
+                    
+                    <div className="bg-slate-900/50 p-6 rounded-[2rem] border border-white/5">
+                        <ApiManager />
                     </div>
                 </div>
 
@@ -1908,6 +1933,74 @@ const Settings = () => {
       </div>
 
       {/* Modais */}
+      {isTableModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 w-full max-w-md rounded-3xl border border-white/10 p-6 shadow-2xl animate-in zoom-in duration-300">
+            <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-6">
+              {editingTable ? 'Editar Mesa' : 'Nova Mesa'}
+            </h3>
+            
+            <form onSubmit={handleSaveTable} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nome da Mesa</label>
+                <input 
+                  autoFocus
+                  type="text" 
+                  value={newTableData.name}
+                  onChange={e => setNewTableData({...newTableData, name: e.target.value})}
+                  className="w-full p-4 bg-black/40 border border-white/10 rounded-2xl text-white font-bold focus:border-primary outline-none"
+                  placeholder="Ex: Mesa 1"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Lugares</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    max="20"
+                    value={newTableData.seats}
+                    onChange={e => setNewTableData({...newTableData, seats: Number(e.target.value)})}
+                    className="w-full p-4 bg-black/40 border border-white/10 rounded-2xl text-white font-bold focus:border-primary outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Zona</label>
+                  <select 
+                    value={newTableData.zone}
+                    onChange={e => setNewTableData({...newTableData, zone: e.target.value})}
+                    className="w-full p-4 bg-black/40 border border-white/10 rounded-2xl text-white font-bold focus:border-primary outline-none appearance-none"
+                  >
+                    <option value="Interior" className="bg-slate-900">Interior</option>
+                    <option value="Esplanada" className="bg-slate-900">Esplanada</option>
+                    <option value="Bar" className="bg-slate-900">Bar</option>
+                    <option value="VIP" className="bg-slate-900">VIP</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsTableModalOpen(false)}
+                  className="flex-1 py-4 bg-white/5 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 py-4 bg-primary text-black rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-glow hover:brightness-110 transition-all"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <UserManagementModal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} />
       <QRMenuConfig isOpen={isQRMenuConfigOpen} onClose={() => setIsQRMenuConfigOpen(false)} />
       <RoleManagementModal isOpen={isRoleManagementOpen} onClose={() => setIsRoleManagementOpen(false)} />
