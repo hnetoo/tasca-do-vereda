@@ -39,15 +39,12 @@ const LoginForm = () => {
       return;
     }
 
-    // Strict Role-Based Routing
+    // Strict Role-Based Routing - Now unified to Dashboard for all roles as requested
     const role = (user.role || '').toUpperCase();
-    if (role === 'ADMIN' || role === 'OWNER') {
-      logger.info(`Redirecionando Administrador/Proprietário ${user.name} para Dashboard Admin`, { role });
-      router.push('/admin/owner');
-    } else {
-      logger.info(`Redirecionando Staff ${user.name} para Interface Operacional`, { role });
-      router.push('/dashboard');
-    }
+    
+    // Always redirect to dashboard, regardless of role
+    logger.info(`Redirecionando utilizador ${user.name} para Dashboard Principal`, { role });
+    router.push('/dashboard');
   };
 
   useEffect(() => {
