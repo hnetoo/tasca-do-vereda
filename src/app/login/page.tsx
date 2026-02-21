@@ -32,8 +32,8 @@ const LoginForm = () => {
   const performRedirect = (user: UserType) => {
     const redirectTo = searchParams.get('redirect_to');
     
-    // If there is a specific redirect request, prioritize it (unless it's to login itself)
-    if (redirectTo && redirectTo !== '/login') {
+    // If there is a specific redirect request, prioritize it (unless it's to login itself or root)
+    if (redirectTo && redirectTo !== '/login' && redirectTo !== '/') {
       logger.info(`Redirecionando usuário ${user.name} para rota solicitada: ${redirectTo}`, { role: user.role });
       router.push(redirectTo);
       return;

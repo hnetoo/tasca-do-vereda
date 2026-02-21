@@ -87,7 +87,12 @@ export const createAuthSlice: StateCreator<
       if (user) {
         // Set a cookie for middleware validation (valid for 24 hours)
         if (typeof document !== 'undefined') {
-          document.cookie = `pin_session=true; userId=${user.id}; userRole=${user.role}; path=/; max-age=86400; SameSite=Lax`;
+          const sessionData = JSON.stringify({
+            valid: true,
+            userId: user.id,
+            userRole: user.role
+          });
+          document.cookie = `pin_session=${encodeURIComponent(sessionData)}; path=/; max-age=86400; SameSite=Lax`;
         }
 
         set({ currentUser: user, isAuthenticated: true });
@@ -191,6 +196,16 @@ export const createAuthSlice: StateCreator<
         }
 
         set({ currentUser: appUser, isAuthenticated: true });
+        
+        // Set a cookie for middleware validation (valid for 24 hours)
+        if (typeof document !== 'undefined') {
+          const sessionData = JSON.stringify({
+            valid: true,
+            userId: appUser.id,
+            userRole: appUser.role
+          });
+          document.cookie = `pin_session=${encodeURIComponent(sessionData)}; path=/; max-age=86400; SameSite=Lax`;
+        }
         
         logger.auth(`Login via Password bem-sucedido: ${appUser.name}`, { 
           userId: appUser.id, 

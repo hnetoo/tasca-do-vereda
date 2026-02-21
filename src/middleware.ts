@@ -62,9 +62,13 @@ export async function middleware(request: NextRequest) {
     } else if (hasPinSession) {
       const pinSessionCookie = request.cookies.get('pin_session');
       if (pinSessionCookie) {
-        const roleMatch = /userRole=([^;]+)/.exec(pinSessionCookie.value);
-        if (roleMatch && roleMatch[1]) {
-          userRole = roleMatch[1].toUpperCase();
+        try {
+          const session = JSON.parse(decodeURIComponent(pinSessionCookie.value));
+          if (session && session.userRole) {
+            userRole = session.userRole.toUpperCase();
+          }
+        } catch (e) {
+          // Fallback/Ignore invalid JSON
         }
       }
     }
@@ -87,9 +91,13 @@ export async function middleware(request: NextRequest) {
     } else if (hasPinSession) {
       const pinSessionCookie = request.cookies.get('pin_session');
       if (pinSessionCookie) {
-        const roleMatch = /userRole=([^;]+)/.exec(pinSessionCookie.value);
-        if (roleMatch && roleMatch[1]) {
-          authenticatedRole = roleMatch[1].toUpperCase();
+        try {
+          const session = JSON.parse(decodeURIComponent(pinSessionCookie.value));
+          if (session && session.userRole) {
+            authenticatedRole = session.userRole.toUpperCase();
+          }
+        } catch (e) {
+          // Fallback/Ignore invalid JSON
         }
       }
     }
