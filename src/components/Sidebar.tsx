@@ -36,7 +36,10 @@ import {
   Cloud, // Adicionado para o submenu Nuvem.db
   Truck,
   Menu,
-  X
+  X,
+  Tags,
+  Package,
+  Shield
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { SystemSettings } from '@/types';
@@ -45,13 +48,23 @@ interface MenuItem {
   path: string;
   icon: React.ReactNode;
   label: string;
+  subItems?: MenuItem[];
 }
 
 const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   const pathname = usePathname();
   const { logout, settings, isMobileMenuOpen, toggleMobileMenu } = useStore();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
-  const isActive = (path: string) => pathname === path;
+  const toggleExpanded = (path: string) => {
+    setExpandedItems(prev => 
+      prev.includes(path) 
+        ? prev.filter(p => p !== path) 
+        : [...prev, path]
+    );
+  };
+
+  const isActive = (path: string) => pathname === path || (path !== '/' && pathname.startsWith(path + '/'));
 
   const ownerMenuItems: MenuItem[] = [
     { path: '/admin/owner', icon: <LayoutGrid size={24} />, label: 'Dashboard' },
@@ -64,7 +77,19 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
 
   const generalMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
-
+    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
+    { path: '/products', icon: <Package size={24} />, label: 'Produtos' },
+    { path: '/categories', icon: <Tags size={24} />, label: 'Categorias' },
+    { 
+      path: '/sistema', 
+      icon: <Monitor size={24} />, 
+      label: 'Sistema',
+      subItems: [
+        { path: '/sistema/dlp-recovery', icon: <Shield size={20} />, label: 'DLP Recovery' },
+        { path: '/sistema/agt', icon: <Activity size={20} />, label: 'AGT' },
+        { path: '/sistema/nuvem-db', icon: <Cloud size={20} />, label: 'Nuvem.db' },
+      ]
+    },
     { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
 
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
@@ -75,7 +100,6 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/employees', icon: <Users size={24} />, label: 'Gestão de Staff' },
     { path: '/schedules', icon: <CalendarCheck size={24} />, label: 'Escalas' },
     { path: '/inventory', icon: <Warehouse size={24} />, label: 'Inventário' },
-    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
     { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
     { path: '/customers', icon: <Users size={24} />, label: 'Clientes' },
     { path: '/reservations', icon: <Calendar size={24} />, label: 'Reservas' },
@@ -141,14 +165,59 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
           <ul className="space-y-1 px-2">
             {menuItems.map((item) => {
               const active = isActive(item.path);
+              const expanded = expandedItems.includes(item.path);
 
               return (
                 <li key={item.path}>
+                  {item.subItems ? (
+                    <>
+                      <button
+                        onClick={() => toggleExpanded(item.path)}
+                        className={`flex items-center justify-between w-full gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                          active 
+                            ? 'bg-gradient-to-br from-slate-100 to-slate-300 text-slate-900 shadow-md transform scale-[1.02]' 
+                            : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {item.icon}
+                          {(showSidebar || isMobileMenuOpen) && <span>{item.label}</span>}
+                        </div>
+                        {(showSidebar || isMobileMenuOpen) && (
+                          expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+                        )}
+                      </button>
+
+                      {(showSidebar || isMobileMenuOpen) && expanded && (
+                        <ul className="mt-1 ml-4 space-y-1 border-l border-slate-700 pl-2">
+                          {item.subItems.map((sub) => {
+                            const subActive = isActive(sub.path);
+                            return (
+                              <li key={sub.path}>
+                                <Link
+                                  href={sub.path}
+                                  className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                                    subActive
+                                      ? 'text-white bg-white/10'
+                                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                  }`}
+                                  onClick={() => isMobileMenuOpen && toggleMobileMenu()}
+                                >
+                                  {sub.icon}
+                                  <span>{sub.label}</span>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
                     <Link 
                       href={item.path}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                         active 
-                          ? 'bg-gradient-to-r from-gray-700 to-gray-600 text-white shadow-md transform scale-[1.02] border border-gray-600' 
+                          ? 'bg-gradient-to-br from-slate-100 to-slate-300 text-slate-900 shadow-md transform scale-[1.02]' 
                           : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
                       }`}
                       onClick={() => isMobileMenuOpen && toggleMobileMenu()}
@@ -156,6 +225,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
                       {item.icon}
                       {(showSidebar || isMobileMenuOpen) && <span>{item.label}</span>}
                     </Link>
+                  )}
                 </li>
               );
             })}
