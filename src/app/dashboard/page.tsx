@@ -78,14 +78,14 @@ const Dashboard = () => {
 
         if (error || (!user && !hasPinSession)) {
           console.error('Session validation failed:', error);
-          await logout();
+          // User requested removal of logout()
           router.replace('/login');
           return;
         }
         setIsLoadingSession(false);
       } catch (error) {
         console.error('Error checking session:', error);
-        await logout();
+        // User requested removal of logout()
         router.replace('/login');
       }
     };
