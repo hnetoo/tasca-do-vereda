@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   AreaChart, Area, CartesianGrid, PieChart, Pie, Cell, Legend
@@ -17,8 +17,17 @@ import { format, differenceInMinutes, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatAOA } from '@/utils/format';
 import { useStore } from '@/store/useStore';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '@/store/slices/authSlice';
 import KPICard from '@/components/KPICard';
-import { Order, Transaction, PaymentMethod } from '@/types';
+
+import { Order, Transaction, PaymentMethod, User } from '@/types';
+
+interface RealtimePostgresPayload<T> {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new: T;
+  old: T;
+}
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -28,15 +37,18 @@ export default function OwnerDashboard() {
   const [yesterdaySales, setYesterdaySales] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { employees, tables, currentUser, logout } = useStore(); 
+  const { employees, tables } = useStore(); 
+  const user = useSelector((state: any) => state.auth.user) as User | null;
+  const dispatch = useDispatch();
+  const supabase = createClient();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
   // Auth Check
   useEffect(() => {
     // Only proceed if store is initialized or we have a user
-    if (currentUser) {
-        const role = (currentUser.role || '').toUpperCase();
+    if (user) {
+        const role = (user.role || '').toUpperCase();
         if (role === 'OWNER' || role === 'ADMIN') {
             setIsAuthorized(true);
         } else {
@@ -46,7 +58,7 @@ export default function OwnerDashboard() {
         setIsAuthorized(false);
     }
     setAuthChecked(true);
-  }, [currentUser]);
+  }, [user]);
 
   // Initial Fetch
   useEffect(() => {
@@ -77,8 +89,8 @@ export default function OwnerDashboard() {
         // Calculate Yesterday Sales
         if (yesterdayData) {
             const total = yesterdayData
-                .filter(o => o.status === 'FECHADO' || o.status === 'PAID')
-                .reduce((acc, o) => acc + Number(o.total || 0), 0);
+                .filter((o: Order) => o.status === 'FECHADO' || o.status === 'PAID')
+                .reduce((acc: number, o: Order) => acc + Number(o.total || 0), 0);
             setYesterdaySales(total);
         }
 
@@ -103,7 +115,7 @@ export default function OwnerDashboard() {
     // Realtime Subscriptions
     const ordersChannel = supabase
       .channel('owner-dashboard-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
           setOrders(prev => [payload.new as Order, ...prev]);
         } else if (payload.eventType === 'UPDATE') {
@@ -114,7 +126,7 @@ export default function OwnerDashboard() {
 
     const transactionsChannel = supabase
       .channel('owner-dashboard-transactions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
           setTransactions(prev => [payload.new as Transaction, ...prev]);
         }
@@ -241,16 +253,16 @@ export default function OwnerDashboard() {
 
   // If not authorized, redirect to login
   if (authChecked && !isAuthorized) {
-    if (currentUser) {
+    if (user) {
         // User is logged in but not authorized
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
                 <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl text-center">
                     <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                     <h1 className="text-2xl font-bold text-white mb-2">Acesso Negado</h1>
-                    <p className="text-slate-400 mb-6">O utilizador {currentUser.name} ({currentUser.role}) não tem permissão para aceder a esta área.</p>
+                    <p className="text-slate-400 mb-6">O utilizador {user.name} ({user.role}) não tem permissão para aceder a esta área.</p>
                     <button 
-                        onClick={async () => { await logout(); window.location.href = '/admin/owner/login'; }}
+                        onClick={async () => { dispatch(logout()); router.push('/admin/owner/login'); }}
                         className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition-colors w-full"
                     >
                         Terminar Sessão

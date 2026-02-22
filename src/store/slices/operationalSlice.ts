@@ -106,7 +106,6 @@ export const createOperationalSlice: StateCreator<
         action: 'PAYMENT_RECEIVED',
         details: { customerId, amount, newBalance },
         timestamp: new Date().toISOString(),
-        userId: state.currentUser?.id || 'system'
       });
     }
   },
@@ -171,8 +170,16 @@ export const createOperationalSlice: StateCreator<
   updateTableStatus: (id: string, status: string) => {
     const table = get().tables.find((t: Table) => t.id === id);
     if (table) {
+      const oldStatus = table.status;
       const updatedTable = { ...table, status };
       get().updateTable(updatedTable);
+      
+      get().addAuditLog({
+        action: 'TABLE_STATUS_CHANGE',
+        details: `Mesa ${table.label || table.id} alterada de ${oldStatus} para ${status}`,
+        metadata: { tableId: id, oldStatus, newStatus: status },
+        userId: (get() as any).currentUser?.id
+      });
     }
   },
   
@@ -307,6 +314,13 @@ export const createOperationalSlice: StateCreator<
       }),
       activeTableId: toTableId
     }));
+
+    get().addAuditLog({
+      action: 'TABLE_TRANSFER',
+      details: `Transferência da mesa ${fromTableId} para ${toTableId}`,
+      metadata: { fromTableId, toTableId },
+      userId: (state as any).currentUser?.id
+    });
     
     // Move orders
     // We need to access orders from FinanceSlice part of state
@@ -342,7 +356,6 @@ export const createOperationalSlice: StateCreator<
       action: 'DELIVERY_ADD',
       details: `Entrega adicionada para o pedido: ${delivery.orderId}`,
       metadata: { deliveryId: delivery.id },
-      userId: get().currentUser?.id
     });
   },
 
@@ -354,7 +367,6 @@ export const createOperationalSlice: StateCreator<
       action: 'DELIVERY_UPDATE',
       details: `Entrega atualizada: ${delivery.id}`,
       metadata: { deliveryId: delivery.id, status: delivery.status },
-      userId: get().currentUser?.id
     });
   },
 
@@ -366,7 +378,6 @@ export const createOperationalSlice: StateCreator<
       action: 'DELIVERY_REMOVE',
       details: `Entrega removida: ${id}`,
       metadata: { deliveryId: id },
-      userId: get().currentUser?.id
     });
   },
 

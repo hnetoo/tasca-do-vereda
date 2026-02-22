@@ -4,14 +4,16 @@ import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { listen } from '@tauri-apps/api/event';
 import { useStore } from '@/store/useStore';
+import { useSelector } from 'react-redux';
 import { ChefHat, ShoppingBasket, Sparkles, CheckCircle2 } from 'lucide-react';
-import { CustomerDisplayEvent, Order, Dish, Table, OrderItem } from '@/types';
+import { CustomerDisplayEvent, Order, Dish, Table, OrderItem, User } from '@/types';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 
 const CustomerDisplayContent = () => {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('tableId');
-  const { activeOrders, dishes: menu, settings, tables, addNotification, currentUser } = useStore();
+  const { activeOrders, dishes: menu, settings, tables, addNotification } = useStore();
+  const user = useSelector((state: any) => state.auth.user) as User | null;
   const [imageErrorMap, setImageErrorMap] = useState<Record<string, boolean>>({});
   const [logoError, setLogoError] = useState(false);
   const [promoIndex, setPromoIndex] = useState(0);
@@ -41,7 +43,7 @@ const CustomerDisplayContent = () => {
   useRealtimeSync(
     'orders',
     handleOrderRealtimeUpdate,
-    (tableId && currentUser?.id) ? { column: 'userId', value: currentUser.id } : undefined
+    (tableId && user?.id) ? { column: 'userId', value: user.id } : undefined
   );
 
   const renderLogo = (className: string, size: number) => (

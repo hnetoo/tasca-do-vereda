@@ -1,47 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { useStore } from '@/store/useStore';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUserSession, logout } from '@/store/slices/authSlice';
+import { RootState } from '@/store/reduxStore';
 import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
-  const { setUserSession, logout } = useStore();
-  const [isChecking, setIsChecking] = useState(true);
+  const dispatch = useDispatch();
+  const user = useSelector((state: RootState) => state.auth.user);
+
 
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const supabase = createClient();
-        // getUser valida o token no servidor, getSession pode usar cache inseguro
-        const { data: { user }, error } = await supabase.auth.getUser();
+    const supabase = createClient();
 
-        // Check for PIN session cookie as fallback
-        const hasPinSession = typeof document !== 'undefined' && 
-          document.cookie.split(';').some((item) => item.trim().startsWith('pin_session='));
+    const checkUser = async () => {
+      const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
 
-        if (user) {
-          // Sync with store if needed
-          setUserSession(user);
-          router.replace('/dashboard');
-        } else if (hasPinSession) {
-          // Valid PIN session found
+      if (supabaseUser) {
+        dispatch(setUserSession(supabaseUser));
+        router.replace('/dashboard');
+      } else if (error) {
+        console.error('Error fetching user:', error);
+        dispatch(logout());
+        router.replace('/login');
+      } else {
+        // Check for PIN session cookie
+        const pinSessionCookie = document.cookie.split('; ').find(row => row.startsWith('pin_session='));
+        if (pinSessionCookie) {
           router.replace('/dashboard');
         } else {
-          // No session found or error
-          if (error) console.error('Session check failed:', error);
           router.replace('/login');
         }
-      } catch (error) {
-        console.error('Error checking session:', error);
-        router.replace('/login');
       }
+
     };
 
-    checkSession();
-  }, [router, setUserSession]);
+    checkUser();
+  }, [dispatch, router]);
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-50">

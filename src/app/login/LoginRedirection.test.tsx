@@ -16,7 +16,7 @@ jest.mock('@/store/useStore', () => ({
 
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: any) => <img {...props} />,
+  default: (props: any) => <img alt="" {...props} />,
 }));
 
 jest.mock('@/services/cryptoService', () => ({

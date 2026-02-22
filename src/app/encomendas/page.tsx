@@ -289,7 +289,7 @@ const NewOrderInterface = ({ dishes }: { dishes: Dish[] }) => {
               <div key={`${item.id}-${idx}`} className="flex justify-between items-center bg-slate-900 p-3 rounded-lg border border-white/5 animate-in slide-in-from-right-10 fade-in duration-300">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded bg-slate-800 overflow-hidden">
-                    {item.imageUrl && <img src={item.imageUrl} className="w-full h-full object-cover" />}
+                    {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />}
                   </div>
                   <div>
                     <p className="text-sm font-bold truncate w-32">{item.name}</p>

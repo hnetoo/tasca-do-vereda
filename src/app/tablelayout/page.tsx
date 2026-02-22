@@ -2,6 +2,7 @@
 
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { useStore } from '@/store/useStore';
 import { 
   LayoutGrid, Plus, MousePointer2, Move, Trash2, Users, 
@@ -15,8 +16,9 @@ import { MOCK_TABLES } from '@/constants';
 const TableLayout = () => {
   const { 
     tables, addTable, updateTable, removeTable, updateTableStatus, 
-    addNotification, currentUser, activeOrders, saveStatus 
+    addNotification, activeOrders, saveStatus 
   } = useStore();
+  const user = useSelector((state: any) => state.auth.user);
   const [isEditMode, setIsEditMode] = useState(false);
   const [draggedTableId, setDraggedTableId] = useState<string | null>(null);
   const [dragOverPos, setDragOverPos] = useState<{x: number, y: number} | null>(null);
@@ -29,7 +31,7 @@ const TableLayout = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const isAdmin = currentUser?.role === 'ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'OWNER';
 
     useEffect(() => {
         if (isAdmin && tables.length === 0) {

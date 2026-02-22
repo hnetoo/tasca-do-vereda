@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectUser } from '@/store/slices/authSlice';
 import {
   Search, Minus, Plus, CreditCard, LayoutGrid, Printer,
   Banknote, X, Lock, MonitorPlay, UserPlus,
@@ -35,9 +37,10 @@ const POS = () => {
     createNewOrder, addToOrder, removeFromOrder, 
     checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
     settings, addNotification,
-    currentShiftId, openShift, toggleMobileMenu, currentUser,
+    currentShiftId, openShift, toggleMobileMenu,
     addTable, auditLogs
   } = useStore();
+  const user = useSelector(selectUser);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
@@ -171,7 +174,7 @@ const POS = () => {
        // Now add to order
        // Pass specificOrderId to avoid race conditions
        if (targetOrderId) {
-         addToOrder(targetTableId!, product, 1, '', targetOrderId!);
+         addToOrder(targetTableId!, product, 1, '', targetOrderId!, user?.id);
        }
     }
   };
@@ -513,7 +516,7 @@ const POS = () => {
     <div class="footer">
       <p>${settings.regimeIVA}</p>
       <p>Obrigado pela sua preferência!</p>
-      <p>Processado por Computador - Operador: ${currentUser?.name || 'Sistema'}</p>
+      <p>Processado por Computador - Operador: ${user?.name || 'Sistema'}</p>
     </div>
   </div>
   <script>
@@ -690,7 +693,7 @@ const POS = () => {
     <div class="footer-info">
       Software Certificado nº ${settings.agtCertificate}<br>
       <strong>${order.hash?.substring(0, 4) || 'SIM'}-Processado por Computador</strong><br>
-      Operador: ${currentUser?.name || 'Sistema'}<br>
+      Operador: ${user?.name || 'Sistema'}<br>
       <br>
       * Obrigado pela preferência e volte sempre *
       ${settings.openDrawerCode ? `<div style="opacity: 0.01; font-size: 1px;">${settings.openDrawerCode}</div>` : ''}
@@ -762,7 +765,7 @@ const POS = () => {
       <div class="bold uppercase">${settings.restaurantName}</div>
       <div>RELATÓRIO DE FECHO DE CAIXA</div>
       <div>${dateStr} - ${timeStr}</div>
-      <div>Operador: ${currentUser?.name || 'Sistema'}</div>
+      <div>Operador: ${user?.name || 'Sistema'}</div>
     </div>
 
     <div class="section-header">VENDAS POR PAGAMENTO</div>
@@ -880,7 +883,7 @@ const POS = () => {
       }
 
       const normalizedNif = customerNif.trim();
-      checkoutTable(activeOrderId, currentPayments, undefined, normalizedNif || undefined);
+      checkoutTable(activeOrderId, currentPayments, undefined, normalizedNif || undefined, user?.id);
       
       const finalOrder: Order = { 
         ...currentOrder, 
@@ -918,7 +921,7 @@ const POS = () => {
 
       setIsCorrecting(true);
       try {
-        const success = await useStore.getState().correctPayment(correctionOrderId, currentPayments, correctionReason);
+        const success = await useStore.getState().correctPayment(correctionOrderId, currentPayments, correctionReason, user);
         if (success) {
           setIsCorrectionModalOpen(false);
           setCorrectionOrderId(null);
@@ -953,10 +956,9 @@ const POS = () => {
 
   const handleCloseShift = () => {
     // Verificar permissão
-    const { currentUser } = useStore.getState();
-    const canClose = currentUser && (
-      currentUser.role === 'ADMIN' || 
-      (currentUser.permissions?.includes('CLOSE_SHIFT'))
+    const canClose = user && (
+      user.role === 'ADMIN' || 
+      ((user as any).permissions?.includes('CLOSE_SHIFT'))
     );
 
     if (!canClose) {
@@ -1383,12 +1385,12 @@ const POS = () => {
                                     <span className="text-[10px] font-mono font-bold text-primary/80">{formatKz((dish.price || 0) * (item.quantity || 0))}</span>
                                     <div className="flex items-center gap-2">
                                       <div className="flex items-center gap-3 bg-black/40 p-1 rounded-lg">
-                                          <button onClick={() => activeTableId && addToOrder(activeTableId, dish, -1, '', currentOrder.id!)} className="w-6 h-6 rounded-md bg-white/5 text-slate-400 flex items-center justify-center hover:bg-white/10"><Minus size={12}/></button>
+                                          <button onClick={() => activeTableId && addToOrder(activeTableId, dish, -1, '', currentOrder.id!, user?.id)} className="w-6 h-6 rounded-md bg-white/5 text-slate-400 flex items-center justify-center hover:bg-white/10"><Minus size={12}/></button>
                                           <span className="text-[10px] font-black text-white w-4 text-center">{item.quantity || 0}</span>
-                                          <button onClick={() => activeTableId && addToOrder(activeTableId, dish, 1, '', currentOrder.id!)} className="w-6 h-6 rounded-md bg-primary text-black flex items-center justify-center"><Plus size={12}/></button>
+                                          <button onClick={() => activeTableId && addToOrder(activeTableId, dish, 1, '', currentOrder.id!, user?.id)} className="w-6 h-6 rounded-md bg-primary text-black flex items-center justify-center"><Plus size={12}/></button>
                                       </div>
                                       <button 
-                                        onClick={() => removeFromOrder(currentOrder.id!, idx)} 
+                                        onClick={() => removeFromOrder(currentOrder.id!, idx, user?.id)} 
                                         className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all"
                                         title="Remover Item"
                                       >
