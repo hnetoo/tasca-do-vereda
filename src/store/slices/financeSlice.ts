@@ -10,6 +10,7 @@ import {
   correctPaymentAction, 
   saveShiftsAction 
 } from '@/app/actions/finance';
+import { saveOrderAction } from '@/app/actions/operational';
 
 export interface FinanceSlice {
   orders: Order[];
@@ -835,6 +836,9 @@ export const createFinanceSlice: StateCreator<
 
     get().updateOrder(updatedOrder);
     
+    // Persist to Supabase
+    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync added item', err));
+    
     get().addAuditLog({
         action: 'ORDER_ITEM_ADD',
         details: `Item adicionado: ${dish.name} x${quantity}`,
@@ -893,6 +897,9 @@ export const createFinanceSlice: StateCreator<
      // Let's assume we keep it in activeOrders but status CLOSED until shift close clears it.
      
      get().updateOrder(updatedOrder);
+
+     // Persist to Supabase
+     await saveOrderAction(updatedOrder);
      
      // Add revenue
      payments.forEach(p => {
@@ -932,6 +939,8 @@ export const createFinanceSlice: StateCreator<
         updatedAt: new Date().toISOString()
     };
     get().updateOrder(updatedOrder);
+    // Persist to Supabase
+    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync fired order', err));
   },
 
   updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => {
@@ -950,6 +959,9 @@ export const createFinanceSlice: StateCreator<
         updatedAt: new Date().toISOString()
     };
     get().updateOrder(updatedOrder);
+    
+    // Persist to Supabase
+    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync item status', err));
   },
 
   markOrderAsServed: (orderId: string) => {
@@ -965,6 +977,9 @@ export const createFinanceSlice: StateCreator<
         updatedAt: new Date().toISOString()
     };
     get().updateOrder(updatedOrder);
+
+    // Persist to Supabase
+    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync served order', err));
   },
 
   clearDraftOrder: (orderId: UUID) => {

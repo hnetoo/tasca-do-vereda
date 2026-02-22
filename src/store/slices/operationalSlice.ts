@@ -11,7 +11,8 @@ import {
   deleteStockItemAction,
   saveDeliveryAction,
   deleteDeliveryAction,
-  getTablesAction
+  getTablesAction,
+  saveOrderAction
 } from '@/app/actions/operational';
 import { logger } from '../../services/logger';
 import { generateUUID } from '../../utils/uuid';
@@ -291,6 +292,15 @@ export const createOperationalSlice: StateCreator<
     
     if ('addOrder' in get()) {
       (get() as any).addOrder(newOrder);
+      
+      // Persist to Supabase
+      saveOrderAction(newOrder).then(res => {
+        if (!res.success) {
+           logger.error('Failed to persist new order', { id: orderId, error: res.error }, 'OPERATIONAL');
+        }
+      }).catch(err => {
+         logger.error('Exception persisting new order', { id: orderId, error: err }, 'OPERATIONAL');
+      });
     }
     
     return orderId;
