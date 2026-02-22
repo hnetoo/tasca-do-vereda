@@ -44,13 +44,28 @@ const LoginPage: React.FC = () => {
   const { isAuthenticated, loading, error } = useSelector(
     (state: RootState) => state.auth
   );
+  
+  // Track if we are in the process of logging in
+  const isLoggingIn = React.useRef(false);
 
   useEffect(() => {
-    dispatch(resetAuthStatus()); // Resetar o estado de autenticação ao montar o componente
-  }, [dispatch]);
+    // If we mount and are authenticated, it's likely stale state or manual navigation.
+    // We should clear it to allow login.
+    if (isAuthenticated && !isLoggingIn.current) {
+        console.warn('LoginPage: Found authenticated state on mount. Clearing.');
+        dispatch(resetAuthStatus());
+    }
+  }, [dispatch, isAuthenticated]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Only redirect if we are authenticated AND it was a result of a login action (or we decide to trust it)
+    // But since we clear on mount, this will only trigger if isAuthenticated becomes true LATER (i.e. after login)
+    // UNLESS the race condition still happens.
+    
+    // Better logic: Only redirect if isLoggingIn.current is true?
+    // But isLoggingIn is a ref, doesn't trigger effect.
+    
+    if (isAuthenticated && isLoggingIn.current) {
       router.push('/');
     }
   }, [isAuthenticated, router]);
@@ -58,6 +73,7 @@ const LoginPage: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedRole) {
+      isLoggingIn.current = true;
       dispatch(loginWithPin({ pin, role: selectedRole }));
     }
   };
