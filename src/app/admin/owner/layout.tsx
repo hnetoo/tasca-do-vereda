@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useStore } from '@/store/useStore';
 import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch } from '@/store/reduxStore';
 import { logoutUser, selectUser } from '@/store/slices/authSlice';
 import { Loader2 } from 'lucide-react';
 
@@ -15,7 +16,7 @@ export default function OwnerLayout({
 }) {
   const router = useRouter();
   const zustandStore = useStore(); // Keep useStore for other state if needed
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const user = useSelector(selectUser);
   const [isLoading, setIsLoading] = useState(true);
 

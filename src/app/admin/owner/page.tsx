@@ -18,6 +18,7 @@ import { pt } from 'date-fns/locale';
 import { formatAOA } from '@/utils/format';
 import { useStore } from '@/store/useStore';
 import { useSelector, useDispatch } from 'react-redux';
+import { AppDispatch } from '@/store/reduxStore';
 import { logoutUser } from '@/store/slices/authSlice';
 import KPICard from '@/components/KPICard';
 
@@ -47,7 +48,7 @@ export default function OwnerDashboard() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { employees, tables } = useStore(); 
   const user = useSelector((state: any) => state.auth.user) as User | null;
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const supabase = createClient();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [showUpdateIndicator, setShowUpdateIndicator] = useState(false);
