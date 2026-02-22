@@ -6,6 +6,9 @@ import Sidebar from '@/components/Sidebar';
 import SmartAlertsPanel from '@/components/SmartAlertsPanel';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { useAuth } from '@/hooks/useAuth'; // Importar o hook useAuth do Redux
+import { supabase } from '@/lib/supabase';
+import { useDispatch } from 'react-redux';
+import { logout } from '@/store/slices/authSlice';
 
 const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu'];
 const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu', '/admin/owner'];
@@ -14,9 +17,24 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth(); // Usar o hook useAuth do Redux
+  const dispatch = useDispatch();
 
   // Considerar a aplicação inicializada quando o estado de autenticação não está mais a carregar
   const isInitialized = !loading;
+
+  useEffect(() => {
+    const validateSession = async () => {
+      if (isAuthenticated && !loading) {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          console.warn('AppShell: Redux says authenticated but Supabase session is invalid. Logging out.');
+          dispatch(logout());
+          router.replace('/login');
+        }
+      }
+    };
+    validateSession();
+  }, [isAuthenticated, loading, dispatch, router]);
 
   const isPublicRoute = useMemo(
     () => publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)),
