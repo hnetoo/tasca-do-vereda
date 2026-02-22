@@ -11,7 +11,7 @@ import {
 import { 
   DollarSign, TrendingUp, Users, Clock, 
   Utensils, Wallet, Banknote, TrendingDown, Layers, Activity, Wifi,
-  Lock, Mail, AlertTriangle, Loader2
+  Lock, Mail, AlertTriangle, Loader2, RefreshCw
 } from 'lucide-react';
 import { format, differenceInMinutes, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -61,56 +61,61 @@ export default function OwnerDashboard() {
   }, [user]);
 
   // Initial Fetch
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      // Fetch Orders (Today)
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .gte('created_at', today.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (ordersError) throw ordersError;
+
+      // Fetch Orders (Yesterday) for trend
+      const { data: yesterdayData } = await supabase
+        .from('orders')
+        .select('total, status')
+        .gte('created_at', yesterday.toISOString())
+        .lt('created_at', today.toISOString());
+
+      // Calculate Yesterday Sales
+      if (yesterdayData) {
+          const total = yesterdayData
+              .filter((o: Order) => o.status === 'FECHADO' || o.status === 'PAID')
+              .reduce((acc: number, o: Order) => acc + Number(o.total || 0), 0);
+          setYesterdaySales(total);
+      }
+
+      // Fetch Transactions
+      const { data: transData, error: transError } = await supabase
+        .from('transactions')
+        .select('*')
+        .gte('created_at', today.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (transError) throw transError;
+
+      if (ordersData) setOrders(ordersData);
+      if (transData) setTransactions(transData);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthorized) return; // Don't fetch if not authorized
 
-    const fetchData = async () => {
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        // Fetch Orders (Today)
-        const { data: ordersData } = await supabase
-          .from('orders')
-          .select('*')
-          .gte('created_at', today.toISOString())
-          .order('created_at', { ascending: false });
-
-        // Fetch Orders (Yesterday) for trend
-        const { data: yesterdayData } = await supabase
-          .from('orders')
-          .select('total, status')
-          .gte('created_at', yesterday.toISOString())
-          .lt('created_at', today.toISOString());
-
-        // Calculate Yesterday Sales
-        if (yesterdayData) {
-            const total = yesterdayData
-                .filter((o: Order) => o.status === 'FECHADO' || o.status === 'PAID')
-                .reduce((acc: number, o: Order) => acc + Number(o.total || 0), 0);
-            setYesterdaySales(total);
-        }
-
-        // Fetch Transactions
-        const { data: transData } = await supabase
-          .from('transactions')
-          .select('*')
-          .gte('created_at', today.toISOString())
-          .order('created_at', { ascending: false });
-
-        if (ordersData) setOrders(ordersData);
-        if (transData) setTransactions(transData);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchDashboardData();
 
     // Realtime Subscriptions
     const ordersChannel = supabase
@@ -340,8 +345,13 @@ export default function OwnerDashboard() {
               </span>
               <span className="text-xs text-slate-500">{format(new Date(), 'HH:mm:ss')}</span>
             </div>
-            <button className="p-2 bg-slate-900 rounded-lg border border-slate-800 text-blue-400 hover:bg-slate-800">
-              <Activity size={18} />
+            <button 
+              onClick={fetchDashboardData}
+              className="p-2 bg-slate-900 rounded-lg border border-slate-800 text-blue-400 hover:bg-slate-800 transition-colors relative"
+              title="Forçar atualização de dados"
+              disabled={isLoading}
+            >
+              <RefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
