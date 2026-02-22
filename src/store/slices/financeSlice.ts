@@ -867,6 +867,9 @@ export const createFinanceSlice: StateCreator<
 
     get().updateOrder(updatedOrder);
 
+    // Persist to Supabase
+    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync removed item', err));
+
     get().addAuditLog({
         action: 'ORDER_ITEM_REMOVE',
         details: `Item removido do pedido ${orderId}`,
