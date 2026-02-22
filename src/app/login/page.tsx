@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
 import { useStore } from '@/store/useStore';
 import { ChefHat, Delete, User, Shield, Wallet, Utensils, ArrowLeft, ChevronRight, Lock, Save, Key, Mail, Eye, EyeOff } from 'lucide-react';
 import { User as UserType } from '@/types';
