@@ -6,7 +6,7 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        persistSession: false, // Desativa a persistência de sessão do Supabase para evitar conflito com redux-persist
+        persistSession: true, // Re-enable session persistence to ensure data fetching works
       },
     }
   )
