@@ -15,9 +15,9 @@ export default function Home() {
     if (redirected.current) return;
     redirected.current = true;
     if (isAuthenticated) {
-      router.replace('/dashboard');
+      window.location.replace('/dashboard');
     } else {
-      router.replace('/login');
+      window.location.replace('/login');
     }
   }, []);
 

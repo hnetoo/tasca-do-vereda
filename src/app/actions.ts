@@ -89,14 +89,20 @@ export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]
 
 export async function saveCategoryAction(category: MenuCategory): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    // Uses admin operations to bypass RLS/Auth issues
     const result = await adminOperations.saveCategory(category);
-    if (!result.success) {
-      const errorToLog = { message: result.error || 'Operation returned false' };
-      logger.error('Failed to save category via server action', { error: errorToLog }, 'SERVER_ACTION');
-      return { success: false, error: errorToLog };
+    if (result.success) {
+      return { success: true };
     }
-    return { success: true };
+
+    logger.warn('Admin saveCategory failed, falling back to direct SQL', { error: result.error }, 'SERVER_ACTION');
+    const directResult = await directOperations.saveCategory(category);
+    if (directResult.success) {
+      return { success: true };
+    }
+
+    const errorToLog = { message: result.error || directResult.error || 'Operation returned false' };
+    logger.error('Failed to save category via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception saving category via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -123,14 +129,22 @@ export async function deleteCategoryAction(id: UUID): Promise<{ success: boolean
 
 export async function saveDishAction(dish: Dish): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    // Uses admin operations to bypass RLS/Auth issues
+    // 1. Try admin operations (Supabase Service Role)
     const result = await adminOperations.saveDish(dish);
-    if (!result.success) {
-      const errorToLog = { message: result.error || 'Operation returned false' };
-      logger.error('Failed to save dish via server action', { error: errorToLog }, 'SERVER_ACTION');
-      return { success: false, error: errorToLog };
+    if (result.success) {
+      return { success: true };
     }
-    return { success: true };
+
+    // 2. Fallback to direct operations (Postgres) if admin fails
+    logger.warn('Admin saveDish failed, falling back to direct SQL', { error: result.error }, 'SERVER_ACTION');
+    const directResult = await directOperations.saveDish(dish);
+    if (directResult.success) {
+      return { success: true };
+    }
+
+    const errorToLog = { message: result.error || directResult.error || 'Operation returned false' };
+    logger.error('Failed to save dish via server action (both admin and direct)', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception saving dish via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -140,14 +154,20 @@ export async function saveDishAction(dish: Dish): Promise<{ success: boolean; er
 
 export async function deleteDishAction(id: UUID): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    // Uses admin operations to bypass RLS/Auth issues
     const result = await adminOperations.deleteDish(id);
-    if (!result.success) {
-      const errorToLog = { message: result.error || 'Operation returned false' };
-      logger.error('Failed to delete dish via server action', { error: errorToLog }, 'SERVER_ACTION');
-      return { success: false, error: errorToLog };
+    if (result.success) {
+      return { success: true };
     }
-    return { success: true };
+
+    logger.warn('Admin deleteDish failed, falling back to direct SQL', { error: result.error }, 'SERVER_ACTION');
+    const directResult = await directOperations.deleteDish(id);
+    if (directResult.success) {
+      return { success: true };
+    }
+
+    const errorToLog = { message: result.error || directResult.error || 'Operation returned false' };
+    logger.error('Failed to delete dish via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception deleting dish via server action', { error: errorToLog }, 'SERVER_ACTION');
