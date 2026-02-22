@@ -218,23 +218,28 @@ export default function OwnerDashboard() {
       
       triggerUpdate();
       setConnectionStatus('CONNECTED');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
       setConnectionStatus('DISCONNECTED');
+      // Force connection status to show error if possible, but the UI logic currently only shows Offline.
+      // We could add a toast or alert here for debugging.
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!isAuthorized) return; // Don't fetch if not authorized
+    if (isAuthorized) {
+        fetchDashboardData();
+    }
+  }, [isAuthorized]);
 
-    fetchDashboardData();
+  // Realtime Subscriptions
+  useEffect(() => {
+    if (!isAuthorized) return;
 
-    // Realtime Subscriptions
     const channel = supabase.channel('dashboard-realtime-channel');
-
-    // Orders
+    
     channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload: any) => {
         triggerUpdate();
