@@ -15,23 +15,14 @@ export default function Home() {
     console.log('PAGE: useEffect triggered');
     console.log('PAGE: Current user state:', { user, isAuthenticated });
 
-    if (isAuthenticated || user) {
+    if (isAuthenticated) {
       console.log('PAGE: User authenticated in Redux, redirecting to /dashboard');
       router.replace('/dashboard');
-      return;
-    }
-
-    const pinSessionCookie = document.cookie.split('; ').find(row => row.startsWith('pin_session='));
-    console.log('PAGE: pinSessionCookie found:', !!pinSessionCookie);
-
-    if (pinSessionCookie) {
-      console.log('PAGE: pinSessionCookie found, redirecting to /dashboard');
-      router.replace('/dashboard');
     } else {
-      console.log('PAGE: No user or pinSessionCookie, redirecting to /login');
+      console.log('PAGE: No authenticated user, redirecting to /login');
       router.replace('/login');
     }
-  }, [user, router]);
+  }, [isAuthenticated, router]);
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-50">
