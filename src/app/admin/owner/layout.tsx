@@ -39,7 +39,9 @@ export default function OwnerLayout({
 
         // Verify Role Access (OWNER or ADMIN only)
         let role = '';
-        if (session?.user) {
+        if (user?.role) {
+          role = user.role.toUpperCase();
+        } else if (session?.user) {
           // If Supabase session, check metadata (default to ADMIN if missing, assuming secure backend)
           role = (session.user.user_metadata.role || 'ADMIN').toUpperCase();
         } else if (hasPinSession && pinSessionCookie) {

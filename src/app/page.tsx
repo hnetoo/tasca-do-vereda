@@ -2,45 +2,30 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { useDispatch, useSelector } from 'react-redux';
-import { setUserSession, logout } from '@/store/slices/authSlice';
+import { useSelector } from 'react-redux';
 import { RootState } from '@/store/reduxStore';
 import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
-  const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
 
 
   useEffect(() => {
-    const supabase = createClient();
+    // Check Redux state first (primary source of truth with redux-persist)
+    if (user) {
+      router.replace('/dashboard');
+      return;
+    }
 
-    const checkUser = async () => {
-      const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
-
-      if (supabaseUser) {
-        dispatch(setUserSession(supabaseUser));
-        router.replace('/dashboard');
-      } else if (error) {
-        console.error('Error fetching user:', error);
-        dispatch(logout());
-        router.replace('/login');
-      } else {
-        // Check for PIN session cookie
-        const pinSessionCookie = document.cookie.split('; ').find(row => row.startsWith('pin_session='));
-        if (pinSessionCookie) {
-          router.replace('/dashboard');
-        } else {
-          router.replace('/login');
-        }
-      }
-
-    };
-
-    checkUser();
-  }, [dispatch, router]);
+    // Fallback to cookie check if Redux state is empty (rare case if persist works)
+    const pinSessionCookie = document.cookie.split('; ').find(row => row.startsWith('pin_session='));
+    if (pinSessionCookie) {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/login');
+    }
+  }, [user, router]);
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-50">
