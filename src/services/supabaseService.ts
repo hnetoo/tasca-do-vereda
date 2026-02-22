@@ -4,9 +4,6 @@ import { logger } from './logger';
 import { exponentialBackoff } from '@/utils/retry';
 import { calculateHash } from '@/utils/crypto';
 
-import { store } from '@/store/reduxStore';
-import { logout } from '@/store/slices/authSlice';
-
 export class SupabaseService {
   private client: SupabaseClient | null = null;
   private config: { url: string; key: string } | null = null;
@@ -54,10 +51,8 @@ export class SupabaseService {
       this.client.auth.onAuthStateChange((event, session) => {
           logger.info(`Auth state changed: ${event}`, { userId: session?.user?.id }, 'SupabaseService');
           
-          if (event === 'SIGNED_OUT') {
-              logger.warn('User signed out. Clearing Redux auth state.', {}, 'SupabaseService');
-              store.dispatch(logout());
-          }
+          // Removed automatic logout on SIGNED_OUT to support local auth mode
+          // where Supabase is only used for DB access, not user sessions.
           
           if (event === 'TOKEN_REFRESHED') {
               logger.info('Auth token refreshed successfully', {}, 'SupabaseService');
