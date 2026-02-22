@@ -24,8 +24,21 @@ import {
   DailySalesAnalytics,
   StoreState
 } from '../types';
-import { MOCK_USERS } from '@/constants';
+import { MOCK_USERS, LOCAL_STORAGE_SCHEMA_VERSION } from '@/constants';
 import { supabaseService } from '@/services/supabaseService';
+
+const clearLocalStorageIfSchemaChanged = () => {
+  if (typeof window !== 'undefined') {
+    const storedVersion = localStorage.getItem('tasca-vereda-storage-v2_schema_version');
+    if (storedVersion && parseInt(storedVersion) < LOCAL_STORAGE_SCHEMA_VERSION) {
+      localStorage.removeItem('tasca-vereda-storage-v2');
+      console.log('Local storage cleared due to schema version mismatch.');
+    }
+    localStorage.setItem('tasca-vereda-storage-v2_schema_version', LOCAL_STORAGE_SCHEMA_VERSION.toString());
+  }
+};
+
+clearLocalStorageIfSchemaChanged();
 
 const customStorage: StateStorage = {
   getItem: (name: string): string | null => {
