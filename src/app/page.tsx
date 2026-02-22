@@ -32,12 +32,10 @@ export default function Home() {
         } else {
           // No session found or error
           if (error) console.error('Session check failed:', error);
-          await logout(); // Clear any stale state
           router.replace('/login');
         }
       } catch (error) {
         console.error('Error checking session:', error);
-        await logout();
         router.replace('/login');
       }
     };

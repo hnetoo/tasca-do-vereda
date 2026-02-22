@@ -12,7 +12,7 @@ import { logger } from '@/services/logger';
 const LoginForm = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, loginWithPassword, users, settings, isInitialized, isAuthenticated, currentUser, logout } = useStore();
+  const { login, loginWithPassword, users, settings, isInitialized, isAuthenticated, currentUser } = useStore();
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -45,11 +45,7 @@ const LoginForm = () => {
         
         if (user) {
            performRedirect(currentUser);
-        } else {
-            // Invalid session but store says authenticated -> Clear store
-            console.warn('Login: Store authenticated but Supabase session missing/invalid. Clearing store.');
-            logout();
-          }
+        }
       }
     };
     
