@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { isTauri } from '../supabase'
 
 export function createClient() {
   return createBrowserClient(
@@ -6,7 +7,7 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        persistSession: true, // Re-enable session persistence to ensure data fetching works
+        persistSession: !isTauri(), // Web: Persist, Tauri: No
       },
     }
   )
