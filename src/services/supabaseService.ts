@@ -63,7 +63,10 @@ export class SupabaseService {
       logger.info('Supabase client initialized via src/lib/supabase', {}, 'SupabaseService');
       if (onRealtimeChange) {
         this.realtimeHandlers.set('default', onRealtimeChange);
-        await this.setupSubscriptions(onRealtimeChange);
+        // Start subscriptions in background to not block initialization
+        this.setupSubscriptions(onRealtimeChange).catch(err => {
+            logger.error('Failed to setup subscriptions in background', { error: err.message }, 'SupabaseService');
+        });
       }
     } catch (error: any) {
       logger.error('Failed to initialize Supabase client', { error: error.message }, 'SupabaseService');
@@ -76,52 +79,68 @@ export class SupabaseService {
         return;
     }
 
-    (this.client.realtime as any).onOpen(() => {
-        logger.info('Supabase Realtime connection opened.', {}, 'SupabaseService');
-        this.syncStatus.isConnected = true;
-        this.syncStatus.status = 'success';
-        this.syncStatus.lastSuccessAt = Date.now();
-        this.syncStatus.retries = 0;
-        this.syncStatus.hasCriticalError = false;
-        this.syncStatus.criticalErrorMessage = undefined;
-        this.reconnect();
-    });
+    // Check if realtime connection methods are available (Supabase v2 compatibility)
+    // Accessing internal socket/connection properties might be fragile
+    const realtime = this.client.realtime as any;
+    
+    if (realtime && typeof realtime.onOpen === 'function') {
+        realtime.onOpen(() => {
+            logger.info('Supabase Realtime connection opened.', {}, 'SupabaseService');
+            this.syncStatus.isConnected = true;
+            this.syncStatus.status = 'success';
+            this.syncStatus.lastSuccessAt = Date.now();
+            this.syncStatus.retries = 0;
+            this.syncStatus.hasCriticalError = false;
+            this.syncStatus.criticalErrorMessage = undefined;
+            this.reconnect();
+        });
 
-    (this.client.realtime as any).onClose(() => {
-        logger.warn('Supabase Realtime connection closed. Attempting to reconnect...', {}, 'SupabaseService');
-        this.syncStatus.isConnected = false;
-        this.syncStatus.status = 'retrying';
-        this.syncStatus.lastErrorAt = Date.now();
-        this.syncStatus.retries++;
-        setTimeout(() => this.reconnect(), 3000);
-    });
+        realtime.onClose(() => {
+            logger.warn('Supabase Realtime connection closed. Attempting to reconnect...', {}, 'SupabaseService');
+            this.syncStatus.isConnected = false;
+            this.syncStatus.status = 'retrying';
+            this.syncStatus.lastErrorAt = Date.now();
+            this.syncStatus.retries++;
+            setTimeout(() => this.reconnect(), 3000);
+        });
 
-    (this.client.realtime as any).onError((event: any) => {
-        logger.error('Supabase Realtime connection error.', { error: event.message || event }, 'SupabaseService');
-        this.syncStatus.isConnected = false;
-        this.syncStatus.status = 'error';
-        this.syncStatus.lastErrorAt = Date.now();
-        this.syncStatus.errorMessage = event.message || 'Unknown Realtime error';
-        this.syncStatus.retries++;
-        setTimeout(() => this.reconnect(), 3000);
-    });
+        realtime.onError((event: any) => {
+            logger.error('Supabase Realtime connection error.', { error: event.message || event }, 'SupabaseService');
+            this.syncStatus.isConnected = false;
+            this.syncStatus.status = 'error';
+            this.syncStatus.lastErrorAt = Date.now();
+            this.syncStatus.errorMessage = event.message || 'Unknown Realtime error';
+            this.syncStatus.retries++;
+            setTimeout(() => this.reconnect(), 3000);
+        });
+    } else {
+        logger.info('Supabase Realtime connection listeners skipped (method not available).', {}, 'SupabaseService');
+    }
   }
 
   private async setupSubscriptions(handler: (payload: any) => void) {
     const tables = [
-      'products', 
-      'categories', 
+      'dishes', 
+      'menu_categories', 
       'orders', 
       'revenues', 
       'expenses', 
       'employees', 
       'attendance_records', 
       'payroll_records', 
-      'dashboard_summary',
       'settings'
     ];
 
-    await Promise.all(tables.map(table => this.subscribeToTableChanges(table, handler)));
+    // Subscribe sequentially to avoid overwhelming the connection and causing TIMED_OUT errors
+    for (const table of tables) {
+        try {
+            await this.subscribeToTableChanges(table, handler);
+            // Small delay between subscriptions to ensure stability
+            await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+            logger.error(`Failed to setup subscription for ${table}`, { error }, 'SupabaseService');
+        }
+    }
   }
 
   async reconnect() {
@@ -163,9 +182,10 @@ export class SupabaseService {
     }
 
     try {
+      logger.debug('Attempting to sync settings with payload:', { settings }, 'SupabaseService');
       const { data, error } = await exponentialBackoff(async () => {
         if (!this.client) throw new Error('Supabase client not available during backoff');
-        return this.client.from('settings').upsert({ id: '1', ...settings });
+        return this.client.from('settings').upsert(settings);
       }, 5, 1000);
 
       if (error) {
@@ -356,7 +376,7 @@ export class SupabaseService {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
       let query = this.client
-        .from('categories')
+        .from('menu_categories')
         .select('*', { count: 'exact' })
         .range(from, to);
       
@@ -378,7 +398,7 @@ export class SupabaseService {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
       let query = this.client
-        .from('products')
+        .from('dishes')
         .select('*', { count: 'exact' })
         .range(from, to);
 
@@ -408,13 +428,13 @@ export class SupabaseService {
     if (!this.client) return { success: false, error: 'Client not initialized' };
     try {
       const categories = await exponentialBackoff(async () => {
-           const { data, error } = await this.client!.from('categories').select('*').order('sort_order');
+           const { data, error } = await this.client!.from('menu_categories').select('*').order('sort_order');
            if (error) throw error;
            return data;
       }, 3, 1000);
 
       const products = await exponentialBackoff(async () => {
-           const { data, error } = await this.client!.from('products').select('*');
+           const { data, error } = await this.client!.from('dishes').select('*');
            if (error) throw error;
            return data;
       }, 3, 1000);

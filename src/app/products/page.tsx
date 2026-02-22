@@ -7,6 +7,7 @@ import { Product, MenuCategory } from '@/types';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Utensils, Copy } from 'lucide-react';
 import { Dish } from '@/types';
 import Image from 'next/image';
+import { generateUUID } from '@/utils/uuid';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
 const Products = () => {
@@ -149,7 +150,7 @@ const Products = () => {
     } else {
       const newDish: Dish = {
         ...dishData,
-        id: dishData.id || Math.random().toString(36).substr(2, 9),
+        id: dishData.id || generateUUID(),
         isActive: true,
         name: dishData.name || '',
         price: dishData.price || 0,
@@ -178,7 +179,7 @@ const Products = () => {
     const newDish = {
       ...dish,
       name: `${dish.name} (Cópia)`,
-      id: Math.random().toString(36).substr(2, 9)
+      id: generateUUID()
     };
     addDish(newDish as Dish);
   };

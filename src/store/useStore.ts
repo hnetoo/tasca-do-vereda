@@ -10,6 +10,7 @@ import { createFinanceSlice } from './slices/financeSlice';
 import { createAuthSlice } from './slices/authSlice';
 import { createOperationalSlice } from './slices/operationalSlice';
 import { getTablesAction } from '@/app/actions/operational';
+import { getEmployeesAction } from '@/app/actions/users';
 import { createUISlice } from './slices/uiSlice';
 import { createIntegrationsSlice } from './slices/integrationsSlice';
 import { 
@@ -24,7 +25,7 @@ import {
   DailySalesAnalytics,
   StoreState
 } from '../types';
-import { MOCK_USERS, LOCAL_STORAGE_SCHEMA_VERSION } from '@/constants';
+import { MOCK_USERS, LOCAL_STORAGE_SCHEMA_VERSION } from '@/constants/index';
 import { supabaseService } from '@/services/supabaseService';
 
 const clearLocalStorageIfSchemaChanged = () => {
@@ -38,7 +39,9 @@ const clearLocalStorageIfSchemaChanged = () => {
   }
 };
 
-clearLocalStorageIfSchemaChanged();
+if (typeof window !== 'undefined') {
+  clearLocalStorageIfSchemaChanged();
+}
 
 const customStorage: StateStorage = {
   getItem: (name: string): string | null => {
@@ -104,6 +107,8 @@ export const useStore = create<StoreState>()(
             
             logger.info('Supabase config for sync:', { config: updated.supabaseConfig }, 'STORE');
             logger.info('IntegrationAPIService is connected:', { isConnected: integrationAPIService.isConnected() }, 'STORE');
+            logger.info('process.env.NEXT_PUBLIC_SUPABASE_URL in updateSettings:', { url: process.env.NEXT_PUBLIC_SUPABASE_URL }, 'STORE');
+            logger.info('updated.supabaseConfig.url in updateSettings:', { url: updated.supabaseConfig?.url }, 'STORE');
 
             // Check if Supabase environment variables are available
             const isSupabaseConfigured = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -145,10 +150,36 @@ export const useStore = create<StoreState>()(
       isInitialized: false,
       initializeStore: async () => {
         try {
+          const state = get();
+          
+          // CRITICAL: Validate session integrity on startup
+          // If the user thinks they are authenticated but the cookie is gone (expired/deleted), 
+          // we must clear the state immediately to force login screen.
+          if (state.isAuthenticated) {
+             const isValid = await state.validateSession();
+             if (!isValid) {
+                logger.warn('Sessão inválida encontrada durante inicialização. Estado limpo.', undefined, 'AUTH');
+                // validateSession already calls logout if invalid, but we ensure state is updated for this render cycle
+                // Return early? No, let initialization proceed but user is now logged out.
+             } else {
+                logger.info('Sessão validada com sucesso no startup.', { userId: state.currentUser?.id }, 'AUTH');
+             }
+          }
+
+          const { supabaseConfig } = state.settings;
+
+          logger.info('process.env.NEXT_PUBLIC_SUPABASE_URL:', { url: process.env.NEXT_PUBLIC_SUPABASE_URL }, 'STORE');
+          logger.info('state.settings.supabaseConfig.url before init:', { url: supabaseConfig?.url }, 'STORE');
+
+          // Initialize IntegrationAPIService if Supabase is enabled and not already connected
+          if (supabaseConfig?.enabled && supabaseConfig?.url && supabaseConfig?.key && !integrationAPIService.isConnected()) {
+            logger.info('Initializing IntegrationAPIService in initializeStore', {}, 'STORE');
+            await integrationAPIService.initialize(supabaseConfig.url, supabaseConfig.key, state.onRealtimeChange);
+          }
+
           // Load menu data from server actions
-          const success = await get().loadFromSQLExclusively();
+          const success = await state.loadFromSQLExclusively();
           if (!success) {
-             const state = get();
              if (state.categories.length === 0) {
                 state.addNotification?.('error', 'Falha ao carregar menu. Tente recarregar a página.', 10000);
              }
@@ -167,13 +198,13 @@ export const useStore = create<StoreState>()(
              logger.error('Exception loading tables', { error: err }, 'STORE');
           }
 
-          // Fetch users from Supabase
-          const { success: usersSuccess, data: fetchedUsers, error: usersError } = await supabaseService.fetchUsers();
+          // Fetch users from Server Action (Direct Postgres)
+          const { success: usersSuccess, data: fetchedUsers, error: usersError } = await getEmployeesAction();
           if (usersSuccess && fetchedUsers) {
             set({ users: fetchedUsers });
-            logger.info('Users fetched from Supabase and updated in store.', { count: fetchedUsers.length }, 'STORE');
+            logger.info('Users fetched from SQL and updated in store.', { count: fetchedUsers.length }, 'STORE');
           } else {
-            logger.error('Failed to fetch users from Supabase.', { error: usersError }, 'STORE');
+            logger.error('Failed to fetch users from SQL.', { error: usersError }, 'STORE');
             get().addNotification('error', 'Falha ao carregar utilizadores. A aplicação pode não funcionar corretamente.');
           }
 

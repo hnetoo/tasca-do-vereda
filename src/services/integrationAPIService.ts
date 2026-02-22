@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { exponentialBackoff } from '../utils/retry';
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { FileObject } from '@supabase/storage-js';
 import { SystemSettings, Dish, MenuCategory, Order, DashboardSummary, StockItem, Fornecedor, User, AuditLog, Revenue, Expense, SystemSettings as Settings, Employee, AttendanceRecord, PayrollRecord, CashShift, Table } from '../types';
@@ -176,7 +177,7 @@ export class IntegrationAPIService {
     if (!this.client) return { success: false, error: 'Not initialized' };
     if (dishes.length === 0) return { success: true, data: null };
 
-    const { error: prodError } = await this.client.from('products').upsert(dishes.map(p => ({
+    const { error: prodError } = await this.client.from('dishes').upsert(dishes.map(p => ({
         id: p.id,
         name: p.name,
         description: p.description,
@@ -313,12 +314,12 @@ export class IntegrationAPIService {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
     if (users.length > 0) {
-        const { error } = await this.client.from('users').upsert(users.map(u => ({
+        const { error } = await this.client.from('employees').upsert(users.map(u => ({
             id: u.id,
             name: u.name,
             role: u.role,
             pin: u.pin,
-            active: u.active ?? true
+            is_active: u.active ?? true
         })), { onConflict: 'id' });
         
         return this._handleSupabaseResponse({ data: null, error }, 'Supabase sync users', 'IntegrationAPIService');
@@ -368,29 +369,33 @@ export class IntegrationAPIService {
 
     // Sync Revenues
     if (revenues.length > 0) {
-        const { error: revError } = await this.client.from('revenues').upsert(revenues.map(r => ({
-            id: r.id,
-            amount: r.amount,
-            date: r.date,
-            category: r.category,
-            description: r.description,
-            payment_method: r.source
-        })));
-        const revResult = this._handleSupabaseResponse({ data: null, error: revError }, 'Supabase sync revenues', 'SupabaseService');
+        const revResult = await exponentialBackoff(async () => {
+            const { error: revError } = await this.client.from('revenues').upsert(revenues.map(r => ({
+                id: r.id,
+                amount: r.amount,
+                date: r.date,
+                category: r.category,
+                description: r.description,
+                payment_method: r.source
+            })));
+            return this._handleSupabaseResponse({ data: null, error: revError }, 'Supabase sync revenues', 'SupabaseService');
+        });
         if (!revResult.success) return revResult;
     }
 
     // Sync Expenses
     if (expenses.length > 0) {
-        const { error: expError } = await this.client.from('expenses').upsert(expenses.map(e => ({
-            id: e.id,
-            amount: e.amount,
-            date: e.date,
-            category: e.category,
-            description: e.description,
-            status: 'PAID'
-        })));
-        const expResult = this._handleSupabaseResponse({ data: null, error: expError }, 'Supabase sync expenses', 'SupabaseService');
+        const expResult = await exponentialBackoff(async () => {
+            const { error: expError } = await this.client.from('expenses').upsert(expenses.map(e => ({
+                id: e.id,
+                amount: e.amount,
+                date: e.date,
+                category: e.category,
+                description: e.description,
+                status: 'PAID'
+            })));
+            return this._handleSupabaseResponse({ data: null, error: expError }, 'Supabase sync expenses', 'SupabaseService');
+        });
         if (!expResult.success) return expResult;
     }
 
@@ -534,9 +539,19 @@ export class IntegrationAPIService {
       return { success: false, error: 'Supabase client not initialized.' };
     }
     try {
-      const { data, error } = await this.client.from('users').select('*');
+      const { data, error } = await this.client.from('employees').select('*');
       if (error) throw error;
-      return { success: true, data: data as User[] };
+      
+      const users: User[] = (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        role: u.role,
+        pin: u.pin,
+        active: u.is_active ?? true,
+        email: u.email
+      }));
+
+      return { success: true, data: users };
     } catch (error: any) {
       logger.error('Failed to fetch users from Supabase', { error: error.message }, 'IntegrationAPIService');
       return { success: false, error: error.message };
@@ -546,18 +561,22 @@ export class IntegrationAPIService {
   async fetchFinancials(startDate: string, endDate: string): Promise<SupabaseResponse<{ expenses: Expense[], revenues: Revenue[] }>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     try {
-      const { data: expenses, error: expError } = await this.client
-        .from('expenses')
-        .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate);
+      const { data: expenses, error: expError } = await exponentialBackoff(async () => {
+        return await this.client
+          .from('expenses')
+          .select('*')
+          .gte('date', startDate)
+          .lte('date', endDate);
+      });
       if (expError) throw expError;
 
-      const { data: revenues, error: revError } = await this.client
-        .from('revenues')
-        .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate);
+      const { data: revenues, error: revError } = await exponentialBackoff(async () => {
+        return await this.client
+          .from('revenues')
+          .select('*')
+          .gte('date', startDate)
+          .lte('date', endDate);
+      });
       if (revError) throw revError;
 
       return {
@@ -921,25 +940,10 @@ export class IntegrationAPIService {
     }
   }
 
-  async fetchUsers(): Promise<SupabaseResponse<User[]>> {
-    if (!this.client) {
-      logger.warn('Supabase client not initialized. Cannot fetch users.', {}, 'IntegrationAPIService');
-      return { success: false, error: 'Supabase client not initialized.' };
-    }
-    try {
-      const { data, error } = await this.client.from('users').select('*');
-      if (error) throw error;
-      return { success: true, data: data as User[] };
-    } catch (error: any) {
-      logger.error('Failed to fetch users from Supabase', { error: error.message }, 'IntegrationAPIService');
-      return { success: false, error: error.message };
-    }
-  }
-
   async fetchCategoriesPaged(params: { page: number; pageSize: number; search?: string }): Promise<SupabaseResponse<MenuCategory[]>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     try {
-      let query = this.client.from('categories').select('*');
+      let query = this.client.from('menu_categories').select('*');
       if (params.search) {
         query = query.ilike('name', `%${params.search}%`);
       }
@@ -970,7 +974,7 @@ export class IntegrationAPIService {
   async fetchProductsPaged(params: { page: number; pageSize: number; search?: string; categoryId?: string }): Promise<SupabaseResponse<Product[]>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     try {
-      let query = this.client.from('products').select('*');
+      let query = this.client.from('dishes').select('*');
       if (params.search) {
         query = query.ilike('name', `%${params.search}%`);
       }
@@ -991,30 +995,25 @@ export class IntegrationAPIService {
             description: p.description,
             price: p.price,
             category_id: p.category_id,
-            image_url: p.image,
-            is_active: p.is_available,
+            image_url: p.image_url,
+            is_active: p.is_active,
             is_available_on_digital_menu: p.is_available_on_digital_menu,
             tax_percentage: p.tax_percentage,
             tax_code: p.tax_code,
-            preparation_time: p.tempo_preparo,
-            track_stock: p.controla_estoque,
-            stock_quantity: p.quantidade_estoque,
-            min_stock_quantity: p.quantidade_minima,
-            max_stock_quantity: p.quantidade_maxima,
-            unit: p.unidade_medida,
-            supplier_id: p.fornecedor_padrao_id
+            preparation_time: p.preparation_time
       }));
-
+      
       return { success: true, data: products };
     } catch (error: any) {
-        return this._handleSupabaseResponse({ data: null, error }, 'Fetch products paged', 'IntegrationAPIService');
+      logger.error('Failed to fetch products paged', { error: error.message }, 'IntegrationAPIService');
+      return { success: false, error: error.message };
     }
   }
 
   async testConnection(url: string, key: string): Promise<boolean> {
       try {
           const tempClient = createClient(url, key);
-          const { data, error } = await tempClient.from('users').select('count', { count: 'exact', head: true });
+          const { data, error } = await tempClient.from('employees').select('count', { count: 'exact', head: true });
           return !error;
       } catch (e) {
           return false;

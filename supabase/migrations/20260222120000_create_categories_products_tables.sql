@@ -1,9 +1,5 @@
--- Enable uuid-ossp extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Create menu_categories table
 CREATE TABLE IF NOT EXISTS public.menu_categories (
-    id text PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id text PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL,
     icon text,
     sort_order integer,
@@ -41,7 +37,7 @@ CREATE POLICY "Enable delete for authenticated users only on menu_categories" ON
 
 -- Create dishes table
 CREATE TABLE IF NOT EXISTS public.dishes (
-    id text PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id text PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL,
     description text,
     price numeric NOT NULL,

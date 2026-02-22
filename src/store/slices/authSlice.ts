@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand';
 import { User, StoreState, Permission, UUID } from '@/types';
-import { MOCK_USERS } from '@/constants';
+import { MOCK_USERS } from '@/constants/index';
 import { logger } from '@/services/logger';
 import { calculateHash } from '@/utils/crypto';
 import { CryptoService } from '@/services/cryptoService';
@@ -20,6 +20,7 @@ export interface AuthSlice {
   setUserSession: (user: User) => void;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  validateSession: () => Promise<boolean>;
 }
 
 export const createAuthSlice: StateCreator<
@@ -39,6 +40,31 @@ export const createAuthSlice: StateCreator<
   removeUser: (id) => set((state) => ({
     users: state.users.filter((u) => u.id !== id)
   })),
+  validateSession: async () => {
+    const state = get();
+    // Early exit if no local state says authenticated
+    if (!state.isAuthenticated || !state.currentUser) return false;
+
+    // Check for session cookie presence
+    let hasValidCookie = false;
+    if (typeof document !== 'undefined') {
+      hasValidCookie = document.cookie.split(';').some((item) => item.trim().startsWith('pin_session='));
+    }
+
+    // Check Supabase session
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // If neither is valid, logout immediately
+    if (!hasValidCookie && !session) {
+       logger.auth('Sessão inválida detectada no startup', { userId: state.currentUser.id });
+       // We call logout but return false immediately to block rendering
+       await get().logout();
+       return false;
+    }
+    
+    return true;
+  },
   login: async (pin, userId, rememberMe) => {
     try {
       logger.auth('Iniciando tentativa de login', { userId, hasPin: !!pin });
@@ -269,7 +295,7 @@ export const createAuthSlice: StateCreator<
     
     // Admin e Gerente têm todas as permissões
     const role = state.currentUser.role.toUpperCase();
-    if (role === 'ADMIN' || role === 'GERENTE') return true;
+    if (role === 'ADMIN' || role === 'GERENTE' || role === 'OWNER') return true;
     
     // Verificar permissões explícitas no usuário
     if (state.currentUser.permissions?.includes(permission as any)) return true;

@@ -1,6 +1,9 @@
 import { logger } from './logger';
 import { dlpAlertService } from './dlpAlertService';
 import { performSelfCheckAction } from '@/app/actions/health';
+import { executeQuery } from '../services/database/operations';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '../database.types';
 
 export interface SystemHealthReport {
   timestamp: string;
@@ -200,6 +203,66 @@ class HealthMonitorService {
     return this.totalFailures > 0 ? uptimeHours / this.totalFailures : uptimeHours;
   }
 
+  private async checkDatabaseLocks(): Promise<boolean> {
+    try {
+      // Query to detect active locks that might indicate a problem
+      const lockQuery = `
+        SELECT
+           pg_locks.pid AS bloqueador_pid,
+           pg_locks.mode AS modo_bloqueio,
+           pg_locks.granted AS bloqueio_concedido,
+           pg_locks.relation::regclass AS tabela_afetada,
+           pg_locks.transactionid AS id_transacao,
+           pg_locks.virtualtransaction AS transacao_virtual,
+           pg_locks.fastpath AS caminho_rapido,
+           pg_locks.waitstart AS inicio_espera,
+          pg_stat_activity.query AS consulta_bloqueadora
+        FROM pg_catalog.pg_locks AS pg_locks
+        JOIN pg_catalog.pg_stat_activity AS pg_stat_activity
+          ON pg_locks.pid = pg_stat_activity.pid
+        WHERE NOT pg_locks.granted
+          AND pg_locks.pid != pg_backend_pid();
+      `;
+      const locks = await executeQuery(lockQuery);
+
+      if (locks && (locks as any[]).length > 0) {
+        logger.warn('Database locks detected:', { locks }, 'HealthMonitorService');
+        return true;
+      }
+
+      // Query to detect deadlocks (simplified check, actual deadlock detection is complex)
+      // PostgreSQL usually handles deadlocks automatically by terminating one of the transactions.
+      // This query helps to identify queries that are waiting for locks, which could be an indicator of contention.
+      const deadlockQuery = `
+        SELECT
+          activity.pid,
+          activity.usename,
+          activity.waiting,
+          activity.state,
+          activity.query_start,
+          activity.query,
+          blocking.pid AS blocking_pid,
+          blocking.query AS blocking_query
+        FROM pg_stat_activity AS activity
+        JOIN pg_locks AS locks ON activity.pid = locks.pid AND locks.granted = false
+        JOIN pg_locks AS blocking_locks ON locks.relation = blocking_locks.relation AND blocking_locks.granted = true
+        JOIN pg_stat_activity AS blocking ON blocking_locks.pid = blocking.pid
+        WHERE activity.waiting = true;
+      `;
+      const deadlocks = await executeQuery(deadlockQuery);
+
+      if (deadlocks && (deadlocks as any[]).length > 0) {
+        logger.error('Potential database deadlocks or severe contention detected:', { deadlocks }, 'HealthMonitorService');
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      logger.error('Error checking database locks/deadlocks', { error }, 'HealthMonitorService');
+      return false;
+    }
+  }
+
   private async performSelfCheck() {
     try {
       // 1. Check for Deadlocks / Event Loop lag
@@ -219,7 +282,13 @@ class HealthMonitorService {
         this.handleIssue('MEMORY_CRITICAL', `Memory usage at ${(mem.usedJSHeapSize / 1024 / 1024).toFixed(2)}MB`, 'CRITICAL');
       }
 
-      // 3. Data Integrity Check (via Server Action)
+      // 3. Database Locks Check
+      const areDatabaseTablesHealthy = await this.checkDatabaseLocks();
+      if (areDatabaseTablesHealthy) {
+        this.handleIssue('DATABASE_LOCKS', 'Database locks or contention detected', 'CRITICAL');
+      }
+
+      // 4. Data Integrity Check (via Server Action)
       const { isHealthy, recovered, issue } = await performSelfCheckAction(
         this.totalFailures,
         this.totalRecoveries,

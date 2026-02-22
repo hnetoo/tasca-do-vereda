@@ -24,7 +24,7 @@ export const createUISlice: StateCreator<
   UISlice
 > = (set, get) => ({
   settings: {
-    id: "default-settings",
+    id: "", // Permitir que o Supabase gere o UUID
     restaurantName: "Tasca Do VEREDA",
     appLogoUrl: "", 
     currency: "Kz",

@@ -9,6 +9,7 @@ import { IntegrationsSlice } from './store/slices/integrationsSlice';
 
 
 import { Database } from './types/supabase';
+export type { Database };
 
 export type AnyRecord = any;
 
@@ -57,6 +58,7 @@ export type Dish = Omit<Partial<DishRow>,
   parentId?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  status?: string;
 };
 
 export type Product = Dish;
@@ -690,6 +692,7 @@ export type Fornecedor = Supplier & {
   endereco?: string;
   ativo?: boolean;
   categoria?: string;
+  notes?: string;
 };
 export type IntegrationLog = any;
 

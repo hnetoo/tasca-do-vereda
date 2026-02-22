@@ -208,7 +208,7 @@ export const createMenuSlice: StateCreator<
           set((state: MenuSlice) => ({ 
               categories: state.categories.filter(c => c.id !== cat.id) 
           }));
-          logger.error('Falha na persistência SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
+          logger.error('Falha na persistência SQL da categoria', { category: cat, error: result.error, fullErrorObject: JSON.stringify(result.error) }, 'DATABASE');
           state.addNotification?.('error', 'Erro ao guardar categoria na base de dados local. A operação foi revertida.');
       }
     } catch (e: unknown) {
@@ -284,7 +284,7 @@ export const createMenuSlice: StateCreator<
       } else {
           // Revert on failure
           set({ categories: previousCategories });
-          logger.error('Falha na atualização SQL da categoria', { category: cat, error: result.error }, 'DATABASE');
+          logger.error('Falha na atualização SQL da categoria', { category: cat, error: result.error, fullErrorObject: JSON.stringify(result.error) }, 'DATABASE');
           state.addNotification?.('error', 'Erro ao atualizar categoria na base de dados local. A operação foi revertida.');
       }
     } catch (e: unknown) {
@@ -682,16 +682,10 @@ export const createMenuSlice: StateCreator<
 
   loadFromSQLExclusively: async () => {
     try {
-      // Create a timeout promise that rejects after 8 seconds
-      const timeoutPromise = new Promise<{ success: boolean; error: string }>((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout loading menu data')), 8000);
-      });
-
-      // Race the actual data fetching against the timeout
-      const result = await Promise.race([
-        getMenuData(),
-        timeoutPromise
-      ]) as { success: boolean; categories?: MenuCategory[]; dishes?: Dish[]; error?: string };
+      logger.info('Starting menu load from SQL (Server Action)...', undefined, 'DATABASE');
+      
+      // Removed strict timeout to allow retry logic in directOperations to complete
+      const result = await getMenuData();
 
       if (!result.success) {
         logger.error('Failed to load menu exclusively from SQL via Server Action', { error: result.error }, 'DATABASE');
@@ -699,17 +693,34 @@ export const createMenuSlice: StateCreator<
       }
 
       const cats = result.categories || [];
-      const dishes = result.dishes || [];
+      const rawDishes = result.dishes || [];
 
-      if (cats.length > 0 || dishes.length > 0) {
+      // VALIDATION STEP: Filter out invalid data
+      const validDishes = rawDishes.filter((d: Dish) => {
+          if (!d.categoryId) return false;
+          // Ensure category exists
+          return cats.some((c: MenuCategory) => c.id === d.categoryId);
+      }).map((d: Dish) => ({
+          ...d,
+          // Ensure image path is normalized to prevent 404s
+          imageUrl: normalizeDishImage(d.imageUrl)
+      }));
+      
+      if (rawDishes.length !== validDishes.length) {
+         logger.warn(`Filtered out ${rawDishes.length - validDishes.length} invalid dishes during load`, { total: rawDishes.length, valid: validDishes.length }, 'DATABASE');
+      }
+
+      if (cats.length > 0 || validDishes.length > 0) {
         set({
           categories: cats,
-          dishes: dishes
+          dishes: validDishes
         });
-        logger.info('Menu loaded exclusively from SQL via Server Action', { categories: cats.length, dishes: dishes.length }, 'DATABASE');
+        logger.info('Menu loaded exclusively from SQL via Server Action', { categories: cats.length, dishes: validDishes.length }, 'DATABASE');
         return true;
       }
-      return false;
+      
+      logger.info('Menu loaded but empty', undefined, 'DATABASE');
+      return false; // Empty is valid but returns false to indicate no data loaded? Or true? Original was false.
     } catch (e: unknown) {
       const error = e as Error;
       logger.error('Failed to load menu exclusively from SQL', { error: error.message }, 'DATABASE');

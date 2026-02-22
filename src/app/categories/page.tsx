@@ -5,7 +5,7 @@ import { useStore } from '@/store/useStore';
 import { logger } from '@/services/logger';
 import { MenuCategory } from '@/types';
 import { Search, Plus, Trash2, Edit2, X, Save, RefreshCw, Grid3X3, Coffee, Pizza, Beer, IceCream, Utensils } from 'lucide-react';
-import { AVAILABLE_ICONS } from '@/constants';
+import { AVAILABLE_ICONS } from '@/constants/client-constants';
 
 const Categories = () => {
   const { categories, addCategory, updateCategory, removeCategory, scanAndRecoverCategories } = useStore();

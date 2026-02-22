@@ -1,24 +1,4 @@
-import { Product, Table, Customer, Reservation, StockItem, User, MenuCategory, Dish } from '@/types';
-import { Grid3X3, Coffee, Pizza, Beer, IceCream, Utensils } from 'lucide-react';
-
-// Icons available for categories
-export const AVAILABLE_ICONS = [
-  { name: 'Grid3X3', label: 'Geral', icon: Grid3X3 },
-  { name: 'Coffee', label: 'Pequeno Almoço/Bebidas Quentes', icon: Coffee },
-  { name: 'Pizza', label: 'Pratos Principais', icon: Pizza },
-  { name: 'Beer', label: 'Bebidas Alcoólicas', icon: Beer },
-  { name: 'IceCream', label: 'Sobremesas', icon: IceCream },
-  { name: 'Utensils', label: 'Talheres', icon: Utensils },
-];
-
-// Usuários do Sistema
-export const MOCK_USERS: User[] = [
-  { id: '1', name: 'Gerente (Admin)', role: 'ADMIN', pin: '1234', active: true },
-  { id: '2', name: 'Operador de Caixa', role: 'CAIXA', pin: '1111', active: true },
-  { id: '3', name: 'Chefe de Cozinha', role: 'COZINHEIRO', pin: '2222', active: true },
-  { id: '4', name: 'Garçom', role: 'GARCOM', pin: '3333', active: true },
-  { id: '5', name: 'Proprietário', role: 'OWNER', pin: '2775', active: true },
-];
+import { Product, Table, Customer, Reservation, StockItem, MenuCategory, Dish } from '@/types';
 
 // Categorias Iniciais
 export const MOCK_CATEGORIES: MenuCategory[] = [];
