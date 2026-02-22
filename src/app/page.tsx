@@ -15,31 +15,30 @@ export default function Home() {
     const checkSession = async () => {
       try {
         const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        // getUser valida o token no servidor, getSession pode usar cache inseguro
+        const { data: { user }, error } = await supabase.auth.getUser();
 
         // Check for PIN session cookie as fallback
         const hasPinSession = typeof document !== 'undefined' && 
           document.cookie.split(';').some((item) => item.trim().startsWith('pin_session='));
 
-        if (session?.user) {
+        if (user) {
           // Sync with store if needed
-          setUserSession(session.user);
-          router.push('/dashboard');
+          setUserSession(user);
+          router.replace('/dashboard');
         } else if (hasPinSession) {
           // Valid PIN session found
-          router.push('/dashboard');
+          router.replace('/dashboard');
         } else {
-          // No session found
+          // No session found or error
+          if (error) console.error('Session check failed:', error);
           await logout(); // Clear any stale state
-          router.push('/login');
+          router.replace('/login');
         }
       } catch (error) {
         console.error('Error checking session:', error);
         await logout();
-        router.push('/login');
-      } finally {
-        // We keep isChecking true until redirect happens to prevent flash of content
-        // But if we want to show loading, we need to render something
+        router.replace('/login');
       }
     };
 

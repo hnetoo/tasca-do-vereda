@@ -69,22 +69,24 @@ const Dashboard = () => {
     const checkSession = async () => {
       try {
         const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        // getUser valida o token no servidor, getSession pode usar cache inseguro
+        const { data: { user }, error } = await supabase.auth.getUser();
         
         // Check for PIN session cookie as fallback
         const hasPinSession = typeof document !== 'undefined' && 
           document.cookie.split(';').some((item) => item.trim().startsWith('pin_session='));
 
-        if (!session && !hasPinSession) {
+        if (error || (!user && !hasPinSession)) {
+          console.error('Session validation failed:', error);
           await logout();
-          router.push('/login');
+          router.replace('/login');
           return;
         }
         setIsLoadingSession(false);
       } catch (error) {
         console.error('Error checking session:', error);
         await logout();
-        router.push('/login');
+        router.replace('/login');
       }
     };
     checkSession();
