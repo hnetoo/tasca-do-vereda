@@ -8,15 +8,15 @@ import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
 
   useEffect(() => {
     console.log('PAGE: useEffect triggered');
-    console.log('PAGE: Current user state:', user);
+    console.log('PAGE: Current user state:', { user, isAuthenticated });
 
-    if (user) {
-      console.log('PAGE: User found in Redux, redirecting to /dashboard');
+    if (isAuthenticated || user) {
+      console.log('PAGE: User authenticated in Redux, redirecting to /dashboard');
       router.replace('/dashboard');
       return;
     }

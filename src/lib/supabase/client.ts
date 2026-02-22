@@ -1,5 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
-import { isTauri } from '../supabase';
+import { isTauri } from './config';
 import type { Database } from '@/types/supabase'; // Importar o tipo Database
 
 let supabaseBrowserClient: ReturnType<typeof createBrowserClient<Database>> | undefined;
@@ -16,5 +16,5 @@ export function createClient() {
       }
     );
   }
-  return supabaseBrowserClient;
+  return supabaseBrowserClient!;
 }
