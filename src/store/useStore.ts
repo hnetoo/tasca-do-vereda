@@ -7,7 +7,7 @@ import { integrationAPIService } from '@/services/integrationAPIService';
 import { createMenuSlice } from './slices/menuSlice';
 import { createStaffSlice } from './slices/staffSlice';
 import { createFinanceSlice } from './slices/financeSlice';
-import { createAuthSlice } from './slices/authSlice';
+
 import { createOperationalSlice } from './slices/operationalSlice';
 import { getTablesAction } from '@/app/actions/operational';
 import { getEmployeesAction } from '@/app/actions/users';
@@ -71,7 +71,7 @@ export const useStore = create<StoreState>()(
       ...createMenuSlice(set, get, api),
       ...createStaffSlice(set, get, api),
       ...createFinanceSlice(set, get, api),
-      ...createAuthSlice(set, get, api),
+
       ...createOperationalSlice(set, get, api),
       ...createUISlice(set, get, api),
       ...createIntegrationsSlice(set, get, api),
@@ -155,16 +155,7 @@ export const useStore = create<StoreState>()(
           // CRITICAL: Validate session integrity on startup
           // If the user thinks they are authenticated but the cookie is gone (expired/deleted), 
           // we must clear the state immediately to force login screen.
-          if (state.isAuthenticated) {
-             const isValid = await state.validateSession();
-             if (!isValid) {
-                logger.warn('Sessão inválida encontrada durante inicialização. Estado limpo.', undefined, 'AUTH');
-                // validateSession already calls logout if invalid, but we ensure state is updated for this render cycle
-                // Return early? No, let initialization proceed but user is now logged out.
-             } else {
-                logger.info('Sessão validada com sucesso no startup.', { userId: state.currentUser?.id }, 'AUTH');
-             }
-          }
+
 
           const { supabaseConfig } = state.settings;
 
@@ -198,15 +189,9 @@ export const useStore = create<StoreState>()(
              logger.error('Exception loading tables', { error: err }, 'STORE');
           }
 
-          // Fetch users from Server Action (Direct Postgres)
-          const { success: usersSuccess, data: fetchedUsers, error: usersError } = await getEmployeesAction();
-          if (usersSuccess && fetchedUsers) {
-            set({ users: fetchedUsers });
-            logger.info('Users fetched from SQL and updated in store.', { count: fetchedUsers.length }, 'STORE');
-          } else {
-            logger.error('Failed to fetch users from SQL.', { error: usersError }, 'STORE');
-            get().addNotification('error', 'Falha ao carregar utilizadores. A aplicação pode não funcionar corretamente.');
-          }
+          // Fetch users from Supabase
+
+
 
         } catch (error) {
           logger.error('Error during store initialization', { error }, 'STORE');

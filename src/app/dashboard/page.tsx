@@ -40,7 +40,7 @@ const paymentLabels: Record<PaymentMethod, string> = {
 const Dashboard = () => {
   const { 
     activeOrders, orders, customers, dishes: menu, settings, expenses, revenues,
-    getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange, logout
+    getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange
   } = useStore();
 
   const [realtimeActivity, setRealtimeActivity] = useState(false);
@@ -63,34 +63,9 @@ const Dashboard = () => {
   const [paymentMetric, setPaymentMetric] = useState<'VENDAS' | 'LUCRO'>('VENDAS');
   const paymentChartRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
-  const [isLoadingSession, setIsLoadingSession] = useState(true);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const supabase = createClient();
-        // getUser valida o token no servidor, getSession pode usar cache inseguro
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        // Check for PIN session cookie as fallback
-        const hasPinSession = typeof document !== 'undefined' && 
-          document.cookie.split(';').some((item) => item.trim().startsWith('pin_session='));
 
-        if (error || (!user && !hasPinSession)) {
-          console.error('Session validation failed:', error);
-          // User requested removal of logout()
-          router.replace('/login');
-          return;
-        }
-        setIsLoadingSession(false);
-      } catch (error) {
-        console.error('Error checking session:', error);
-        // User requested removal of logout()
-        router.replace('/login');
-      }
-    };
-    checkSession();
-  }, [router, logout]);
+
 
   useEffect(() => {
     if (realtimeActivity) {
@@ -276,14 +251,7 @@ const Dashboard = () => {
     return cols;
   }, []);
 
-  if (isLoadingSession) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-slate-950">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2 text-sm text-slate-400">A verificar sessão...</p>
-      </div>
-    );
-  }
+
 
   return (
     <div className="p-6 pb-24 space-y-8 animate-in fade-in duration-500">

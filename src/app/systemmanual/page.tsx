@@ -4,9 +4,12 @@ import React, { useState } from 'react';
 import { Book, Shield, User } from 'lucide-react';
 import { MANUAL_UTILIZADOR, MANUAL_ADMIN } from '@/data/manuals';
 import { useStore } from '@/store/useStore';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectUser } from '@/store/slices/authSlice';
 
 const SystemManual = () => {
-  const { currentUser } = useStore();
+  const { } = useStore();
+  const user = useSelector(selectUser);
   const [activeTab, setActiveTab] = useState<'user' | 'admin'>('user');
 
   // Simple Markdown-like parser for basic formatting
@@ -84,7 +87,7 @@ const SystemManual = () => {
             Manual do Utilizador
           </button>
           
-          {['ADMIN', 'GERENTE'].includes(currentUser?.role || '') && (
+          {['ADMIN', 'GERENTE'].includes(user?.role || '') && (
             <button
               onClick={() => setActiveTab('admin')}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-lg transition-all font-medium ${

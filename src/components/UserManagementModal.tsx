@@ -1,10 +1,10 @@
-'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useStore } from '@/store/useStore';
+import { useSelector } from 'react-redux';
 import { 
   Users, UserPlus, Search, Shield, Edit2, Trash2, X, AlertTriangle
 } from 'lucide-react';
-import { Employee } from '@/types';
+import { Employee, User } from '@/types';
 import EmployeeModal from '@/components/EmployeeModal';
 import { getEmployeesAction, deleteEmployeeAction } from '@/app/actions/users';
 
@@ -14,7 +14,8 @@ interface UserManagementModalProps {
 }
 
 const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen, onClose }) => {
-  const { employees, removeEmployee, currentUser, addNotification } = useStore();
+  const { employees, removeEmployee, addNotification } = useStore();
+  const user = useSelector((state: any) => state.auth.user) as User | null;
   const [searchTerm, setSearchTerm] = useState('');
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -31,7 +32,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ isOpen, onClo
   const [loadError, setLoadError] = useState<string | null>(null);
   const isMounted = useRef(false);
 
-  const canManageUsers = currentUser?.role === 'ADMIN' || currentUser?.role === 'OWNER';
+  const canManageUsers = user?.role === 'ADMIN' || user?.role === 'OWNER';
 
   // Unified useEffect for fetching data
   // Handles initial load and refetch after modal close

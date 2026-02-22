@@ -346,7 +346,7 @@ const Reports = () => {
                            <td className="px-8 py-6">
                               <div className="flex items-center gap-4">
                                  <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 group-hover:border-primary/50 transition-colors">
-                                    <img src={dish?.imageUrl} className="w-full h-full object-cover" />
+                                    <img src={dish?.imageUrl} alt={dish?.name || ''} className="w-full h-full object-cover" />
                                  </div>
                                  <span className="font-bold text-white text-sm">{item.name}</span>
                               </div>

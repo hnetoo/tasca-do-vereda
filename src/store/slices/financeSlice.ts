@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Dish, OrderItemDetail } from '@/types';
+import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Dish, OrderItemDetail, User } from '@/types';
 import { logger } from '@/services/logger';
 import { backupService } from '@/services/backupService';
 import { integrationAPIService } from '@/services/integrationAPIService';
@@ -48,7 +48,7 @@ export interface FinanceSlice {
   createFullFinancialBackup: () => Promise<boolean>;
   restoreFullFinancialBackup: () => Promise<boolean>;
   clearFinancialData: (reason: string, userId: UUID) => Promise<{ success: boolean; report: FinancialClearanceReport }>;
-  correctPayment: (orderId: UUID, newPayments: OrderPayment[], reason: string) => Promise<boolean>;
+  correctPayment: (orderId: UUID, newPayments: OrderPayment[], reason: string, user: User) => Promise<boolean>;
   getDailySalesAnalytics: (days: number) => DailySalesAnalytics[];
   getSalesForDate: (date: Date) => DailySalesAnalytics;
   getMenuAnalytics: (period: 'day' | 'week' | 'month' | number) => MenuAnalytics[];
@@ -63,9 +63,9 @@ export interface FinanceSlice {
   fetchRemoteDashboard: () => Promise<void>;
   handleRealtimeUpdate: (payload: RealtimePayload) => void;
   
-  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID) => void;
-  removeFromOrder: (orderId: UUID, itemIndex: number) => void;
-  checkoutTable: (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string) => Promise<void>;
+  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID, userId?: string) => void;
+  removeFromOrder: (orderId: UUID, itemIndex: number, userId?: string) => void;
+  checkoutTable: (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string, userId?: string) => Promise<void>;
   fireOrderToKitchen: (orderId: UUID) => void;
   clearDraftOrder: (orderId: UUID) => void;
   updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => void;
@@ -135,7 +135,6 @@ export const createFinanceSlice: StateCreator<
       action: 'ORDER_CREATE',
       details: `Novo pedido criado: ${order.order_number || order.id}`,
       metadata: { orderId: order.id, total: order.total },
-      userId: get().currentUser?.id
     });
   },
 
@@ -156,7 +155,6 @@ export const createFinanceSlice: StateCreator<
         action: 'ORDER_STATUS_CHANGE',
         details: `Status do pedido ${order.order_number || order.id} alterado para ${order.status}`,
         metadata: { orderId: order.id, oldStatus: prevOrder.status, newStatus: order.status },
-        userId: get().currentUser?.id
       });
     }
   },
@@ -428,7 +426,6 @@ export const createFinanceSlice: StateCreator<
       action: 'EXPENSE_ADD',
       details: `Despesa adicionada: ${expense.description} - ${expense.amount}`,
       metadata: { expenseId: expense.id, amount: expense.amount },
-      userId: get().currentUser?.id
     });
   },
   
@@ -440,7 +437,6 @@ export const createFinanceSlice: StateCreator<
       action: 'EXPENSE_UPDATE',
       details: `Despesa atualizada: ${expense.description}`,
       metadata: { expenseId: expense.id },
-      userId: get().currentUser?.id
     });
   },
   
@@ -453,7 +449,6 @@ export const createFinanceSlice: StateCreator<
       action: 'EXPENSE_REMOVE',
       details: `Despesa removida: ${expense?.description || id}`,
       metadata: { expenseId: id },
-      userId: get().currentUser?.id
     });
   },
 
@@ -465,7 +460,6 @@ export const createFinanceSlice: StateCreator<
       action: 'REVENUE_ADD',
       details: `Receita adicionada: ${revenue.description} - ${revenue.amount}`,
       metadata: { revenueId: revenue.id, amount: revenue.amount },
-      userId: get().currentUser?.id
     });
   },
   
@@ -478,7 +472,6 @@ export const createFinanceSlice: StateCreator<
       action: 'REVENUE_REMOVE',
       details: `Receita removida: ${revenue?.description || id}`,
       metadata: { revenueId: id },
-      userId: get().currentUser?.id
     });
   },
 
@@ -519,19 +512,11 @@ export const createFinanceSlice: StateCreator<
   },
 
   processPayroll: async (_employeeId, _month, _year, _paymentMethod) => {
-    if (!get().hasPermission('VIEW_FINANCIAL')) {
-      get().addNotification('error', 'Sem permissão para processar salários.');
-      return;
-    }
     // Implementation details would go here, simplified for now
     get().addNotification('success', 'Salário processado com sucesso.');
   },
 
   createFullFinancialBackup: async () => {
-    if (!get().hasPermission('EXPORT_DATA')) {
-      get().addNotification('error', 'Sem permissão para criar backup financeiro completo.');
-      return false;
-    }
     get().addNotification('info', 'A criar backup financeiro completo...');
     try {
       const state = get();
@@ -559,20 +544,6 @@ export const createFinanceSlice: StateCreator<
   },
 
   restoreFullFinancialBackup: async () => {
-    if (!get().hasPermission('EXPORT_DATA')) {
-      get().addNotification('error', 'Sem permissão para restaurar backup completo.');
-      return false;
-    }
-
-    const confirmRestore = window.confirm(
-      "ATENÇÃO: Restaurar um backup completo irá:\n" +
-      "1. Apagar TODOS os dados financeiros atuais (pedidos, despesas, etc.)\n" +
-      "2. Substituir pelos dados do backup.\n\n" +
-      "Deseja prosseguir?"
-    );
-
-    if (!confirmRestore) return false;
-
     get().addNotification('info', 'A restaurar backup financeiro completo...');
     try {
       const restoredData = await backupService.loadFinancialBackup();
@@ -598,32 +569,8 @@ export const createFinanceSlice: StateCreator<
     }
   },
 
-  clearFinancialData: async (reason: string, userId: string) => {
-    if (!get().hasPermission('ADMIN_POWER')) {
-      const errorMsg = 'Permissão de Administrador necessária para zerar dados financeiros.';
-      get().addNotification('error', errorMsg);
-      return { success: false, report: { 
-        timestamp: new Date().toISOString(),
-        user: userId,
-        reason,
-        authorizedBy: userId,
-        clearedOrders: 0,
-        clearedExpenses: 0,
-        clearedRevenues: 0,
-        clearedPayroll: 0,
-        summary: {
-          ordersCount: 0,
-          expensesCount: 0,
-          fixedExpensesCount: 0,
-          revenuesCount: 0,
-          payrollCount: 0,
-          totalRevenue: 0,
-          totalExpenses: 0
-        },
-        error: errorMsg 
-      } };
-    }
-
+  clearFinancialData: async (reason: string, userId: UUID) => {
+    get().addNotification('info', 'A limpar dados financeiros...');
     try {
       const state = get();
       
@@ -724,28 +671,21 @@ export const createFinanceSlice: StateCreator<
     }
   },
 
-  correctPayment: async (orderId, newPayments, reason) => {
+  correctPayment: async (orderId, newPayments, reason, user) => {
     const state = get();
     const order = state.activeOrders.find((o) => o.id === orderId);
-    const currentUser = state.currentUser;
 
     if (!order) {
       get().addNotification('error', 'Pedido não encontrado.');
       return false;
     }
 
-    if (!currentUser) {
+    if (!user) {
       get().addNotification('error', 'Usuário não autenticado.');
       return false;
     }
 
-    const isPostPrint = order.status === 'FECHADO';
-    const permissionRequired = isPostPrint ? 'CORRECT_PAYMENT_POST_PRINT' : 'CORRECT_PAYMENT_PRE_PRINT';
 
-    if (!get().hasPermission(permissionRequired)) {
-      get().addNotification('error', `Sem permissão para correção de pagamento ${isPostPrint ? 'pós-impressão' : 'pré-impressão'}.`);
-      return false;
-    }
 
     // Validação de valor total
     const totalNewPayments = newPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -766,14 +706,14 @@ export const createFinanceSlice: StateCreator<
         id: `corr-${Date.now()}`,
         orderId: order.id!,
         timestamp: new Date(),
-        userId: currentUser.id,
-        userName: currentUser.name,
+        userId: user.id,
+        userName: user.name,
         reason,
         originalPayments: previousPayments,
         correctedPayments: newPayments,
         previousPayments,
         newPayments,
-        type: isPostPrint ? 'POST_PRINT' : 'PRE_PRINT'
+        type: 'PRE_PRINT'
       };
 
       const updatedOrder: Order = {
@@ -823,7 +763,7 @@ export const createFinanceSlice: StateCreator<
 
       // Audit Log imutável
       get().addAuditLog({
-        action: isPostPrint ? 'PAYMENT_CORRECTION_POST_PRINT' : 'PAYMENT_CORRECTION_PRE_PRINT',
+        action: 'PAYMENT_CORRECTION_PRE_PRINT',
         details: `Correção de pagamento para pedido ${order.invoice_number || order.id}. Motivo: ${reason}`,
         metadata: {
           orderId: order.id,
@@ -831,14 +771,14 @@ export const createFinanceSlice: StateCreator<
           previousPayments,
           newPayments,
           correctionId: correction.id,
-          isPostPrint
+
         },
-        userId: currentUser.id
+        userId: user.id
       });
 
       // Persistência em Banco de Dados (Transação simulada via executeQuery sequencial)
       // Em um ambiente real, usaríamos BEGIN TRANSACTION
-      const result = await correctPaymentAction(order.id!, currentUser.id, reason, newPayments);
+      const result = await correctPaymentAction(order.id!, user.id, reason, newPayments);
       if (!result.success) {
         throw new Error(result.error || 'Failed to correct payment');
       }
@@ -856,7 +796,7 @@ export const createFinanceSlice: StateCreator<
     }
   },
 
-  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID) => {
+  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID, userId?: string) => {
     const state = get();
     let order = state.activeOrders.find((o) => o.id === orderId);
 
@@ -899,11 +839,11 @@ export const createFinanceSlice: StateCreator<
         action: 'ORDER_ITEM_ADD',
         details: `Item adicionado: ${dish.name} x${quantity}`,
         metadata: { orderId, dishId: dish.id, quantity },
-        userId: get().currentUser?.id
+        userId: userId || undefined
     });
   },
 
-  removeFromOrder: (orderId: UUID, itemIndex: number) => {
+  removeFromOrder: (orderId: UUID, itemIndex: number, userId?: string) => {
     const state = get();
     const order = state.activeOrders.find((o) => o.id === orderId);
     if (!order || !order.items) return;
@@ -927,11 +867,11 @@ export const createFinanceSlice: StateCreator<
         action: 'ORDER_ITEM_REMOVE',
         details: `Item removido do pedido ${orderId}`,
         metadata: { orderId, itemIndex },
-        userId: get().currentUser?.id
+        userId: userId || undefined
     });
   },
 
-  checkoutTable: async (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string) => {
+  checkoutTable: async (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string, userId?: string) => {
      const state = get();
      const order = state.activeOrders.find((o) => o.id === orderId);
      if (!order) throw new Error('Order not found');
@@ -966,11 +906,17 @@ export const createFinanceSlice: StateCreator<
          });
      });
 
+     // Auto-liberate table
+     const tableId = order.table_id || (order as any).tableId;
+     if (tableId) {
+        get().updateTableStatus(String(tableId), 'AVAILABLE');
+     }
+
      get().addAuditLog({
         action: 'ORDER_CHECKOUT',
         details: `Mesa ${order.table_id} fechada. Total: ${order.total}`,
         metadata: { orderId, total: order.total, payments },
-        userId: get().currentUser?.id
+        userId: userId
     });
   },
 

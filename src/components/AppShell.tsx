@@ -4,8 +4,8 @@ import React, { useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import SmartAlertsPanel from '@/components/SmartAlertsPanel';
-import Breadcrumbs from '@/components/Breadcrumbs'; // Importar o componente Breadcrumbs
-import { useStore } from '@/store/useStore';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import { useAuth } from '@/hooks/useAuth'; // Importar o hook useAuth do Redux
 
 const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu'];
 const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu', '/admin/owner'];
@@ -13,11 +13,10 @@ const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscann
 const AppShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, isInitialized, initializeStore } = useStore();
+  const { isAuthenticated, loading } = useAuth(); // Usar o hook useAuth do Redux
 
-  useEffect(() => {
-    initializeStore();
-  }, [initializeStore]);
+  // Considerar a aplicação inicializada quando o estado de autenticação não está mais a carregar
+  const isInitialized = !loading;
 
   const isPublicRoute = useMemo(
     () => publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)),
@@ -31,10 +30,23 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Strict Guard: If initialized and not authenticated on a protected route, force redirect immediately
+    console.log('AppShell Debug:', {
+      pathname,
+      isAuthenticated,
+      isInitialized,
+      isPublicRoute,
+    });
+
     if (isInitialized && !isAuthenticated && !isPublicRoute) {
+      console.log('AppShell: Redirecting to /login');
       router.replace('/login');
     }
   }, [isPublicRoute, isInitialized, isAuthenticated, router]);
+
+  // If it's a public route, just render the children directly
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
 
   // Block rendering entirely until initialized
   if (!isInitialized) {

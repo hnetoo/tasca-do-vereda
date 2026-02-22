@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectUser } from '@/store/slices/authSlice';
 import { 
   Lock, Eye, EyeOff, ShieldAlert, FileText, 
   UserCheck, Database, Save, AlertCircle, RefreshCw, CheckCircle, XCircle, Trash2, Check
@@ -8,7 +10,8 @@ import { dlpAlertService, DLPAlert } from '@/services/dlpAlertService';
 import { analyzeAndFixMenu, MenuConsistencyReport } from '@/services/categoryResolver';
 
 export const DlpManager = () => {
-  const { addNotification, dishes: products, categories, updateDish, batchUpdateDishes, currentUser, addAuditLog } = useStore();
+  const { addNotification, dishes: products, categories, updateDish, batchUpdateDishes, addAuditLog } = useStore();
+  const user = useSelector(selectUser);
   const [dlpSettings, setDlpSettings] = useState({
     maskNif: true,
     maskPhone: true,
@@ -268,7 +271,7 @@ export const DlpManager = () => {
                         </div>
                     </div>
                     <button 
-                        onClick={() => dlpAlertService.resolveAll(currentUser?.id)}
+                        onClick={() => dlpAlertService.resolveAll(user?.id)}
                         className="px-4 py-2 bg-white/5 text-slate-300 hover:text-white rounded-xl transition-colors text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"
                     >
                         <Check size={14} /> Resolver Todos
@@ -298,7 +301,7 @@ export const DlpManager = () => {
                             </div>
                             <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
-                                    onClick={() => dlpAlertService.resolve(alert.id, currentUser?.id)}
+                                    onClick={() => dlpAlertService.resolve(alert.id, user?.id)}
                                     title="Resolver"
                                     className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-colors"
                                 >

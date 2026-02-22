@@ -3,12 +3,15 @@
 
 import React, { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectUser } from '@/store/slices/authSlice';
 import { Users, Phone, Calendar, Wallet, Printer, CheckCircle, X, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Customer } from '@/types';
 import ExportButton from '@/components/ExportButton';
 
 const Customers = () => {
-  const { customers, settleCustomerDebt, addCustomer, updateCustomer, removeCustomer, currentUser, settings, addNotification } = useStore();
+  const { customers, settleCustomerDebt, addCustomer, updateCustomer, removeCustomer, settings, addNotification } = useStore();
+  const user = useSelector(selectUser);
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentModal, setPaymentModal] = useState<{ id: string, name: string, debt: number } | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<string>('');
@@ -314,7 +317,7 @@ const Customers = () => {
                                 >
                                     <Printer size={18} />
                                 </button>
-                                {currentUser?.role === 'ADMIN' && (
+                                {user?.role === 'ADMIN' && (
                                     <button 
                                         onClick={() => handleDeleteCustomer(customer.id)}
                                         className="p-2 rounded-lg border border-red-100 text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -375,7 +378,7 @@ const Customers = () => {
                             placeholder="999999999"
                         />
                     </div>
-                    {currentUser?.role === 'ADMIN' && (
+                    {user?.role === 'ADMIN' && (
                         <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Saldo Inicial</label>

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useStore } from '@/store/useStore';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout, selectUser } from '@/store/slices/authSlice';
 import { Loader2 } from 'lucide-react';
 
 export default function OwnerLayout({
@@ -12,7 +14,9 @@ export default function OwnerLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { logout } = useStore();
+  const zustandStore = useStore(); // Keep useStore for other state if needed
+  const dispatch = useDispatch();
+  const user = useSelector(selectUser);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -27,8 +31,8 @@ export default function OwnerLayout({
         
         const hasPinSession = !!pinSessionCookie;
 
-        if (!session && !hasPinSession) {
-          await logout();
+        if (!session && !hasPinSession && !user) {
+          await dispatch(logout());
           router.push('/admin/owner/login');
           return;
         }
@@ -57,13 +61,13 @@ export default function OwnerLayout({
         setIsLoading(false);
       } catch (error) {
         console.error('Error checking session:', error);
-        await logout();
+        await dispatch(logout());
         router.push('/admin/owner/login');
       }
     };
 
     checkSession();
-  }, [router, logout]);
+  }, [router, dispatch, user]);
 
   if (isLoading) {
     return (

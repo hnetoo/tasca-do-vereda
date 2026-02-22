@@ -1,10 +1,10 @@
-import { UISlice } from './store/slices/uiSlice';
-import { OperationalSlice } from './store/slices/operationalSlice';
-import { MenuSlice } from './store/slices/menuSlice';
-import { StaffSlice } from './store/slices/staffSlice';
-import { FinanceSlice } from './store/slices/financeSlice';
-import { AuthSlice } from './store/slices/authSlice';
-import { IntegrationsSlice } from './store/slices/integrationsSlice';
+// Slices will be defined in this file to avoid circular dependencies
+// import { UISlice } from './store/slices/uiSlice';
+// import { OperationalSlice } from './store/slices/operationalSlice';
+// import { MenuSlice } from './store/slices/menuSlice';
+// import { StaffSlice } from './store/slices/staffSlice';
+// import { FinanceSlice } from './store/slices/financeSlice';
+// import { IntegrationsSlice } from './store/slices/integrationsSlice';
 
 
 
@@ -588,7 +588,218 @@ export interface BiometricClockEvent {
   processedAt?: Date | string;
   linkedAttendanceId?: string;
 }
-export interface StoreState extends MenuSlice, StaffSlice, FinanceSlice, AuthSlice, UISlice, OperationalSlice, IntegrationsSlice {
+export interface MenuSlice {
+  dishes: Dish[];
+  categories: MenuCategory[];
+  deletedCategoryIds: UUID[];
+  isDiagnosing: boolean;
+  integrityIssues: IntegrityIssue[];
+  setDishes: (dishes: Dish[]) => void;
+  setCategories: (categories: MenuCategory[]) => void;
+  setDishesFromCloud: (dishes: Dish[]) => void;
+  setCategoriesFromCloud: (categories: MenuCategory[]) => void;
+  addCategory: (cat: MenuCategory) => void;
+  updateCategory: (cat: MenuCategory) => void;
+  removeCategory: (id: UUID) => void;
+  restoreCategory: (id: UUID) => void;
+  recoverDeletedCategory: (category: MenuCategory) => void;
+  scanAndRecoverCategories: () => Promise<void>;
+  addDish: (dish: Dish) => Promise<boolean>;
+  updateDish: (dish: Dish) => Promise<boolean>;
+  batchUpdateDishes: (updates: { id: UUID; changes: Partial<Dish> }[]) => Promise<boolean>;
+  removeDish: (id: UUID) => void;
+  restoreMenuData: () => Promise<void>;
+  hardResetMenu: () => Promise<void>;
+  loadFromSQLExclusively: () => Promise<boolean>;
+  getDishById: (id: UUID) => Dish | undefined;
+  getDishesByCategory: (categoryId: UUID) => Dish[];
+  getCategoryById: (id: UUID) => MenuCategory | undefined;
+  rebuildMenu: (categories: MenuCategory[], dishes: Dish[]) => void;
+  invalidateMenuCache: () => void;
+  syncMenuWithCloud: () => Promise<void>;
+  validateMenuIntegrity: (categories: MenuCategory[], dishes: Dish[]) => { isValid: boolean; issues: IntegrityIssue[] };
+  runIntegrityDiagnostics: () => Promise<void>;
+  performSafeCleanup: () => Promise<boolean>;
+  importCloudItems: (data: { categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => Promise<void>;
+  detectCloudConflicts: (data: { categories: MenuCategory[], products: Dish[] }) => { categories: MenuCategory[], products: Dish[] };
+  menuAccessLogs: MenuAccessLog[];
+  getMenuAccessStats: () => MenuAccessAggregatedStats;
+  clearMenuAccessLogs: () => void;
+  logMenuAccess: (log: MenuAccessLog) => void;
+}
+
+export interface StaffSlice {
+  employees: Employee[];
+  workShifts: WorkShift[];
+  attendance: AttendanceRecord[];
+  addEmployee: (emp: Employee) => void;
+  updateEmployee: (emp: Employee) => void;
+  removeEmployee: (id: UUID) => void;
+  addWorkShift: (shift: WorkShift) => void;
+  removeWorkShift: (id: UUID) => void;
+  clockIn: (employeeId: UUID, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => void;
+  clockOut: (employeeId: UUID, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => void;
+  getEmployeeById: (id: UUID) => Employee | undefined;
+  getAttendanceByEmployeeId: (employeeId: UUID) => AttendanceRecord[];
+  setEmployees: (employees: Employee[]) => void;
+  setAttendance: (attendance: AttendanceRecord[]) => void;
+  updateAttendance: (record: AttendanceRecord) => void;
+}
+
+export interface UISlice {
+  settings: SystemSettings;
+  notifications: Notification[];
+  isSidebarCollapsed: boolean;
+  isMobileMenuOpen: boolean;
+  addNotification: (type: Notification['type'], message: string) => void;
+  removeNotification: (id: string) => void;
+  updateSettings: (settings: Partial<SystemSettings>) => void;
+  toggleSidebar: () => void;
+  toggleMobileMenu: () => void;
+  triggerSync: () => Promise<void>;
+}
+
+export interface IntegrationsSlice {
+  apiKeys: APIKey[];
+  generateApiKey: (name: string, scopes: string[]) => APIKey;
+  revokeApiKey: (keyId: string) => void;
+  webhooks: WebhookConfig[];
+  registerWebhook: (config: WebhookConfig) => void;
+  updateWebhook: (config: WebhookConfig) => void;
+  removeWebhook: (webhookId: string) => void;
+  triggerWebhook: (event: string, data: unknown) => Promise<void>;
+  testWebhook: (webhookId: string) => Promise<boolean>;
+  biometricDevices: BiometricDevice[];
+  registerBiometricDevice: (device: BiometricDevice) => void;
+  removeBiometricDevice: (deviceId: string) => void;
+  updateBiometricDevice: (device: BiometricDevice) => void;
+  syncBiometricDevice: (deviceId: string) => Promise<void>;
+  testBiometricConnection: (deviceId: string) => Promise<boolean>;
+  integrationLogs: IntegrationLog[]; 
+  mobileSessions: MobileSession[];
+  createMobileSession: (userId: string, deviceInfo: { deviceId: string; deviceName: string; ipAddress: string }) => MobileSession;
+  validateMobileSession: (token: string) => MobileSession | null;
+  revokeMobileSession: (sessionId: string) => void;
+  processBiometricWebhook: (payload: {
+    externalBioId: string;
+    type: string;
+    clockTime: string | Date;
+    temperature?: number;
+    deviceId?: string;
+  }) => Promise<void>;
+}
+
+export interface OperationalSlice {
+  tables: Table[];
+  fetchTables: () => Promise<void>;
+  activeTableId: string | null;
+  saveStatus: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE';
+  customers: Customer[];
+  reservations: Reservation[];
+  stock: StockItem[];
+  shifts: CashShift[];
+  currentShiftId: UUID | null;
+  deliveries: Delivery[];
+  
+  setActiveTable: (id: string | null) => void;
+  addTable: (table: Table) => void;
+  updateTable: (table: Table) => void;
+  removeTable: (id: string) => void;
+  updateTableStatus: (id: string, status: string) => void;
+  
+  addCustomer: (customer: Customer) => void;
+  updateCustomer: (customer: Customer) => void;
+  removeCustomer: (id: UUID) => void;
+  
+  addReservation: (res: Reservation) => void;
+  updateReservation: (res: Reservation) => void;
+  removeReservation: (id: UUID) => void;
+  
+  addStockItem: (item: StockItem) => void;
+  updateStockItem: (item: StockItem) => void;
+  removeStockItem: (id: UUID) => void;
+  
+  openShift: (amount: number) => void;
+  closeShift: (closingAmount: number) => void;
+  backupLayout: () => void;
+  createNewOrder: (tableId: string, name: string) => UUID;
+  updateStockQuantity: (id: UUID, quantity: number) => void;
+  
+  closeTableWithoutOrders: (tableId: string) => void;
+  transferTable: (fromTableId: string, toTableId: string) => void;
+
+  addDelivery: (delivery: Delivery) => void;
+  updateDelivery: (delivery: Delivery) => void;
+  removeDelivery: (id: UUID) => void;
+  setDeliveries: (deliveries: Delivery[]) => void;
+  setShifts: (shifts: CashShift[]) => void;
+  addAuditLog: (log: any) => void;
+  auditLogs: any[];
+  settleCustomerDebt: (customerId: UUID, amount: number) => void;
+}
+
+export interface FinanceSlice {
+  orders: Order[];
+  activeOrders: Order[];
+  activeOrderIds: UUID[];
+  expenses: Expense[];
+  fixedExpenses: FixedExpense[];
+  revenues: Revenue[];
+  payroll: PayrollRecord[];
+  activeOrderId: UUID | null;
+  dashboardSummary: DashboardSummary | null;
+  dashboardAnalytics: Analytics | null;
+  setActiveOrder: (id: UUID | null) => void;
+  setDashboardSummary: (summary: DashboardSummary) => void;
+  setDashboardAnalytics: (analytics: Analytics) => void;
+  addOrder: (order: Order) => void;
+  updateOrder: (order: Order) => void;
+  removeOrder: (id: UUID) => void;
+  addExpense: (expense: Expense) => void;
+  updateExpense: (expense: Expense) => void;
+  removeExpense: (id: UUID) => void;
+  addRevenue: (revenue: Revenue) => void;
+  removeRevenue: (id: UUID) => void;
+  addFixedExpense: (expense: FixedExpense) => void;
+  updateFixedExpense: (expense: FixedExpense) => void;
+  removeFixedExpense: (id: UUID) => void;
+  addPayrollRecord: (record: PayrollRecord) => void;
+  updatePayrollRecord: (record: PayrollRecord) => void;
+  removePayrollRecord: (id: UUID) => void;
+  setOrders: (orders: Order[]) => void;
+  setExpenses: (expenses: Expense[]) => void;
+  setRevenues: (revenues: Revenue[]) => void;
+  setPayroll: (payroll: PayrollRecord[]) => void;
+  getLoyaltyTier: (customerId: UUID) => string;
+  processPayroll: (employeeId: UUID, month: number, year: number, paymentMethod: PaymentMethod) => Promise<void>;
+  createFullFinancialBackup: () => Promise<boolean>;
+  restoreFullFinancialBackup: () => Promise<boolean>;
+  clearFinancialData: (reason: string, userId: UUID) => Promise<{ success: boolean; report: FinancialClearanceReport }>;
+  correctPayment: (orderId: UUID, newPayments: OrderPayment[], reason: string, user: User) => Promise<boolean>;
+  getDailySalesAnalytics: (days: number) => DailySalesAnalytics[];
+  getSalesForDate: (date: Date) => DailySalesAnalytics;
+  getMenuAnalytics: (period: 'day' | 'week' | 'month' | number) => MenuAnalytics[];
+  getStockAnalytics: () => Array<{ itemId: string; itemName: string; currentStock: number; minThreshold: number; daysToRunOut: number }>;
+  getEmployeePerformance: () => Array<{ employeeId: string; efficiency: number; rating: number }>;
+  getPeakHours: () => number[];
+  getTopSellingDishes: (limit?: number) => Dish[];
+  getAverageOrderValue: () => number;
+  getCustomerRetention: () => any;
+  getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
+  syncFinancialMetricsToDashboard: () => Promise<void>;
+  fetchRemoteDashboard: () => Promise<void>;
+  handleRealtimeUpdate: (payload: RealtimePayload<any>) => void;
+  
+  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID, userId?: string) => void;
+  removeFromOrder: (orderId: UUID, itemIndex: number, userId?: string) => void;
+  checkoutTable: (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string, userId?: string) => Promise<void>;
+  fireOrderToKitchen: (orderId: UUID) => void;
+  clearDraftOrder: (orderId: UUID) => void;
+  updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => void;
+  markOrderAsServed: (orderId: string) => void;
+}
+
+export interface StoreState extends MenuSlice, StaffSlice, FinanceSlice, UISlice, OperationalSlice, IntegrationsSlice {
   addAuditLog: (log: any) => void;
   suppliers: Fornecedor[];
   supabaseSyncStatus: SupabaseSyncStatus;
@@ -598,7 +809,6 @@ export interface StoreState extends MenuSlice, StaffSlice, FinanceSlice, AuthSli
   attendance: AttendanceRecord[];
   employees: Employee[];
   notifications: Notification[];
-  users: User[];
   payroll: PayrollRecord[];
   loyaltyRewards: any[];
   dailyAnalyticsData: DailySalesAnalytics | null;

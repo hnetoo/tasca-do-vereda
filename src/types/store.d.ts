@@ -19,7 +19,7 @@ export interface StoreState extends
   MenuSlice, 
   StaffSlice, 
   FinanceSlice, 
-  AuthSlice, 
+ 
   OperationalSlice, 
   UISlice 
 {
@@ -31,7 +31,7 @@ export interface StoreState extends
   attendance: any[]; // Defined in StaffSlice, but also initialized here
   employees: any[]; // Defined in StaffSlice, but also initialized here
   notifications: Notification[]; // Defined in UISlice, but also initialized here
-  users: any[]; // Defined in AuthSlice, but also initialized here
+
   payroll: any[]; // Defined in FinanceSlice, but also initialized here
   loyaltyRewards: any[];
   dailyAnalyticsData: DailySalesAnalytics | null;

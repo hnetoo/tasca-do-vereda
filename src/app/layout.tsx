@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "../styles/globals.css";
 import AppShell from "@/components/AppShell";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { ReduxProvider } from "@/providers/ReduxProvider";
 
 export const metadata: Metadata = {
   title: "Tasca do Vereda",
@@ -16,7 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased bg-background text-foreground">
-        <AppShell>{children}</AppShell>
+        <ReduxProvider>
+          <AppShell>{children}</AppShell>
+        </ReduxProvider>
       </body>
     </html>
   );

@@ -4,6 +4,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useStore } from '@/store/useStore';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectUser } from '@/store/slices/authSlice';
 import {
   Settings as SettingsIcon, Users, Save, Shield,
   CheckCircle, ShieldCheck, QrCode, Share2, Terminal, Smartphone,
@@ -161,11 +163,12 @@ const CloudImportPanel = () => {
 };
 const Settings = () => {
   const { 
-    settings, updateSettings, currentUser, addNotification, categories, dishes, hardResetMenu, tables, removeTable, addTable, updateTable,
+    settings, updateSettings, addNotification, categories, dishes, hardResetMenu, tables, removeTable, addTable, updateTable,
     biometricDevices, registerBiometricDevice, removeBiometricDevice, updateBiometricDevice,
     apiKeys, generateApiKey, revokeApiKey,
     webhooks, registerWebhook, removeWebhook
   } = useStore();
+  const user = useSelector(selectUser);
   const [activeTab, setActiveTab] = useState<'general' | 'fiscal' | 'tables' | 'qr' | 'system'>('general');
   const [activeSystemSubTab, setActiveSystemSubTab] = useState<'users' | 'integrations' | 'roles' | 'database' | 'agt' | 'dlp' | 'monitoring' | 'cloud' | 'bd' | 'history'>('users');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -245,7 +248,7 @@ const Settings = () => {
         autoSync: settings.supabaseConfig?.autoSync ?? hasEnv
       }
     });
-  }, [settings, currentUser]);
+  }, [settings, user]);
 
 
 
@@ -754,7 +757,7 @@ const Settings = () => {
 
     try {
       const { clearFinancialData } = useStore.getState();
-      const result = await clearFinancialData(reason, currentUser?.id || 'unknown');
+      const result = await clearFinancialData(reason, user?.id || 'unknown');
 
       if (result.success) {
         addNotification('success', 'Dados financeiros limpos com sucesso e backup de segurança realizado.');
