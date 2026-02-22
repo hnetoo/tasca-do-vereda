@@ -18,7 +18,7 @@ import { pt } from 'date-fns/locale';
 import { formatAOA } from '@/utils/format';
 import { useStore } from '@/store/useStore';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '@/store/slices/authSlice';
+import { logoutUser } from '@/store/slices/authSlice';
 import KPICard from '@/components/KPICard';
 
 import { Order, Transaction, PaymentMethod, User } from '@/types';
@@ -496,7 +496,7 @@ export default function OwnerDashboard() {
                     <h1 className="text-2xl font-bold text-white mb-2">Acesso Negado</h1>
                     <p className="text-slate-400 mb-6">O utilizador {user.name} ({user.role}) não tem permissão para aceder a esta área.</p>
                     <button 
-                        onClick={async () => { dispatch(logout()); router.push('/admin/owner/login'); }}
+                        onClick={async () => { dispatch(logoutUser()); router.push('/admin/owner/login'); }}
                         className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition-colors w-full"
                     >
                         Terminar Sessão

@@ -35,6 +35,10 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Check for our custom auth cookie set by the mock login
+  const tascaAuthToken = request.cookies.get('tasca_auth_token')
+  const isAuthenticated = !!user || !!tascaAuthToken
+
   const url = request.nextUrl.clone()
   const path = url.pathname
 
@@ -46,28 +50,28 @@ export async function updateSession(request: NextRequest) {
     '/qrscanner', 
     '/mobiledashboard', 
     '/menu',
-    '/auth/callback' // Ensure auth callback is accessible
+    '/auth/callback'
   ]
 
   // Check if the current path starts with any of the public routes
   const isPublicRoute = publicRoutes.some(route => path === route || path.startsWith(`${route}/`))
 
   // 1. If user is NOT authenticated and tries to access a protected route
-  if (!user && !isPublicRoute && path !== '/') {
+  if (!isAuthenticated && !isPublicRoute && path !== '/') {
     // Redirect to login
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   // 2. If user IS authenticated and tries to access login
-  if (user && path === '/login') {
+  if (isAuthenticated && path === '/login') {
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
   
   // 3. Root path handling
   if (path === '/') {
-    if (user) {
+    if (isAuthenticated) {
       url.pathname = '/dashboard'
     } else {
       url.pathname = '/login'

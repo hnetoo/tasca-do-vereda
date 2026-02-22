@@ -42,7 +42,7 @@ import {
   Package
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
-import { logout } from '../store/slices/authSlice';
+import { logoutUser } from '@/store/slices/authSlice';
 import { useStore } from '../store/useStore';
 import { SystemSettings } from '@/types';
 
@@ -225,7 +225,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
 
         <div className="p-4 border-t border-slate-800">
           <button 
-            onClick={() => dispatch(logout())}
+            onClick={() => dispatch(logoutUser() as any)}
             className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-400 hover:bg-red-900/20 transition-colors"
           >
             <LogOut size={24} />

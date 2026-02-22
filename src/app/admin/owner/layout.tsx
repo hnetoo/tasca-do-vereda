@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useStore } from '@/store/useStore';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout, selectUser } from '@/store/slices/authSlice';
+import { logoutUser, selectUser } from '@/store/slices/authSlice';
 import { Loader2 } from 'lucide-react';
 
 export default function OwnerLayout({
@@ -32,7 +32,7 @@ export default function OwnerLayout({
         const hasPinSession = !!pinSessionCookie;
 
         if (!session && !hasPinSession && !user) {
-          await dispatch(logout());
+          await dispatch(logoutUser());
           router.push('/admin/owner/login');
           return;
         }
@@ -63,7 +63,7 @@ export default function OwnerLayout({
         setIsLoading(false);
       } catch (error) {
         console.error('Error checking session:', error);
-        await dispatch(logout());
+        await dispatch(logoutUser());
         router.push('/admin/owner/login');
       }
     };
