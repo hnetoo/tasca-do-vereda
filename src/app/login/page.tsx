@@ -12,7 +12,7 @@ import { logger } from '@/services/logger';
 const LoginForm = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, loginWithPassword, users, settings, isInitialized, isAuthenticated, currentUser } = useStore();
+  const { login, loginWithPassword, users, settings, isInitialized, isAuthenticated, currentUser, logout } = useStore();
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -30,18 +30,30 @@ const LoginForm = () => {
 
   // Helper function for strict role-based redirection
   const performRedirect = (user: UserType) => {
-    // Forced redirection to Home for all users as per strict requirement
-    // "Após o login bem-sucedido, redirecionar obrigatoriamente para a URL principal"
+    // Forced redirection to Dashboard directly
     const role = (user.role || '').toUpperCase();
-    logger.info(`Redirecionando utilizador ${user.name} para Home Principal (Forçado)`, { role });
-    router.push('/');
+    logger.info(`Redirecionando utilizador ${user.name} para Dashboard (Forçado)`, { role });
+    router.replace('/dashboard');
   };
 
   useEffect(() => {
-    // Auth check: redirect based on role if already authenticated
-    if (isAuthenticated && currentUser) {
-      performRedirect(currentUser);
-    }
+    // Auth check: redirect only if Supabase session is valid
+    const checkAuth = async () => {
+      if (isAuthenticated && currentUser) {
+        const supabase = createClient();
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (user) {
+           performRedirect(currentUser);
+        } else {
+            // Invalid session but store says authenticated -> Clear store
+            console.warn('Login: Store authenticated but Supabase session missing/invalid. Clearing store.');
+            logout();
+          }
+      }
+    };
+    
+    checkAuth();
   }, [isAuthenticated, currentUser, router]);
 
   useEffect(() => {
