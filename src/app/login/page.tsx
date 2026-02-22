@@ -30,21 +30,11 @@ const LoginForm = () => {
 
   // Helper function for strict role-based redirection
   const performRedirect = (user: UserType) => {
-    const redirectTo = searchParams.get('redirect_to');
-    
-    // If there is a specific redirect request, prioritize it (unless it's to login itself or root)
-    if (redirectTo && redirectTo !== '/login' && redirectTo !== '/') {
-      logger.info(`Redirecionando usuário ${user.name} para rota solicitada: ${redirectTo}`, { role: user.role });
-      router.push(redirectTo);
-      return;
-    }
-
-    // Strict Role-Based Routing - Now unified to Dashboard for all roles as requested
+    // Forced redirection to Home for all users as per strict requirement
+    // "Após o login bem-sucedido, redirecionar obrigatoriamente para a URL principal"
     const role = (user.role || '').toUpperCase();
-    
-    // Always redirect to dashboard, regardless of role
-    logger.info(`Redirecionando utilizador ${user.name} para Dashboard Principal`, { role });
-    router.push('/dashboard');
+    logger.info(`Redirecionando utilizador ${user.name} para Home Principal (Forçado)`, { role });
+    router.push('/');
   };
 
   useEffect(() => {

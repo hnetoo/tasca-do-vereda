@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { Employee, WorkShift, AttendanceRecord, StoreState, UUID } from '../../types';
-import { saveEmployeesAction, deleteEmployeeAction, saveAttendanceAction } from '@/app/actions';
+import { saveEmployeeAction, deleteEmployeeAction } from '@/app/actions/users';
+import { saveAttendanceAction } from '@/app/actions';
 import { logger } from '../../services/logger';
 
 export interface StaffSlice {
@@ -78,7 +79,7 @@ export const createStaffSlice: StateCreator<
   
   addEmployee: (emp: Employee) => {
     set((state: StaffSlice) => ({ employees: [...state.employees, emp] }));
-    saveEmployeesAction([emp]).then(res => {
+    saveEmployeeAction(emp).then(res => {
       if (!res.success) logger.error('Failed to persist new employee to SQL', { id: emp.id, error: res.error }, 'DATABASE');
     }).catch(e => 
       logger.error('Failed to persist new employee to SQL', { id: emp.id, error: e.message }, 'DATABASE')
@@ -89,7 +90,7 @@ export const createStaffSlice: StateCreator<
     set((state: StaffSlice) => ({
       employees: state.employees.map((e: Employee) => e.id === emp.id ? emp : e)
     }));
-    saveEmployeesAction([emp]).then(res => {
+    saveEmployeeAction(emp).then(res => {
       if (!res.success) logger.error('Failed to persist updated employee to SQL', { id: emp.id, error: res.error }, 'DATABASE');
     }).catch(e => 
       logger.error('Failed to persist updated employee to SQL', { id: emp.id, error: e.message }, 'DATABASE')

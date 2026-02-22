@@ -1,19 +1,15 @@
-
-
 'use server';
 
-import { databaseOperations } from '@/services/database/operations';
+import { adminOperations } from '@/services/database/adminOperations';
 import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID, Order } from '@/types';
 import { logger } from '@/services/logger';
-import { createClient } from '@/lib/supabase/server';
 
 export async function saveOrderAction(order: Order): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const supabase = await createClient();
-    const success = await databaseOperations.saveOrder(order, supabase);
-    if (!success) {
-      logger.error('Failed to save order via server action', { orderId: order.id }, 'SERVER_ACTION');
-      return { success: false, error: 'Operation returned false' };
+    const result = await adminOperations.saveOrder(order);
+    if (!result.success) {
+      logger.error('Failed to save order via server action', { orderId: order.id, error: result.error }, 'SERVER_ACTION');
+      return { success: false, error: result.error };
     }
     return { success: true };
   } catch (error: unknown) {
@@ -25,7 +21,7 @@ export async function saveOrderAction(order: Order): Promise<{ success: boolean;
 
 export async function getTablesAction(): Promise<{ success: boolean; data?: Table[]; error?: string }> {
   try {
-    const tables = await databaseOperations.getTables();
+    const tables = await adminOperations.getTables();
     return { success: true, data: tables };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
@@ -36,7 +32,7 @@ export async function getTablesAction(): Promise<{ success: boolean; data?: Tabl
 
 export async function saveTableAction(table: Table): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveTable(table);
+    const result = await adminOperations.saveTable(table);
     if (!result.success) {
       logger.error('Failed to save table via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -51,7 +47,7 @@ export async function saveTableAction(table: Table): Promise<{ success: boolean;
 
 export async function deleteTableAction(id: string): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.deleteTable(id);
+    const result = await adminOperations.deleteTable(id);
     if (!result.success) {
       logger.error('Failed to delete table via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -66,7 +62,7 @@ export async function deleteTableAction(id: string): Promise<{ success: boolean;
 
 export async function saveCustomerAction(customer: Customer): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveCustomer(customer);
+    const result = await adminOperations.saveCustomer(customer);
     if (!result.success) {
       logger.error('Failed to save customer via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -81,7 +77,7 @@ export async function saveCustomerAction(customer: Customer): Promise<{ success:
 
 export async function deleteCustomerAction(id: UUID): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.deleteCustomer(id);
+    const result = await adminOperations.deleteCustomer(id);
     if (!result.success) {
       logger.error('Failed to delete customer via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -96,7 +92,7 @@ export async function deleteCustomerAction(id: UUID): Promise<{ success: boolean
 
 export async function saveReservationAction(reservation: Reservation): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveReservation(reservation);
+    const result = await adminOperations.saveReservation(reservation);
     if (!result.success) {
       logger.error('Failed to save reservation via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -111,7 +107,7 @@ export async function saveReservationAction(reservation: Reservation): Promise<{
 
 export async function deleteReservationAction(id: UUID): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.deleteReservation(id);
+    const result = await adminOperations.deleteReservation(id);
     if (!result.success) {
       logger.error('Failed to delete reservation via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -126,7 +122,7 @@ export async function deleteReservationAction(id: UUID): Promise<{ success: bool
 
 export async function saveStockItemAction(item: StockItem): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveStockItem(item);
+    const result = await adminOperations.saveStockItem(item);
     if (!result.success) {
       logger.error('Failed to save stock item via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -141,7 +137,7 @@ export async function saveStockItemAction(item: StockItem): Promise<{ success: b
 
 export async function deleteStockItemAction(id: UUID): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.deleteStockItem(id);
+    const result = await adminOperations.deleteStockItem(id);
     if (!result.success) {
       logger.error('Failed to delete stock item via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -156,7 +152,7 @@ export async function deleteStockItemAction(id: UUID): Promise<{ success: boolea
 
 export async function saveShiftAction(shift: CashShift): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveShift(shift);
+    const result = await adminOperations.saveShift(shift);
     if (!result.success) {
       logger.error('Failed to save shift via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -171,7 +167,7 @@ export async function saveShiftAction(shift: CashShift): Promise<{ success: bool
 
 export async function saveDeliveryAction(delivery: Delivery): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.saveDelivery(delivery);
+    const result = await adminOperations.saveDelivery(delivery);
     if (!result.success) {
       logger.error('Failed to save delivery via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };
@@ -186,7 +182,7 @@ export async function saveDeliveryAction(delivery: Delivery): Promise<{ success:
 
 export async function deleteDeliveryAction(id: UUID): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await databaseOperations.deleteDelivery(id);
+    const result = await adminOperations.deleteDelivery(id);
     if (!result.success) {
       logger.error('Failed to delete delivery via server action', { error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };

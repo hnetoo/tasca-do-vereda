@@ -7,6 +7,7 @@ import { DollarSign, ShoppingBag, Users, TrendingUp, Sparkles, Loader2, Activity
 import { analyzeBusinessPerformance } from '@/services/geminiService';
 import { Order, AIAnalysisResult, PedidoPayload, DailyAnalyticsPayload, PaymentMethod, Expense, Revenue, Customer } from '@/types';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import Image from 'next/image';
 import ExportButton from '@/components/ExportButton';
 import { exportChartToPDF } from '@/services/exportService';
@@ -39,7 +40,7 @@ const paymentLabels: Record<PaymentMethod, string> = {
 const Dashboard = () => {
   const { 
     activeOrders, orders, customers, dishes: menu, settings, expenses, revenues,
-    getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange, isAuthenticated
+    getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange, logout
   } = useStore();
 
   const [realtimeActivity, setRealtimeActivity] = useState(false);
@@ -62,12 +63,32 @@ const Dashboard = () => {
   const [paymentMetric, setPaymentMetric] = useState<'VENDAS' | 'LUCRO'>('VENDAS');
   const paymentChartRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
+    const checkSession = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Check for PIN session cookie as fallback
+        const hasPinSession = typeof document !== 'undefined' && 
+          document.cookie.split(';').some((item) => item.trim().startsWith('pin_session='));
+
+        if (!session && !hasPinSession) {
+          await logout();
+          router.push('/login');
+          return;
+        }
+        setIsLoadingSession(false);
+      } catch (error) {
+        console.error('Error checking session:', error);
+        await logout();
+        router.push('/login');
+      }
+    };
+    checkSession();
+  }, [router, logout]);
 
   useEffect(() => {
     if (realtimeActivity) {
@@ -252,6 +273,15 @@ const Dashboard = () => {
     });
     return cols;
   }, []);
+
+  if (isLoadingSession) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-950">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-sm text-slate-400">A verificar sessão...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 pb-24 space-y-8 animate-in fade-in duration-500">

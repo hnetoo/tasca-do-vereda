@@ -10,20 +10,20 @@ import { translateDatabaseError } from './errors';
 import { Order, OrderItem, Table, MenuCategory, Dish, CashShift, Expense, Revenue, Fornecedor, User, AttendanceRecord, PayrollRecord, SystemSettings, Customer, Employee, StockItem, LayoutBackup, Reservation, Delivery } from '../../types';
 
 
-export async function executeQuery(sql: string, params?: any[]): Promise<void>;
-export async function executeQuery(supabase: SupabaseClient<Database>, sql: string, params?: any[]): Promise<void>;
-export async function executeQuery(supabaseOrSql: SupabaseClient<Database> | string, sqlOrParams?: string | any[], params?: any[]) {
+export async function executeQuery<T = any>(sql: string, params?: any[]): Promise<T[]>;
+export async function executeQuery<T = any>(supabase: SupabaseClient<Database>, sql: string, params?: any[]): Promise<T[]>;
+export async function executeQuery<T = any>(supabaseOrSql: SupabaseClient<Database> | string, sqlOrParams?: string | any[], params?: any[]): Promise<T[]> {
     if (typeof supabaseOrSql === 'string') {
         // Handle case where first arg is sql string (legacy compatibility: executeQuery(sql, params))
         const sql = supabaseOrSql;
         const parameters = Array.isArray(sqlOrParams) ? sqlOrParams : [];
         const client = await supabaseClientPromise;
-        const { error } = await (client as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+        const { data, error } = await (client as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
             if (error) {
-            logger.error(`Error fetching categories from Supabase`, { error }, 'DATABASE');
+            logger.error(`Error executing query from Supabase`, { error }, 'DATABASE');
             throw error;
         }
-        return;
+        return (data ?? []) as T[];
     }
     
     // Handle standard case: executeQuery(supabase, sql, params)
@@ -31,8 +31,9 @@ export async function executeQuery(supabaseOrSql: SupabaseClient<Database> | str
     const sql = sqlOrParams as string;
     const parameters = params || [];
     
-    const { error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+    const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
     if (error) throw error;
+    return (data ?? []) as T[];
 }
 
 const selectQuery = async <T>(supabase: SupabaseClient<Database>, sql: string, params?: any[]): Promise<T[]> => {

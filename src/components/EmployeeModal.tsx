@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, User, Briefcase, Phone, DollarSign, Mail, Calendar, Hash, Banknote, IdCard, Palette, Clock } from 'lucide-react';
+import { X, User, Briefcase, Phone, DollarSign, Mail, Calendar, Hash, Banknote, IdCard, Palette, Clock, Key } from 'lucide-react';
 import { Employee } from '@/types';
 import { useStore } from '@/store/useStore';
 import { v4 as uuidv4 } from 'uuid';
@@ -57,6 +57,24 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
   };
 
   const handleSave = () => {
+    // Validation
+    if (!formData.name.trim()) {
+      alert('O nome é obrigatório');
+      return;
+    }
+    if (!formData.role) {
+      alert('O cargo é obrigatório');
+      return;
+    }
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      alert('Email inválido');
+      return;
+    }
+    if (formData.pin && !/^\d{4}$/.test(formData.pin)) {
+        alert('O PIN deve conter exatamente 4 dígitos numéricos');
+        return;
+    }
+
     if (employee) {
       updateEmployee(formData);
     } else {
@@ -112,6 +130,25 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* PIN */}
+          <div>
+            <label htmlFor="pin" className="block text-sm font-medium text-slate-400 mb-1">PIN (Acesso)</label>
+            <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700">
+              <Key size={18} className="text-slate-500 ml-3" />
+              <input
+                type="password"
+                id="pin"
+                name="pin"
+                value={formData.pin || ''}
+                onChange={handleChange}
+                placeholder="****"
+                className="flex-1 p-2.5 bg-transparent outline-none"
+                maxLength={4}
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">PIN de 4 dígitos para login no POS</p>
           </div>
 
           {/* Phone */}

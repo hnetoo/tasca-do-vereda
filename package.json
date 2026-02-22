@@ -15,7 +15,7 @@
     "type-check": "tsc --noEmit",
     "check-branch": "echo 'Checking branch skipped'",
     "test": "jest",
-    "supabase:gen-types": "supabase gen types typescript --project-id \"ratzyxwpzrqbtpheygh\" --schema public > src/types/supabase.ts"
+    "supabase:gen-types": "npx supabase gen types typescript --project-id \"ratzyxwpzrqbtpheygch\" --schema public > src/types/supabase.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

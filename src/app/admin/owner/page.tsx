@@ -22,199 +22,6 @@ import { Order, Transaction, PaymentMethod } from '@/types';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-function AdminLoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [attempts, setAttempts] = useState(0);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [blockUntil, setBlockUntil] = useState<Date | null>(null);
-  const { loginWithPassword, currentUser, logout } = useStore();
-  const router = useRouter();
-
-  // Load block state from localStorage
-  useEffect(() => {
-    const savedBlockUntil = localStorage.getItem('admin_block_until');
-    const savedAttempts = localStorage.getItem('admin_login_attempts');
-
-    if (savedBlockUntil) {
-      const blockDate = new Date(savedBlockUntil);
-      if (blockDate > new Date()) {
-        setBlockUntil(blockDate);
-        setIsBlocked(true);
-      } else {
-        localStorage.removeItem('admin_block_until');
-        localStorage.removeItem('admin_login_attempts');
-      }
-    }
-    
-    if (savedAttempts) {
-        setAttempts(parseInt(savedAttempts, 10));
-    }
-  }, []);
-
-  // Handle Lockout Timer
-  useEffect(() => {
-    if (blockUntil) {
-      const interval = setInterval(() => {
-        if (new Date() > blockUntil) {
-          setIsBlocked(false);
-          setBlockUntil(null);
-          setAttempts(0);
-          setError('');
-          localStorage.removeItem('admin_block_until');
-          localStorage.removeItem('admin_login_attempts');
-        }
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [blockUntil]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (isBlocked) return;
-    if (!email || !password) {
-      setError('Por favor, preencha todos os campos.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const result = await loginWithPassword(email, password);
-
-      if (result.success) {
-        // Verify role immediately
-        const user = useStore.getState().currentUser;
-        const role = user?.role?.toUpperCase();
-        
-        if (role !== 'OWNER' && role !== 'ADMIN') {
-            await logout();
-            setError('Acesso negado. Permissão insuficiente.');
-            return;
-        }
-
-        // Clear block state on success
-        localStorage.removeItem('admin_block_until');
-        localStorage.removeItem('admin_login_attempts');
-        setAttempts(0);
-      } else {
-        const newAttempts = attempts + 1;
-        setAttempts(newAttempts);
-        localStorage.setItem('admin_login_attempts', newAttempts.toString());
-        
-        if (newAttempts >= 3) {
-          setIsBlocked(true);
-          const blockDate = new Date(Date.now() + 60 * 1000); // 1 minute block
-          setBlockUntil(blockDate);
-          localStorage.setItem('admin_block_until', blockDate.toISOString());
-          setError('Muitas tentativas falhadas. Acesso bloqueado temporariamente.');
-        } else {
-          setError(result.error || 'Credenciais inválidas.');
-        }
-      }
-    } catch (err) {
-      setError('Ocorreu um erro ao tentar entrar.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // If we are blocked, calculate time remaining
-  const timeRemaining = blockUntil ? Math.ceil((blockUntil.getTime() - new Date().getTime()) / 1000) : 0;
-
-  return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800 mb-4">
-            <Lock className="w-8 h-8 text-blue-500" />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Acesso Administrativo</h1>
-          <p className="text-slate-400">Área restrita a Owner e Admin</p>
-        </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-400">
-            <AlertTriangle size={20} />
-            <p className="text-sm">{error}</p>
-          </div>
-        )}
-
-        {isBlocked ? (
-           <div className="text-center p-6 bg-slate-800 rounded-xl border border-slate-700">
-             <Clock className="w-10 h-10 text-amber-500 mx-auto mb-3" />
-             <h3 className="text-lg font-medium text-white mb-2">Acesso Bloqueado</h3>
-             <p className="text-slate-400 mb-4">Muitas tentativas falhadas.</p>
-             <p className="text-2xl font-bold text-amber-500">{timeRemaining}s</p>
-             <p className="text-xs text-slate-500 mt-2">Aguarde para tentar novamente</p>
-           </div>
-        ) : (
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Email</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-500" />
-                </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
-                  placeholder="admin@exemplo.com"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-500" />
-                </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                  Verificando...
-                </>
-              ) : (
-                'Entrar'
-              )}
-            </button>
-          </form>
-        )}
-        
-        <div className="mt-8 text-center">
-            <Link href="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-                Voltar ao Menu Principal
-            </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function OwnerDashboard() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -224,22 +31,6 @@ export default function OwnerDashboard() {
   const { employees, tables, currentUser, logout } = useStore(); 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-
-  // Auth Check
-  useEffect(() => {
-    // Only proceed if store is initialized or we have a user
-    if (currentUser) {
-        const role = (currentUser.role || '').toUpperCase();
-        if (role === 'OWNER' || role === 'ADMIN') {
-            setIsAuthorized(true);
-        } else {
-            setIsAuthorized(false);
-        }
-    } else {
-        setIsAuthorized(false);
-    }
-    setAuthChecked(true);
-  }, [currentUser]);
 
   // Auth Check
   useEffect(() => {
@@ -448,7 +239,7 @@ export default function OwnerDashboard() {
     };
   }, [orders, transactions, employees, tables, yesterdaySales]);
 
-  // If not authorized, show login form
+  // If not authorized, redirect to login
   if (authChecked && !isAuthorized) {
     if (currentUser) {
         // User is logged in but not authorized
@@ -459,7 +250,7 @@ export default function OwnerDashboard() {
                     <h1 className="text-2xl font-bold text-white mb-2">Acesso Negado</h1>
                     <p className="text-slate-400 mb-6">O utilizador {currentUser.name} ({currentUser.role}) não tem permissão para aceder a esta área.</p>
                     <button 
-                        onClick={() => { logout(); window.location.href = '/admin/owner'; }}
+                        onClick={async () => { await logout(); window.location.href = '/admin/owner/login'; }}
                         className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition-colors w-full"
                     >
                         Terminar Sessão
@@ -468,7 +259,11 @@ export default function OwnerDashboard() {
             </div>
         );
     }
-    return <AdminLoginForm />;
+    // Not logged in -> Redirect
+    if (typeof window !== 'undefined') {
+        router.push('/admin/owner/login');
+    }
+    return null;
   }
 
   // While checking, show loading or nothing (to avoid flicker)

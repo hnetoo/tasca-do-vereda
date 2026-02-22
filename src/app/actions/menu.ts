@@ -2,7 +2,7 @@
 
 'use server';
 
-import { databaseOperations } from "@/services/database/operations";
+import { adminOperations } from "@/services/database/adminOperations";
 import { logger } from "@/services/logger";
 import { MenuCategory, Product } from "@/types";
 
@@ -11,9 +11,10 @@ export async function getMenuData(): Promise<{ success: boolean; categories?: Me
     // Optimization removed for stability - running on every fetch is dangerous
     // await databaseOperations.applyDatabaseOptimizations();
 
+    // Use admin operations to bypass RLS
     const [categoriesResult, dishesResult] = await Promise.all([
-      databaseOperations.getCategories(),
-      databaseOperations.getDishes(),
+      adminOperations.getCategories(),
+      adminOperations.getDishes(),
     ]);
 
     if (!categoriesResult.success || !dishesResult.success) {

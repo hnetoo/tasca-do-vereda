@@ -10,7 +10,7 @@ import { Product, MenuCategory, StockItem, IntegrityIssue, Supplier } from '@/ty
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Link as LinkIcon, AlertCircle, Check, Tag, Box, Utensils, Grid3X3, Coffee, Pizza, Beer, IceCream, Copy, RefreshCw } from 'lucide-react';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
-import { AVAILABLE_ICONS } from '@/constants';
+import { AVAILABLE_ICONS } from '@/constants/client-constants';
 
 const InventoryContent = () => {
   const { 
@@ -100,10 +100,14 @@ const InventoryContent = () => {
     }
   }, [activeTab, searchParams, pathname, router]);
 
+  const isMounted = useRef(false);
+
   // Lifecycle logging
   useEffect(() => {
+    isMounted.current = true;
     logger.info('Inventory component mounted', { activeTab }, 'Inventory');
     return () => {
+      isMounted.current = false;
       logger.info('Inventory component unmounted', null, 'Inventory');
     };
   }, [activeTab]);
@@ -202,7 +206,7 @@ const InventoryContent = () => {
     const selectedCat = categories.find((c: MenuCategory) => c.id === productForm.categoryId);
     const productData = {
       ...productForm,
-      id: editingId || productForm.id,
+      id: editingId, // Se editingId for null, o id será undefined, permitindo ao Supabase gerar um novo.
       imageUrl: finalImage,
       price: Number(productForm.price),
       isAvailableOnDigitalMenu: productForm.isAvailableOnDigitalMenu ?? true,
@@ -223,30 +227,29 @@ const InventoryContent = () => {
       }
       logger.info('Atualizando produto', { productId: editingId, name: productData.name }, 'Inventory');
       updateProduct(productData);
-      setIsProductModalOpen(false);
+      if (isMounted.current) {
+        setIsProductModalOpen(false);
+      }
     } else {
-      // Ensure ID generation for new products
-      const newProduct = {
-        ...productData,
-        id: productData.id || `product_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
-      };
-      logger.info('Adicionando novo produto', { name: newProduct.name }, 'Inventory');
-      addProduct(newProduct);
-      setIsProductModalOpen(false);
-      setProductForm({
-        name: '',
-        description: '',
-        price: 0,
-        categoryId: productForm.categoryId, 
-        imageUrl: '',
-        isAvailableOnDigitalMenu: true,
-        taxCode: 'NOR',
-        supplierId: '',
-        trackStock: false,
-        stockQuantity: 0,
-        minStockQuantity: 5,
-        unit: 'un'
-      });
+      logger.info('Adicionando novo produto', { name: productData.name }, 'Inventory');
+      addProduct(productData); // O id será gerado pelo addProduct no useStore
+      if (isMounted.current) {
+        setIsProductModalOpen(false);
+        setProductForm({
+          name: '',
+          description: '',
+          price: 0,
+          categoryId: productForm.categoryId, 
+          imageUrl: '',
+          isAvailableOnDigitalMenu: true,
+          taxCode: 'NOR',
+          supplierId: '',
+          trackStock: false,
+          stockQuantity: 0,
+          minStockQuantity: 5,
+          unit: 'un'
+        });
+      }
     }
   };
 
@@ -264,21 +267,20 @@ const InventoryContent = () => {
       logger.info('Categoria atualizada', { id: editingId, name: catData.name, parentId: catData.parentId }, 'Inventory');
     } else {
       // Ensure ID generation for new categories
-      const newCategory = {
-        ...catData,
-        id: Math.random().toString(36).substring(2, 11)
-      } as MenuCategory;
-      addCategory(newCategory);
-      logger.info('Nova categoria adicionada', { name: newCategory.name, parentId: newCategory.parentId }, 'Inventory');
+      // O id será gerado pelo addCategory no useStore
+      addCategory(catData as MenuCategory);
+      logger.info('Nova categoria adicionada', { name: catData.name, parentId: catData.parentId }, 'Inventory');
     }
-    setIsCatModalOpen(false);
+    if (isMounted.current) {
+      setIsCatModalOpen(false);
+    }
   };
 
   const handleDuplicateProduct = (product: Product) => {
     const newProduct = {
       ...product,
       name: `${product.name} (Cópia)`,
-      id: Math.random().toString(36).substring(2, 11)
+      id: undefined // Deixa o useStore gerar um novo ID
     };
     addProduct(newProduct as Product);
   };

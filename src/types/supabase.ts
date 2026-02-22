@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -299,6 +279,7 @@ export type Database = {
           name: string
           preparation_time: number | null
           price: number
+          status: string | null
           stock_quantity: number | null
           supplier_id: string | null
           tax_code: string | null
@@ -306,6 +287,7 @@ export type Database = {
           track_stock: boolean | null
           unit: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           available?: boolean | null
@@ -322,6 +304,7 @@ export type Database = {
           name: string
           preparation_time?: number | null
           price: number
+          status?: string | null
           stock_quantity?: number | null
           supplier_id?: string | null
           tax_code?: string | null
@@ -329,6 +312,7 @@ export type Database = {
           track_stock?: boolean | null
           unit?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           available?: boolean | null
@@ -345,6 +329,7 @@ export type Database = {
           name?: string
           preparation_time?: number | null
           price?: number
+          status?: string | null
           stock_quantity?: number | null
           supplier_id?: string | null
           tax_code?: string | null
@@ -352,6 +337,7 @@ export type Database = {
           track_stock?: boolean | null
           unit?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -501,6 +487,7 @@ export type Database = {
           parent_id: string | null
           sort_order: number | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -513,6 +500,7 @@ export type Database = {
           parent_id?: string | null
           sort_order?: number | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -525,6 +513,7 @@ export type Database = {
           parent_id?: string | null
           sort_order?: number | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -535,6 +524,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -761,6 +780,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id: string
+          name?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       reservations: {
         Row: {
@@ -1117,6 +1163,50 @@ export type Database = {
         }
         Relationships: []
       }
+      work_shifts: {
+        Row: {
+          closing_balance: number | null
+          created_at: string | null
+          employee_id: string | null
+          end_time: string | null
+          id: string
+          opening_balance: number | null
+          start_time: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          closing_balance?: number | null
+          created_at?: string | null
+          employee_id?: string | null
+          end_time?: string | null
+          id?: string
+          opening_balance?: number | null
+          start_time: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          closing_balance?: number | null
+          created_at?: string | null
+          employee_id?: string | null
+          end_time?: string | null
+          id?: string
+          opening_balance?: number | null
+          start_time?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_shifts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1254,11 +1344,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-

@@ -2,7 +2,7 @@ import { createAuthSlice, AuthSlice } from './authSlice';
 import { StoreState } from '@/types';
 import { logger } from '@/services/logger';
 import { createClient } from '@/lib/supabase/client';
-import { MOCK_USERS } from '@/constants';
+import { MOCK_USERS } from '@/constants/index';
 
 // Mock dependencies
 jest.mock('@/services/logger', () => ({
