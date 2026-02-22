@@ -12,17 +12,23 @@ export default function Home() {
 
 
   useEffect(() => {
-    // Check Redux state first (primary source of truth with redux-persist)
+    console.log('PAGE: useEffect triggered');
+    console.log('PAGE: Current user state:', user);
+
     if (user) {
+      console.log('PAGE: User found in Redux, redirecting to /dashboard');
       router.replace('/dashboard');
       return;
     }
 
-    // Fallback to cookie check if Redux state is empty (rare case if persist works)
     const pinSessionCookie = document.cookie.split('; ').find(row => row.startsWith('pin_session='));
+    console.log('PAGE: pinSessionCookie found:', !!pinSessionCookie);
+
     if (pinSessionCookie) {
+      console.log('PAGE: pinSessionCookie found, redirecting to /dashboard');
       router.replace('/dashboard');
     } else {
+      console.log('PAGE: No user or pinSessionCookie, redirecting to /login');
       router.replace('/login');
     }
   }, [user, router]);
