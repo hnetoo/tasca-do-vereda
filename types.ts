@@ -15,8 +15,8 @@ export interface Order {
   subtotal?: number; // New property
   taxTotal?: number;
   tax_total?: number; // For Supabase compatibility
-  paymentMethod?: PaymentMethod;
-  payment_method?: PaymentMethod; // For Supabase compatibility
+  paymentMethod?: PaymentMethod | null;
+  payment_method?: PaymentMethod | null; // For Supabase compatibility
   customerId?: string;
   customer_id?: string; // For Supabase compatibility
   shiftId?: string;

@@ -149,7 +149,7 @@ export interface OrderPayment {
 export type Order = Omit<Partial<Database['public']['Tables']['orders']['Row']>, 'created_at' | 'updated_at' | 'split_payments'> & {
   items?: (OrderItem & { dish?: Dish; product?: Dish })[];
   payments?: OrderPayment[];
-  payment_method?: PaymentMethod;
+  payment_method?: PaymentMethod | null;
   split_payments?: { method: PaymentMethod; amount: number }[];
   timestamp?: string | Date;
   created_at?: string | Date;
