@@ -51,6 +51,7 @@ export default function OwnerDashboard() {
   const supabase = createClient();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [showUpdateIndicator, setShowUpdateIndicator] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Helper to trigger update indicator
   const triggerUpdate = () => {
