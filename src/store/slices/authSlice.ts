@@ -92,6 +92,16 @@ const authSlice = createSlice({
 
 export const { clearAuthError, logout, resetAuthStatus, setUserSession } = authSlice.actions;
 
+// Async Thunk para logout que limpa o cookie
+export const logoutUser = createAsyncThunk(
+  'auth/logoutUser',
+  async (_, { dispatch }) => {
+    // Clear cookie
+    document.cookie = 'tasca_auth_token=; path=/; max-age=0; SameSite=Lax';
+    dispatch(logout());
+  }
+);
+
 export const selectUser = (state: { auth: AuthState }) => state.auth.user;
 
 export default authSlice.reducer;
