@@ -34,6 +34,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 export default function OwnerDashboard() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [monthOrders, setMonthOrders] = useState<Order[]>([]); // New state for monthly data
   const [yesterdaySales, setYesterdaySales] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +70,8 @@ export default function OwnerDashboard() {
 
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
+      
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
       // Fetch Orders (Today)
       const { data: ordersData, error: ordersError } = await supabase
@@ -78,6 +81,17 @@ export default function OwnerDashboard() {
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
+
+      // Fetch Orders (Month) for Total Arrecadado
+      const { data: monthOrdersData, error: monthError } = await supabase
+        .from('orders')
+        .select('total, status, created_at')
+        .gte('created_at', startOfMonth.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (monthError) console.error('Error fetching month orders:', monthError);
+      
+      if (monthOrdersData) setMonthOrders(monthOrdersData as Order[]);
 
       // Fetch Orders (Yesterday) for trend
       const { data: yesterdayData } = await supabase
@@ -147,19 +161,21 @@ export default function OwnerDashboard() {
   // Metrics Calculation
   const metrics = useMemo(() => {
     const closedOrders = orders.filter(o => o.status === 'FECHADO' || o.status === 'PAID');
+    const closedMonthOrders = monthOrders.filter(o => o.status === 'FECHADO' || o.status === 'PAID');
     
-    const totalSales = closedOrders.reduce((acc, o) => acc + Number(o.total || 0), 0);
+    const todaySales = closedOrders.reduce((acc, o) => acc + Number(o.total || 0), 0);
+    const totalMonthSales = closedMonthOrders.reduce((acc, o) => acc + Number(o.total || 0), 0);
 
     // Sales Trend Calculation
     let salesTrend: 'up' | 'down' | 'neutral' = 'neutral';
     let salesTrendValue = '0%';
     
     if (yesterdaySales > 0) {
-        const diff = totalSales - yesterdaySales;
+        const diff = todaySales - yesterdaySales;
         const percentage = (diff / yesterdaySales) * 100;
         salesTrend = percentage > 0 ? 'up' : percentage < 0 ? 'down' : 'neutral';
         salesTrendValue = `${percentage > 0 ? '+' : ''}${percentage.toFixed(1)}%`;
-    } else if (totalSales > 0) {
+    } else if (todaySales > 0) {
         salesTrend = 'up';
         salesTrendValue = '+100%'; // First day or no sales yesterday
     }
@@ -171,8 +187,10 @@ export default function OwnerDashboard() {
       .filter(t => t.type === 'expense')
       .reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
-    const netProfit = totalSales - totalExpenses;
-    const cashFlow = totalSales - totalExpenses; 
+    const netProfit = totalMonthSales - totalExpenses; // Profit based on monthly sales for better view? Or daily? Let's stick to daily for netProfit consistent with transactions fetch
+    // Actually, transactions fetch is daily based on 'gte today'.
+    // If we want consistent daily profit, use todaySales.
+    const dailyProfit = todaySales - totalExpenses;
     
     // Active Staff (filtering only if employees exists)
     const activeStaff = employees ? employees.filter((e: any) => e.status === 'ATIVO').length : 0;
@@ -264,7 +282,8 @@ export default function OwnerDashboard() {
     const salesByPeriodData = Object.entries(periods).map(([name, value]) => ({ name, value }));
 
     return { 
-      totalSales, 
+      todaySales,
+      totalMonthSales, // Export monthly sales
       salesTrend,
       salesTrendValue,
       activeOrders, 
@@ -272,15 +291,15 @@ export default function OwnerDashboard() {
       activeStaff,
       freeTables,
       totalExpenses,
-      cashFlow,
-      netProfit,
+      cashFlow: todaySales - totalExpenses,
+      netProfit: dailyProfit,
       chartData,
       salesByPeriodData,
       avgPrepTime,
       loyalty: '85%', // Mock for now as requested
       paymentMethodsData
     };
-  }, [orders, transactions, employees, tables, yesterdaySales]);
+  }, [orders, monthOrders, transactions, employees, tables, yesterdaySales]);
 
   // If not authorized, redirect to login
   if (authChecked && !isAuthorized) {
@@ -363,8 +382,8 @@ export default function OwnerDashboard() {
           {/* Row 1 */}
           <KPICard 
             title="TOTAL ARRECADADO" 
-            value={formatAOA(metrics.totalSales)} 
-            subtitle="Vendas Brutas"
+            value={formatAOA(metrics.totalMonthSales)} 
+            subtitle="Este Mês"
             icon={<DollarSign size={16} className="text-emerald-400" />}
             trend={metrics.salesTrend}
             trendValue={metrics.salesTrendValue}
@@ -372,7 +391,7 @@ export default function OwnerDashboard() {
           />
           <KPICard 
             title="HOJE" 
-            value={formatAOA(metrics.totalSales)} 
+            value={formatAOA(metrics.todaySales)} 
             subtitle={`${metrics.totalOrders} pedidos`}
             icon={<DollarSign size={16} className="text-blue-400" />}
             trend={metrics.salesTrend}
