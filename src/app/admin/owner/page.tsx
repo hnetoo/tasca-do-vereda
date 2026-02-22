@@ -65,19 +65,54 @@ export default function OwnerDashboard() {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
+      // Use Angola Time (WAT) which is UTC+1 all year round
+      // Create date object for "Now" in Angola
+      const now = new Date();
+      // Adjust to Angola Timezone manually if needed, but since we compare with ISO strings from DB which are UTC,
+      // we need to construct the 'start of day' in Angola Time, then convert that specific moment to UTC ISO string for the query.
       
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      // Angola is UTC+1. 
+      // Midnight in Angola (00:00 WAT) is 23:00 UTC previous day.
+      // 1. Get current time in Angola
+      const angolaOffset = 1 * 60; // +1 hour in minutes
+      const localOffset = now.getTimezoneOffset(); // in minutes (e.g., -60 for UTC+1, 0 for UTC)
+      // Note: getTimezoneOffset returns positive if local is behind UTC, negative if ahead.
+      // e.g. UTC+1 -> -60.
+      
+      // We want to find the start of the day in Angola.
+      // Let's use string manipulation to be safe and avoid browser timezone issues.
+      // Format: YYYY-MM-DDT00:00:00+01:00
+      
+      const getAngolaDateString = (date: Date) => {
+        // Create a date object shifted to Angola time
+        const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+        const angolaTime = new Date(utc + (3600000 * 1)); // Add 1 hour
+        return angolaTime;
+      };
+
+      const angolaNow = getAngolaDateString(new Date());
+      
+      // Start of Today (Angola)
+      const startOfTodayAngola = new Date(angolaNow);
+      startOfTodayAngola.setHours(0, 0, 0, 0);
+      // Convert back to UTC for query
+      // 00:00 Angola = 23:00 UTC prev day
+      const startOfTodayUTC = new Date(startOfTodayAngola.getTime() - 3600000);
+
+      // Start of Yesterday (Angola)
+      const startOfYesterdayAngola = new Date(startOfTodayAngola);
+      startOfYesterdayAngola.setDate(startOfYesterdayAngola.getDate() - 1);
+      const startOfYesterdayUTC = new Date(startOfYesterdayAngola.getTime() - 3600000);
+      
+      // Start of Month (Angola)
+      const startOfMonthAngola = new Date(angolaNow.getFullYear(), angolaNow.getMonth(), 1, 0, 0, 0, 0);
+      const startOfMonthUTC = new Date(startOfMonthAngola.getTime() - 3600000);
 
       // Fetch Orders (Today)
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
-        .gte('created_at', today.toISOString())
+        .gte('created_at', startOfTodayUTC.toISOString())
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
@@ -86,7 +121,7 @@ export default function OwnerDashboard() {
       const { data: monthOrdersData, error: monthError } = await supabase
         .from('orders')
         .select('total, status, created_at')
-        .gte('created_at', startOfMonth.toISOString())
+        .gte('created_at', startOfMonthUTC.toISOString())
         .order('created_at', { ascending: false });
 
       if (monthError) console.error('Error fetching month orders:', monthError);
@@ -97,8 +132,8 @@ export default function OwnerDashboard() {
       const { data: yesterdayData } = await supabase
         .from('orders')
         .select('total, status')
-        .gte('created_at', yesterday.toISOString())
-        .lt('created_at', today.toISOString());
+        .gte('created_at', startOfYesterdayUTC.toISOString())
+        .lt('created_at', startOfTodayUTC.toISOString());
 
       // Calculate Yesterday Sales
       if (yesterdayData) {
@@ -112,7 +147,7 @@ export default function OwnerDashboard() {
       const { data: transData, error: transError } = await supabase
         .from('transactions')
         .select('*')
-        .gte('created_at', today.toISOString())
+        .gte('created_at', startOfTodayUTC.toISOString())
         .order('created_at', { ascending: false });
 
       if (transError) throw transError;
