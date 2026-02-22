@@ -146,24 +146,23 @@ export interface OrderPayment {
   timestamp?: string;
 }
 
-export type Order = Omit<Partial<Database['public']['Tables']['orders']['Row']>, 'created_at' | 'updated_at' | 'split_payments'> & {
+export type Order = Omit<Partial<Database['public']['Tables']['orders']['Row']>, 'created_at' | 'updated_at'> & {
   items?: (OrderItem & { dish?: Dish; product?: Dish })[];
   payments?: OrderPayment[];
-  payment_method?: PaymentMethod | null;
-  split_payments?: { method: PaymentMethod; amount: number }[];
+  payment_method?: PaymentMethod | string | null;
   timestamp?: string | Date;
-  created_at?: string | Date;
-  updated_at?: string | Date;
-  customer_name?: string;
-  customer_id?: UUID;
-  order_number?: string;
-  shift_id?: UUID;
-  table_id?: string;
-  invoice_number?: string;
-  tax_total?: number;
-  sub_account_name?: string;
-  user_id?: UUID;
-  user_name?: string;
+  created_at?: string | Date | null;
+  updated_at?: string | Date | null;
+  customer_name?: string | null;
+  customer_id?: UUID | null;
+  order_number?: string | number | null;
+  shift_id?: UUID | null;
+  table_id?: string | null;
+  invoice_number?: string | null;
+  tax_total?: number | null;
+  sub_account_name?: string | null;
+  user_id?: UUID | null;
+  user_name?: string | null;
   paymentCorrectionHistory?: PaymentCorrection[];
   
   // CamelCase aliases
@@ -183,20 +182,20 @@ export type Order = Omit<Partial<Database['public']['Tables']['orders']['Row']>,
   customerNif?: string;
   
   // Additional properties
-  previous_hash?: string;
+  previous_hash?: string | null;
   jws_payload?: any;
-  is_synced_agt?: boolean;
-  agt_submission_uuid?: string;
-  signature?: string;
-  hash?: string;
+  is_synced_agt?: boolean | number | null;
+  agt_submission_uuid?: string | null;
+  signature?: string | null;
+  hash?: string | null;
 };
 
 export type Profile = AnyRecord;
 export type Customer = AnyRecord;
 
 export type Transaction = Database['public']['Tables']['transactions']['Row'] & {
-  created_at?: string; // Legacy support
-  payment_method?: string; // Legacy support
+  created_at?: string | null; // Legacy support
+  payment_method?: string | null; // Legacy support
 };
 
 export type Payment = AnyRecord;

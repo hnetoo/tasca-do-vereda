@@ -211,14 +211,15 @@ export default function OwnerDashboard() {
     const paymentMethodsMap: Record<string, number> = {};
     
     closedOrders.forEach(order => {
-        // Check split payments first
-        if (order.split_payments && order.split_payments.length > 0) {
-            order.split_payments.forEach(split => {
-                const method = split.method || 'OTHER';
-                paymentMethodsMap[method] = (paymentMethodsMap[method] || 0) + (split.amount || 0);
+        const splits = Array.isArray(order.split_payments) ? (order.split_payments as any[]) : [];
+        if (splits.length > 0) {
+            splits.forEach((split: any) => {
+                const method = (split && split.method) ? split.method : 'OTHER';
+                const amount = (split && typeof split.amount === 'number') ? split.amount : 0;
+                paymentMethodsMap[method] = (paymentMethodsMap[method] || 0) + amount;
             });
         } else if (order.payment_method) {
-            const method = order.payment_method;
+            const method = order.payment_method as string;
             paymentMethodsMap[method] = (paymentMethodsMap[method] || 0) + (order.total || 0);
         }
     });
