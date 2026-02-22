@@ -234,6 +234,30 @@ export default function OwnerDashboard() {
         paymentMethodsData.push({ name: 'Nenhum', value: 1 });
     }
 
+    const periods = {
+      'Manhã': 0,
+      'Almoço': 0,
+      'Tarde': 0,
+      'Jantar': 0,
+      'Madrugada': 0
+    };
+
+    orders.forEach(order => {
+      if (!order.created_at) return;
+      const dateObj = new Date(order.created_at);
+      if (isNaN(dateObj.getTime())) return;
+      const hour = dateObj.getHours();
+      const amount = Number(order.total || 0);
+
+      if (hour >= 6 && hour < 12) periods['Manhã'] += amount;
+      else if (hour >= 12 && hour < 16) periods['Almoço'] += amount;
+      else if (hour >= 16 && hour < 19) periods['Tarde'] += amount;
+      else if (hour >= 19 && hour <= 23) periods['Jantar'] += amount;
+      else periods['Madrugada'] += amount;
+    });
+
+    const salesByPeriodData = Object.entries(periods).map(([name, value]) => ({ name, value }));
+
     return { 
       totalSales, 
       salesTrend,
@@ -246,6 +270,7 @@ export default function OwnerDashboard() {
       cashFlow,
       netProfit,
       chartData,
+      salesByPeriodData,
       avgPrepTime,
       loyalty: '85%', // Mock for now as requested
       paymentMethodsData
@@ -327,6 +352,15 @@ export default function OwnerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Row 1 */}
           <KPICard 
+            title="TOTAL ARRECADADO" 
+            value={formatAOA(metrics.totalSales)} 
+            subtitle="Vendas Brutas"
+            icon={<DollarSign size={16} className="text-emerald-400" />}
+            trend={metrics.salesTrend}
+            trendValue={metrics.salesTrendValue}
+            color="text-emerald-400"
+          />
+          <KPICard 
             title="HOJE" 
             value={formatAOA(metrics.totalSales)} 
             subtitle={`${metrics.totalOrders} pedidos`}
@@ -340,19 +374,13 @@ export default function OwnerDashboard() {
             subtitle="mesas ativas"
             icon={<Layers size={16} className="text-slate-400" />}
           />
+          
+          {/* Row 2 */}
           <KPICard 
             title="EQUIPA" 
             value={metrics.activeStaff.toString()} 
             subtitle="ao serviço"
             icon={<Users size={16} className="text-emerald-500" />}
-          />
-
-          {/* Row 2 */}
-          <KPICard 
-            title="LOYALTY" 
-            value={metrics.loyalty} 
-            subtitle="retenção"
-            icon={<TrendingUp size={16} className="text-purple-500" />}
           />
           <KPICard 
             title="PREPARO MÉDIO" 
@@ -393,9 +421,6 @@ export default function OwnerDashboard() {
 
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar md:justify-start">
-            <Link href="/pos" className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                COMANDO
-            </Link>
             <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
                 ANALYTICS
             </button>
@@ -408,12 +433,6 @@ export default function OwnerDashboard() {
             <Link href="/settings" className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
                 SISTEMA
             </Link>
-            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                ESCALAS
-            </button>
-            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                RESERVAS
-            </button>
         </div>
 
         {/* Charts Section */}
@@ -504,6 +523,38 @@ export default function OwnerDashboard() {
                         />
                         <Legend verticalAlign="bottom" height={36}/>
                     </PieChart>
+                </ResponsiveContainer>
+             </div>
+          </div>
+
+          {/* Sales by Period Chart */}
+          <div className="lg:col-span-3 bg-slate-900/50 p-6 rounded-xl border border-slate-800 backdrop-blur-sm min-h-[350px]">
+             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Vendas por Período</h3>
+             <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={metrics.salesByPeriodData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                        <XAxis 
+                            dataKey="name" 
+                            stroke="#64748b" 
+                            fontSize={12}
+                            axisLine={false}
+                            tickLine={false}
+                        />
+                        <YAxis 
+                            stroke="#64748b" 
+                            fontSize={10}
+                            tickFormatter={(value) => new Intl.NumberFormat('en', { notation: "compact" }).format(value)}
+                            axisLine={false}
+                            tickLine={false}
+                        />
+                        <Tooltip 
+                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#fff' }}
+                            itemStyle={{ color: '#fff' }}
+                            formatter={(value: number) => formatAOA(value)}
+                        />
+                        <Bar dataKey="value" name="Vendas" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
                 </ResponsiveContainer>
              </div>
           </div>
