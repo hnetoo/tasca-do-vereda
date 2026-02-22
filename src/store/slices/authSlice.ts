@@ -98,6 +98,7 @@ export const logoutUser = createAsyncThunk(
   async (_, { dispatch }) => {
     // Clear cookie
     document.cookie = 'tasca_auth_token=; path=/; max-age=0; SameSite=Lax';
+    document.cookie = 'pin_session=; path=/; max-age=0; SameSite=Lax';
     dispatch(logout());
   }
 );

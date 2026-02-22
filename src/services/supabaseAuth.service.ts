@@ -60,7 +60,9 @@ export const supabaseAuthService = {
 
         if (foundUser) {
           // Set a cookie for middleware to verify authentication
-          document.cookie = `tasca_auth_token=${JSON.stringify({ role: foundUser.role, id: foundUser.id })}; path=/; max-age=86400; SameSite=Lax`;
+          // We encode the value to ensure it's a valid cookie value
+          const cookieValue = encodeURIComponent(JSON.stringify({ role: foundUser.role, id: foundUser.id }));
+          document.cookie = `tasca_auth_token=${cookieValue}; path=/; max-age=86400; SameSite=Lax`;
           
           resolve({ user: foundUser, role: foundUser.role, authenticatedAt: Date.now() });
         } else {
