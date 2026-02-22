@@ -1,27 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient } from './supabase/client';
+import { isTauri, supabaseUrl, supabaseAnonKey } from './supabase/config';
 
-// Guarda Tauri: Utilitário para verificar se estamos no ambiente Tauri
-export const isTauri = () => typeof window !== 'undefined' && !!(window as unknown as any).__TAURI__;
+// Re-export configuration for backward compatibility
+export { isTauri, supabaseUrl, supabaseAnonKey };
 
-// Recupera as credenciais com o operador ! para garantir que existem (TypeScript)
-export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  const errorMessage = '[SUPABASE ERROR] Missing environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. Please check your .env.local file or Vercel environment variables (ensure no quotes or extra spaces).';
-  console.error(errorMessage);
-  throw new Error(errorMessage);
-} else {
-  console.log('[SUPABASE CONFIG] URL:', supabaseUrl);
-  console.log('[SUPABASE CONFIG] Key:', supabaseAnonKey ? '***DEFINED***' : 'UNDEFINED');
-}
-
-// Inicialização do cliente
-// Mantemos as configurações de persistência para garantir funcionamento correto em Web vs Tauri
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: !isTauri(), // Web: Persist, Tauri: No (usa plugin nativo ou storage manual se necessário)
-    autoRefreshToken: !isTauri(),
-    detectSessionInUrl: !isTauri(),
-  },
-});
+// Export singleton instance
+export const supabase = createSupabaseClient();
