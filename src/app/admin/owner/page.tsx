@@ -37,13 +37,27 @@ export default function OwnerDashboard() {
   const [monthOrders, setMonthOrders] = useState<Order[]>([]); // New state for monthly data
   const [yesterdaySales, setYesterdaySales] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [revenues, setRevenues] = useState<any[]>([]);
+  const [cashShifts, setCashShifts] = useState<any[]>([]);
+  const [localEmployees, setLocalEmployees] = useState<any[]>([]);
+  const [localTables, setLocalTables] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<'CONNECTED' | 'DISCONNECTED' | 'CONNECTING'>('CONNECTING');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { employees, tables } = useStore(); 
   const user = useSelector((state: any) => state.auth.user) as User | null;
   const dispatch = useDispatch();
   const supabase = createClient();
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [showUpdateIndicator, setShowUpdateIndicator] = useState(false);
+
+  // Helper to trigger update indicator
+  const triggerUpdate = () => {
+    setLastUpdated(new Date());
+    setShowUpdateIndicator(true);
+    setTimeout(() => setShowUpdateIndicator(false), 2000);
+  };
 
   // Auth Check
   useEffect(() => {
@@ -152,10 +166,60 @@ export default function OwnerDashboard() {
 
       if (transError) throw transError;
 
+      // Fetch Expenses
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('expenses')
+        .select('*')
+        .gte('created_at', startOfTodayUTC.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (expensesError) console.error('Error fetching expenses:', expensesError);
+
+      // Fetch Revenues
+      const { data: revenuesData, error: revenuesError } = await supabase
+        .from('revenues')
+        .select('*')
+        .gte('created_at', startOfTodayUTC.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (revenuesError) console.error('Error fetching revenues:', revenuesError);
+
+      // Fetch Cash Shifts
+      const { data: shiftsData, error: shiftsError } = await supabase
+        .from('cash_shifts')
+        .select('*')
+        .gte('created_at', startOfTodayUTC.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (shiftsError) console.error('Error fetching shifts:', shiftsError);
+      
+      // Fetch Employees
+      const { data: employeesData, error: employeesError } = await supabase
+        .from('employees')
+        .select('*');
+
+      if (employeesError) console.error('Error fetching employees:', employeesError);
+
+      // Fetch Tables
+      const { data: tablesData, error: tablesError } = await supabase
+        .from('restaurant_tables')
+        .select('*');
+
+      if (tablesError) console.error('Error fetching tables:', tablesError);
+
       if (ordersData) setOrders(ordersData);
       if (transData) setTransactions(transData);
+      if (expensesData) setExpenses(expensesData);
+      if (revenuesData) setRevenues(revenuesData);
+      if (shiftsData) setCashShifts(shiftsData);
+      if (employeesData) setLocalEmployees(employeesData);
+      if (tablesData) setLocalTables(tablesData);
+      
+      triggerUpdate();
+      setConnectionStatus('CONNECTED');
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setConnectionStatus('DISCONNECTED');
     } finally {
       setIsLoading(false);
     }
@@ -167,29 +231,106 @@ export default function OwnerDashboard() {
     fetchDashboardData();
 
     // Realtime Subscriptions
-    const ordersChannel = supabase
-      .channel('owner-dashboard-orders')
+    const channel = supabase.channel('dashboard-realtime-channel');
+
+    // Orders
+    channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload: any) => {
+        triggerUpdate();
         if (payload.eventType === 'INSERT') {
           setOrders(prev => [payload.new as Order, ...prev]);
         } else if (payload.eventType === 'UPDATE') {
           setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new as Order : o));
+        } else if (payload.eventType === 'DELETE') {
+          setOrders(prev => prev.filter(o => o.id !== payload.old.id));
         }
       })
-      .subscribe();
-
-    const transactionsChannel = supabase
-      .channel('owner-dashboard-transactions')
+      // Transactions
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload: any) => {
+        triggerUpdate();
         if (payload.eventType === 'INSERT') {
           setTransactions(prev => [payload.new as Transaction, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setTransactions(prev => prev.map(t => t.id === payload.new.id ? payload.new as Transaction : t));
+        } else if (payload.eventType === 'DELETE') {
+          setTransactions(prev => prev.filter(t => t.id !== payload.old.id));
         }
       })
-      .subscribe();
+      // Expenses
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, (payload: any) => {
+        triggerUpdate();
+        if (payload.eventType === 'INSERT') {
+          setExpenses(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setExpenses(prev => prev.map(e => e.id === payload.new.id ? payload.new : e));
+        } else if (payload.eventType === 'DELETE') {
+          setExpenses(prev => prev.filter(e => e.id !== payload.old.id));
+        }
+      })
+      // Revenues
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'revenues' }, (payload: any) => {
+        triggerUpdate();
+        if (payload.eventType === 'INSERT') {
+          setRevenues(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setRevenues(prev => prev.map(r => r.id === payload.new.id ? payload.new : r));
+        } else if (payload.eventType === 'DELETE') {
+          setRevenues(prev => prev.filter(r => r.id !== payload.old.id));
+        }
+      })
+      // Cash Shifts
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_shifts' }, (payload: any) => {
+        triggerUpdate();
+        if (payload.eventType === 'INSERT') {
+          setCashShifts(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setCashShifts(prev => prev.map(s => s.id === payload.new.id ? payload.new : s));
+        }
+      })
+      // Employees
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, (payload: any) => {
+        triggerUpdate();
+        if (payload.eventType === 'INSERT') {
+          setLocalEmployees(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setLocalEmployees(prev => prev.map(e => e.id === payload.new.id ? payload.new : e));
+        } else if (payload.eventType === 'DELETE') {
+          setLocalEmployees(prev => prev.filter(e => e.id !== payload.old.id));
+        }
+      })
+      // Tables
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_tables' }, (payload: any) => {
+        triggerUpdate();
+        if (payload.eventType === 'INSERT') {
+          setLocalTables(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setLocalTables(prev => prev.map(t => t.id === payload.new.id ? payload.new : t));
+        } else if (payload.eventType === 'DELETE') {
+          setLocalTables(prev => prev.filter(t => t.id !== payload.old.id));
+        }
+      })
+      // System Events
+      .on('system', { event: '*' }, (payload: any) => {
+        if (payload.event === 'subscribed') {
+            setConnectionStatus('CONNECTED');
+        } else if (payload.event === 'unsubscribed') {
+            setConnectionStatus('DISCONNECTED');
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setConnectionStatus('CONNECTED');
+        } else if (status === 'CLOSED') {
+          setConnectionStatus('DISCONNECTED');
+        } else if (status === 'CHANNEL_ERROR') {
+          setConnectionStatus('DISCONNECTED');
+        } else {
+          setConnectionStatus('CONNECTING');
+        }
+      });
 
     return () => {
-      supabase.removeChannel(ordersChannel);
-      supabase.removeChannel(transactionsChannel);
+      supabase.removeChannel(channel);
     };
   }, [isAuthorized]);
 
@@ -227,11 +368,13 @@ export default function OwnerDashboard() {
     // If we want consistent daily profit, use todaySales.
     const dailyProfit = todaySales - totalExpenses;
     
-    // Active Staff (filtering only if employees exists)
-    const activeStaff = employees ? employees.filter((e: any) => e.status === 'ATIVO').length : 0;
+    // Active Staff (using localEmployees if available, else store)
+    const staffList = localEmployees.length > 0 ? localEmployees : (employees || []);
+    const activeStaff = staffList.filter((e: any) => e.status === 'ATIVO').length;
 
-    // Free tables
-    const freeTables = tables ? tables.filter((t: any) => t.status === 'LIVRE').length : 0;
+    // Free tables (using localTables if available, else store)
+    const tablesList = localTables.length > 0 ? localTables : (tables || []);
+    const freeTables = tablesList.filter((t: any) => t.status === 'LIVRE').length;
 
     // Prep Time Calculation
     let totalPrepTime = 0;
@@ -334,7 +477,7 @@ export default function OwnerDashboard() {
       loyalty: '85%', // Mock for now as requested
       paymentMethodsData
     };
-  }, [orders, monthOrders, transactions, employees, tables, yesterdaySales]);
+  }, [orders, monthOrders, transactions, employees, tables, yesterdaySales, localEmployees, localTables]);
 
   // If not authorized, redirect to login
   if (authChecked && !isAuthorized) {
@@ -394,10 +537,24 @@ export default function OwnerDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-end mr-2 hidden md:flex">
-              <span className="text-xs font-bold text-emerald-500 flex items-center gap-1">
-                <Wifi size={12} /> Online
+              <div className="flex items-center gap-2">
+                 {showUpdateIndicator && (
+                    <span className="text-[10px] font-bold text-emerald-400 animate-pulse bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20">
+                        ATUALIZADO
+                    </span>
+                 )}
+                 <span className={`text-xs font-bold flex items-center gap-1 ${
+                    connectionStatus === 'CONNECTED' ? 'text-emerald-500' : 
+                    connectionStatus === 'CONNECTING' ? 'text-amber-500' : 'text-red-500'
+                 }`}>
+                    <Wifi size={12} /> 
+                    {connectionStatus === 'CONNECTED' ? 'Online' : 
+                     connectionStatus === 'CONNECTING' ? 'Conectando...' : 'Offline'}
+                 </span>
+              </div>
+              <span className="text-[10px] text-slate-500">
+                {lastUpdated ? `Atualizado: ${format(lastUpdated, 'HH:mm:ss')}` : 'Aguardando dados...'}
               </span>
-              <span className="text-xs text-slate-500">{format(new Date(), 'HH:mm:ss')}</span>
             </div>
             <button 
               onClick={fetchDashboardData}
@@ -483,21 +640,7 @@ export default function OwnerDashboard() {
           />
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar md:justify-start">
-            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                ANALYTICS
-            </button>
-            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-cyan-500 text-black transition-colors">
-                ANÁLISES
-            </button>
-            <button className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                FINANÇAS
-            </button>
-            <Link href="/settings" className="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-                SISTEMA
-            </Link>
-        </div>
+
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
