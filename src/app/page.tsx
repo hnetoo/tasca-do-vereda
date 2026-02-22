@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/reduxStore';
@@ -9,20 +9,17 @@ import { Loader2 } from 'lucide-react';
 export default function Home() {
   const router = useRouter();
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
-
+  const redirected = useRef(false);
 
   useEffect(() => {
-    console.log('PAGE: useEffect triggered');
-    console.log('PAGE: Current user state:', { user, isAuthenticated });
-
+    if (redirected.current) return;
+    redirected.current = true;
     if (isAuthenticated) {
-      console.log('PAGE: User authenticated in Redux, redirecting to /dashboard');
       router.replace('/dashboard');
     } else {
-      console.log('PAGE: No authenticated user, redirecting to /login');
       router.replace('/login');
     }
-  }, [isAuthenticated, router]);
+  }, []);
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-50">
