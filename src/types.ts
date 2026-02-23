@@ -693,6 +693,7 @@ export interface OperationalSlice {
   fetchTables: () => Promise<void>;
   activeTableId: string | null;
   saveStatus: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE';
+  setSaveStatus: (status: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE') => void;
   customers: Customer[];
   reservations: Reservation[];
   stock: StockItem[];

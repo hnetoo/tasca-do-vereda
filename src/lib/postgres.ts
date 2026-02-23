@@ -4,7 +4,7 @@ import { dbConfig } from '@/services/database/config';
 // Use connection string from dbConfig or fallback to env
 const connectionString = dbConfig.connectionString || process.env.DATABASE_URL;
 
-let sql: postgres.Sql<{}>;
+let sql: any;
 
 if (connectionString) {
   // Create a singleton connection instance
