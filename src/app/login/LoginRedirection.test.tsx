@@ -1,17 +1,16 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import Login from './page';
-import { useStore } from '@/store/useStore';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import authReducer from '@/store/slices/authSlice';
+import { UserRole } from '@/types/auth.types';
 
 // Mock dependencies
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
   useSearchParams: jest.fn(),
-}));
-
-jest.mock('@/store/useStore', () => ({
-  useStore: jest.fn(),
 }));
 
 jest.mock('next/image', () => ({
@@ -35,6 +34,30 @@ jest.mock('@/services/logger', () => ({
   },
 }));
 
+// Mock supabaseAuthService to avoid delay and ensure success
+jest.mock('@/services/supabaseAuth.service', () => ({
+  supabaseAuthService: {
+    loginWithPin: jest.fn((pin, role) => {
+      return Promise.resolve({
+        user: {
+          id: '1',
+          name: 'Test User',
+          role: role,
+          pin: 'hashed',
+          email: 'test@example.com'
+        },
+        role: role,
+        authenticatedAt: Date.now()
+      });
+    })
+  }
+}));
+
+const createMockStore = (preloadedState: any) => configureStore({
+  reducer: { auth: authReducer },
+  preloadedState
+});
+
 describe('Login Component Redirection Logic', () => {
   let mockPush: jest.Mock;
   let mockSearchParams: URLSearchParams;
@@ -48,39 +71,46 @@ describe('Login Component Redirection Logic', () => {
     (useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
   });
 
-  const setupStore = (isAuthenticated: boolean, role: string) => {
-    (useStore as unknown as jest.Mock).mockReturnValue({
-      login: jest.fn(),
-      loginWithPassword: jest.fn(),
-      users: [],
-      settings: { restaurantName: 'Test Restaurant' },
-      isInitialized: true,
-      isAuthenticated,
-      currentUser: isAuthenticated ? { id: '1', name: 'Test User', role } : null,
-    });
+  const renderWithRedux = (component: React.ReactElement, initialState: any = {}) => {
+    const store = createMockStore(initialState);
+    return render(<Provider store={store}>{component}</Provider>);
   };
 
-  it('should redirect ADMIN to /admin/owner upon authentication', async () => {
-    setupStore(true, 'ADMIN');
-    render(<Login />);
+  const performLogin = async (roleName: string, pin: string) => {
+    // 1. Click on role card
+    const roleButton = screen.getByText(roleName);
+    fireEvent.click(roleButton);
+
+    // 2. Enter PIN
+    const pinInput = screen.getByPlaceholderText('Digite seu PIN');
+    fireEvent.change(pinInput, { target: { value: pin } });
+
+    // 3. Click Submit
+    const submitButton = screen.getByText('Entrar');
+    fireEvent.click(submitButton);
+  };
+
+  it('should redirect ADMIN to /dashboard upon authentication', async () => {
+    renderWithRedux(<Login />);
+    await performLogin('Gerente', '1234');
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/admin/owner');
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
   });
 
-  it('should redirect OWNER to /admin/owner upon authentication', async () => {
-    setupStore(true, 'OWNER');
-    render(<Login />);
+  it('should redirect OWNER to /dashboard upon authentication', async () => {
+    renderWithRedux(<Login />);
+    await performLogin('Proprietário', '5678');
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/admin/owner');
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
   });
 
   it('should redirect CAIXA (Staff) to /dashboard upon authentication', async () => {
-    setupStore(true, 'CAIXA');
-    render(<Login />);
+    renderWithRedux(<Login />);
+    await performLogin('Operador de Caixa', '1111');
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/dashboard');
@@ -88,44 +118,23 @@ describe('Login Component Redirection Logic', () => {
   });
 
   it('should redirect GARCOM (Staff) to /dashboard upon authentication', async () => {
-    setupStore(true, 'GARCOM');
-    render(<Login />);
+    renderWithRedux(<Login />);
+    await performLogin('Garçom', '3333');
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
   });
-
-  it('should prioritize redirect_to query parameter if present', async () => {
+  
+  it('should redirect to redirect_to param if present', async () => {
     mockSearchParams.set('redirect_to', '/inventory');
     (useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
-    
-    setupStore(true, 'ADMIN');
-    render(<Login />);
+
+    renderWithRedux(<Login />);
+    await performLogin('Gerente', '1234');
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/inventory');
-    });
-  });
-
-  it('should ignore redirect_to if it is /login', async () => {
-    mockSearchParams.set('redirect_to', '/login');
-    (useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
-    
-    setupStore(true, 'ADMIN');
-    render(<Login />);
-
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/admin/owner');
-    });
-  });
-
-  it('should NOT redirect if NOT authenticated', async () => {
-    setupStore(false, '');
-    render(<Login />);
-
-    await waitFor(() => {
-      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 });

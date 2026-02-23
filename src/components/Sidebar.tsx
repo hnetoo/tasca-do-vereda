@@ -71,12 +71,12 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   const isActive = (path: string) => pathname === path || (path !== '/' && pathname.startsWith(path + '/'));
 
   const ownerMenuItems: MenuItem[] = [
-    { path: '/admin/owner', icon: <LayoutGrid size={24} />, label: 'Dashboard' },
-    { path: '/admin/owner/analytics', icon: <BarChart2 size={24} />, label: 'Análises' },
-    { path: '/admin/owner/pos', icon: <Monitor size={24} />, label: 'POS' },
-    { path: '/admin/owner/staff', icon: <Users size={24} />, label: 'Gestão de Pessoal' },
-    { path: '/admin/owner/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
-    { path: '/admin/owner/settings', icon: <Settings size={24} />, label: 'Definições' },
+    { path: '/owner', icon: <LayoutGrid size={24} />, label: 'Dashboard' },
+    { path: '/owner/analytics', icon: <BarChart2 size={24} />, label: 'Análises' },
+    { path: '/owner/pos', icon: <Monitor size={24} />, label: 'POS' },
+    { path: '/owner/staff', icon: <Users size={24} />, label: 'Gestão de Pessoal' },
+    { path: '/owner/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
+    { path: '/owner/settings', icon: <Settings size={24} />, label: 'Definições' },
   ];
 
   const generalMenuItems: MenuItem[] = [
@@ -99,7 +99,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/qrmenumanager', icon: <Menu size={24} />, label: 'QR Menu Manager' },
   ];
 
-  const menuItems: MenuItem[] = pathname.startsWith('/admin/owner')
+  const menuItems: MenuItem[] = pathname.startsWith('/owner')
     ? ownerMenuItems
     : generalMenuItems;
 

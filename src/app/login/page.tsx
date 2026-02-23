@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/store/reduxStore';
 import { loginWithPin, resetAuthStatus } from '@/store/slices/authSlice';
@@ -40,6 +40,8 @@ const LoginPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect_to');
 
   const { isAuthenticated, loading, error } = useSelector(
     (state: RootState) => state.auth
@@ -62,13 +64,15 @@ const LoginPage: React.FC = () => {
     // But since we clear on mount, this will only trigger if isAuthenticated becomes true LATER (i.e. after login)
     // UNLESS the race condition still happens.
     
-    // Better logic: Only redirect if isLoggingIn.current is true?
-    // But isLoggingIn is a ref, doesn't trigger effect.
-    
     if (isAuthenticated && isLoggingIn.current) {
-      router.push('/');
+      if (redirectTo && redirectTo !== '/login' && !redirectTo.startsWith('/login')) {
+        router.push(redirectTo);
+        return;
+      }
+      
+      router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, selectedRole, redirectTo]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
