@@ -28,14 +28,20 @@ export default function AdminOwnerLoginPage() {
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.role === UserRole.Admin || user.role === UserRole.Owner) {
-        router.push('/admin/owner');
+        router.push('/owner');
       }
     }
   }, [isAuthenticated, user, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(loginWithPin({ pin, role: UserRole.Owner }));
+    // Try login as Owner first
+    try {
+      await dispatch(loginWithPin({ pin, role: UserRole.Owner })).unwrap();
+    } catch (err) {
+      // If fails, try as Admin
+      dispatch(loginWithPin({ pin, role: UserRole.Admin }));
+    }
   };
 
   const renderLogo = () => {
@@ -122,4 +128,3 @@ export default function AdminOwnerLoginPage() {
     </div>
   );
 }
-

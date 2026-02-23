@@ -46,7 +46,7 @@ Para que o deploy funcione corretamente e o menu carregue os dados do Supabase, 
 
 O comando de build local (`npm run build`) foi executado com sucesso e gerou todas as rotas estáticas corretamente.
 
-- Rota `/admin/owner`: **OK** (Gerada estaticamente)
+- Rota `/owner`: **OK** (Gerada estaticamente)
 - Rota `/menu`: **OK** (Gerada estaticamente)
 - Rota `/menu-digital`: **Redirecionada para /menu**
 

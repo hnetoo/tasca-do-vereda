@@ -34,7 +34,7 @@ export default function OwnerLayout({
 
         if (!session && !hasPinSession && !user) {
           await dispatch(logoutUser());
-          router.push('/admin/owner/login');
+          router.push('/owner/login');
           return;
         }
 
@@ -65,7 +65,7 @@ export default function OwnerLayout({
       } catch (error) {
         console.error('Error checking session:', error);
         await dispatch(logoutUser());
-        router.push('/admin/owner/login');
+        router.push('/owner/login');
       }
     };
 
@@ -81,14 +81,8 @@ export default function OwnerLayout({
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-white">
-      <div className="p-8 pb-0">
-        <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Área do Proprietário</h1>
-        <p className="text-slate-400 mb-8">Gestão completa e análise do restaurante</p>
-      </div>
-      <div className="flex-1 p-8 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {children}
-      </div>
-    </div>
+    <>
+      {children}
+    </>
   );
 }

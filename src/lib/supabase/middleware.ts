@@ -46,6 +46,7 @@ export async function updateSession(request: NextRequest) {
   // Public routes that do not require authentication
   const publicRoutes = [
     '/login',
+    '/owner/login',
     '/publicmenu', 
     '/customer-display', 
     '/qrscanner', 
@@ -59,6 +60,12 @@ export async function updateSession(request: NextRequest) {
 
   // 1. If user is NOT authenticated and tries to access a protected route
   if (!isAuthenticated && !isPublicRoute && path !== '/') {
+    // Special case for owner routes
+    if (path.startsWith('/owner')) {
+        url.pathname = '/owner/login'
+        return NextResponse.redirect(url)
+    }
+
     // Redirect to login
     url.pathname = '/login'
     return NextResponse.redirect(url)

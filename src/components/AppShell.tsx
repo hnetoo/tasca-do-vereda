@@ -8,7 +8,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import { useAuth } from '@/hooks/useAuth'; // Importar o hook useAuth do Redux
 
 const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu'];
-const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu', '/admin/owner'];
+const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu', '/owner'];
 
 const AppShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
@@ -68,7 +68,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
       <div className="min-h-[100dvh] bg-slate-950 text-white flex transition-opacity duration-300">
           <Sidebar showSidebar={showSidebar} />
           <main className={`flex-1 min-w-0 ${showSidebar ? '' : 'ml-0'}`}>
-            {!pathname.startsWith('/admin/owner') && <Breadcrumbs />} 
+            {!pathname.startsWith('/owner') && <Breadcrumbs />} 
             {children}
           </main>
       </div>

@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const tabs = [
-  { name: 'DASHBOARD', path: '/admin/owner' },
-  { name: 'ANÁLISES', path: '/admin/owner/analytics' },
-  { name: 'POS', path: '/admin/owner/pos' },
-  { name: 'PESSOAL', path: '/admin/owner/staff' },
-  { name: 'FINANÇAS', path: '/admin/owner/finance' },
-  { name: 'DEFINIÇÕES', path: '/admin/owner/settings' },
+  { name: 'DASHBOARD', path: '/owner' },
+  { name: 'ANÁLISES', path: '/owner/analytics' },
+  { name: 'POS', path: '/owner/pos' },
+  { name: 'PESSOAL', path: '/owner/staff' },
+  { name: 'FINANÇAS', path: '/owner/finance' },
+  { name: 'DEFINIÇÕES', path: '/owner/settings' },
 ];
 
 export function OwnerTabs() {
@@ -18,7 +18,7 @@ export function OwnerTabs() {
   return (
     <div className="flex items-center gap-1 border-b border-white/10 mb-8 overflow-x-auto pb-1">
       {tabs.map((tab) => {
-        const isActive = pathname === tab.path || (tab.path === '/admin/owner' && pathname === '/admin/owner/dashboard');
+        const isActive = pathname === tab.path || (tab.path === '/owner' && pathname === '/owner/dashboard');
         
         return (
           <Link

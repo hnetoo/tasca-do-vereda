@@ -245,11 +245,17 @@ export default function OwnerDashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload: any) => {
         triggerUpdate();
         if (payload.eventType === 'INSERT') {
-          setOrders(prev => [payload.new as Order, ...prev]);
+          const newOrder = payload.new as Order;
+          setOrders(prev => [newOrder, ...prev]);
+          // Also update month orders since new order is definitely in current month
+          setMonthOrders(prev => [newOrder, ...prev]);
         } else if (payload.eventType === 'UPDATE') {
-          setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new as Order : o));
+          const updatedOrder = payload.new as Order;
+          setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+          setMonthOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
         } else if (payload.eventType === 'DELETE') {
           setOrders(prev => prev.filter(o => o.id !== payload.old.id));
+          setMonthOrders(prev => prev.filter(o => o.id !== payload.old.id));
         }
       })
       // Transactions
@@ -365,10 +371,8 @@ export default function OwnerDashboard() {
 
     const activeOrders = orders.filter(o => o.status && ['PENDENTE', 'PREPARANDO', 'PRONTO'].includes(o.status)).length;
     
-    // Expenses (from transactions table)
-    const totalExpenses = transactions
-      .filter(t => t.type === 'expense')
-      .reduce((acc, t) => acc + Number(t.amount || 0), 0);
+    // Expenses (from expenses table)
+    const totalExpenses = expenses.reduce((acc, e) => acc + Number(e.amount || 0), 0);
 
     const netProfit = totalMonthSales - totalExpenses; // Profit based on monthly sales for better view? Or daily? Let's stick to daily for netProfit consistent with transactions fetch
     // Actually, transactions fetch is daily based on 'gte today'.
@@ -497,7 +501,7 @@ export default function OwnerDashboard() {
                     <h1 className="text-2xl font-bold text-white mb-2">Acesso Negado</h1>
                     <p className="text-slate-400 mb-6">O utilizador {user.name} ({user.role}) não tem permissão para aceder a esta área.</p>
                     <button 
-                        onClick={async () => { dispatch(logoutUser()); router.push('/admin/owner/login'); }}
+                        onClick={async () => { dispatch(logoutUser()); router.push('/owner/login'); }}
                         className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl transition-colors w-full"
                     >
                         Terminar Sessão
@@ -508,7 +512,7 @@ export default function OwnerDashboard() {
     }
     // Not logged in -> Redirect
     if (typeof window !== 'undefined') {
-        router.push('/admin/owner/login');
+        router.push('/owner/login');
     }
     return null;
   }
