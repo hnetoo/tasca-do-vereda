@@ -21,17 +21,31 @@ const QRMenuManager = () => {
   const { settings, updateSettings, addNotification, categories, dishes: menu, updateCategory } = useStore();
   const qrRef = useRef<HTMLDivElement>(null);
 
-  const getInitialUrl = () => {
-    const cloud = (settings.qrMenuCloudUrl || '').trim();
-    if (cloud) return cloud.replace(/\/$/, '');
-    if (typeof window !== 'undefined') {
-      const current = window.location.href.split('#')[0].replace(/\/$/, '');
-      return current || 'https://seu-dominio.com';
-    }
-    return 'https://seu-dominio.com';
-  };
+  const [baseUrl, setBaseUrl] = useState('https://seu-dominio.com');
 
-  const [baseUrl, setBaseUrl] = useState(getInitialUrl());
+  useEffect(() => {
+    let newUrl = '';
+
+    // 1. Prefer user manual override
+    const manual = (settings.restaurantUrl || '').trim();
+    if (manual) {
+      newUrl = manual.replace(/\/$/, '');
+    } else {
+      // 2. Then cloud config
+      const cloud = (settings.qrMenuCloudUrl || '').trim();
+      if (cloud) {
+        newUrl = cloud.replace(/\/$/, '');
+      } else if (typeof window !== 'undefined') {
+        // 3. Fallback to current origin
+        newUrl = window.location.origin;
+      }
+    }
+
+    if (newUrl && newUrl !== baseUrl) {
+      // eslint-disable-next-line
+      setBaseUrl(newUrl);
+    }
+  }, [settings.restaurantUrl, settings.qrMenuCloudUrl, baseUrl]);
   const [showPreview, setShowPreview] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showSettings, setShowSettings] = useState(false);

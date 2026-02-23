@@ -31,7 +31,7 @@ import { downloadManual } from '@/services/manualService';
 import { generateSQLSchema } from '@/services/sqlExportService';
 
 
-import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction } from '@/app/actions/settings';
+import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction } from '@/app/actions/settings';
 import { logger } from '@/services/logger';
 
 
@@ -182,6 +182,21 @@ const Settings = () => {
   const [isApiModalOpen, setIsApiModalOpen] = useState(false);
   const [newWebhookUrl, setNewWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState<string[]>(['order.created']);
+
+  // Database Config State
+  const [dbConfig, setDbConfig] = useState<{ type: 'local_storage' | 'postgres' | 'sqlite', connectionString?: string }>({ type: 'local_storage' });
+
+  useEffect(() => {
+    getDatabaseConfigAction().then(res => {
+      if (res.success && res.data) setDbConfig(res.data);
+    });
+  }, []);
+
+  const handleSaveDatabaseConfig = async () => {
+    const res = await saveDatabaseConfigAction(dbConfig);
+    if (res.success) addNotification('success', 'Configuração salva! Reinicie a aplicação para aplicar.');
+    else addNotification('error', 'Erro ao salvar: ' + res.error);
+  };
 
   const [localSettings, setLocalSettings] = useState<SystemSettings>(settings);
 
@@ -1116,9 +1131,64 @@ const Settings = () => {
                 </div>
                 <p className="text-sm text-slate-400 mb-6 font-medium">Configure o adaptador de base de dados para usar SQL Nativo (PostgreSQL, MySQL, SQLite) ou LocalStorage.</p>
                 
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-500">
-                    <p className="text-sm font-bold">Funcionalidade em desenvolvimento</p>
-                    <p className="text-xs mt-1">A configuração de driver SQL está temporariamente desativada.</p>
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div 
+                            onClick={() => setDbConfig({...dbConfig, type: 'local_storage'})}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all ${dbConfig.type === 'local_storage' ? 'bg-primary/10 border-primary text-primary' : 'bg-slate-800 border-white/5 hover:border-white/10'}`}
+                        >
+                            <div className="font-bold mb-1">LocalStorage</div>
+                            <div className="text-xs opacity-70">Armazenamento local do navegador (Padrão)</div>
+                        </div>
+                        <div 
+                            onClick={() => setDbConfig({...dbConfig, type: 'postgres'})}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all ${dbConfig.type === 'postgres' ? 'bg-blue-500/10 border-blue-500 text-blue-500' : 'bg-slate-800 border-white/5 hover:border-white/10'}`}
+                        >
+                            <div className="font-bold mb-1">PostgreSQL</div>
+                            <div className="text-xs opacity-70">Banco de dados relacional robusto</div>
+                        </div>
+                        <div 
+                            onClick={() => setDbConfig({...dbConfig, type: 'sqlite'})}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all ${dbConfig.type === 'sqlite' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-800 border-white/5 hover:border-white/10'}`}
+                        >
+                            <div className="font-bold mb-1">SQLite</div>
+                            <div className="text-xs opacity-70">Arquivo local (Ideal para Desktop/Tauri)</div>
+                        </div>
+                    </div>
+
+                    {dbConfig.type !== 'local_storage' && (
+                        <div className="p-6 bg-slate-800 rounded-2xl border border-white/5 space-y-4 animate-in slide-in-from-top-2">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Connection String / Caminho</label>
+                                <input 
+                                    type="text" 
+                                    placeholder={dbConfig.type === 'sqlite' ? 'sqlite:tasca.db' : 'postgres://user:pass@localhost:5432/db'}
+                                    className="w-full p-4 bg-slate-900 border border-white/10 rounded-xl text-white focus:border-primary outline-none font-mono text-sm"
+                                    value={dbConfig.connectionString || ''}
+                                    onChange={e => setDbConfig({...dbConfig, connectionString: e.target.value})}
+                                />
+                            </div>
+                            <div className="flex justify-end">
+                                <button 
+                                    onClick={async (e) => {
+                                        e.preventDefault();
+                                        // TODO: Implement connection test
+                                        alert('Teste de conexão simulado: OK');
+                                    }}
+                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase tracking-widest transition-all"
+                                >
+                                    Testar Conexão
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <button 
+                        onClick={handleSaveDatabaseConfig}
+                        className="w-full py-4 bg-primary text-black rounded-xl font-black uppercase tracking-widest shadow-glow hover:brightness-110 transition-all"
+                    >
+                        Salvar Configuração de Banco de Dados
+                    </button>
                 </div>
              </div>
 

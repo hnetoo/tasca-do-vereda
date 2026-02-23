@@ -94,18 +94,22 @@ export async function saveCategoryAction(category: MenuCategory): Promise<{ succ
       return { success: true };
     }
 
-    logger.warn('Admin saveCategory failed, falling back to direct SQL', { error: result.error }, 'SERVER_ACTION');
+    logger.warn('Admin saveCategory failed, falling back to direct SQL', { error: result.error, categoryId: category.id }, 'SERVER_ACTION');
     const directResult = await directOperations.saveCategory(category);
     if (directResult.success) {
       return { success: true };
     }
 
-    const errorToLog = { message: result.error || directResult.error || 'Operation returned false' };
-    logger.error('Failed to save category via server action', { error: errorToLog }, 'SERVER_ACTION');
-    return { success: false, error: errorToLog };
+    const errorToLog = { 
+      message: result.error || directResult.error || 'Operation returned false',
+      adminError: result.error,
+      directError: directResult.error
+    };
+    logger.error('Failed to save category via server action', { error: errorToLog, categoryId: category.id }, 'SERVER_ACTION');
+    return { success: false, error: { message: JSON.stringify(errorToLog) } };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
-    logger.error('Exception saving category via server action', { error: errorToLog }, 'SERVER_ACTION');
+    logger.error('Exception saving category via server action', { error: errorToLog, categoryId: category.id }, 'SERVER_ACTION');
     return { success: false, error: errorToLog };
   }
 }
@@ -136,15 +140,19 @@ export async function saveDishAction(dish: Dish): Promise<{ success: boolean; er
     }
 
     // 2. Fallback to direct operations (Postgres) if admin fails
-    logger.warn('Admin saveDish failed, falling back to direct SQL', { error: result.error }, 'SERVER_ACTION');
+    logger.warn('Admin saveDish failed, falling back to direct SQL', { error: result.error, dishId: dish.id }, 'SERVER_ACTION');
     const directResult = await directOperations.saveDish(dish);
     if (directResult.success) {
       return { success: true };
     }
 
-    const errorToLog = { message: result.error || directResult.error || 'Operation returned false' };
-    logger.error('Failed to save dish via server action (both admin and direct)', { error: errorToLog }, 'SERVER_ACTION');
-    return { success: false, error: errorToLog };
+    const errorToLog = { 
+      message: result.error || directResult.error || 'Operation returned false',
+      adminError: result.error,
+      directError: directResult.error
+    };
+    logger.error('Failed to save dish via server action (both admin and direct)', { error: errorToLog, dishId: dish.id }, 'SERVER_ACTION');
+    return { success: false, error: { message: JSON.stringify(errorToLog) } };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception saving dish via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -218,14 +226,22 @@ export async function recreateMenuSchemaAction(): Promise<{ success: boolean; er
 
 export async function saveCategoriesAction(categories: MenuCategory[]): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    // Uses admin operations to bypass RLS/Auth issues
+    // 1. Try admin operations (Supabase Service Role)
     const success = await adminOperations.saveCategories(categories);
-    if (!success) {
-      const errorToLog = { message: 'Operation returned false' };
-      logger.error('Failed to save categories via server action', { error: errorToLog }, 'SERVER_ACTION');
-      return { success: false, error: errorToLog };
+    if (success) {
+      return { success: true };
     }
-    return { success: true };
+
+    // 2. Fallback to direct operations
+    logger.warn('Admin saveCategories failed, falling back to direct SQL', undefined, 'SERVER_ACTION');
+    const directSuccess = await directOperations.saveCategories(categories);
+    if (directSuccess) {
+      return { success: true };
+    }
+
+    const errorToLog = { message: 'Operation returned false (both admin and direct)' };
+    logger.error('Failed to save categories via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception saving categories via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -235,14 +251,22 @@ export async function saveCategoriesAction(categories: MenuCategory[]): Promise<
 
 export async function saveDishesAction(dishes: Dish[]): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
-    // Uses admin operations to bypass RLS/Auth issues
+    // 1. Try admin operations (Supabase Service Role)
     const success = await adminOperations.saveDishes(dishes);
-    if (!success) {
-      const errorToLog = { message: 'Operation returned false' };
-      logger.error('Failed to save dishes via server action', { error: errorToLog }, 'SERVER_ACTION');
-      return { success: false, error: errorToLog };
+    if (success) {
+      return { success: true };
     }
-    return { success: true };
+
+    // 2. Fallback to direct operations
+    logger.warn('Admin saveDishes failed, falling back to direct SQL', undefined, 'SERVER_ACTION');
+    const directSuccess = await directOperations.saveDishes(dishes);
+    if (directSuccess) {
+      return { success: true };
+    }
+
+    const errorToLog = { message: 'Operation returned false (both admin and direct)' };
+    logger.error('Failed to save dishes via server action', { error: errorToLog }, 'SERVER_ACTION');
+    return { success: false, error: errorToLog };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception saving dishes via server action', { error: errorToLog }, 'SERVER_ACTION');
