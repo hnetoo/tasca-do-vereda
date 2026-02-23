@@ -1,7 +1,12 @@
 
+import { getStoredDatabaseConfigSync } from '@/lib/config-manager';
+
+const stored = getStoredDatabaseConfigSync();
+
 export const dbConfig = {
-  type: 'postgres',
-  database: process.env.DATABASE_URL || 'tasca-postgres',
+  type: stored.type,
+  connectionString: stored.connectionString || process.env.DATABASE_URL,
+  database: stored.connectionString || process.env.DATABASE_URL || 'tasca-postgres',
   tables: [
     'menu_categories',
     'dishes',

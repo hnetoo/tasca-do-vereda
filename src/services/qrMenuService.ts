@@ -33,10 +33,22 @@ export interface MenuAccessLog {
 const normalizeMenuBase = (baseUrl: string) => {
   const trimmed = baseUrl.trim();
   if (!trimmed) return { base: '', menuBase: '' };
+  
+  // Ensure protocol
   const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  
+  // Remove hash if present
   const [base] = withProtocol.split('#');
-  const cleanBase = base.replace(/\/$/, '');
-  return { base: cleanBase, menuBase: `${cleanBase}/#` };
+  
+  // Remove trailing slashes
+  let cleanBase = base.replace(/\/+$/, '');
+  
+  // Remove trailing /menu if present to avoid duplication
+  if (cleanBase.endsWith('/menu')) {
+    cleanBase = cleanBase.substring(0, cleanBase.length - 5);
+  }
+  
+  return { base: cleanBase, menuBase: cleanBase };
 };
 
 export function generateMenuUrl(

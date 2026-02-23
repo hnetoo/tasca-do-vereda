@@ -3,12 +3,15 @@
 import { useEffect } from 'react'; 
 import { supabase } from '@/lib/supabase';
 import { RealtimePayload } from '@/types';
+import { useStore } from '@/store/useStore';
 
 export const useRealtimeSync = <T = any>(
   table: string,
   callback: (payload: RealtimePayload<T>) => void,
   filter?: { column: string; value: string | number }
 ) => {
+  const setSaveStatus = useStore((state) => state.setSaveStatus);
+
   useEffect(() => {
     let channel = supabase.channel(`realtime-${table}`);
 
@@ -44,11 +47,15 @@ export const useRealtimeSync = <T = any>(
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log(`Conectado ao Realtime: ${table}${filter ? ` (filtrado por ${filter.column}=${filter.value})` : ''}`);
+        setSaveStatus('IDLE');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error(`Erro no Realtime: ${table}`, status);
+        setSaveStatus('ERROR');
       }
     });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [table, callback, filter]);
+  }, [table, callback, filter, setSaveStatus]);
 };

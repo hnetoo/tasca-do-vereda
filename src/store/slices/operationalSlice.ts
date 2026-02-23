@@ -22,6 +22,7 @@ export interface OperationalSlice {
   fetchTables: () => Promise<void>;
   activeTableId: string | null;
   saveStatus: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE';
+  setSaveStatus: (status: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE') => void;
   customers: Customer[];
   reservations: Reservation[];
   stock: StockItem[];
@@ -75,6 +76,7 @@ export const createOperationalSlice: StateCreator<
   tables: [],
   activeTableId: null,
   saveStatus: 'IDLE',
+  setSaveStatus: (status) => set({ saveStatus: status }),
   customers: [],
   reservations: [],
   stock: [],
