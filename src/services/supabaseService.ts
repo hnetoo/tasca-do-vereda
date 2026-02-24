@@ -347,6 +347,7 @@ export class SupabaseService {
                 return reject(new Error('Client not initialized'));
             }
             
+            // Use a simpler channel name to avoid potential conflicts
             const channel = this.client
               .channel(`public:${tableName}`)
               .on('postgres_changes', { event: eventType, schema: 'public', table: tableName }, (payload) => {
@@ -367,17 +368,26 @@ export class SupabaseService {
                 } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                   const errMsg = err ? err.message : status;
                   logger.error(`Error subscribing to ${tableName} changes: ${status}`, { error: errMsg }, 'SupabaseService');
+                  
+                  // Clean up channel on error to avoid lingering bad state
+                  channel.unsubscribe().catch(() => {});
+                  
                   // We reject here to trigger the retry in exponentialBackoff
                   reject(new Error(`Subscription failed: ${status} - ${errMsg}`));
+                } else if (status === 'CLOSED') {
+                   // Graceful close, usually intentionally called
+                   logger.info(`Channel for ${tableName} closed`, {}, 'SupabaseService');
                 }
               });
         });
     };
 
+    // Retry configuration: 5 attempts with exponential backoff (starting at 2s)
     try {
         await exponentialBackoff(subscribeAttempt, 5, 2000);
     } catch (error: any) {
         logger.error(`Failed to subscribe to ${tableName} after retries`, { error: error.message }, 'SupabaseService');
+        // Do not throw here to prevent blocking other subscriptions
     }
   }
 
