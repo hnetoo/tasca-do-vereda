@@ -25,8 +25,7 @@ export function createClient() {
           getUser: async () => ({ data: { user: null }, error: null }),
         },
       };
-      // @ts-expect-error intentionally broad to avoid runtime crash in desktop
-      supabaseBrowserClient = dummy;
+      supabaseBrowserClient = dummy as unknown as ReturnType<typeof createBrowserClient<Database>>;
     } else {
       supabaseBrowserClient = createBrowserClient<Database>(url, key, {
         auth: { persistSession: !isTauri() },

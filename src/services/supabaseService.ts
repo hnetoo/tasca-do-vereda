@@ -1,5 +1,7 @@
 import { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
+import type { Database } from '@/types/supabase';
 import { logger } from './logger';
 import { exponentialBackoff } from '@/utils/retry';
 import { calculateHash } from '@/utils/crypto';
@@ -34,13 +36,17 @@ export class SupabaseService {
         this.statusHandler = onStatusChange;
     }
     
-    // Use the robust client from src/lib/supabase
-    this.client = supabase;
-    
-    // Fallback to arguments if provided, otherwise use exported constants from lib
+    // Initialize client: prefer provided url/key for dynamic cloud config
     const targetUrl = url || supabaseUrl;
     const targetKey = key || supabaseAnonKey;
+    if (url && key) {
+      this.client = createBrowserClient<Database>(url, key, { auth: { persistSession: true } });
+    } else {
+      // Use the robust client from src/lib/supabase (env-based or mock)
+      this.client = supabase;
+    }
     
+    // Track effective config for reconnects
     if (targetUrl && targetKey) {
         this.config = { url: targetUrl, key: targetKey };
     } else {
