@@ -128,7 +128,8 @@ export async function testCloudConnectionAction(url: string, key: string): Promi
     // 2) Tentar Storage (pode falhar por permissões; se falhar, ainda assim consideramos ligação OK)
     const { error: storageError } = await supabase.storage.listBuckets();
     if (storageError && (storageError.message?.includes('fetch failed') || storageError.message?.includes('network'))) {
-      throw storageError;
+      serverLog(`Supabase storage check network error: ${storageError.message}`, storageError, 'CLOUD');
+      return { success: false, error: 'Falha de rede ao verificar Storage. Verifique conectividade.' };
     }
 
     const msg =
