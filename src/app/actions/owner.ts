@@ -127,7 +127,7 @@ export async function syncFinancialToSqlite(): Promise<{ success: boolean; error
       supabase.from('revenues').select('*'),
       supabase.from('expenses').select('*'),
       supabase.from('orders').select('*'),
-      supabase.from('financial_transactions').select('*'),
+      (supabase as any).from('financial_transactions').select('*'),
     ]);
     const r = rRes.data || [];
     const e = eRes.data || [];
