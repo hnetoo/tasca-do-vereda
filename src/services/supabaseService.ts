@@ -47,9 +47,6 @@ export class SupabaseService {
     }
     
     // Track effective config for reconnects
-    const targetUrl = url || supabaseUrl;
-    const targetKey = key || supabaseAnonKey;
-    
     if (targetUrl && targetKey) {
         this.config = { url: targetUrl, key: targetKey };
     } else {
