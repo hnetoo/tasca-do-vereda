@@ -33,7 +33,7 @@ import { downloadManual } from '@/services/manualService';
 import { generateSQLSchema } from '@/services/sqlExportService';
 
 
-import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction, testDatabaseConnectionAction, runMigrationsAction, renameCategoryGrelhoesAction } from '@/app/actions/settings';
+import { clearAllDataActionClient, hardResetActionClient, testCloudConnectionActionClient, fetchRemoteCategoriesActionClient, fetchRemoteProductsActionClient, setupRLSActionClient, setupBucketsActionClient, getDatabaseConfigActionClient, saveDatabaseConfigActionClient, testDatabaseConnectionActionClient, runMigrationsActionClient, renameCategoryGrelhoesActionClient, captureFullStateActionClient, restoreFullStateActionClient } from '@/utils/clientSettingsActions';
 
 
 
@@ -64,8 +64,8 @@ const CloudImportPanel = () => {
     }
     setIsLoading(true);
     try {
-      const catsRes = await fetchRemoteCategoriesAction(settings.supabaseConfig, search);
-      const prodsRes = await fetchRemoteProductsAction(settings.supabaseConfig, search, categoryFilter);
+      const catsRes = await fetchRemoteCategoriesActionClient();
+      const prodsRes = await fetchRemoteProductsActionClient();
       if (catsRes.success && catsRes.data) setRemoteCategories(catsRes.data);
       if (prodsRes.success && prodsRes.data) setRemoteProducts(prodsRes.data);
       addNotification('success', 'Itens carregados da cloud');
@@ -209,13 +209,13 @@ const Settings = () => {
   const [dbConfig, setDbConfig] = useState<{ type: 'local_storage' | 'postgres' | 'sqlite', connectionString?: string }>({ type: 'local_storage' });
 
   useEffect(() => {
-    getDatabaseConfigAction().then(res => {
+    getDatabaseConfigActionClient().then(res => {
       if (res.success && res.data) setDbConfig(res.data);
     });
   }, []);
 
   const handleSaveDatabaseConfig = async () => {
-    const res = await saveDatabaseConfigAction(dbConfig);
+    const res = await saveDatabaseConfigActionClient(dbConfig);
     if (res.success) addNotification('success', 'Configuração salva! Reinicie a aplicação para aplicar.');
     else addNotification('error', 'Erro ao salvar: ' + res.error);
   };
@@ -386,7 +386,7 @@ const Settings = () => {
       setCloudStatus('testing');
       console.log('[CLOUD] Iniciando teste de conexão Supabase...');
 
-      const { success, error, message } = await testCloudConnectionAction(url, key);
+      const { success, error, message } = await testCloudConnectionActionClient(url, key);
       if (success) {
         setCloudStatus('success');
         addNotification('success', message || 'Conexão Supabase estabelecida com sucesso!');
@@ -433,7 +433,7 @@ const Settings = () => {
     addNotification('info', 'Validando conexão para políticas de segurança...');
     console.log('[SECURITY] Iniciando validação de políticas RLS');
     const config = localSettings.supabaseConfig || { enabled: false, url: '', key: '', autoSync: false };
-    const result = await setupRLSAction(config);
+    const result = await setupRLSActionClient();
     if (result.success) {
       addNotification('success', (result as any).message || 'Políticas validadas com sucesso.');
       console.log('[SECURITY] RLS validado com sucesso', result);
@@ -447,7 +447,7 @@ const Settings = () => {
     addNotification('info', 'Configurando buckets de armazenamento...');
     console.log('[STORAGE] Iniciando configuração de buckets de armazenamento');
     const config = localSettings.supabaseConfig || { enabled: false, url: '', key: '', autoSync: false };
-    const result = await setupBucketsAction(config);
+    const result = await setupBucketsActionClient();
     if (result.success) {
       addNotification('success', (result as any).message || 'Buckets configurados com sucesso.');
       console.log('[STORAGE] Buckets configurados com sucesso', result);
@@ -460,7 +460,7 @@ const Settings = () => {
   const handleBackup = async () => {
     try {
       addNotification('info', 'A preparar backup completo (SQL + Local)...');
-      const res = await captureFullStateAction();
+      const res = await captureFullStateActionClient();
       
       if (!res.success) {
         throw new Error(res.error || 'Falha ao capturar estado do sistema');
@@ -640,7 +640,7 @@ const Settings = () => {
              } as unknown as FullApplicationState;
              
              // Save sanitized content to SQL and Local
-             await restoreFullStateAction(fullState);
+             await restoreFullStateActionClient(fullState);
              
              // Also update localStorage for Zustand rehydration (safety)
              localStorage.setItem('tasca-vereda-storage-v2', JSON.stringify({ state: fullState, version: 3 }));
@@ -879,7 +879,7 @@ const Settings = () => {
 
      try {
          // Use the server action for full cleanup
-         const result = await hardResetAction();
+         const result = await hardResetActionClient();
          if (result.success) {
             // Also clear local storage
             localStorage.removeItem('tasca-vereda-storage-v2');
@@ -1202,7 +1202,7 @@ const Settings = () => {
                                     onClick={async (e) => {
                                         e.preventDefault();
                                         try {
-                                            const res = await testDatabaseConnectionAction(dbConfig.type, dbConfig.connectionString || '');
+                                            const res = await testDatabaseConnectionActionClient(dbConfig.type, dbConfig.connectionString || '');
                                             if (res.success) {
                                                 addNotification('success', 'Conexão estabelecida com sucesso!');
                                             } else {
@@ -1224,7 +1224,7 @@ const Settings = () => {
                   <button
                     onClick={async () => {
                       addNotification('info', 'Aplicando migrações...');
-                      const res = await runMigrationsAction();
+                      const res = await runMigrationsActionClient();
                       if (res.success) addNotification('success', 'Migrações aplicadas com sucesso.');
                       else addNotification('error', `Falha ao aplicar migrações: ${res.error}`);
                     }}
@@ -1236,7 +1236,7 @@ const Settings = () => {
                   <button
                     onClick={async () => {
                       addNotification('info', 'Corrigindo categorias...');
-                      const res = await renameCategoryGrelhoesAction();
+                      const res = await renameCategoryGrelhoesActionClient();
                       if (res.success) addNotification('success', 'Categoria normalizada para "Grelhados".');
                       else addNotification('error', `Falha ao normalizar: ${res.error}`);
                     }}
