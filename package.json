@@ -19,7 +19,9 @@
     "supabase:gen-types": "npx supabase gen types typescript --project-id \"ratzyxwpzrqbtpheygch\" --schema public > src/types/supabase.ts",
     "msi:build": "powershell -ExecutionPolicy Bypass -File ./scripts/win/build-msi.ps1",
     "msi:sign": "powershell -ExecutionPolicy Bypass -File ./scripts/win/build-msi.ps1 -SkipBuild -CertificatePath \"$env:WIN_CERT_PFX\" -CertificatePassword \"$env:WIN_CERT_PASS\" -TimestampUrl \"http://timestamp.digicert.com\"",
-    "msi:validate": "powershell -ExecutionPolicy Bypass -File ./scripts/win/build-msi.ps1 -ValidateOnly"
+    "msi:validate": "powershell -ExecutionPolicy Bypass -File ./scripts/win/build-msi.ps1 -ValidateOnly",
+    "db:apply:financial": "node ./scripts/db/apply-financial-view.js",
+    "supabase:db:push": "npx supabase db push"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

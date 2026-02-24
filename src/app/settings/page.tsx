@@ -233,6 +233,15 @@ const Settings = () => {
     { id: 'history', label: 'Histórico', icon: <DollarSign size={16} /> },
   ];
   
+  useEffect(() => {
+    if (activeTab === 'system') {
+      const validIds = systemSubTabs.map(t => t.id);
+      if (!validIds.includes(activeSystemSubTab as any)) {
+        setActiveSystemSubTab('cloud' as any);
+      }
+    }
+  }, [activeTab, activeSystemSubTab, systemSubTabs]);
+  
   // Cloud State (managed within localSettings)
   const [isTestingCloud, setIsTestingCloud] = useState(false);
   const [cloudStatus, setCloudStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -376,14 +385,15 @@ const Settings = () => {
       setCloudStatus('testing');
       console.log('[CLOUD] Iniciando teste de conexão Supabase...');
 
-      const { success, error } = await testCloudConnectionAction(url, key);
-      
+      const { success, error, message } = await testCloudConnectionAction(url, key);
       if (success) {
         setCloudStatus('success');
-        addNotification('success', 'Conexão Supabase estabelecida com sucesso!');
+        addNotification('success', message || 'Conexão Supabase estabelecida com sucesso!');
         console.log('[CLOUD] Conexão Supabase validada.');
       } else {
-        throw new Error(error || 'Falha na resposta do servidor');
+        setCloudStatus('error');
+        addNotification('error', `Erro na conexão: ${error || 'Falha na resposta do servidor'}`);
+        console.error('[CLOUD] Falha no teste de conexão:', error);
       }
     } catch (error: unknown) {
       setCloudStatus('error');

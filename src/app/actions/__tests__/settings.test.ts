@@ -1,69 +1,70 @@
-import { getDatabaseConfigAction, saveDatabaseConfigAction } from '../settings';
-import { DatabaseConfig } from '@/lib/config-manager';
+import { testCloudConnectionAction, testDatabaseConnectionAction } from '../settings';
 
-// Mock next/cache
-jest.mock('next/cache', () => ({
-  revalidatePath: jest.fn(),
-}));
+jest.mock('@supabase/supabase-js', () => {
+  const createClient = jest.fn(() => ({
+    from: () => ({
+      select: () => ({
+        limit: () => Promise.resolve({ data: [], error: null })
+      })
+    }),
+    storage: {
+      listBuckets: () => Promise.resolve({ data: [], error: null })
+    }
+  }));
+  return { createClient };
+});
 
-// Mock config-manager
-jest.mock('@/lib/config-manager', () => ({
-  getStoredDatabaseConfig: jest.fn(),
-  saveStoredDatabaseConfig: jest.fn(),
-}));
-
-const mockGetStoredDatabaseConfig = require('@/lib/config-manager').getStoredDatabaseConfig;
-const mockSaveStoredDatabaseConfig = require('@/lib/config-manager').saveStoredDatabaseConfig;
-
-describe('settings server actions', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+describe('testDatabaseConnectionAction', () => {
+  it('returns success for local storage', async () => {
+    const res = await testDatabaseConnectionAction('local_storage', '');
+    expect(res.success).toBe(true);
   });
 
-  describe('getDatabaseConfigAction', () => {
-    it('should return success with config when getStoredDatabaseConfig is successful', async () => {
-      const mockConfig: DatabaseConfig = { type: 'postgres', connectionString: 'test-conn-string' };
-      mockGetStoredDatabaseConfig.mockResolvedValue(mockConfig);
-
-      const result = await getDatabaseConfigAction();
-
-      expect(result).toEqual({ success: true, data: mockConfig });
-      expect(mockGetStoredDatabaseConfig).toHaveBeenCalledTimes(1);
-    });
-
-    it('should return failure with error when getStoredDatabaseConfig throws an error', async () => {
-      const errorMessage = 'Failed to get config';
-      mockGetStoredDatabaseConfig.mockRejectedValue(new Error(errorMessage));
-
-      const result = await getDatabaseConfigAction();
-
-      expect(result).toEqual({ success: false, error: errorMessage });
-      expect(mockGetStoredDatabaseConfig).toHaveBeenCalledTimes(1);
-    });
+  it('fails for unsupported type', async () => {
+    const res = await testDatabaseConnectionAction('mysql' as any, '');
+    expect(res.success).toBe(false);
+    expect(res.error).toBeDefined();
   });
 
-  describe('saveDatabaseConfigAction', () => {
-    it('should return success when saveStoredDatabaseConfig is successful', async () => {
-      const mockConfig: DatabaseConfig = { type: 'local', connectionString: '' };
-      mockSaveStoredDatabaseConfig.mockResolvedValue(undefined);
+  it('fails when connection string missing for postgres', async () => {
+    const res = await testDatabaseConnectionAction('postgres', '');
+    expect(res.success).toBe(false);
+    expect(res.error).toBeDefined();
+  });
+});
 
-      const result = await saveDatabaseConfigAction(mockConfig);
+describe('testCloudConnectionAction', () => {
+  it('fails when url or key missing', async () => {
+    const res = await testCloudConnectionAction('', '');
+    expect(res.success).toBe(false);
+    expect(res.error).toBeDefined();
+  });
 
-      expect(result).toEqual({ success: true });
-      expect(mockSaveStoredDatabaseConfig).toHaveBeenCalledTimes(1);
-      expect(mockSaveStoredDatabaseConfig).toHaveBeenCalledWith(mockConfig);
+  it('fails for invalid URL', async () => {
+    const res = await testCloudConnectionAction('invalid-url', 'key');
+    expect(res.success).toBe(false);
+    expect(res.error).toBe('URL do Supabase inválida');
+  });
+
+  it('returns success for valid URL and key', async () => {
+    const res = await testCloudConnectionAction('https://project.supabase.co', 'anon-key');
+    expect(res.success).toBe(true);
+  });
+
+  it('returns error on storage network failure without throwing', async () => {
+    const { createClient } = require('@supabase/supabase-js');
+    (createClient as jest.Mock).mockReturnValueOnce({
+      from: () => ({
+        select: () => ({
+          limit: () => Promise.resolve({ data: [], error: null })
+        })
+      }),
+      storage: {
+        listBuckets: () => Promise.resolve({ data: null, error: { message: 'fetch failed' } })
+      }
     });
-
-    it('should return failure with error when saveStoredDatabaseConfig throws an error', async () => {
-      const mockConfig: DatabaseConfig = { type: 'local', connectionString: '' };
-      const errorMessage = 'Failed to save config';
-      mockSaveStoredDatabaseConfig.mockRejectedValue(new Error(errorMessage));
-
-      const result = await saveDatabaseConfigAction(mockConfig);
-
-      expect(result).toEqual({ success: false, error: errorMessage });
-      expect(mockSaveStoredDatabaseConfig).toHaveBeenCalledTimes(1);
-      expect(mockSaveStoredDatabaseConfig).toHaveBeenCalledWith(mockConfig);
-    });
+    const res = await testCloudConnectionAction('https://project.supabase.co', 'anon-key');
+    expect(res.success).toBe(false);
+    expect(res.error).toContain('Falha de rede');
   });
 });
