@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, User, Briefcase, Phone, DollarSign, Mail, Calendar, Hash, Banknote, IdCard, Palette, Clock, Key } from 'lucide-react';
-import { Employee } from '@/types';
+import { X, User, Briefcase, Phone, DollarSign, Mail, Calendar, Hash, Banknote, IdCard, Palette, Clock, Key, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { Employee, Permission } from '@/types';
 import { useStore } from '@/store/useStore';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_ROLES } from '@/constants/permissions';
+import { DEFAULT_ROLES, permissionDescriptions } from '@/constants/permissions';
+import { ALL_PERMISSIONS } from '@/services/permissionsService';
 
 interface EmployeeModalProps {
   isOpen: boolean;
@@ -46,14 +47,50 @@ interface EmployeeModalContentProps {
 }
 
 const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, onClose, addEmployee, updateEmployee, roles }) => {
-  const [formData, setFormData] = useState<Employee>(() => (employee ? { ...employee } : createDefaultEmployee()));
+  const [formData, setFormData] = useState<Employee>(() => {
+    if (employee) return { ...employee };
+    const defaultEmp = createDefaultEmployee();
+    // Pre-fill permissions for new employee based on default role
+    defaultEmp.permissions = DEFAULT_ROLES[defaultEmp.role] || [];
+    return defaultEmp;
+  });
+  
+  const [showPermissions, setShowPermissions] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }));
+    
+    if (name === 'role') {
+      // When role changes, reset permissions to role default unless manually overridden?
+      // For simplicity, let's ask or just reset. Here we reset to new role defaults.
+      const newRolePermissions = DEFAULT_ROLES[value] || [];
+      setFormData(prev => ({
+        ...prev,
+        role: value,
+        permissions: newRolePermissions
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'number' ? Number(value) : value,
+      }));
+    }
+  };
+
+  const togglePermission = (permission: Permission) => {
+    setFormData(prev => {
+      const currentPermissions = prev.permissions || [];
+      const hasPermission = currentPermissions.includes(permission);
+      
+      let newPermissions;
+      if (hasPermission) {
+        newPermissions = currentPermissions.filter(p => p !== permission);
+      } else {
+        newPermissions = [...currentPermissions, permission];
+      }
+      
+      return { ...prev, permissions: newPermissions };
+    });
   };
 
   const handleSave = () => {
@@ -341,6 +378,46 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
                 className="flex-1 p-2.5 bg-transparent outline-none"
               />
             </div>
+          </div>
+
+          {/* Permissions Section */}
+          <div className="border-t border-slate-700 pt-4 mt-4">
+             <button 
+                type="button"
+                onClick={() => setShowPermissions(!showPermissions)}
+                className="flex items-center justify-between w-full text-left p-2 hover:bg-slate-800/50 rounded-lg transition-colors"
+             >
+                <div className="flex items-center gap-2 font-medium text-slate-300">
+                   <ShieldCheck size={18} className="text-primary" />
+                   Permissões Personalizadas
+                </div>
+                {showPermissions ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+             </button>
+             
+             {showPermissions && (
+                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-950/50 p-4 rounded-xl border border-white/5 max-h-60 overflow-y-auto custom-scrollbar">
+                     {ALL_PERMISSIONS.map(permission => {
+                         const isSelected = (formData.permissions || []).includes(permission);
+                         return (
+                             <label key={permission} className="flex items-start gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors select-none">
+                                 <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'bg-primary border-primary text-black' : 'border-slate-600 bg-transparent'}`}>
+                                     {isSelected && <ShieldCheck size={14} />}
+                                 </div>
+                                 <input 
+                                    type="checkbox" 
+                                    className="hidden" 
+                                    checked={isSelected}
+                                    onChange={() => togglePermission(permission)}
+                                 />
+                                 <div>
+                                     <div className="text-xs font-bold text-slate-200">{permission}</div>
+                                     <div className="text-[10px] text-slate-500 leading-tight">{permissionDescriptions[permission] || permission}</div>
+                                 </div>
+                             </label>
+                         );
+                     })}
+                 </div>
+             )}
           </div>
         </div>
 

@@ -363,17 +363,21 @@ const Settings = () => {
   };
 
   const handleTestCloudConnection = async () => {
-    if (!localSettings.supabaseConfig?.url || !localSettings.supabaseConfig?.key) {
-      addNotification('warning', 'Introduza o URL e a Anon Key para testar.');
-      return;
-    }
-
-    setIsTestingCloud(true);
-    setCloudStatus('testing');
-    console.log('[CLOUD] Iniciando teste de conexão Supabase...');
-
     try {
-      const { success, error } = await testCloudConnectionAction(localSettings.supabaseConfig.url, localSettings.supabaseConfig.key);
+      const url = localSettings.supabaseConfig?.url?.trim();
+      const key = localSettings.supabaseConfig?.key?.trim();
+
+      if (!url || !key) {
+        addNotification('warning', 'Introduza o URL e a Anon Key para testar.');
+        return;
+      }
+
+      setIsTestingCloud(true);
+      setCloudStatus('testing');
+      console.log('[CLOUD] Iniciando teste de conexão Supabase...');
+
+      const { success, error } = await testCloudConnectionAction(url, key);
+      
       if (success) {
         setCloudStatus('success');
         addNotification('success', 'Conexão Supabase estabelecida com sucesso!');

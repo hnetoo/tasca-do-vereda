@@ -166,7 +166,7 @@ export const createMenuSlice: StateCreator<
     // 5. Validation: Duplicate Name (Case insensitive)
     const normalizedName = cat.name.trim().toLowerCase();
     if (state.categories.some((c: MenuCategory) => c.name.trim().toLowerCase() === normalizedName)) {
-        state.addNotification?.('warning', `A categoria "${cat.name}" já existe.`);
+        state.addNotification?.('error', `A categoria "${cat.name}" já existe.`);
         return;
     }
 

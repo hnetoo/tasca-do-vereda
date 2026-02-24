@@ -72,7 +72,8 @@ export const adminOperations = {
             email: employee.email || null,
             phone: employee.phone || null,
             active: employee.active ?? true,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            permissions: employee.permissions || null
         };
 
         const { error } = await supabaseAdmin

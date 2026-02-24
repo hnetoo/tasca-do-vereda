@@ -83,6 +83,7 @@ export const directOperations = {
           pin = EXCLUDED.pin,
           email = EXCLUDED.email,
           phone = EXCLUDED.phone,
+          permissions = EXCLUDED.permissions,
           active = EXCLUDED.active,
           updated_at = EXCLUDED.updated_at
       `;

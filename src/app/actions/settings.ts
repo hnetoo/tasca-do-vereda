@@ -7,7 +7,12 @@ import postgres from 'postgres';
 
 // Helper for server-side logging
 const serverLog = (message: string, data?: any, type: string = 'INFO') => {
-  console.log(`[SERVER_ACTION][${type}] ${message}`, data ? JSON.stringify(data, null, 2) : '');
+  try {
+    const dataStr = data ? (data instanceof Error ? data.toString() : JSON.stringify(data, null, 2)) : '';
+    console.log(`[SERVER_ACTION][${type}] ${message}`, dataStr);
+  } catch (e) {
+    console.log(`[SERVER_ACTION][${type}] ${message}`, '[Circular/Unserializable Data]');
+  }
 };
 
 export async function getDatabaseConfigAction(): Promise<{ success: boolean; data?: DatabaseConfig; error?: string }> {
@@ -93,7 +98,14 @@ export async function testCloudConnectionAction(url: string, key: string): Promi
     serverLog(`Testing connection to ${url}`, null, 'CLOUD');
 
     if (!url || !key) {
-      throw new Error('URL e Key são obrigatórios');
+      return { success: false, error: 'URL e Key são obrigatórios' };
+    }
+    
+    // Validate URL format to prevent sync crashes
+    try {
+      new URL(url);
+    } catch (e) {
+      return { success: false, error: 'URL do Supabase inválida' };
     }
 
     const supabase = createClient(url, key, {
@@ -110,10 +122,6 @@ export async function testCloudConnectionAction(url: string, key: string): Promi
 
     if (error) {
        serverLog(`Supabase Storage check failed: ${error.message}`, error, 'CLOUD');
-       // Se falhar storage, tenta uma query simples em uma tabela que provavelmente não existe para ver se é erro de conexão ou permissão
-       // Mas na verdade, se deu erro, já conectou (ou falhou DNS).
-       // Vamos considerar sucesso se o erro for de permissão (significa que o servidor respondeu)
-       // Mas erro de conexão (ENOTFOUND) é falha.
        
        if (error.message.includes('fetch failed') || error.message.includes('network')) {
          throw error;
@@ -133,7 +141,8 @@ export async function testCloudConnectionAction(url: string, key: string): Promi
     return { success: true, message: 'Conexão Supabase estabelecida com sucesso!' };
   } catch (error: any) {
     serverLog(`Connection failed: ${error.message}`, error, 'ERROR');
-    return { success: false, error: error.message };
+    // Ensure we return a serializable error object
+    return { success: false, error: error.message || 'Erro desconhecido ao testar conexão' };
   }
 }
 
