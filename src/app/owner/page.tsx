@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getOwnerFinancialData } from '@/app/actions/owner';
 import type { Database } from '@/types/supabase';
 
 type RevenueRow = Database['public']['Tables']['revenues']['Row'];
@@ -65,129 +66,28 @@ export default function OwnerRealtime() {
   const loadAll = async () => {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const { start, end } = computeRange();
-    const today = new Date();
-    const startDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-    const startMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-
     try {
-      // Prefer unified view if available
-      const txQuery = (supabase as any)
-        .from('financial_transactions')
-        .select('*')
-        .order('date', { ascending: false });
-      let txRes;
-      if (start && end) txRes = await txQuery.gte('date', start).lte('date', end);
-      else if (start) txRes = await txQuery.gte('date', start);
-      else if (end) txRes = await txQuery.lte('date', end);
-      else txRes = await txQuery;
-      if (!txRes.error && txRes.data) {
-        setTransactions(
-          (txRes.data as any[]).map((r) => ({
-            id: r.id,
-            date: r.date,
-            amount: Number(r.amount || 0),
-            description: r.description || '',
-            category: r.category || '',
-            type: r.type,
-            status: r.status,
-          }))
-        );
-      } else {
-        // Fallback: combine manually
-        const [r1, r2] = await Promise.all([
-          supabase.from('revenues').select('*').order('created_at', { ascending: false }),
-          supabase.from('expenses').select('*').order('created_at', { ascending: false }),
-        ]);
-        const txs: Tx[] = [];
-        if (!r1.error && r1.data) {
-          (r1.data as RevenueRow[]).forEach((r) => {
-            const d = new Date(r.created_at || '');
-            if ((!start || d >= new Date(start)) && (!end || d <= new Date(end))) {
-              txs.push({
-                id: r.id,
-                date: r.created_at || '',
-                amount: Number(r.amount || 0),
-                description: r.description || '',
-                category: r.category || 'REVENUE',
-                type: 'REVENUE',
-                status: (r as any).status || 'COMPLETED',
-              });
-            }
-          });
-        }
-        if (!r2.error && r2.data) {
-          (r2.data as ExpenseRow[]).forEach((e) => {
-            const d = new Date(e.created_at || '');
-            if ((!start || d >= new Date(start)) && (!end || d <= new Date(end))) {
-              txs.push({
-                id: e.id,
-                date: e.created_at || '',
-                amount: Number(e.amount || 0),
-                description: e.description || '',
-                category: e.category || 'EXPENSE',
-                type: 'EXPENSE',
-                status: (e as any).status || 'COMPLETED',
-              });
-            }
-          });
-        }
-        txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setTransactions(txs);
-      }
-
-      const [r1, r2, r3, r4] = await Promise.all([
-        supabase.from('revenues').select('*').gte('created_at', startDay).order('created_at', { ascending: false }),
-        supabase.from('expenses').select('*').gte('created_at', startDay).order('created_at', { ascending: false }),
-        supabase.from('orders').select('*').gte('created_at', startDay).order('created_at', { ascending: false }),
-        supabase.from('revenues').select('*').gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-      ]);
-
-      if (!r1.error && r1.data) setRevenues(r1.data as RevenueRow[]);
-      if (!r2.error && r2.data) setExpenses(r2.data as ExpenseRow[]);
-      if (!r3.error && r3.data) setOrders(r3.data as OrderRow[]);
-      if (!r4.error && r4.data) setMonthRevenues(r4.data as RevenueRow[]);
+      const { start, end } = computeRange();
+      const res = await getOwnerFinancialData(period, start || undefined, end || undefined);
+      if (res.error) setError(res.error);
+      setTransactions(res.transactions || []);
+      setRevenues([{ id: 'today', amount: res.revenueTotal } as any]);
+      setExpenses([{ id: 'today', amount: res.expenseTotal } as any]);
+      setOrders(new Array(res.ordersCount || 0).fill(0).map((_, i) => ({ id: `o-${i}`, total: 0 } as any)));
+      setMonthRevenues([{ id: 'month', amount: res.monthTotal } as any]);
     } catch (e: any) {
       setError(e.message || 'Falha ao carregar dados');
     } finally {
       setLoading(false);
+      setReady(true);
     }
-
-    setReady(true);
   };
 
   useEffect(() => {
-    if (!supabaseUrl || !supabaseKey) {
-      setReady(true);
-      return;
-    }
     loadAll();
-
-    const supabase = createClient();
-    const ch = supabase
-      .channel('owner-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'revenues' },
-        () => loadAll()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'expenses' },
-        () => loadAll()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        () => loadAll()
-      )
-      .subscribe();
-    return () => {
-      ch.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const id = setInterval(loadAll, 5000);
+    return () => clearInterval(id);
+  }, [period, startDate, endDate]);
 
   const totals = useMemo(() => {
     const revenueTotal = revenues.reduce((acc, r) => acc + Number(r.amount || 0), 0);
@@ -197,21 +97,7 @@ export default function OwnerRealtime() {
     return { revenueTotal, expenseTotal, net, monthTotal };
   }, [revenues, expenses, monthRevenues]);
 
-  if (!supabaseUrl || !supabaseKey) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-black text-white mb-4">Painel Financeiro (Cloud)</h1>
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-            <p className="text-sm text-slate-400">
-              Cloud não configurada. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY para ativar o
-              modo online.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-6 md:p-8">
