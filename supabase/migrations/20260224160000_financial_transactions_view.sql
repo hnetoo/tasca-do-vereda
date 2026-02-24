@@ -7,7 +7,7 @@ select
   r.description::text as description,
   coalesce(r.category, 'REVENUE')::text as category,
   'REVENUE'::text as type,
-  coalesce(r.status, 'COMPLETED')::text as status
+  'COMPLETED'::text as status
 from public.revenues r
 union all
 select
@@ -17,7 +17,7 @@ select
   e.description::text as description,
   coalesce(e.category, 'EXPENSE')::text as category,
   'EXPENSE'::text as type,
-  coalesce(e.status, 'COMPLETED')::text as status
+  'COMPLETED'::text as status
 from public.expenses e;
 
 alter view public.financial_transactions owner to postgres;
