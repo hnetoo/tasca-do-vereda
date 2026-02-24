@@ -218,7 +218,7 @@ export const adminOperations = {
       
       const mappedCategories = (data || []).map(r => ({
         id: r.id,
-        name: r.name,
+        name: (typeof r.name === 'string' && r.name.trim().toLowerCase() === 'grelhoes') ? 'Grelhados' : r.name,
         icon: r.icon,
         sortOrder: r.sort_order || 0,
         isActive: r.is_active ?? true,

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star } from 'lucide-react';
-import { Product, MenuCategory } from '@/types';
+import { Product, MenuCategory, SystemSettings } from '@/types';
 import { Database } from '@/types/supabase';
 
 type MenuCategoryRow = Database['public']['Tables']['menu_categories']['Row'];
@@ -17,6 +17,7 @@ export default function MenuDigital() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Partial<SystemSettings> | null>(null);
 
   // Helper to map DB row to Product interface
   const mapToProduct = (row: DishRow): Product => {
@@ -68,6 +69,12 @@ export default function MenuDigital() {
           .select('*');
 
         if (prodError) throw prodError;
+        
+        // Fetch settings (branding)
+        const { data: settingsRows } = await supabase.from('settings').select('*').limit(1);
+        if (settingsRows && settingsRows.length > 0) {
+          setSettings(settingsRows[0] as any);
+        }
 
         if (cats) {
           // Client-side sort
@@ -252,19 +259,19 @@ export default function MenuDigital() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shadow-lg flex items-center justify-center">
-                 <Image src="/logo.png" alt="Tasca do Vereda" fill style={{ objectFit: 'cover' }} />
+              <div className="rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shadow-lg flex items-center justify-center" style={{ width: 200, height: 60 }}>
+                 <Image src={settings?.appLogoUrl || '/logo.png'} alt={settings?.restaurantName || 'Logo'} width={200} height={60} style={{ objectFit: 'contain' }} />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-white leading-none mb-1">Tasca do Vereda</h1>
-                <div className="flex items-center gap-1.5">
-                   <span className="text-[10px] font-bold tracking-widest text-emerald-500 uppercase">TAS</span>
-                   <span className="w-1 h-1 rounded-full bg-slate-600"></span>
-                   <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Vitrine Digital</p>
-                </div>
+              <div className="min-w-0">
+                <h1 className="text-[18px] md:text-[20px] font-bold text-white leading-none mb-1 truncate">{settings?.restaurantName || 'Tasca do Vereda'}</h1>
+                <p className="text-xs text-slate-400 max-w-md truncate">{(settings?.description || 'Vitrine Digital').slice(0, 150)}</p>
               </div>
             </div>
-            
+            <div className="flex items-center">
+              <a href="tel:976825520" className="px-3 py-2 rounded-lg bg-emerald-600 text-white font-bold text-[16px] hover:bg-emerald-500 transition-colors">
+                976 825 520
+              </a>
+            </div>
           </div>
 
           {/* Search Bar */}
