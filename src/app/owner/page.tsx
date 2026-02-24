@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { getOwnerFinancialData } from '@/app/actions/owner';
+import { syncFinancialClientToSqlite, fetchOwnerDataFromSqlite } from '@/services/ownerSqlite';
 import type { Database } from '@/types/supabase';
 
 type RevenueRow = Database['public']['Tables']['revenues']['Row'];
@@ -67,8 +68,14 @@ export default function OwnerRealtime() {
     setLoading(true);
     setError(null);
     try {
-      const { start, end } = computeRange();
-      const res = await getOwnerFinancialData(period, start || undefined, end || undefined);
+      const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+      let res: any;
+      if (isTauri) {
+        res = await fetchOwnerDataFromSqlite();
+      } else {
+        const { start, end } = computeRange();
+        res = await getOwnerFinancialData(period, start || undefined, end || undefined);
+      }
       if (res.error) setError(res.error);
       setTransactions(res.transactions || []);
       setRevenues([{ id: 'today', amount: res.revenueTotal } as any]);
@@ -86,7 +93,15 @@ export default function OwnerRealtime() {
   useEffect(() => {
     loadAll();
     const id = setInterval(loadAll, 5000);
-    return () => clearInterval(id);
+    const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+    let syncId: any = null;
+    if (isTauri) {
+      syncId = setInterval(() => { syncFinancialClientToSqlite().catch(() => {}); }, 30000);
+    }
+    return () => {
+      clearInterval(id);
+      if (syncId) clearInterval(syncId);
+    };
   }, [period, startDate, endDate]);
 
   const totals = useMemo(() => {
