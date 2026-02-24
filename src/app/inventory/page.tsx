@@ -8,6 +8,7 @@ import { logger } from '@/services/logger';
 import { buildFeed, downloadFeed } from '@/services/qrFeedService';
 import { publishFeedHybrid } from '@/services/feedPublisher';
 import { Product, MenuCategory, StockItem, IntegrityIssue, Supplier } from '@/types';
+import { generateUUID } from '@/utils/uuid';
 import { Search, Plus, Trash2, Edit2, X, Save, Upload, Image as ImageIcon, Link as LinkIcon, AlertCircle, Check, Tag, Box, Utensils, Grid3X3, Coffee, Pizza, Beer, IceCream, Copy, RefreshCw } from 'lucide-react';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
@@ -284,7 +285,7 @@ const InventoryContent = () => {
     } else {
       // Ensure ID generation for new categories
       // O id será gerado pelo addCategory no useStore
-      addCategory(catData as MenuCategory);
+      addCategory({ ...catData, id: generateUUID() } as MenuCategory);
       logger.info('Nova categoria adicionada', { name: catData.name, parentId: catData.parentId }, 'Inventory');
     }
     if (isMounted.current) {

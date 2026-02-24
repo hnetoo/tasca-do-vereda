@@ -6,6 +6,8 @@ import { adminOperations } from '@/services/database/adminOperations';
 import { SystemSettings, Fornecedor, Employee, AttendanceRecord, Dish, MenuCategory, UUID } from '@/types';
 import { logger } from '@/services/logger';
 import { createClient } from '@/lib/supabase/server';
+import { sqliteOperations } from '@/services/database/sqliteOperations';
+import { getStoredDatabaseConfig } from '@/lib/config-manager';
 
 export async function saveSettingsAction(settings: SystemSettings): Promise<{ success: boolean; error?: string | Error }> {
   try {
@@ -89,6 +91,12 @@ export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]
 
 export async function saveCategoryAction(category: MenuCategory): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
+    const cfg = await getStoredDatabaseConfig();
+    if (cfg.type === 'sqlite') {
+      const res = await sqliteOperations.saveCategory(category);
+      if (res.success) return { success: true };
+      return { success: false, error: { message: res.error || 'SQLite operation failed' } };
+    }
     const result = await adminOperations.saveCategory(category);
     if (result.success) {
       return { success: true };
@@ -116,6 +124,12 @@ export async function saveCategoryAction(category: MenuCategory): Promise<{ succ
 
 export async function deleteCategoryAction(id: UUID): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
+    const cfg = await getStoredDatabaseConfig();
+    if (cfg.type === 'sqlite') {
+      const res = await sqliteOperations.deleteCategory(id);
+      if (res.success) return { success: true };
+      return { success: false, error: { message: res.error || 'SQLite operation failed' } };
+    }
     // Uses admin operations to bypass RLS/Auth issues
     const result = await adminOperations.deleteCategory(id);
     if (!result.success) {
@@ -133,6 +147,12 @@ export async function deleteCategoryAction(id: UUID): Promise<{ success: boolean
 
 export async function saveDishAction(dish: Dish): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
+    const cfg = await getStoredDatabaseConfig();
+    if (cfg.type === 'sqlite') {
+      const res = await sqliteOperations.saveDish(dish);
+      if (res.success) return { success: true };
+      return { success: false, error: { message: res.error || 'SQLite operation failed' } };
+    }
     // 1. Try admin operations (Supabase Service Role)
     const result = await adminOperations.saveDish(dish);
     if (result.success) {
@@ -162,6 +182,12 @@ export async function saveDishAction(dish: Dish): Promise<{ success: boolean; er
 
 export async function deleteDishAction(id: UUID): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
+    const cfg = await getStoredDatabaseConfig();
+    if (cfg.type === 'sqlite') {
+      const res = await sqliteOperations.deleteDish(id as string);
+      if (res.success) return { success: true };
+      return { success: false, error: { message: res.error || 'SQLite operation failed' } };
+    }
     const result = await adminOperations.deleteDish(id);
     if (result.success) {
       return { success: true };
@@ -185,6 +211,12 @@ export async function deleteDishAction(id: UUID): Promise<{ success: boolean; er
 
 export async function getCategoriesAction(): Promise<{ success: boolean; data?: MenuCategory[]; error?: { message: string; stack?: string } }> {
   try {
+    const cfg = await getStoredDatabaseConfig();
+    if (cfg.type === 'sqlite') {
+      const res = await sqliteOperations.getCategories();
+      if (res.success) return { success: true, data: res.data };
+      return { success: false, data: [], error: { message: res.error || 'SQLite operation failed' } };
+    }
     const result = await adminOperations.getCategories();
     if (result.success) {
         return { success: true, data: result.data };
@@ -200,6 +232,12 @@ export async function getCategoriesAction(): Promise<{ success: boolean; data?: 
 
 export async function getDishesAction(): Promise<{ success: boolean; data?: Dish[]; error?: { message: string; stack?: string } }> {
   try {
+    const cfg = await getStoredDatabaseConfig();
+    if (cfg.type === 'sqlite') {
+      const res = await sqliteOperations.getDishes();
+      if (res.success) return { success: true, data: res.data };
+      return { success: false, data: [], error: { message: res.error || 'SQLite operation failed' } };
+    }
     const result = await adminOperations.getDishes();
     if (result.success) {
         return { success: true, data: result.data };

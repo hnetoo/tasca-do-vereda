@@ -325,6 +325,7 @@ export type Employee = Partial<Database['public']['Tables']['employees']['Row']>
   work_days_per_month?: number | null;
   daily_work_hours?: number | null;
   external_bio_id?: string | null;
+  permissions?: Permission[]; // Custom permissions
   [key: string]: any;
 };
 
