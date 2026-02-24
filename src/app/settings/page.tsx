@@ -34,6 +34,8 @@ import { generateSQLSchema } from '@/services/sqlExportService';
 
 
 import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction, testDatabaseConnectionAction } from '@/app/actions/settings';
+  clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction, testDatabaseConnectionAction, runMigrationsAction, renameCategoryGrelhoesAction
+
 
 
 import { healthMonitorService, SystemHealthReport, SystemIssue } from '@/services/healthMonitorService';
@@ -1218,6 +1220,33 @@ const Settings = () => {
                             </div>
                         </div>
                     )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={async () => {
+                      addNotification('info', 'Aplicando migrações...');
+                      const res = await runMigrationsAction();
+                      if (res.success) addNotification('success', 'Migrações aplicadas com sucesso.');
+                      else addNotification('error', `Falha ao aplicar migrações: ${res.error}`);
+                    }}
+                    className="p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-left transition-all"
+                  >
+                    <div className="font-bold text-white">Aplicar Migrações</div>
+                    <div className="text-xs text-slate-400">Atualiza o esquema do banco de dados com controle de versão.</div>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      addNotification('info', 'Corrigindo categorias...');
+                      const res = await renameCategoryGrelhoesAction();
+                      if (res.success) addNotification('success', 'Categoria normalizada para "Grelhados".');
+                      else addNotification('error', `Falha ao normalizar: ${res.error}`);
+                    }}
+                    className="p-4 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-left transition-all"
+                  >
+                    <div className="font-bold text-white">Corrigir Categoria “grelhoes”</div>
+                    <div className="text-xs text-slate-400">Substitui por “Grelhados” em todas as referências.</div>
+                  </button>
+                </div>
 
                     <button 
                         onClick={handleSaveDatabaseConfig}

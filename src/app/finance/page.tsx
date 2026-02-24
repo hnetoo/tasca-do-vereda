@@ -44,7 +44,20 @@ export default function FinancePage() {
     generateFinancialReport,
     activeShift,
     shifts,
-    settings
+    settings,
+    expenses,
+    fixedExpenses,
+    payroll,
+    addExpense,
+    updateExpense,
+    removeExpense,
+    addFixedExpense,
+    updateFixedExpense,
+    removeFixedExpense,
+    addPayrollRecord,
+    updatePayrollRecord,
+    removePayrollRecord,
+    employees
   } = useStore();
 
   const [dateRange, setDateRange] = useState('today'); // today, week, month, year
@@ -179,6 +192,111 @@ export default function FinancePage() {
           </div>
           <h3 className="text-slate-400 text-sm font-medium mb-1">Turno Atual</h3>
           <p className="text-lg font-bold text-white">{activeShift ? 'Aberto' : 'Fechado'}</p>
+        </div>
+      </div>
+
+      {/* Despesas & Salários */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Despesas Variáveis */}
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
+          <h3 className="text-lg font-bold text-white mb-4">Despesas Variáveis</h3>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const desc = (form.elements.namedItem('desc') as HTMLInputElement).value;
+              const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value);
+              if (!desc || !Number.isFinite(amount)) return;
+              addExpense({ id: `exp-${Date.now()}`, description: desc, amount, date: new Date(), category: 'VARIAVEL' } as any);
+              form.reset();
+            }}
+            className="flex gap-2 mb-4"
+          >
+            <input name="desc" placeholder="Descrição" className="flex-1 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
+            <input name="amount" type="number" placeholder="Valor" className="w-32 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
+            <button className="px-4 py-2 bg-primary text-black font-bold rounded-lg">Adicionar</button>
+          </form>
+          <div className="space-y-2">
+            {(expenses || []).map(e => (
+              <div key={e.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                <span className="text-sm font-bold">{e.description}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono text-red-400">{formatKz(Number(e.amount || 0))}</span>
+                  <button onClick={() => removeExpense(e.id as any)} className="text-xs text-slate-400 hover:text-red-400">Apagar</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Despesas Fixas */}
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
+          <h3 className="text-lg font-bold text-white mb-4">Despesas Fixas</h3>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const desc = (form.elements.namedItem('fdesc') as HTMLInputElement).value;
+              const amount = Number((form.elements.namedItem('famount') as HTMLInputElement).value);
+              if (!desc || !Number.isFinite(amount)) return;
+              addFixedExpense({ id: `fix-${Date.now()}`, description: desc, amount, frequency: 'MENSAL' } as any);
+              form.reset();
+            }}
+            className="flex gap-2 mb-4"
+          >
+            <input name="fdesc" placeholder="Descrição" className="flex-1 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
+            <input name="famount" type="number" placeholder="Valor" className="w-32 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
+            <button className="px-4 py-2 bg-primary text黑 font-bold rounded-lg">Adicionar</button>
+          </form>
+          <div className="space-y-2">
+            {(fixedExpenses || []).map(e => (
+              <div key={e.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                <span className="text-sm font-bold">{e.description}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono text-red-400">{formatKz(Number(e.amount || 0))}</span>
+                  <button onClick={() => removeFixedExpense(e.id as any)} className="text-xs text-slate-400 hover:text-red-400">Apagar</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Folha de Salários */}
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
+          <h3 className="text-lg font-bold text-white mb-4">Folha de Salários</h3>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const empId = (form.elements.namedItem('emp') as HTMLSelectElement).value;
+              const amount = Number((form.elements.namedItem('samount') as HTMLInputElement).value);
+              const month = Number((form.elements.namedItem('smonth') as HTMLInputElement).value);
+              const year = Number((form.elements.namedItem('syear') as HTMLInputElement).value);
+              if (!empId || !Number.isFinite(amount)) return;
+              addPayrollRecord({ id: `pay-${Date.now()}`, employeeId: empId as any, amount, month, year, status: 'PENDENTE' } as any);
+              form.reset();
+            }}
+            className="grid grid-cols-2 gap-2 mb-4"
+          >
+            <select name="emp" className="p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none">
+              {(employees || []).map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
+            <input name="samount" type="number" placeholder="Valor" className="p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
+            <input name="smonth" type="number" placeholder="Mês" className="p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
+            <input name="syear" type="number" placeholder="Ano" className="p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
+            <button className="px-4 py-2 bg-primary text-black font-bold rounded-lg col-span-2">Registar Pagamento</button>
+          </form>
+          <div className="space-y-2">
+            {(payroll || []).map(p => (
+              <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                <span className="text-sm font-bold">Emp: {p.employeeId} • {p.month}/{p.year}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono text-emerald-400">{formatKz(Number(p.amount || 0))}</span>
+                  <button onClick={() => removePayrollRecord(p.id as any)} className="text-xs text-slate-400 hover:text-red-400">Apagar</button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

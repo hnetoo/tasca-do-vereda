@@ -4,6 +4,7 @@ import { getStoredDatabaseConfig, saveStoredDatabaseConfig, DatabaseConfig } fro
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
+import { databaseOperations } from '@/services/database/operations';
 
 // Helper for server-side logging
 const serverLog = (message: string, data?: any, type: string = 'INFO') => {
@@ -95,6 +96,32 @@ export async function hardResetAction(): Promise<{ success: boolean; error?: str
     serverLog('Performing hard reset via server action', {}, 'SETTINGS');
     return { success: true };
   } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function runMigrationsAction(): Promise<{ success: boolean; error?: string }> {
+  try {
+    serverLog('Running database migrations...', undefined, 'DATABASE');
+    const result = await databaseOperations.runMigrations();
+    if (!result.success) return { success: false, error: result.error };
+    serverLog('Migrations applied successfully', undefined, 'DATABASE');
+    return { success: true };
+  } catch (error: any) {
+    serverLog('Error running migrations', { error: error.message }, 'ERROR');
+    return { success: false, error: error.message };
+  }
+}
+
+export async function renameCategoryGrelhoesAction(): Promise<{ success: boolean; error?: string }> {
+  try {
+    serverLog('Normalizing category "grelhoes" to "Grelhados"...', undefined, 'DATABASE');
+    const result = await databaseOperations.renameCategoryName('grelhoes', 'Grelhados');
+    if (!result.success) return { success: false, error: result.error };
+    serverLog('Category normalization applied', undefined, 'DATABASE');
+    return { success: true };
+  } catch (error: any) {
+    serverLog('Error normalizing category', { error: error.message }, 'ERROR');
     return { success: false, error: error.message };
   }
 }
