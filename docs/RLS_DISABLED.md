@@ -1,0 +1,239 @@
+# RLS Disabled Report
+
+Date: 2026-02-24T10:57:31.591Z
+
+## Tables in public schema (34)
+- agt_config
+- api_keys
+- attendance_records
+- audit_logs
+- biometric_devices
+- cash_shifts
+- customers
+- daily_analytics
+- deliveries
+- dishes
+- dlp_policies
+- employees
+- expenses
+- integration_logs
+- menu_categories
+- notifications
+- order_items
+- orders
+- payroll_records
+- profiles
+- reservations
+- restaurant_tables
+- revenues
+- settings
+- stock_items
+- suppliers
+- system_health
+- system_health_logs
+- system_settings
+- transactions
+- user_roles
+- users
+- webhooks
+- work_shifts
+
+## Policies dropped (124)
+- api_keys: Enable all for authenticated users
+- api_keys: Enable delete for all users
+- api_keys: Enable insert for all users
+- api_keys: Enable read access for all users
+- api_keys: Enable update for all users
+- audit_logs: Admins can read audit logs
+- audit_logs: Enable delete for all users
+- audit_logs: Enable insert for all users
+- audit_logs: Enable insert for authenticated users
+- audit_logs: Enable read access for all users
+- audit_logs: Enable read for authenticated users
+- audit_logs: Enable update for all users
+- audit_logs: System can insert audit logs
+- biometric_devices: Enable all for authenticated users
+- biometric_devices: Enable delete for all users
+- biometric_devices: Enable insert for all users
+- biometric_devices: Enable read access for all users
+- biometric_devices: Enable read for anon users
+- biometric_devices: Enable update for all users
+- cash_shifts: Admins/Owners can manage all shifts
+- cash_shifts: Enable delete for all users
+- cash_shifts: Enable insert for all users
+- cash_shifts: Enable read access for all users
+- cash_shifts: Enable update for all users
+- cash_shifts: Staff can manage their own shifts
+- customers: Enable delete for all users
+- customers: Enable insert for all users
+- customers: Enable read access for all users
+- customers: Enable update for all users
+- customers: Staff can manage customers
+- daily_analytics: Admins can read analytics
+- dishes: Admins/Owners can modify dishes
+- dishes: Authenticated read access
+- dishes: Enable delete for all users
+- dishes: Enable insert for all users
+- dishes: Enable update for all users
+- dishes: Public can read dishes
+- dishes: Public read access
+- dlp_policies: Enable all for authenticated users
+- employees: Admins/Owners can do everything on employees
+- employees: Enable delete for all users
+- employees: Enable insert for all users
+- employees: Enable read access for all users
+- employees: Enable update for all users
+- employees: Staff can read employees
+- expenses: Admins/Owners can manage expenses
+- expenses: Enable delete for all users
+- expenses: Enable insert for all users
+- expenses: Enable read access for all users
+- expenses: Enable update for all users
+- expenses: expense_read_anon
+- integration_logs: Enable all for authenticated users
+- menu_categories: Admins/Owners can modify menu categories
+- menu_categories: Authenticated read access
+- menu_categories: Enable delete for all users
+- menu_categories: Enable insert for all users
+- menu_categories: Enable update for all users
+- menu_categories: Public can read menu categories
+- menu_categories: Public read access
+- notifications: Users can manage their own notifications
+- order_items: Enable delete for all users
+- order_items: Enable delete for authenticated and anon users
+- order_items: Enable insert for all users
+- order_items: Enable insert for authenticated and anon users
+- order_items: Enable read access for all users
+- order_items: Enable update for all users
+- order_items: Enable update for authenticated and anon users
+- order_items: Staff can create order items
+- order_items: Staff can delete order items
+- order_items: Staff can read order items
+- order_items: Staff can update order items
+- orders: Enable delete for all users
+- orders: Enable delete for authenticated and anon users
+- orders: Enable insert for all users
+- orders: Enable insert for authenticated and anon users
+- orders: Enable read access for all users
+- orders: Enable update for all users
+- orders: Enable update for authenticated and anon users
+- orders: Staff can create orders
+- orders: Staff can read orders
+- orders: Staff can update orders
+- payroll_records: Admins/Owners can manage payroll
+- reservations: Enable delete for all users
+- reservations: Enable insert for all users
+- reservations: Enable read access for all users
+- reservations: Enable update for all users
+- restaurant_tables: Admins/Owners can manage tables
+- restaurant_tables: Enable delete for all users
+- restaurant_tables: Enable insert for all users
+- restaurant_tables: Enable read access for all users
+- restaurant_tables: Enable update for all users
+- restaurant_tables: Staff can read tables
+- restaurant_tables: Staff can update tables
+- revenues: Admins/Owners can manage revenues
+- revenues: Enable delete for all users
+- revenues: Enable insert for all users
+- revenues: Enable read access for all users
+- revenues: Enable update for all users
+- revenues: revenue_read_anon
+- stock_items: Admins/Owners can manage stock
+- stock_items: Staff can read stock
+- system_health: Enable all for authenticated users
+- system_health: Enable delete for all users
+- system_health: Enable insert for all users
+- system_health: Enable read access for all users
+- system_health: Enable update for all users
+- system_health_logs: Enable all for authenticated users
+- system_health_logs: Enable insert for anon users
+- system_settings: Enable delete for all users
+- system_settings: Enable insert for all users
+- system_settings: Enable read access for all users
+- system_settings: Enable update for all users
+- transactions: Admins/Owners can manage transactions
+- transactions: Enable delete for all users
+- transactions: Enable insert for all users
+- transactions: Enable read access for all users
+- transactions: Enable update for all users
+- user_roles: Enable all for authenticated users
+- user_roles: Enable read for authenticated users
+- webhooks: Enable all for authenticated users
+- webhooks: Enable delete for all users
+- webhooks: Enable insert for all users
+- webhooks: Enable read access for all users
+- webhooks: Enable update for all users
+
+## Verification (pg_class)
+- deliveries: rls_enabled=false, force_rls=false
+- dishes: rls_enabled=false, force_rls=false
+- notifications: rls_enabled=false, force_rls=false
+- user_roles: rls_enabled=false, force_rls=false
+- agt_config: rls_enabled=false, force_rls=false
+- dlp_policies: rls_enabled=false, force_rls=false
+- order_items: rls_enabled=false, force_rls=false
+- orders: rls_enabled=false, force_rls=false
+- transactions: rls_enabled=false, force_rls=false
+- audit_logs: rls_enabled=false, force_rls=false
+- work_shifts: rls_enabled=false, force_rls=false
+- api_keys: rls_enabled=false, force_rls=false
+- biometric_devices: rls_enabled=false, force_rls=false
+- webhooks: rls_enabled=false, force_rls=false
+- daily_analytics: rls_enabled=false, force_rls=false
+- employees: rls_enabled=false, force_rls=false
+- revenues: rls_enabled=false, force_rls=false
+- system_settings: rls_enabled=false, force_rls=false
+- cash_shifts: rls_enabled=false, force_rls=false
+- customers: rls_enabled=false, force_rls=false
+- users: rls_enabled=false, force_rls=false
+- restaurant_tables: rls_enabled=false, force_rls=false
+- attendance_records: rls_enabled=false, force_rls=false
+- expenses: rls_enabled=false, force_rls=false
+- integration_logs: rls_enabled=false, force_rls=false
+- menu_categories: rls_enabled=false, force_rls=false
+- payroll_records: rls_enabled=false, force_rls=false
+- profiles: rls_enabled=false, force_rls=false
+- reservations: rls_enabled=false, force_rls=false
+- settings: rls_enabled=false, force_rls=false
+- stock_items: rls_enabled=false, force_rls=false
+- suppliers: rls_enabled=false, force_rls=false
+- system_health: rls_enabled=false, force_rls=false
+- system_health_logs: rls_enabled=false, force_rls=false
+
+## Remaining policies (pg_policies): 0
+
+## SELECT visibility test
+- agt_config: count=0
+- api_keys: count=0
+- attendance_records: count=0
+- audit_logs: count=7
+- biometric_devices: count=0
+- cash_shifts: count=0
+- customers: count=0
+- daily_analytics: count=1
+- deliveries: count=0
+- dishes: count=8
+- dlp_policies: count=0
+- employees: count=1
+- expenses: count=0
+- integration_logs: count=0
+- menu_categories: count=8
+- notifications: count=0
+- order_items: count=0
+- orders: count=0
+- payroll_records: count=0
+- profiles: count=0
+- reservations: count=0
+- restaurant_tables: count=15
+- revenues: count=0
+- settings: count=0
+- stock_items: count=0
+- suppliers: count=0
+- system_health: count=0
+- system_health_logs: count=0
+- system_settings: count=0
+- transactions: count=0
+- user_roles: count=0
+- users: count=2
+- webhooks: count=0
+- work_shifts: count=0
