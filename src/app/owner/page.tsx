@@ -254,24 +254,24 @@ export default function OwnerRealtime() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
+          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10 min-w-0">
             <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total Arrecadado</div>
-            <div className="text-2xl font-black text-white">{fmt(totals.monthTotal)}</div>
+            <div className="font-black text-white leading-tight tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{fmt(totals.monthTotal)}</div>
             <div className="text-[10px] text-slate-500 mt-1">Este mês</div>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
+          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10 min-w-0">
             <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Hoje</div>
-            <div className="text-2xl font-black text-white">{fmt(totals.revenueTotal)}</div>
+            <div className="font-black text-white leading-tight tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{fmt(totals.revenueTotal)}</div>
             <div className="text-[10px] text-slate-500 mt-1">{orders.length} pedidos</div>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
+          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10 min-w-0">
             <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Despesas Hoje</div>
-            <div className="text-2xl font-black text-red-400">{fmt(totals.expenseTotal)}</div>
+            <div className="font-black text-red-400 leading-tight tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{fmt(totals.expenseTotal)}</div>
             <div className="text-[10px] text-slate-500 mt-1">saídas</div>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
+          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10 min-w-0">
             <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Fluxo de Caixa</div>
-            <div className="text-2xl font-black text-emerald-400">{fmt(totals.net)}</div>
+            <div className="font-black text-emerald-400 leading-tight tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{fmt(totals.net)}</div>
             <div className="text-[10px] text-slate-500 mt-1">hoje</div>
           </div>
           <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
