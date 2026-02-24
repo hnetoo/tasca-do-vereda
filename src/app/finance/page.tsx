@@ -23,6 +23,7 @@ import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatDateInLuanda } from '@/utils/date';
+import { formatKz } from '@/services/utils/currencyFormatter';
 
 ChartJS.register(
   CategoryScale,
