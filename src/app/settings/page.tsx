@@ -33,8 +33,7 @@ import { downloadManual } from '@/services/manualService';
 import { generateSQLSchema } from '@/services/sqlExportService';
 
 
-import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction, testDatabaseConnectionAction } from '@/app/actions/settings';
-  clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction, testDatabaseConnectionAction, runMigrationsAction, renameCategoryGrelhoesAction
+import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction, testDatabaseConnectionAction, runMigrationsAction, renameCategoryGrelhoesAction } from '@/app/actions/settings';
 
 
 
