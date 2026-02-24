@@ -9,12 +9,12 @@ import { Order, AIAnalysisResult, PedidoPayload, DailyAnalyticsPayload, PaymentM
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Image from 'next/image';
+import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 import ExportButton from '@/components/ExportButton';
-import { exportChartToPDF } from '@/services/exportService';
-import { formatKz } from '@/services/utils/currencyFormatter';
-import { formatDateInLuanda } from '@/utils/date';
-import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { formatDateInLuanda } from '@/utils/date';
+import { normalizeDate, buildDateRange, getOrderDate } from '@/services/utils/dateUtils';
+import { formatCurrency as formatKz } from '@/utils/formatCurrency';
 
 interface PaymentDailyDataRow {
   date: Date;
@@ -25,16 +25,15 @@ interface PaymentDailyDataRow {
   profitByMethod: Record<PaymentMethod, number>;
 }
 
-const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE', 'SPLIT', 'OTHER'];
-
+const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE'];
 const paymentLabels: Record<PaymentMethod, string> = {
   NUMERARIO: 'Numerário',
   TPA: 'Cartão',
   TRANSFERENCIA: 'Transferência',
   QR_CODE: 'QR Code',
   CONTA_CORRENTE: 'Conta Corrente',
-  SPLIT: 'Dividido',
-  OTHER: 'Outro',
+  SPLIT: 'Split',
+  OTHER: 'Outros',
 };
 
 const Dashboard = () => {
@@ -267,29 +266,7 @@ const Dashboard = () => {
           <p className="text-slate-400 text-sm mt-1">Visão geral em tempo real</p>
         </div>
         <div className="flex gap-3 flex-wrap items-center">
-          {settings.supabaseConfig?.enabled && (
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
-              saveStatus === 'SAVING' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' :
-              saveStatus === 'ERROR' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
-              'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-            }`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${
-                saveStatus === 'SAVING' ? 'bg-blue-500 animate-pulse' :
-                saveStatus === 'ERROR' ? 'bg-red-500' :
-                'bg-emerald-500 shadow-[0_0_8px_#10b981]'
-              }`} />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest">
-                {saveStatus === 'SAVING' ? 'Sincronizando...' : 
-                 saveStatus === 'ERROR' ? 'Erro Sinc' : 'Cloud Link'}
-              </span>
-              {realtimeActivity && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-ping-slow" />
-              )}
-            </div>
-          )}
-
-
-
+          <SyncStatusIndicator />
 
           <button
             onClick={handleAIAnalysis}

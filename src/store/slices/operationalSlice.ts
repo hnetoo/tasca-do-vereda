@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID } from '../../types';
+import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID, OrderItem, Order } from '../../types';
 import { 
   saveTableAction, 
   deleteTableAction, 
@@ -12,7 +12,9 @@ import {
   saveDeliveryAction,
   deleteDeliveryAction,
   getTablesAction,
-  saveOrderAction
+  saveOrderAction,
+  saveOrderItemAction,
+  deleteOrderItemAction
 } from '@/app/actions/operational';
 import { logger } from '../../services/logger';
 import { generateUUID } from '../../utils/uuid';
@@ -52,6 +54,9 @@ export interface OperationalSlice {
   closeShift: (closingAmount: number) => void;
   backupLayout: () => void;
   createNewOrder: (tableId: string, name: string) => UUID;
+  addOrderItem: (orderId: UUID, item: OrderItem) => void;
+  updateOrderItem: (orderId: UUID, itemId: UUID, updatedItem: Partial<OrderItem>) => void;
+  removeOrderItem: (orderId: UUID, itemId: UUID) => void;
   updateStockQuantity: (id: UUID, quantity: number) => void;
   
   closeTableWithoutOrders: (tableId: string) => void;
@@ -277,7 +282,7 @@ export const createOperationalSlice: StateCreator<
 
   createNewOrder: (tableId: string, name: string) => {
     const orderId = generateUUID();
-    const newOrder: any = {
+    const newOrder: Order = {
       id: orderId,
       tableId,
       customerName: name,
@@ -290,7 +295,7 @@ export const createOperationalSlice: StateCreator<
       updatedAt: new Date().toISOString(),
       isPaid: false,
       subAccountName: name
-    };
+    } as unknown as Order;
     
     if ('addOrder' in get()) {
       (get() as any).addOrder(newOrder);
@@ -306,6 +311,126 @@ export const createOperationalSlice: StateCreator<
     }
     
     return orderId;
+  },
+
+  addOrderItem: (orderId: UUID, item: OrderItem) => {
+    const state = get();
+    const orders = (state as any).orders as Order[];
+    const orderIndex = orders.findIndex(o => o.id === orderId);
+
+    if (orderIndex !== -1) {
+      const updatedOrders = [...orders];
+      const orderToUpdate = { ...updatedOrders[orderIndex] };
+      
+      const newItem = { 
+        ...item, 
+        id: item.id || generateUUID(), 
+        orderId, 
+        createdAt: new Date().toISOString(), 
+        updatedAt: new Date().toISOString() 
+      };
+      
+      orderToUpdate.items = [...(orderToUpdate.items || []), newItem];
+
+      // Recalculate order totals
+      orderToUpdate.subtotal = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.subtotal || 0), 0);
+      orderToUpdate.tax = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.tax || 0), 0);
+      orderToUpdate.total = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.total || 0), 0);
+
+      updatedOrders[orderIndex] = orderToUpdate;
+      set({ orders: updatedOrders } as any);
+
+      saveOrderItemAction(newItem).then(res => {
+        if (!res.success) {
+          logger.error('Failed to persist new order item', { orderItemId: newItem.id, error: res.error }, 'OPERATIONAL');
+        }
+      }).catch(err => {
+        logger.error('Exception persisting new order item', { orderItemId: newItem.id, error: err }, 'OPERATIONAL');
+      });
+    } else {
+      logger.warn(`Order with ID ${orderId} not found when trying to add item.`, undefined, 'OPERATIONAL');
+    }
+  },
+
+  updateOrderItem: (orderId: UUID, itemId: UUID, updatedItem: Partial<OrderItem>) => {
+    const state = get();
+    const orders = (state as any).orders as Order[];
+    const orderIndex = orders.findIndex(o => o.id === orderId);
+
+    if (orderIndex !== -1) {
+      const updatedOrders = [...orders];
+      const orderToUpdate = { ...updatedOrders[orderIndex] };
+      
+      const items = orderToUpdate.items || [];
+      const itemToUpdateIndex = items.findIndex(item => item.id === itemId);
+
+      if (itemToUpdateIndex !== -1) {
+        const itemToUpdate = { ...items[itemToUpdateIndex], ...updatedItem, updatedAt: new Date().toISOString() };
+        const newItems = items.map((item, idx) => idx === itemToUpdateIndex ? itemToUpdate : item);
+        orderToUpdate.items = newItems;
+
+        // Recalculate order totals
+        orderToUpdate.subtotal = newItems.reduce((sum, oi) => sum + (oi.subtotal || 0), 0);
+        orderToUpdate.tax = newItems.reduce((sum, oi) => sum + (oi.tax || 0), 0);
+        orderToUpdate.total = newItems.reduce((sum, oi) => sum + (oi.total || 0), 0);
+
+        updatedOrders[orderIndex] = orderToUpdate;
+        set({ orders: updatedOrders } as any);
+
+        saveOrderItemAction(itemToUpdate).then(res => {
+          if (!res.success) {
+            logger.error('Failed to persist updated order item', { orderItemId: itemToUpdate.id, error: res.error }, 'OPERATIONAL');
+          }
+        }).catch(err => {
+          logger.error('Exception persisting updated order item', { orderItemId: itemToUpdate.id, error: err }, 'OPERATIONAL');
+        });
+      } else {
+        logger.warn(`Order item with ID ${itemId} not found for order ID ${orderId}.`, undefined, 'OPERATIONAL');
+      }
+    } else {
+      logger.warn(`Order with ID ${orderId} not found when trying to update item.`, undefined, 'OPERATIONAL');
+    }
+  },
+
+  removeOrderItem: (orderId: UUID, itemId: UUID) => {
+    const state = get();
+    const orders = (state as any).orders as Order[];
+    const orderIndex = orders.findIndex(o => o.id === orderId);
+
+    if (orderIndex !== -1) {
+      const updatedOrders = [...orders];
+      const orderToUpdate = { ...updatedOrders[orderIndex] };
+      
+      const items = orderToUpdate.items || [];
+      const itemToRemove = items.find(item => item.id === itemId);
+
+      if (itemToRemove) {
+        const newItems = items.filter(item => item.id !== itemId);
+        orderToUpdate.items = newItems;
+
+        // Recalculate order totals
+        orderToUpdate.subtotal = newItems.reduce((sum, oi) => sum + (oi.subtotal || 0), 0);
+        orderToUpdate.tax = newItems.reduce((sum, oi) => sum + (oi.tax || 0), 0);
+        orderToUpdate.total = newItems.reduce((sum, oi) => sum + (oi.total || 0), 0);
+
+        updatedOrders[orderIndex] = orderToUpdate;
+        set({ orders: updatedOrders } as any);
+
+        if (itemToRemove.id) {
+          deleteOrderItemAction(itemToRemove.id).then(res => {
+            if (!res.success) {
+              logger.error('Failed to delete order item', { orderItemId: itemToRemove.id, error: res.error }, 'OPERATIONAL');
+            }
+          }).catch(err => {
+            logger.error('Exception deleting order item', { orderItemId: itemToRemove.id, error: err }, 'OPERATIONAL');
+          });
+        }
+      } else {
+        logger.warn(`Order item with ID ${itemId} not found for order ID ${orderId}.`, undefined, 'OPERATIONAL');
+      }
+    } else {
+      logger.warn(`Order with ID ${orderId} not found when trying to remove item.`, undefined, 'OPERATIONAL');
+    }
   },
   
   closeTableWithoutOrders: (tableId: string) => {

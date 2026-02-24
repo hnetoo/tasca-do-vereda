@@ -11,11 +11,27 @@ export class SupabaseService {
   private circuitBreaker: { open: boolean; failures: number; threshold: number; openedAt: number; cooldownMs: number; halfOpenProbe: boolean } = { open: false, failures: 0, threshold: 3, openedAt: 0, cooldownMs: 30000, halfOpenProbe: false };
   private subscriptions: Map<string, RealtimeChannel> = new Map();
   private realtimeHandlers: Map<string, (payload: any) => void> = new Map();
+  private statusHandler: ((status: typeof this.syncStatus) => void) | null = null;
 
-  async initialize(url?: string, key?: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
+  async initialize(
+    url?: string, 
+    key?: string, 
+    onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void,
+    onStatusChange?: (status: typeof this.syncStatus) => void
+  ) {
     if (this.client) {
       logger.info('Supabase client already initialized. Skipping re-initialization.', {}, 'SupabaseService');
+      // If a new status handler is provided, update it even if already initialized
+      if (onStatusChange) {
+          this.statusHandler = onStatusChange;
+          // Emit current status immediately
+          this.statusHandler(this.syncStatus);
+      }
       return;
+    }
+    
+    if (onStatusChange) {
+        this.statusHandler = onStatusChange;
     }
     
     // Use the robust client from src/lib/supabase
@@ -74,6 +90,13 @@ export class SupabaseService {
     }
   }
 
+  private updateStatus(updates: Partial<typeof this.syncStatus>) {
+    this.syncStatus = { ...this.syncStatus, ...updates };
+    if (this.statusHandler) {
+        this.statusHandler(this.syncStatus);
+    }
+  }
+
   private setupRealtimeConnectionListeners() {
     if (!this.client) {
         logger.warn('Supabase client not initialized for realtime listeners.', {}, 'SupabaseService');
@@ -87,31 +110,37 @@ export class SupabaseService {
     if (realtime && typeof realtime.onOpen === 'function') {
         realtime.onOpen(() => {
             logger.info('Supabase Realtime connection opened.', {}, 'SupabaseService');
-            this.syncStatus.isConnected = true;
-            this.syncStatus.status = 'success';
-            this.syncStatus.lastSuccessAt = Date.now();
-            this.syncStatus.retries = 0;
-            this.syncStatus.hasCriticalError = false;
-            this.syncStatus.criticalErrorMessage = undefined;
+            this.updateStatus({
+                isConnected: true,
+                status: 'success',
+                lastSuccessAt: Date.now(),
+                retries: 0,
+                hasCriticalError: false,
+                criticalErrorMessage: undefined
+            });
             this.reconnect();
         });
 
         realtime.onClose(() => {
             logger.warn('Supabase Realtime connection closed. Attempting to reconnect...', {}, 'SupabaseService');
-            this.syncStatus.isConnected = false;
-            this.syncStatus.status = 'retrying';
-            this.syncStatus.lastErrorAt = Date.now();
-            this.syncStatus.retries++;
+            this.updateStatus({
+                isConnected: false,
+                status: 'retrying',
+                lastErrorAt: Date.now(),
+                retries: this.syncStatus.retries + 1
+            });
             setTimeout(() => this.reconnect(), 3000);
         });
 
         realtime.onError((event: any) => {
             logger.error('Supabase Realtime connection error.', { error: event.message || event }, 'SupabaseService');
-            this.syncStatus.isConnected = false;
-            this.syncStatus.status = 'error';
-            this.syncStatus.lastErrorAt = Date.now();
-            this.syncStatus.errorMessage = event.message || 'Unknown Realtime error';
-            this.syncStatus.retries++;
+            this.updateStatus({
+                isConnected: false,
+                status: 'error',
+                lastErrorAt: Date.now(),
+                errorMessage: event.message || 'Unknown Realtime error',
+                retries: this.syncStatus.retries + 1
+            });
             setTimeout(() => this.reconnect(), 3000);
         });
     } else {
@@ -124,6 +153,9 @@ export class SupabaseService {
       'dishes', 
       'menu_categories', 
       'orders', 
+      'order_items',
+      'audit_logs',
+      'system_settings',
       'revenues', 
       'expenses', 
       'employees', 

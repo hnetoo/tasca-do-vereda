@@ -1,8 +1,11 @@
-import { createAuthSlice, AuthSlice } from './authSlice';
+import authReducer, { logoutUser, logout, resetAuthStatus, setUserSession, loginWithPin } from './authSlice';
 import { StoreState } from '@/types';
 import { logger } from '@/services/logger';
 import { createClient } from '@/lib/supabase/client';
 import { MOCK_USERS } from '@/constants/index';
+import { configureStore } from '@reduxjs/toolkit';
+import { AuthState } from '@/types/auth.types';
+import { supabaseAuthService } from '@/services/supabaseAuth.service';
 
 // Mock dependencies
 jest.mock('@/services/logger', () => ({
@@ -28,40 +31,40 @@ jest.mock('@/services/cryptoService', () => ({
   },
 }));
 
+jest.mock('@/services/supabaseAuth.service', () => ({
+  supabaseAuthService: {
+    loginWithPin: jest.fn(),
+  },
+}));
+
 // Mock utils/crypto calculateHash since it's used in login (pin)
 jest.mock('@/utils/crypto', () => ({
   calculateHash: jest.fn(),
 }));
 
+// Mock store setup
+const createMockStore = (initialState?: Partial<AuthState>) => {
+  return configureStore({
+    reducer: {
+      auth: authReducer,
+    },
+    preloadedState: {
+      auth: {
+        user: null,
+        isAuthenticated: false,
+        isLocked: false,
+        loading: false,
+        error: null,
+        ...initialState,
+      },
+    },
+  });
+};
+
 describe('AuthSlice', () => {
-  let set: jest.Mock;
-  let get: jest.Mock;
-  let authSlice: AuthSlice;
   let mockSupabase: any;
 
   beforeEach(() => {
-    set = jest.fn((partial) => {
-      // simulate state update for simple cases if needed
-      if (typeof partial === 'function') {
-          // partial(state) logic
-      }
-    });
-    
-    // Initial state mock
-    const state: Partial<StoreState> = {
-      users: MOCK_USERS,
-      currentUser: null,
-      isAuthenticated: false,
-      settings: {
-          restaurantName: 'Test',
-          supabaseConfig: { enabled: true }
-      } as any,
-      addNotification: jest.fn(),
-      addAuditLog: jest.fn(),
-    };
-    
-    get = jest.fn(() => state);
-
     mockSupabase = {
       auth: {
         signInWithPassword: jest.fn(),
@@ -69,94 +72,133 @@ describe('AuthSlice', () => {
       },
     };
     (createClient as jest.Mock).mockReturnValue(mockSupabase);
-
-    // Create the slice
-    // We only test the methods returned by createAuthSlice
-    authSlice = createAuthSlice(set, get, {} as any);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('loginWithPassword', () => {
-    it('should login successfully with valid credentials', async () => {
-      const email = 'admin@example.com';
-      const password = 'password123';
-      const mockUser = {
-        id: 'user-123',
-        email,
-        user_metadata: { role: 'admin', name: 'Admin User' },
-      };
+  describe('logoutUser', () => {
+    let setCookieSpy: jest.SpyInstance;
 
-      mockSupabase.auth.signInWithPassword.mockResolvedValue({
-        data: { user: mockUser },
-        error: null,
-      });
+    beforeEach(() => {
+      // Spy on the document.cookie setter
+      setCookieSpy = jest.spyOn(document, 'cookie', 'set');
+    });
 
-      const result = await authSlice.loginWithPassword(email, password);
+    afterEach(() => {
+      setCookieSpy.mockRestore(); // Restore the original setter
+    });
 
-      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
-        email,
-        password,
-      });
-      expect(result.success).toBe(true);
-      expect(set).toHaveBeenCalledWith(expect.objectContaining({
+    it('should logout successfully and clear session', async () => {
+      // Set up initial state with an authenticated user
+      const store = createMockStore({
+        user: { id: '1', name: 'Test User', role: 'ADMIN', email: 'test@example.com', pin: '1234', metadata: {} },
         isAuthenticated: true,
-        currentUser: expect.objectContaining({
-          email,
-          role: 'ADMIN',
-        }),
-      }));
-      expect(logger.auth).toHaveBeenCalled();
-    });
-
-    it('should fail login with invalid credentials', async () => {
-      const email = 'admin@example.com';
-      const password = 'wrongpassword';
-
-      mockSupabase.auth.signInWithPassword.mockResolvedValue({
-        data: { user: null },
-        error: { message: 'Invalid login credentials' },
       });
 
-      const result = await authSlice.loginWithPassword(email, password);
+      await store.dispatch(logoutUser() as any);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Invalid login credentials');
-      expect(set).not.toHaveBeenCalled(); // Should not update state
-      expect(logger.security).toHaveBeenCalled();
-    });
+      const state = store.getState().auth;
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
 
-    it('should handle internal errors gracefully', async () => {
-      mockSupabase.auth.signInWithPassword.mockRejectedValue(new Error('Network error'));
-
-      const result = await authSlice.loginWithPassword('test@example.com', 'pass');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Erro interno');
-      expect(logger.error).toHaveBeenCalled();
+      // Verify cookies are cleared by checking the setter calls
+      expect(setCookieSpy).toHaveBeenCalledWith('tasca_auth_token=; path=/; max-age=0; SameSite=Lax');
+      expect(setCookieSpy).toHaveBeenCalledWith('pin_session=; path=/; max-age=0; SameSite=Lax');
     });
   });
 
-  describe('logout', () => {
-    it('should logout successfully', async () => {
-        // Setup initial state with a logged in user
-        const user = { id: '1', name: 'User', role: 'ADMIN' };
-        get.mockReturnValue({
-            currentUser: user,
-            addAuditLog: jest.fn(),
-            addNotification: jest.fn(),
-        });
+  describe('loginWithPin', () => {
+    it('should set loading to true when loginWithPin is pending', async () => {
+      const store = createMockStore();
+      store.dispatch(loginWithPin({ pin: '1234', role: 'ADMIN' }) as any);
+      const state = store.getState().auth;
+      expect(state.loading).toBe(true);
+      expect(state.error).toBeNull();
+    });
 
-        await authSlice.logout();
+    it('should handle successful loginWithPin', async () => {
+      const mockUser = {
+        id: 'user-123',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: 'ADMIN',
+        pin: '1234',
+        metadata: {},
+      };
+      (supabaseAuthService.loginWithPin as jest.Mock).mockResolvedValue({ user: mockUser });
 
-        expect(mockSupabase.auth.signOut).toHaveBeenCalled();
-        expect(set).toHaveBeenCalledWith({
-            currentUser: null,
-            isAuthenticated: false,
-        });
-        expect(logger.auth).toHaveBeenCalled();
+      const store = createMockStore();
+      await store.dispatch(loginWithPin({ pin: '1234', role: 'ADMIN' }) as any);
+
+      const state = store.getState().auth;
+      expect(state.loading).toBe(false);
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.user).toEqual(mockUser);
+      expect(state.error).toBeNull();
+    });
+
+    it('should handle failed loginWithPin', async () => {
+      const mockError = { type: 'CredenciaisInvalidas', message: 'PIN inválido' };
+      (supabaseAuthService.loginWithPin as jest.Mock).mockRejectedValue(mockError);
+
+      const store = createMockStore();
+      await store.dispatch(loginWithPin({ pin: 'wrong', role: 'ADMIN' }) as any);
+
+      const state = store.getState().auth;
+      expect(state.loading).toBe(false);
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+      expect(state.error).toEqual(mockError);
+    });
+  });
+
+  describe('setUserSession', () => {
+    it('should set user session and authenticate', () => {
+      const store = createMockStore();
+      const mockUser = { id: '1', name: 'Test User', role: 'ADMIN', email: 'test@example.com', pin: '1234', metadata: {} };
+      store.dispatch(setUserSession(mockUser));
+
+      const state = store.getState().auth;
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.user).toEqual(mockUser);
+      expect(state.error).toBeNull();
+      expect(state.loading).toBe(false);
+    });
+
+    it('should clear session if null user is provided', () => {
+      const store = createMockStore({
+        user: { id: '1', name: 'Test User', role: 'ADMIN', email: 'test@example.com', pin: '1234', metadata: {} },
+        isAuthenticated: true,
+      });
+      store.dispatch(setUserSession(null));
+
+      const state = store.getState().auth;
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+      expect(state.error).toBeNull();
+      expect(state.loading).toBe(false);
+    });
+  });
+
+  describe('resetAuthStatus', () => {
+    it('should reset auth status to initial state', () => {
+      const store = createMockStore({
+        user: { id: '1', name: 'Test User', role: 'ADMIN', email: 'test@example.com', pin: '1234', metadata: {} },
+        isAuthenticated: true,
+        isLocked: true,
+        error: { type: 'SomeError', message: 'Error message' },
+        loading: true,
+      });
+      store.dispatch(resetAuthStatus());
+
+      const state = store.getState().auth;
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+      expect(state.isLocked).toBe(false);
+      expect(state.error).toBeNull();
+      expect(state.loading).toBe(false);
     });
   });
 });

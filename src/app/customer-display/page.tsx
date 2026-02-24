@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { listen } from '@tauri-apps/api/event';
 import { useStore } from '@/store/useStore';
-import { useSelector } from 'react-redux';
 import { ChefHat, ShoppingBasket, Sparkles, CheckCircle2 } from 'lucide-react';
-import { CustomerDisplayEvent, Order, Dish, Table, OrderItem, User } from '@/types';
-import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { CustomerDisplayEvent, Order, Dish, Table, OrderItem } from '@/types';
 
 const CustomerDisplayContent = () => {
   const searchParams = useSearchParams();
   const tableId = searchParams.get('tableId');
   const { activeOrders, dishes: menu, settings, tables, addNotification } = useStore();
-  const user = useSelector((state: any) => state.auth.user) as User | null;
   const [imageErrorMap, setImageErrorMap] = useState<Record<string, boolean>>({});
   const [logoError, setLogoError] = useState(false);
   const [promoIndex, setPromoIndex] = useState(0);
@@ -32,27 +30,17 @@ const CustomerDisplayContent = () => {
     return () => clearInterval(interval);
   }, [promoItems.length]);
 
-  const handleOrderRealtimeUpdate = useCallback((payload: any) => {
-    if (payload.eventType === 'UPDATE' && payload.new && payload.new.tableId === Number(tableId)) {
-      const updatedOrder = payload.new as Order;
-      addNotification('info', `O estado do seu pedido foi atualizado para: ${updatedOrder.status}`);
-    }
-  }, [tableId, addNotification]);
 
-  // Realtime sync for orders
-  useRealtimeSync(
-    'orders',
-    handleOrderRealtimeUpdate,
-    (tableId && user?.id) ? { column: 'userId', value: user.id } : undefined
-  );
 
   const renderLogo = (className: string, size: number) => (
     <div className={`${className} bg-gradient-to-br from-primary to-blue-600 rounded-3xl flex items-center justify-center shadow-glow border border-white/10 shrink-0`}>
         {settings.logo && !logoError ? (
-            <img 
+            <Image 
                 src={settings.logo} 
                 alt="Logo" 
-                className="w-full h-full object-contain p-2"
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                style={{ objectFit: 'contain', padding: '0.5rem' }}
                 onError={() => setLogoError(true)}
             />
         ) : (
@@ -64,7 +52,7 @@ const CustomerDisplayContent = () => {
   const table = tables.find((t: Table) => t.id === tableId);
   const tableOrders = activeOrders.filter((o: Order) => o.tableId === tableId && o.status === 'ABERTO');
   
-  const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
+  const formatKz = (val: number) => val.toLocaleString('pt-AO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' AKZ';
 
   const allItems = tableOrders.flatMap((o: Order) => o.items);
   const total = tableOrders.reduce((acc: number, o: Order) => acc + (o.total ?? 0), 0);
@@ -146,8 +134,8 @@ const CustomerDisplayContent = () => {
                 return (
                   <div key={idx} className="flex items-center justify-between group animate-in slide-in-from-right duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
                     <div className="flex items-center gap-6">
-                       <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/5 group-hover:border-primary/30 transition-all shrink-0">
-                          <img src={dish?.imageUrl || undefined} className="w-full h-full object-cover" alt="" />
+                       <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/5 group-hover:border-primary/30 transition-all shrink-0 relative">
+                          <Image src={dish?.imageUrl || '/placeholder-image.jpg'} alt={dish?.name || 'Dish image'} fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
                        </div>
                        <div className="min-w-0">
                           <p className="text-lg font-black text-white uppercase tracking-tighter italic truncate pr-4">{dish?.name}</p>
@@ -184,19 +172,22 @@ const CustomerDisplayContent = () => {
         <div className="w-1/3 flex flex-col gap-10">
            <div className="flex-1 glass-panel rounded-[4rem] overflow-hidden relative group bg-slate-900 flex items-center justify-center">
               {currentPromo.imageUrl && !imageErrorMap[currentPromo.id as string] ? (
-                <img 
+                <Image 
                   key={currentPromo.imageUrl}
                   src={currentPromo.imageUrl} 
-                  crossOrigin="anonymous"
-                  className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-[10s] animate-in fade-in duration-1000 absolute inset-0" 
                   alt="Ad"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  style={{ objectFit: 'cover' }}
+                  className="opacity-50 group-hover:scale-110 transition-transform duration-[10s] animate-in fade-in duration-1000 absolute inset-0" 
+                  onError={() => {
                     if (currentPromo.id) {
                       setImageErrorMap(prev => ({ ...prev, [currentPromo.id as string]: true }));
                     }
                   }} 
+                  priority
+                  placeholder="blur"
+                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center opacity-10">

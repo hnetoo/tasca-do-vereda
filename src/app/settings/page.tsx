@@ -12,6 +12,8 @@ import {
   Database, ChefHat, Upload, Link as LinkIcon, MonitorPlay, ToggleRight, ToggleLeft, Rocket, FileText, DownloadCloud, Download, KeyRound, Wifi, Cpu, RefreshCw, Trash2, DollarSign, AlertCircle, Printer, UploadCloud,
   Activity, Zap, Server, Globe, Lock, HardDrive, BarChart3, Bug, Plus, Edit
 } from 'lucide-react';
+import { useRealtimeAuditLogs } from '@/hooks/useRealtimeAuditLogs';
+import { useRealtimeSystemSettings } from '@/hooks/useRealtimeSystemSettings';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
@@ -31,8 +33,7 @@ import { downloadManual } from '@/services/manualService';
 import { generateSQLSchema } from '@/services/sqlExportService';
 
 
-import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction } from '@/app/actions/settings';
-import { logger } from '@/services/logger';
+import { clearAllDataAction, hardResetAction, testCloudConnectionAction, fetchRemoteCategoriesAction, fetchRemoteProductsAction, setupRLSAction, setupBucketsAction, captureFullStateAction, restoreFullStateAction, getDatabaseConfigAction, saveDatabaseConfigAction, testDatabaseConnectionAction } from '@/app/actions/settings';
 
 
 import { healthMonitorService, SystemHealthReport, SystemIssue } from '@/services/healthMonitorService';
@@ -199,6 +200,13 @@ const Settings = () => {
   };
 
   const [localSettings, setLocalSettings] = useState<SystemSettings>(settings);
+  const realtimeSystemSettings = useRealtimeSystemSettings();
+
+  useEffect(() => {
+    if (realtimeSystemSettings && realtimeSystemSettings.length > 0) {
+      setLocalSettings(realtimeSystemSettings[0]);
+    }
+  }, [realtimeSystemSettings]);
 
   // Table Management State
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
@@ -232,14 +240,14 @@ const Settings = () => {
   // Monitoring State
   const [healthReport, setHealthReport] = useState<SystemHealthReport | null>(null);
   const [metricsHistory, setMetricsHistory] = useState<SystemHealthReport[]>([]);
-  const [recentLogs, setRecentLogs] = useState<SystemIssue[]>([]);
+  const realtimeAuditLogs = useRealtimeAuditLogs();
+  const recentLogs = realtimeAuditLogs.slice(0, 15);
 
   useEffect(() => {
     if (activeTab === 'system' && activeSystemSubTab === 'monitoring') {
       const updateMetrics = () => {
         setHealthReport(healthMonitorService.getHealthReport());
         setMetricsHistory(healthMonitorService.getMetricsHistory());
-        setRecentLogs(healthMonitorService.getRecentLogs(15));
       };
 
       updateMetrics();
@@ -362,21 +370,21 @@ const Settings = () => {
 
     setIsTestingCloud(true);
     setCloudStatus('testing');
-    logger.info('Iniciando teste de conexão Supabase...', null, 'CLOUD');
+    console.log('[CLOUD] Iniciando teste de conexão Supabase...');
 
     try {
       const { success, error } = await testCloudConnectionAction(localSettings.supabaseConfig.url, localSettings.supabaseConfig.key);
       if (success) {
         setCloudStatus('success');
         addNotification('success', 'Conexão Supabase estabelecida com sucesso!');
-        logger.info('Conexão Supabase validada.', null, 'CLOUD');
+        console.log('[CLOUD] Conexão Supabase validada.');
       } else {
-        throw new Error('Falha na resposta do servidor');
+        throw new Error(error || 'Falha na resposta do servidor');
       }
     } catch (error: unknown) {
       setCloudStatus('error');
       addNotification('error', `Erro na conexão: ${error instanceof Error ? error.message : String(error)}`);
-      logger.error(`Falha no teste de conexão: ${error instanceof Error ? error.message : String(error)}`, error, 'CLOUD');
+      console.error('[CLOUD] Falha no teste de conexão:', error);
     } finally {
       setIsTestingCloud(false);
     }
@@ -384,17 +392,17 @@ const Settings = () => {
 
   const handleForcerSincronizacao = async () => {
     addNotification('info', 'Iniciando sincronização forçada...');
-    logger.info('Sincronização forçada solicitada pelo utilizador', null, 'CLOUD');
+    console.log('[CLOUD] Sincronização forçada solicitada pelo utilizador');
     
     try {
       // Simulação de sincronização
       await new Promise(resolve => setTimeout(resolve, 2000));
       addNotification('success', 'Sincronização concluída com sucesso.');
-      logger.info('Sincronização concluída.', null, 'CLOUD');
+      console.log('[CLOUD] Sincronização concluída.');
     } catch (e: unknown) {
       const error = e as Error;
       addNotification('error', 'Falha na sincronização.');
-      logger.error('Erro durante sincronização forçada', { error: error.message }, 'CLOUD');
+      console.error('[CLOUD] Erro durante sincronização forçada:', error);
     }
   };
 
@@ -408,36 +416,42 @@ const Settings = () => {
 
   const handleSetupRLS = async () => {
     addNotification('info', 'Validando conexão para políticas de segurança...');
-    logger.info('Iniciando validação de políticas RLS', null, 'SECURITY');
+    console.log('[SECURITY] Iniciando validação de políticas RLS');
     const config = localSettings.supabaseConfig || { enabled: false, url: '', key: '', autoSync: false };
     const result = await setupRLSAction(config);
     if (result.success) {
       addNotification('success', (result as any).message || 'Políticas validadas com sucesso.');
-      logger.info('RLS validado com sucesso', { result }, 'SECURITY');
+      console.log('[SECURITY] RLS validado com sucesso', result);
     } else {
       addNotification('error', `Falha ao configurar RLS: ${(result as any).error}`);
-      logger.error('Falha na configuração/validação de RLS', { error: (result as any).error }, 'SECURITY');
+      console.error('[SECURITY] Falha na configuração/validação de RLS:', (result as any).error);
     }
   };
 
   const handleSetupBuckets = async () => {
     addNotification('info', 'Configurando buckets de armazenamento...');
-    logger.info('Iniciando configuração de buckets de armazenamento', null, 'STORAGE');
+    console.log('[STORAGE] Iniciando configuração de buckets de armazenamento');
     const config = localSettings.supabaseConfig || { enabled: false, url: '', key: '', autoSync: false };
     const result = await setupBucketsAction(config);
     if (result.success) {
       addNotification('success', (result as any).message || 'Buckets configurados com sucesso.');
-      logger.info('Buckets configurados com sucesso', { result }, 'STORAGE');
+      console.log('[STORAGE] Buckets configurados com sucesso', result);
     } else {
       addNotification('error', `Falha ao configurar buckets: ${(result as any).error}`);
-      logger.error('Falha na configuração de buckets', { error: (result as any).error }, 'STORAGE');
+      console.error('[STORAGE] Falha na configuração de buckets:', (result as any).error);
     }
   };
 
   const handleBackup = async () => {
     try {
       addNotification('info', 'A preparar backup completo (SQL + Local)...');
-      const state = await captureFullStateAction();
+      const res = await captureFullStateAction();
+      
+      if (!res.success) {
+        throw new Error(res.error || 'Falha ao capturar estado do sistema');
+      }
+
+      const state = res.data;
       
       const backupData = {
         state,
@@ -1172,8 +1186,16 @@ const Settings = () => {
                                 <button 
                                     onClick={async (e) => {
                                         e.preventDefault();
-                                        // TODO: Implement connection test
-                                        alert('Teste de conexão simulado: OK');
+                                        try {
+                                            const res = await testDatabaseConnectionAction(dbConfig.type, dbConfig.connectionString || '');
+                                            if (res.success) {
+                                                addNotification('success', 'Conexão estabelecida com sucesso!');
+                                            } else {
+                                                addNotification('error', `Falha na conexão: ${res.error}`);
+                                            }
+                                        } catch (err: any) {
+                                            addNotification('error', `Erro: ${err.message}`);
+                                        }
                                     }}
                                     className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase tracking-widest transition-all"
                                 >
@@ -1407,7 +1429,26 @@ const Settings = () => {
         )}
 
         {activeTab === 'system' && activeSystemSubTab === 'users' && (
-            <POSAccessManagement />
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="flex justify-between items-center bg-slate-900/50 p-6 rounded-3xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-emerald-500/20 rounded-xl text-emerald-500">
+                            <Users size={22} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Gestão de Utilizadores</h3>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Controlo de Acesso e Permissões POS</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => setIsUserModalOpen(true)}
+                        className="px-6 py-3 bg-primary text-black rounded-xl font-black uppercase text-[10px] tracking-widest shadow-glow hover:brightness-110 transition-all flex items-center gap-2"
+                    >
+                        <Users size={16} /> Gerir Utilizadores
+                    </button>
+                </div>
+                <POSAccessManagement />
+            </div>
         )}
 
         {activeTab === 'system' && activeSystemSubTab === 'roles' && (

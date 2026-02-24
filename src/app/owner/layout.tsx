@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useStore } from '@/store/useStore';
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,12 +15,20 @@ export default function OwnerLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const zustandStore = useStore(); // Keep useStore for other state if needed
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector(selectUser);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Skip checks for login page - Handle trailing slashes
+  const isLoginPage = pathname === '/owner/login' || pathname === '/owner/login/';
+
   useEffect(() => {
+    if (isLoginPage) {
+      return;
+    }
+
     const checkSession = async () => {
       try {
         const supabase = createClient();
@@ -70,9 +78,9 @@ export default function OwnerLayout({
     };
 
     checkSession();
-  }, [router, dispatch, user]);
+  }, [router, dispatch, user, isLoginPage]);
 
-  if (isLoading) {
+  if (isLoading && !isLoginPage) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-950">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

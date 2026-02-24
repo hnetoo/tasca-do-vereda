@@ -1,6 +1,7 @@
 'use client';
 
 
+import Image from 'next/image';
 import { useState, useMemo, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import { generateMonthlyReport } from '@/services/geminiService';
@@ -100,7 +101,7 @@ const Reports = () => {
   const paymentChartData = useMemo(() => {
       // Simplified payment chart data for reconstruction
       return [];
-  }, [closedOrders, paymentPeriod, paymentYear]);
+  }, []);
   
   const paymentMethods = Object.keys(paymentLabels);
   const COLORS = ['#FFBB28', '#FF8042', '#0088FE', '#00C49F', '#8884d8', '#82ca9d', '#ffc658'];
@@ -346,7 +347,15 @@ const Reports = () => {
                            <td className="px-8 py-6">
                               <div className="flex items-center gap-4">
                                  <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 group-hover:border-primary/50 transition-colors">
-                                    <img src={dish?.imageUrl} alt={dish?.name || ''} className="w-full h-full object-cover" />
+                                    <Image
+                                       src={dish?.imageUrl || '/placeholder-image.jpg'}
+                                       alt={dish?.name || ''}
+                                       fill
+                                       sizes="40px"
+                                       style={{ objectFit: 'cover' }}
+                                       placeholder="blur"
+                                       blurDataURL="/placeholder-image.jpg"
+                                    />
                                  </div>
                                  <span className="font-bold text-white text-sm">{item.name}</span>
                               </div>

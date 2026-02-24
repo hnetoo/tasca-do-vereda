@@ -88,6 +88,10 @@ export type OrderItem = Partial<Database['public']['Tables']['order_items']['Row
   // Runtime / Local DB extensions
   dish_id?: string;
   dishId?: string; // CamelCase alias
+  order_id?: string;
+  orderId?: string; // CamelCase alias
+  product_id?: string;
+  productId?: string; // CamelCase alias
   tax_amount?: number;
   taxAmount?: number; // CamelCase alias
   tax_percentage?: number;
@@ -100,6 +104,13 @@ export type OrderItem = Partial<Database['public']['Tables']['order_items']['Row
   quantity?: number; // Ensure quantity is available
   notes?: string;
   status?: string;
+
+  // Calculated fields
+  subtotal?: number;
+  tax?: number;
+  total?: number;
+  createdAt?: string; // CamelCase alias
+  updatedAt?: string; // CamelCase alias
 };
 
 export type OrderItemDetail = OrderItem & {
@@ -181,9 +192,19 @@ export type Order = Omit<Partial<Database['public']['Tables']['orders']['Row']>,
   splitPayments?: { method: PaymentMethod; amount: number }[];
   customerNif?: string;
   
+  // Calculated fields
+  subtotal?: number;
+  tax?: number;
+  total?: number | null; // Allow null from DB
+
   // Additional properties
   previous_hash?: string | null;
+  previousHash?: string | null; // Alias
   jws_payload?: any;
+  jwsPayload?: any; // Alias
+  updatedAt?: string | Date; // Alias
+  isSyncedAgt?: boolean | number | null; // Alias
+  isPaid?: boolean; // Runtime flag
   is_synced_agt?: boolean | number | null;
   agt_submission_uuid?: string | null;
   signature?: string | null;
@@ -518,7 +539,7 @@ export interface FinancialBackupData {
 
 export interface SupabaseSyncStatus {
   isConnected: boolean;
-  status: 'connected' | 'disconnected' | 'connecting' | 'error';
+  status: 'connected' | 'disconnected' | 'connecting' | 'error' | 'syncing' | 'retrying';
   lastErrorAt: string | null;
   errorMessage: string | null;
   retries: number;
@@ -723,6 +744,9 @@ export interface OperationalSlice {
   closeShift: (closingAmount: number) => void;
   backupLayout: () => void;
   createNewOrder: (tableId: string, name: string) => UUID;
+  addOrderItem: (orderId: UUID, item: OrderItem) => void;
+  updateOrderItem: (orderId: UUID, itemId: UUID, updatedItem: Partial<OrderItem>) => void;
+  removeOrderItem: (orderId: UUID, itemId: UUID) => void;
   updateStockQuantity: (id: UUID, quantity: number) => void;
   
   closeTableWithoutOrders: (tableId: string) => void;
@@ -803,6 +827,7 @@ export interface StoreState extends MenuSlice, StaffSlice, FinanceSlice, UISlice
   addAuditLog: (log: any) => void;
   suppliers: Fornecedor[];
   supabaseSyncStatus: SupabaseSyncStatus;
+  setSupabaseSyncStatus: (status: SupabaseSyncStatus) => void;
   activeTableId: string | null;
   shifts: WorkShift[];
   stock: StockItem[];
@@ -835,6 +860,7 @@ export interface StoreState extends MenuSlice, StaffSlice, FinanceSlice, UISlice
   auditLogs: AuditLog[];
   updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => void;
   markOrderAsServed: (orderId: string) => void;
+  retrySync: () => Promise<void>;
 }
 
 export type FullApplicationState = StoreState;

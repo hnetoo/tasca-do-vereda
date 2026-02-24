@@ -24,7 +24,15 @@ export interface StoreState extends
   UISlice 
 {
   // Root State Properties from useStore.ts
-  supabaseSyncStatus: SupabaseSyncStatus;
+  supabaseSyncStatus: {
+    isConnected: boolean;
+    status: 'connected' | 'connecting' | 'disconnected' | 'error' | 'syncing' | 'retrying';
+    lastErrorAt: number | null;
+    errorMessage: string | null;
+    retries: number;
+  };
+  setSupabaseSyncStatus: (status: any) => void;
+  retrySync: () => Promise<void>;
   activeTableId: UUID | null;
   shifts: any[]; // Defined in OperationalSlice, but also initialized here
   stock: any[]; // Defined in OperationalSlice, but also initialized here

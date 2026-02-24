@@ -4,7 +4,7 @@ import { dbConfig } from '@/services/database/config';
 // Use connection string from dbConfig or fallback to env
 const connectionString = dbConfig.connectionString || process.env.DATABASE_URL;
 
-let sql: any;
+let sql: postgres.Sql<any, any>;
 
 if (connectionString) {
   // Create a singleton connection instance
@@ -19,7 +19,7 @@ if (connectionString) {
   // But throw error if used
   sql = ((...args: any[]) => {
     throw new Error('Database not configured. Please set up SQL Driver in Settings.');
-  }) as any;
+  }) as unknown as postgres.Sql<any, any>;
   // Mock methods like begin, etc. if needed
   (sql as any).begin = async () => { throw new Error('Database not configured. Please set up SQL Driver in Settings.'); };
 }

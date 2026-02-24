@@ -93,8 +93,13 @@ export class IntegrationAPIService {
         return this.supabase.getClient();
     }
 
-    async initialize(url?: string, key?: string, onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void) {
-        await this.supabase.initialize(url, key, onRealtimeChange);
+    async initialize(
+      url?: string, 
+      key?: string, 
+      onRealtimeChange?: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => void,
+      onStatusChange?: (status: any) => void
+    ) {
+        await this.supabase.initialize(url, key, onRealtimeChange, onStatusChange);
     }
 
     async reconnect() {

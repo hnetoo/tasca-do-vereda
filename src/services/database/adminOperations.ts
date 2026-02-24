@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { MenuCategory, Dish, Employee, Table, Customer, Reservation, StockItem, CashShift, Delivery, Order, Fornecedor, SystemSettings } from '@/types';
+import { MenuCategory, Dish, Employee, Table, Customer, Reservation, StockItem, CashShift, Delivery, Order, Fornecedor, SystemSettings, OrderItem, UUID } from '@/types';
 import { logger } from '@/services/logger';
 import { isValidUUID } from '@/utils/uuid';
 import { v4 as uuidv4 } from 'uuid';
@@ -439,6 +439,52 @@ export const adminOperations = {
     }
   },
   
+  saveOrderItem: async (orderItem: OrderItem): Promise<{ success: boolean; error?: string }> => {
+    if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
+    try {
+      const dbOrderItem = {
+        id: orderItem.id,
+        order_id: orderItem.orderId || orderItem.order_id,
+        product_id: orderItem.productId || orderItem.product_id || orderItem.dishId || orderItem.dish_id,
+        quantity: orderItem.quantity,
+        price: orderItem.price || orderItem.unitPrice || orderItem.unit_price,
+        subtotal: orderItem.subtotal,
+        tax: orderItem.tax || orderItem.taxAmount || orderItem.tax_amount,
+        total: orderItem.total,
+        notes: orderItem.notes,
+        status: orderItem.status,
+        created_at: orderItem.createdAt || orderItem.created_at,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabaseAdmin
+        .from('order_items')
+        .upsert(dbOrderItem);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error: any) {
+      logger.error('Error saving order item (admin)', { error: error.message }, 'DATABASE_ADMIN');
+      return { success: false, error: error.message };
+    }
+  },
+
+  deleteOrderItem: async (id: UUID): Promise<{ success: boolean; error?: string }> => {
+    if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
+    try {
+      const { error } = await supabaseAdmin
+        .from('order_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error: any) {
+      logger.error('Error deleting order item (admin)', { error: error.message }, 'DATABASE_ADMIN');
+      return { success: false, error: error.message };
+    }
+  },
+
   saveDishes: async (dishes: Dish[]): Promise<boolean> => {
     if (!supabaseAdmin) return false;
     for (const dish of dishes) {

@@ -14,24 +14,26 @@ export default function AdminOwnerLoginPage() {
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false); // Para alternar visibilidade do PIN
 
-  const { isAuthenticated, loading, error, user } = useSelector(
-    (state: RootState) => state.auth
-  );
-
-
+  const authState = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, loading, error, user } = authState || { isAuthenticated: false, loading: false, error: null, user: null };
 
   useEffect(() => {
     dispatch(resetAuthStatus()); // Resetar o estado de autenticação ao montar o componente
   }, [dispatch]);
 
-  // Redirecionamento e validação de role
+  // Adicione um estado de carregamento para evitar redirecionamento imediato
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (!loading && isAuthenticated && user) {
+      // Redirecionamento e validação de role
       if (user.role === UserRole.Admin || user.role === UserRole.Owner) {
-        router.push('/owner');
+        // Prevent immediate redirect loop by adding a small delay
+        const timeoutId = setTimeout(() => {
+          router.push('/owner');
+        }, 1000);
+        return () => clearTimeout(timeoutId);
       }
     }
-  }, [isAuthenticated, user, router]);
+  }, [loading, isAuthenticated, user, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,8 +58,8 @@ export default function AdminOwnerLoginPage() {
   return (
     <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center relative overflow-y-auto font-sans px-6 py-10">
        <div className="w-full max-w-md z-10">
-         <div className="text-center mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-           {renderLogo()}
+        <div className="text-center mb-8">
+          {renderLogo()}
            <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">
              Tasca do Vereda
            </h1>
@@ -73,10 +75,10 @@ export default function AdminOwnerLoginPage() {
                 </h2>
               </div>
 
-              {((isAuthenticated && user && user.role !== UserRole.Admin && user.role !== UserRole.Owner) || error) && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-200 text-sm animate-in fade-in zoom-in duration-300">
+              {((isAuthenticated && user && user.role !== UserRole?.Admin && user.role !== UserRole?.Owner) || error) && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-200 text-sm">
                   <AlertTriangle size={18} />
-                  {isAuthenticated && user && user.role !== UserRole.Admin && user.role !== UserRole.Owner
+                  {isAuthenticated && user && user.role !== UserRole?.Admin && user.role !== UserRole?.Owner
                     ? 'Acesso negado: PIN não autorizado para área administrativa.'
                     : error?.message}
                 </div>
