@@ -1572,11 +1572,11 @@ const POS = () => {
               <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="p-8 bg-primary/5 border border-primary/20 rounded-[2rem] flex flex-col justify-center">
                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total a Pagar</p>
-                   <p className="text-4xl font-mono font-bold text-primary text-glow">{formatKz(totalWithTax)}</p>
+                   <p className="font-mono font-bold text-primary text-glow whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.75rem,6vw,3rem)]">{formatKz(totalWithTax)}</p>
                 </div>
                 <div className="p-8 bg-white/5 border border-white/10 rounded-[2rem] flex flex-col justify-center">
                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Faltante</p>
-                   <p className={`text-4xl font-mono font-bold ${Math.max(0, totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                   <p className={`font-mono font-bold whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.75rem,6vw,3rem)] ${Math.max(0, totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>
                      {formatKz(Math.max(0, totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0)))}
                    </p>
                 </div>

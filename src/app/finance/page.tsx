@@ -140,8 +140,8 @@ export default function FinancePage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800 min-w-0">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-green-900/20 rounded-lg">
               <DollarSign className="text-green-500" size={24} />
@@ -152,7 +152,7 @@ export default function FinancePage() {
             </span>
           </div>
           <h3 className="text-slate-400 text-sm font-medium mb-1">Receita Total</h3>
-          <p className="text-2xl font-bold text-white">{metrics.totalRevenue.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
+          <p className="font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{metrics.totalRevenue.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
         </div>
 
         <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
@@ -166,7 +166,7 @@ export default function FinancePage() {
             </span>
           </div>
           <h3 className="text-slate-400 text-sm font-medium mb-1">Valor Médio</h3>
-          <p className="text-2xl font-bold text-white">{metrics.avgTicket.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' AKZ'}</p>
+          <p className="font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{metrics.avgTicket.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' AKZ'}</p>
         </div>
 
         <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
@@ -180,7 +180,7 @@ export default function FinancePage() {
             </span>
           </div>
           <h3 className="text-slate-400 text-sm font-medium mb-1">Total Pedidos</h3>
-          <p className="text-2xl font-bold text-white">{metrics.orderCount}</p>
+          <p className="font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{metrics.orderCount}</p>
         </div>
 
         <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
@@ -198,7 +198,7 @@ export default function FinancePage() {
       {/* Despesas & Salários */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Despesas Variáveis */}
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
+        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800 min-w-0">
           <h3 className="text-lg font-bold text-white mb-4">Despesas Variáveis</h3>
           <form
             onSubmit={(e) => {
