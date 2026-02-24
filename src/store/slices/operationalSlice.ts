@@ -1,8 +1,8 @@
 import { StateCreator } from 'zustand';
 import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID, OrderItem, Order } from '../../types';
 import { 
-  saveTableAction, 
-  deleteTableAction, 
+  saveTableClientClient, 
+  deleteTableClientClient, 
   saveCustomerAction, 
   deleteCustomerAction,
   saveReservationAction,
@@ -16,6 +16,7 @@ import {
   saveOrderItemAction,
   deleteOrderItemAction
 } from '@/app/actions/operational';
+import { saveTableClientClient as saveTableClient, deleteTableClientClient as deleteTableClient } from '@/utils/clientOperationalActions';
 import { logger } from '../../services/logger';
 import { generateUUID } from '../../utils/uuid';
 
@@ -123,7 +124,7 @@ export const createOperationalSlice: StateCreator<
   addTable: (table: Table) => {
     set({ saveStatus: 'SAVING' });
     set((state: OperationalSlice) => ({ tables: [...state.tables, table] }));
-    saveTableAction(table).then(res => {
+    saveTableClient(table).then(res => {
       if (!res.success) {
         set({ saveStatus: 'ERROR' });
         logger.error('Failed to persist new table to SQL', { id: table.id, error: res.error }, 'DATABASE');
@@ -142,7 +143,7 @@ export const createOperationalSlice: StateCreator<
     set((state: OperationalSlice) => ({
       tables: state.tables.map((t: Table) => t.id === table.id ? table : t)
     }));
-    saveTableAction(table).then(res => {
+    saveTableClient(table).then(res => {
       if (!res.success) {
         set({ saveStatus: 'ERROR' });
         logger.error('Failed to persist updated table to SQL', { id: table.id, error: res.error }, 'DATABASE');
@@ -161,7 +162,7 @@ export const createOperationalSlice: StateCreator<
     set((state: OperationalSlice) => ({
       tables: state.tables.filter((t: Table) => t.id !== id)
     }));
-    deleteTableAction(id).then(res => {
+    deleteTableClient(id).then(res => {
       if (!res.success) {
         set({ saveStatus: 'ERROR' });
         logger.error('Failed to delete table from SQL', { id, error: res.error }, 'DATABASE');

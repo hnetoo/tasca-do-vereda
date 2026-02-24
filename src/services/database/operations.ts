@@ -87,30 +87,192 @@ export async function executeQuery<T = any>(supabaseOrSql: SupabaseClient<Databa
       let result: T[];
       const trimmedSql = sql.trim().toUpperCase();
       
-      if (trimmedSql.startsWith('SELECT') && !trimmedSql.includes('JOIN') && !trimmedSql.includes('GROUP BY') && !trimmedSql.includes('ORDER BY') && !trimmedSql.includes('LIMIT')) {
-        // Tentar extrair nome da tabela para queries simples
-        const tableMatch = sql.match(/FROM\s+(\w+)/i);
-        if (tableMatch) {
-          const tableName = tableMatch[1];
-          try {
-            // Usar type assertion para contornar verificação estrita de tipos
-            const { data, error } = await (supabase as any).from(tableName).select('*');
+      if (trimmedSql.startsWith('SELECT')) {
+        // Para queries SELECT, sempre tentar usar supabase.from()
+        try {
+          // Tentar extrair nome da tabela
+          const tableMatch = sql.match(/FROM\s+(\w+)/i);
+          if (tableMatch) {
+            const tableName = tableMatch[1];
+            
+            // Tentar construir query dinâmica baseada no SQL
+            let query = (supabase as any).from(tableName);
+            
+            // Verificar se há WHERE
+            const whereMatch = sql.match(/WHERE\s+(.+?)(?:\s+ORDER\s+BY|\s+GROUP\s+BY|\s+LIMIT|\s+OFFSET|$)/i);
+            if (whereMatch) {
+              // Para WHERE simples, tentar aplicar filtro
+              const whereClause = whereMatch[1].trim();
+              if (whereClause.includes('=')) {
+                const [field, value] = whereClause.split('=').map(s => s.trim());
+                if (field && value) {
+                  // Remover aspas se existirem
+                  const cleanValue = value.replace(/['"]/g, '');
+                  query = query.eq(field, cleanValue);
+                }
+              }
+            }
+            
+            // Verificar LIMIT
+            const limitMatch = sql.match(/LIMIT\s+(\d+)/i);
+            if (limitMatch) {
+              query = query.limit(parseInt(limitMatch[1]));
+            }
+            
+            // Verificar ORDER BY
+            const orderMatch = sql.match(/ORDER\s+BY\s+(\w+)(?:\s+(ASC|DESC))?/i);
+            if (orderMatch) {
+              const field = orderMatch[1];
+              const direction = orderMatch[2]?.toLowerCase() || 'asc';
+              query = query.order(field, { ascending: direction === 'asc' });
+            }
+            
+            const { data, error } = await query.select('*');
             if (error) throw error;
             result = (data ?? []) as T[];
-          } catch (e) {
-            // Fallback para RPC se supabase.from() falhar
+          } else {
+            // Se não conseguir extrair tabela, usar RPC como último recurso
             const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
             if (error) throw error;
             result = (data ?? []) as T[];
           }
-        } else {
-          // Fallback para RPC se não conseguir extrair tabela
+        } catch (e) {
+          // Fallback para RPC se supabase.from() falhar
+          const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+          if (error) throw error;
+          result = (data ?? []) as T[];
+        }
+      } else if (trimmedSql.startsWith('INSERT')) {
+        // Para INSERT, tentar usar supabase.insert()
+        try {
+          const tableMatch = sql.match(/INSERT\s+INTO\s+(\w+)/i);
+          if (tableMatch) {
+            const tableName = tableMatch[1];
+            
+            // Tentar extrair valores do INSERT
+            const valuesMatch = sql.match(/VALUES\s*\((.+)\)/i);
+            if (valuesMatch) {
+              // Para INSERT simples, tentar extrair dados
+              const valuesStr = valuesMatch[1];
+              const values = valuesStr.split(',').map(v => v.trim().replace(/['"]/g, ''));
+              
+              // Tentar extrair colunas
+              const columnsMatch = sql.match(/\(([^)]+)\)\s*VALUES/i);
+              let columns: string[] = [];
+              if (columnsMatch) {
+                columns = columnsMatch[1].split(',').map(c => c.trim());
+              }
+              
+              // Construir objeto de dados
+              const data: any = {};
+              columns.forEach((col, index) => {
+                data[col] = values[index] || null;
+              });
+              
+              const { data: insertData, error } = await (supabase as any).from(tableName).insert(data);
+              if (error) throw error;
+              result = (insertData ?? []) as T[];
+            } else {
+              throw new Error('Não foi possível extrair valores do INSERT');
+            }
+          } else {
+            throw new Error('Não foi possível extrair tabela do INSERT');
+          }
+        } catch (e) {
+          // Fallback para RPC se supabase.insert() falhar
+          const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+          if (error) throw error;
+          result = (data ?? []) as T[];
+        }
+      } else if (trimmedSql.startsWith('UPDATE')) {
+        // Para UPDATE, tentar usar supabase.update()
+        try {
+          const tableMatch = sql.match(/UPDATE\s+(\w+)/i);
+          if (tableMatch) {
+            const tableName = tableMatch[1];
+            
+            // Tentar extrair SET
+            const setMatch = sql.match(/SET\s+(.+?)(?:\s+WHERE|\s*$)/i);
+            if (setMatch) {
+              const setClause = setMatch[1].trim();
+              const setData: any = {};
+              
+              // Parse SET clause
+              const setPairs = setClause.split(',');
+              setPairs.forEach(pair => {
+                const [field, value] = pair.split('=').map(s => s.trim());
+                if (field && value) {
+                  const cleanValue = value.replace(/['"]/g, '');
+                  setData[field] = cleanValue;
+                }
+              });
+              
+              let query = (supabase as any).from(tableName).update(setData);
+              
+              // Verificar WHERE
+              const whereMatch = sql.match(/WHERE\s+(.+?)(?:\s*$)/i);
+              if (whereMatch) {
+                const whereClause = whereMatch[1].trim();
+                if (whereClause.includes('=')) {
+                  const [field, value] = whereClause.split('=').map(s => s.trim());
+                  if (field && value) {
+                    const cleanValue = value.replace(/['"]/g, '');
+                    query = query.eq(field, cleanValue);
+                  }
+                }
+              }
+              
+              const { data, error } = await query.select('*');
+              if (error) throw error;
+              result = (data ?? []) as T[];
+            } else {
+              throw new Error('Não foi possível extrair SET do UPDATE');
+            }
+          } else {
+            throw new Error('Não foi possível extrair tabela do UPDATE');
+          }
+        } catch (e) {
+          // Fallback para RPC se supabase.update() falhar
+          const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+          if (error) throw error;
+          result = (data ?? []) as T[];
+        }
+      } else if (trimmedSql.startsWith('DELETE')) {
+        // Para DELETE, tentar usar supabase.delete()
+        try {
+          const tableMatch = sql.match(/DELETE\s+FROM\s+(\w+)/i);
+          if (tableMatch) {
+            const tableName = tableMatch[1];
+            
+            let query = (supabase as any).from(tableName).delete();
+            
+            // Verificar WHERE
+            const whereMatch = sql.match(/WHERE\s+(.+?)(?:\s*$)/i);
+            if (whereMatch) {
+              const whereClause = whereMatch[1].trim();
+              if (whereClause.includes('=')) {
+                const [field, value] = whereClause.split('=').map(s => s.trim());
+                if (field && value) {
+                  const cleanValue = value.replace(/['"]/g, '');
+                  query = query.eq(field, cleanValue);
+                }
+              }
+            }
+            
+            const { data, error } = await query.select('*');
+            if (error) throw error;
+            result = (data ?? []) as T[];
+          } else {
+            throw new Error('Não foi possível extrair tabela do DELETE');
+          }
+        } catch (e) {
+          // Fallback para RPC se supabase.delete() falhar
           const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
           if (error) throw error;
           result = (data ?? []) as T[];
         }
       } else {
-        // Para queries complexas ou não-SELECT, manter RPC por enquanto
+        // Para queries complexas (JOIN, GROUP BY, etc.), manter RPC como último recurso
         const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
         if (error) throw error;
         result = (data ?? []) as T[];
