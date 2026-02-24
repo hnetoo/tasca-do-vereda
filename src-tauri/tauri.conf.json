@@ -5,7 +5,7 @@
   "identifier": "com.tascadovereda.app",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "cmd /c echo skip",
+    "beforeBuildCommand": "cmd /c set TAURI_BUILD=true && npm run build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },

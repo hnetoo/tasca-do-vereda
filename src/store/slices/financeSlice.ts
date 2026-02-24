@@ -10,7 +10,7 @@ import {
   correctPaymentAction, 
   saveShiftsAction 
 } from '@/app/actions/finance';
-import { saveOrderAction } from '@/app/actions/operational';
+import { saveOrderActionClient } from '@/utils/clientOperationalActions';
 
 export interface FinanceSlice {
   orders: Order[];
@@ -837,7 +837,7 @@ export const createFinanceSlice: StateCreator<
     get().updateOrder(updatedOrder);
     
     // Persist to Supabase
-    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync added item', err));
+    saveOrderActionClient(updatedOrder).catch(err => logger.error('Failed to sync added item', err));
     
     get().addAuditLog({
         action: 'ORDER_ITEM_ADD',
@@ -868,7 +868,7 @@ export const createFinanceSlice: StateCreator<
     get().updateOrder(updatedOrder);
 
     // Persist to Supabase
-    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync removed item', err));
+    saveOrderActionClient(updatedOrder).catch(err => logger.error('Failed to sync removed item', err));
 
     get().addAuditLog({
         action: 'ORDER_ITEM_REMOVE',
@@ -902,7 +902,7 @@ export const createFinanceSlice: StateCreator<
      get().updateOrder(updatedOrder);
 
      // Persist to Supabase
-     await saveOrderAction(updatedOrder);
+     await saveOrderActionClient(updatedOrder);
      
      // Add revenue
      payments.forEach(p => {
@@ -943,7 +943,7 @@ export const createFinanceSlice: StateCreator<
     };
     get().updateOrder(updatedOrder);
     // Persist to Supabase
-    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync fired order', err));
+    saveOrderActionClient(updatedOrder).catch(err => logger.error('Failed to sync fired order', err));
   },
 
   updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => {
@@ -964,7 +964,7 @@ export const createFinanceSlice: StateCreator<
     get().updateOrder(updatedOrder);
     
     // Persist to Supabase
-    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync item status', err));
+    saveOrderActionClient(updatedOrder).catch(err => logger.error('Failed to sync item status', err));
   },
 
   markOrderAsServed: (orderId: string) => {
@@ -982,7 +982,7 @@ export const createFinanceSlice: StateCreator<
     get().updateOrder(updatedOrder);
 
     // Persist to Supabase
-    saveOrderAction(updatedOrder).catch(err => logger.error('Failed to sync served order', err));
+    saveOrderActionClient(updatedOrder).catch(err => logger.error('Failed to sync served order', err));
   },
 
   clearDraftOrder: (orderId: UUID) => {
