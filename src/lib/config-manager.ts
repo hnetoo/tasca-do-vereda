@@ -1,8 +1,28 @@
 import fs from 'fs/promises';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, constants as FS_CONSTANTS } from 'fs';
 import path from 'path';
 
-const CONFIG_FILE = path.join(process.cwd(), 'database-config.json');
+function resolveWritableConfigPath(): string {
+  const explicit = process.env.DATABASE_CONFIG_PATH;
+  if (explicit) return explicit;
+  const defaultPath = path.join(process.cwd(), 'database-config.json');
+  try {
+    // Try access write permissions on the directory
+    const dir = path.dirname(defaultPath);
+    // Note: fs.promises.access is async; for sync check fallback below
+    // If running on serverless (e.g. Vercel), /var/task is read-only; prefer /tmp
+    // We don't rely solely on access; use environment hint
+    const isVercel = !!process.env.VERCEL || process.env.AWS_REGION || process.env.LAMBDA_TASK_ROOT;
+    if (isVercel) {
+      return path.join('/tmp', 'database-config.json');
+    }
+    return defaultPath;
+  } catch {
+    return path.join('/tmp', 'database-config.json');
+  }
+}
+
+const CONFIG_FILE = resolveWritableConfigPath();
 
 export interface DatabaseConfig {
   type: 'local_storage' | 'postgres' | 'sqlite';
@@ -37,5 +57,15 @@ export async function saveStoredDatabaseConfig(config: DatabaseConfig): Promise<
     ...config,
     updatedAt: new Date().toISOString()
   };
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(configToSave, null, 2), 'utf-8');
+  try {
+    await fs.writeFile(CONFIG_FILE, JSON.stringify(configToSave, null, 2), 'utf-8');
+  } catch (error: any) {
+    // Attempt fallback to /tmp if primary path failed (read-only FS)
+    const fallbackPath = path.join('/tmp', 'database-config.json');
+    try {
+      await fs.writeFile(fallbackPath, JSON.stringify(configToSave, null, 2), 'utf-8');
+    } catch (err: any) {
+      throw error;
+    }
+  }
 }

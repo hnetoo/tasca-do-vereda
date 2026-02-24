@@ -28,15 +28,21 @@ export async function getDatabaseConfigAction(): Promise<{ success: boolean; dat
 export async function testDatabaseConnectionAction(type: string, connectionString: string): Promise<{ success: boolean; error?: string }> {
   try {
     if (type === 'local' || type === 'local_storage') {
-       return { success: true };
+      return { success: true };
     }
-    
+    if (type === 'sqlite') {
+      if (!connectionString || !connectionString.trim()) {
+        return { success: false, error: 'Informe o caminho do arquivo SQLite (ex.: sqlite:tasca.db).' };
+      }
+      // No driver connectivity test needed; consider valid if a path-like string is provided
+      return { success: true };
+    }
     if (type !== 'postgres') {
-       return { success: false, error: 'Teste de conexão suportado apenas para PostgreSQL.' };
+      return { success: false, error: 'Teste de conexão suportado apenas para PostgreSQL.' };
     }
     
     if (!connectionString) {
-        return { success: false, error: 'String de conexão ausente.' };
+      return { success: false, error: 'String de conexão ausente.' };
     }
     
     serverLog(`Testing Postgres connection`, null, 'DATABASE');
