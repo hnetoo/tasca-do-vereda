@@ -24,12 +24,12 @@ const Breadcrumbs: React.FC = () => {
   });
 
   return (
-    <nav className="flex items-center space-x-2 text-sm text-gray-500 p-4 bg-gray-50 border-b border-gray-200">
+    <nav className="flex items-center space-x-2 text-xs text-slate-500 p-3">
       {breadcrumbs.map((item, index) => (
         <React.Fragment key={item.path}>
-          {index > 0 && <ChevronRight size={16} className="text-gray-400" />}
+          {index > 0 && <ChevronRight size={14} className="text-slate-600" />}
           <Link href={item.path} className="hover:text-primary transition-colors">
-            {index === 0 ? <Home size={16} /> : item.label}
+            {index === 0 ? <Home size={14} /> : item.label}
           </Link>
         </React.Fragment>
       ))}
