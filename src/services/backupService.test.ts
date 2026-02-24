@@ -1,6 +1,5 @@
 import { BackupService, CURRENT_BACKUP_VERSION } from '../services/backupService';
 import { logger } from '@/services/logger';
-import { LocalStorage } from '@/services/localStorage';
 import { BackupData } from '@/types';
 
 // Mock dependencies
@@ -12,13 +11,31 @@ jest.mock('@/services/logger', () => ({
   },
 }));
 
-jest.mock('@/services/localStorage', () => ({
-  LocalStorage: {
-    get: jest.fn(),
-    set: jest.fn(),
-    remove: jest.fn(),
-  },
+const mockLocalStorage = (() => {
+  let store: { [key: string]: string } = {};
+  return {
+    getItem: jest.fn((key: string) => store[key] || null),
+    setItem: jest.fn((key: string, value: string) => {
+      store[key] = value.toString();
+    }),
+    removeItem: jest.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: jest.fn(() => {
+      store = {};
+    }),
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
+
+jest.mock('../services/backupService', () => ({
+  ...jest.requireActual('../services/backupService'),
+  BackupService: jest.fn().mockImplementation(() => ({
+    migrateSchema: jest.fn(),
+  })),
 }));
+
 
 describe('BackupService', () => {
   let backupService: BackupService;

@@ -19,7 +19,7 @@ export default function Home() {
     } else {
       window.location.replace('/login');
     }
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center bg-slate-50">

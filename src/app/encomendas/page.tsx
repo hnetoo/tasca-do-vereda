@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import Image from 'next/image';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { 
   MapPin, Clock, Bike, DollarSign, Package, 
@@ -245,7 +246,16 @@ const NewOrderInterface = ({ dishes }: { dishes: Dish[] }) => {
             >
               <div className="aspect-square mb-3 rounded-lg bg-slate-700 overflow-hidden relative">
                 {dish.imageUrl ? (
-                   <img src={dish.imageUrl} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                   <Image
+                     src={dish.imageUrl}
+                     alt={dish.name}
+                     fill
+                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                     style={{ objectFit: 'cover' }}
+                     placeholder="blur"
+                     blurDataURL="/placeholder-image.jpg"
+                     priority={false}
+                   />
                 ) : (
                    <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs">Sem foto</div>
                 )}
@@ -288,8 +298,18 @@ const NewOrderInterface = ({ dishes }: { dishes: Dish[] }) => {
             cart.map((item, idx) => (
               <div key={`${item.id}-${idx}`} className="flex justify-between items-center bg-slate-900 p-3 rounded-lg border border-white/5 animate-in slide-in-from-right-10 fade-in duration-300">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded bg-slate-800 overflow-hidden">
-                    {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />}
+                  <div className="w-10 h-10 rounded bg-slate-800 overflow-hidden relative">
+                    {item.imageUrl && (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        fill
+                        sizes="40px"
+                        style={{ objectFit: 'cover' }}
+                        placeholder="blur"
+                        blurDataURL="/placeholder-image.jpg"
+                      />
+                    )}
                   </div>
                   <div>
                     <p className="text-sm font-bold truncate w-32">{item.name}</p>

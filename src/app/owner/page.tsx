@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -78,7 +78,7 @@ export default function OwnerDashboard() {
   }, [user]);
 
   // Initial Fetch
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Use Angola Time (WAT) which is UTC+1 all year round
@@ -154,8 +154,8 @@ export default function OwnerDashboard() {
       // Calculate Yesterday Sales
       if (yesterdayData) {
           const total = yesterdayData
-              .filter((o: Order) => o.status === 'FECHADO' || o.status === 'PAID')
-              .reduce((acc: number, o: Order) => acc + Number(o.total || 0), 0);
+              .filter((o: any) => o.status === 'FECHADO' || o.status === 'PAID')
+              .reduce((acc: number, o: any) => acc + Number(o.total || 0), 0);
           setYesterdaySales(total);
       }
 
@@ -227,13 +227,13 @@ export default function OwnerDashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
     if (isAuthorized) {
         fetchDashboardData();
     }
-  }, [isAuthorized]);
+  }, [isAuthorized, fetchDashboardData]);
 
   // Realtime Subscriptions
   useEffect(() => {
@@ -345,7 +345,7 @@ export default function OwnerDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isAuthorized]);
+  }, [isAuthorized, supabase]);
 
   // Metrics Calculation
   const metrics = useMemo(() => {
@@ -488,7 +488,7 @@ export default function OwnerDashboard() {
       loyalty: '85%', // Mock for now as requested
       paymentMethodsData
     };
-  }, [orders, monthOrders, transactions, employees, tables, yesterdaySales, localEmployees, localTables]);
+  }, [orders, monthOrders, employees, tables, yesterdaySales, localEmployees, localTables, expenses]);
 
   // If not authorized, redirect to login
   if (authChecked && !isAuthorized) {

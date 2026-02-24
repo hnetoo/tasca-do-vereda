@@ -7,8 +7,8 @@ import SmartAlertsPanel from '@/components/SmartAlertsPanel';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { useAuth } from '@/hooks/useAuth'; // Importar o hook useAuth do Redux
 
-const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu'];
-const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu', '/owner'];
+const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner/login'];
+const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/pos', '/menu', '/owner', '/owner/login'];
 
 const AppShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
@@ -41,7 +41,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
       console.log('AppShell: Redirecting to /login');
       router.replace('/login');
     }
-  }, [isPublicRoute, isInitialized, isAuthenticated, router]);
+  }, [isPublicRoute, isInitialized, isAuthenticated, router, pathname]);
 
   // If it's a public route, just render the children directly
   if (isPublicRoute) {
@@ -69,6 +69,19 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
           <Sidebar showSidebar={showSidebar} />
           <main className={`flex-1 min-w-0 ${showSidebar ? '' : 'ml-0'}`}>
             {!pathname.startsWith('/owner') && <Breadcrumbs />} 
+            
+            {/* Elemento de Marketing */}
+            <div className="fixed bottom-4 right-4 md:absolute md:top-4 md:right-4 z-50">
+              <a 
+                href="https://wa.me/244976825520" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 bg-primary text-black px-3 py-1.5 md:px-4 md:py-2 rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs shadow-[0_0_20px_rgba(250,204,21,0.5)] hover:scale-105 transition-transform animate-pulse"
+              >
+                <span>FAÇA A SUA ENCOMENDA</span>
+              </a>
+            </div>
+
             {children}
           </main>
       </div>

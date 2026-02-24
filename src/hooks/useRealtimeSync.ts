@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react'; 
+import { useEffect, useRef } from 'react'; 
 import { supabase } from '@/lib/supabase';
 import { RealtimePayload } from '@/types';
 import { useStore } from '@/store/useStore';
@@ -11,6 +11,8 @@ export const useRealtimeSync = <T = any>(
   filter?: { column: string; value: string | number }
 ) => {
   const setSaveStatus = useStore((state) => state.setSaveStatus);
+  const addNotification = useStore((state) => state.addNotification);
+  const retryAttempts = useRef(0);
 
   useEffect(() => {
     let channel = supabase.channel(`realtime-${table}`);
@@ -48,14 +50,20 @@ export const useRealtimeSync = <T = any>(
       if (status === 'SUBSCRIBED') {
         console.log(`Conectado ao Realtime: ${table}${filter ? ` (filtrado por ${filter.column}=${filter.value})` : ''}`);
         setSaveStatus('IDLE');
+        retryAttempts.current = 0; // Reset retry attempts on successful connection
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.error(`Erro no Realtime: ${table}`, status);
         setSaveStatus('ERROR');
+        retryAttempts.current += 1;
+        if (retryAttempts.current >= 3) {
+          addNotification('error', 'Conexão em tempo real indisponível; dados atualizados ao recarregar', 10000);
+          retryAttempts.current = 0; // Reset after showing notification
+        }
       }
     });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [table, callback, filter, setSaveStatus]);
+  }, [table, callback, filter, setSaveStatus, addNotification]);
 };

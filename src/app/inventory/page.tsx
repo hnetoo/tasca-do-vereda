@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
@@ -137,6 +138,21 @@ const InventoryContent = () => {
     });
     setIsStockModalOpen(true);
   };
+
+  useEffect(() => {
+    // Fix typo in "Grelhados" category if it exists
+    const fixCategoryTypo = async () => {
+      const typoCategory = categories.find(c => c.name.toLowerCase() === 'grelhoe');
+      if (typoCategory) {
+        console.log('Fixing category typo: grelhoe -> Grelhados');
+        updateCategory({ ...typoCategory, name: 'Grelhados' });
+      }
+    };
+    
+    if (categories.length > 0) {
+      fixCategoryTypo();
+    }
+  }, [categories, updateCategory]);
 
   const handleOpenProductModal = (product?: Product) => {
     if (product) {
@@ -309,7 +325,7 @@ const InventoryContent = () => {
 
   const compressImage = (base64: string): Promise<string> => {
     return new Promise((resolve, reject) => {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
@@ -338,7 +354,7 @@ const InventoryContent = () => {
           reject(new Error('Canvas context not available'));
         }
       };
-      img.onerror = (err) => reject(err);
+      img.onerror = (err: any) => reject(err);
       img.src = base64;
     });
   };
@@ -469,7 +485,7 @@ const InventoryContent = () => {
             className={`bg-primary text-black px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-glow hover:scale-105 transition-all font-black uppercase text-xs tracking-widest ${activeTab === 'orders' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Plus size={18} />
-            {activeTab === 'menu' ? 'Novo Prato' : activeTab === 'categories' ? 'Nova Categoria' : 'Novo Item'}
+            {activeTab === 'menu' ? 'Novo Produto' : activeTab === 'categories' ? 'Novo Produto' : 'Novo Item'}
           </button>
           
           {activeTab === 'categories' && (
@@ -540,7 +556,16 @@ const InventoryContent = () => {
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-2xl bg-black/30 overflow-hidden shrink-0 border border-white/5 relative">
                     {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        style={{ objectFit: 'cover' }}
+                        priority
+                        placeholder="blur"
+                        blurDataURL="/placeholder-image.jpg"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-600">
                         <Utensils size={24} />
@@ -925,7 +950,7 @@ const InventoryContent = () => {
                     <div className="aspect-video rounded-3xl bg-black/40 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-all">
                         {productForm.imageUrl ? (
                           <>
-                            <img src={productForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                            <Image src={productForm.imageUrl} alt="Preview" fill style={{ objectFit: 'cover' }} />
                             <button 
                               type="button"
                               onClick={(e) => { e.preventDefault(); setProductForm({...productForm, imageUrl: ''}); }}

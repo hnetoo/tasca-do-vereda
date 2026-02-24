@@ -53,17 +53,21 @@ export default function FinancePage() {
   
   // Calculate financial metrics
   const calculateMetrics = () => {
+    // Safety check for orders
+    const currentOrders = orders || [];
+    const currentDishes = dishes || [];
+    
     // Mock data for now based on orders
-    const completedOrders = orders.filter(o => o.status === 'FECHADO');
-    const currentRevenue = completedOrders.reduce((sum, o) => sum + o.total, 0);
-    const totalRevenue = currentRevenue + (settings.legacyTotalRevenue || 0);
+    const completedOrders = currentOrders.filter(o => o.status === 'FECHADO');
+    const currentRevenue = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalRevenue = currentRevenue + (settings?.legacyTotalRevenue || 0);
     const avgTicket = completedOrders.length > 0 ? currentRevenue / completedOrders.length : 0;
     
     return {
       totalRevenue,
       orderCount: completedOrders.length,
       avgTicket,
-      topProducts: dishes.slice(0, 5) // Mock top products
+      topProducts: currentDishes.slice(0, 5) // Mock top products
     };
   };
 
@@ -147,8 +151,8 @@ export default function FinancePage() {
               +5.2%
             </span>
           </div>
-          <h3 className="text-slate-400 text-sm font-medium mb-1">Ticket Médio</h3>
-          <p className="text-2xl font-bold text-white">{metrics.avgTicket.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
+          <h3 className="text-slate-400 text-sm font-medium mb-1">Valor Médio</h3>
+          <p className="text-2xl font-bold text-white">{metrics.avgTicket.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' AKZ'}</p>
         </div>
 
         <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">

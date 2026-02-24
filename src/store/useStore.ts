@@ -23,7 +23,13 @@ import {
   Notification,
   Fornecedor,
   DailySalesAnalytics,
-  StoreState
+  StoreState,
+  WorkShift,
+  AttendanceRecord,
+  Employee,
+  OrderItem,
+  AuditLog,
+  SupabaseSyncStatus
 } from '../types';
 import { MOCK_USERS, LOCAL_STORAGE_SCHEMA_VERSION } from '@/constants/index';
 import { supabaseService } from '@/services/supabaseService';
@@ -83,6 +89,17 @@ export const useStore = create<StoreState>()(
         lastErrorAt: null,
         errorMessage: null,
         retries: 0
+      },
+      setSupabaseSyncStatus: (status: SupabaseSyncStatus) => set({ supabaseSyncStatus: status }),
+      retrySync: async () => {
+        set((state) => ({
+          supabaseSyncStatus: {
+            ...state.supabaseSyncStatus,
+            status: 'connecting',
+            errorMessage: null
+          }
+        }));
+        await supabaseService.reconnect();
       },
       activeTableId: null,
       shifts: [],
@@ -165,7 +182,18 @@ export const useStore = create<StoreState>()(
           // Initialize IntegrationAPIService if Supabase is enabled and not already connected
           if (supabaseConfig?.enabled && supabaseConfig?.url && supabaseConfig?.key && !integrationAPIService.isConnected()) {
             logger.info('Initializing IntegrationAPIService in initializeStore', {}, 'STORE');
-            await integrationAPIService.initialize(supabaseConfig.url, supabaseConfig.key, state.onRealtimeChange);
+            await integrationAPIService.initialize(
+                supabaseConfig.url, 
+                supabaseConfig.key, 
+                state.onRealtimeChange,
+                (status: any) => {
+                    state.setSupabaseSyncStatus(status);
+                    // Check for critical realtime connection failure
+                    if (status.status === 'error' && status.retries === 3) {
+                         state.addNotification('error', 'Conexão em tempo real indisponível; dados atualizados ao recarregar', 10000);
+                    }
+                }
+            );
           }
 
           // Load menu data from server actions
@@ -237,18 +265,18 @@ export const useStore = create<StoreState>()(
       }),
 
 
-      setShifts: (shifts: any[]) => set({ shifts }),
-      setAttendance: (records: any[]) => set({ attendance: records }),
-      setEmployees: (employees: any[]) => set({ employees }),
-      addAuditLog: (log: any) => console.log('Audit log:', log),
+      setShifts: (shifts: WorkShift[]) => set({ shifts }),
+      setAttendance: (records: AttendanceRecord[]) => set({ attendance: records }),
+      setEmployees: (employees: Employee[]) => set({ employees }),
+      addAuditLog: (log: AuditLog) => console.log('Audit log:', log),
       addNotification: (type: Notification['type'], message: string, duration?: number) => {
         const autoDismissDuration = duration || 2500; // Reduced to 2.5s for faster dismissal
         const newNotification = { id: Date.now().toString(), type, message, duration: autoDismissDuration };
         set((state: StoreState) => ({ notifications: [...(state.notifications || []), newNotification] }));
         
         setTimeout(() => {
-          set((state: any) => ({
-            notifications: (state.notifications || []).filter((n: any) => n.id !== newNotification.id)
+          set((state: StoreState) => ({
+            notifications: (state.notifications || []).filter((n: Notification) => n.id !== newNotification.id)
           }));
         }, autoDismissDuration);
       },  
@@ -266,7 +294,7 @@ export const useStore = create<StoreState>()(
         set((state: StoreState) => ({ suppliers: (state.suppliers || []).filter((s: Fornecedor) => s.id !== id) }));
       },
 
-      onRealtimeChange: (payload: any) => {
+      onRealtimeChange: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => {
         logger.info(`Realtime change received for table: ${payload.tableName}, event: ${payload.eventType}`, payload, 'STORE');
         // Add a specific log for orders to confirm reception
         if (payload.tableName === 'orders') {
@@ -285,14 +313,30 @@ export const useStore = create<StoreState>()(
                 isActive: p.is_active,
                 available: p.available ?? p.is_available_on_digital_menu,
                 parentId: p.parent_id,
-                createdAt: p.created_at ? new Date(p.created_at) : null,
-                updatedAt: p.updated_at ? new Date(p.updated_at) : null,
+                createdAt: p.created_at ? new Date(p.created_at) : undefined,
+                updatedAt: p.updated_at ? new Date(p.updated_at) : undefined,
               };
               
               if (payload.eventType === 'INSERT') state.addDish(dish);
               if (payload.eventType === 'UPDATE') state.updateDish(dish);
             }
             if (payload.eventType === 'DELETE') state.removeDish(payload.old.id as string);
+            break;
+            
+          case 'menu_categories':
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const c = payload.new as Category;
+              const category: Category = {
+                ...c,
+                parentId: (c as any).parent_id,
+                availableOnDigitalMenu: (c as any).is_available_on_digital_menu,
+                createdAt: (c as any).created_at ? new Date((c as any).created_at) : undefined,
+                updatedAt: (c as any).updated_at ? new Date((c as any).updated_at) : undefined,
+              };
+              if (payload.eventType === 'INSERT') state.addCategory(category);
+              if (payload.eventType === 'UPDATE') state.updateCategory(category);
+            }
+            if (payload.eventType === 'DELETE') state.removeCategory(payload.old.id as string);
             break;
             
           case 'categories':
@@ -302,8 +346,8 @@ export const useStore = create<StoreState>()(
                 ...c, // Spread all properties from payload.new
                 parentId: c.parent_id,
                 availableOnDigitalMenu: c.is_available_on_digital_menu,
-                createdAt: c.created_at ? new Date(c.created_at) : null,
-                updatedAt: c.updated_at ? new Date(c.updated_at) : null,
+                createdAt: c.created_at ? new Date(c.created_at) : undefined,
+                updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
               };
               if (payload.eventType === 'INSERT') state.addCategory(category);
               if (payload.eventType === 'UPDATE') state.updateCategory(category);
@@ -313,35 +357,102 @@ export const useStore = create<StoreState>()(
             
           case 'orders':
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-              const o = payload.new as any;
+              const o = payload.new as Order;
               const order: Order = {
                 ...o, // Spread all properties from payload.new
-                tableId: o.table_id,
-                userId: o.user_id,
-                userName: o.user_name,
-                customerNif: o.customer_nif,
-                customerId: o.customer_id,
-                shiftId: o.shift_id,
-                subAccountName: o.sub_account_name,
-                invoiceNumber: o.invoice_number,
+                tableId: o.table_id ?? undefined,
+                userId: o.user_id ?? undefined,
+                userName: o.user_name ?? undefined,
+                customerNif: o.customer_nif ?? undefined,
+                customerId: o.customer_id ?? undefined,
+                shiftId: o.shift_id ?? undefined,
+                subAccountName: o.sub_account_name ?? undefined,
+                invoiceNumber: o.invoice_number ?? undefined,
                 previousHash: o.previous_hash,
                 jwsPayload: o.jws_payload,
-                isSyncedAgt: o.is_synced_agt,
-                agtSubmissionUuid: o.agt_submission_uuid,
-                createdAt: o.created_at ? new Date(o.created_at) : null,
-                updatedAt: o.updated_at ? new Date(o.updated_at) : null,
-                closedAt: o.closed_at ? new Date(o.closed_at) : null,
-                paymentMethod: o.payment_method,
-                splitPayments: o.split_payments,
-                customerName: o.customer_name,
+                isSyncedAgt: o.is_synced_agt ?? undefined,
+                agtSubmissionUuid: o.agt_submission_uuid ?? undefined,
+                createdAt: o.created_at ? new Date(o.created_at) : undefined,
+                updatedAt: o.updated_at ? new Date(o.updated_at) : undefined,
+                closedAt: o.closed_at ? new Date(o.closed_at) : undefined,
+                paymentMethod: (o.payment_method as any) ?? undefined,
+                splitPayments: (o.split_payments as any) ?? undefined,
+                customerName: o.customer_name ?? undefined,
                 // Runtime fields
                 items: [],
                 payments: []
-              };
+              } as unknown as Order;
               if (payload.eventType === 'INSERT') state.addOrder(order);
               if (payload.eventType === 'UPDATE') state.updateOrder(order);
             }
             if (payload.eventType === 'DELETE') state.removeOrder(payload.old.id as string);
+            break;
+            
+          case 'order_items':
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const oi = payload.new as any; // Cast to any first to access snake_case properties
+              const orderItem: any = {
+                id: oi.id,
+                productId: oi.product_id,
+                quantity: oi.quantity,
+                price: oi.price,
+                subtotal: oi.subtotal,
+                tax: oi.tax,
+                total: oi.total,
+                notes: oi.notes,
+                status: oi.status,
+                createdAt: oi.created_at ? new Date(oi.created_at).toISOString() : new Date().toISOString(),
+                updatedAt: oi.updated_at ? new Date(oi.updated_at).toISOString() : new Date().toISOString(),
+              };
+              if (payload.eventType === 'INSERT') {
+                state.addOrderItem(oi.order_id, orderItem);
+              }
+              if (payload.eventType === 'UPDATE') {
+                state.updateOrderItem(oi.order_id, orderItem.id!, orderItem);
+              }
+            }
+            if (payload.eventType === 'DELETE') {
+              const oldOrderItem = payload.old as any;
+              state.removeOrderItem(oldOrderItem.order_id, oldOrderItem.id);
+            }
+            break;
+            
+          case 'system_settings':
+          case 'settings':
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const s = payload.new as any;
+              const current = state.settings;
+              const settingsPatch: Partial<SystemSettings> = {
+                id: s.id ?? current.id,
+                restaurantName: s.restaurant_name ?? s.name ?? current.restaurantName,
+                nif: s.nif ?? current.nif,
+                address: s.address ?? current.address,
+                phone: s.phone ?? current.phone,
+                email: s.email ?? current.email,
+                appLogoUrl: s.app_logo_url ?? s.logo_url ?? current.appLogoUrl ?? null,
+                taxPercentage: Number(s.tax_percentage ?? current.taxPercentage ?? 0),
+                currency: s.currency ?? current.currency,
+                timezone: s.timezone ?? current.timezone,
+                language: s.language ?? current.language,
+                wifi_name: s.wifi_name ?? current.wifi_name,
+                wifi_password: s.wifi_password ?? current.wifi_password,
+                qr_code_title: s.qr_code_title ?? current.qr_code_title,
+                qr_code_subtitle: s.qr_code_subtitle ?? current.qr_code_subtitle,
+                qr_code_short_code: s.qr_code_short_code ?? current.qr_code_short_code,
+                qr_menu_url: s.qr_menu_url ?? current.qr_menu_url,
+                qr_menu_cloud_url: s.qr_menu_cloud_url ?? current.qr_menu_cloud_url,
+                logo_url: s.logo_url ?? current.logo_url,
+                name: s.name ?? current.name,
+              };
+              state.updateSettings(settingsPatch);
+            }
+            break;
+          
+          case 'audit_logs':
+            if (payload.eventType === 'INSERT') {
+              const logEntry = payload.new as any;
+              state.addAuditLog(logEntry);
+            }
             break;
             
           case 'dashboard_summary':

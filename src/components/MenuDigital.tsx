@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star } from 'lucide-react';
@@ -15,47 +16,51 @@ export default function MenuDigital() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Helper to map DB row to Product interface
-  const mapToProduct = (row: DishRow | any): Product => {
-    if (!row) return {} as Product;
-    const r = row as any; // Temporary cast to access properties that might differ in case or exist in joined views
+  const mapToProduct = (row: DishRow): Product => {
+    if (!row) return {} as Product; // Should not happen with DishRow type, but as a safeguard
     return {
-      id: r.id,
-      name: r.name,
-      description: r.description,
-      price: Number(r.price),
-      categoryId: r.category_id,
-      imageUrl: r.image_url || r.image, // Support both column names
-      taxCode: r.tax_code || 'NOR',
-      taxPercentage: r.tax_percentage || 0,
-      isActive: r.is_active ?? r.is_available ?? true,
-      isAvailableOnDigitalMenu: r.is_available_on_digital_menu ?? true,
-      available: r.available ?? r.is_available ?? true, // Schema has 'available'
-      createdAt: r.created_at ? new Date(r.created_at) : undefined,
-      updatedAt: r.updated_at ? new Date(r.updated_at) : undefined,
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      price: Number(row.price),
+      categoryId: row.category_id || undefined,
+      imageUrl: row.image_url || undefined, // Use undefined if null
+      taxCode: row.tax_code || 'NOR',
+      taxPercentage: row.tax_percentage || 0,
+      isActive: row.is_active ?? true, // Default to true if null/undefined
+      isAvailableOnDigitalMenu: row.is_available_on_digital_menu ?? true, // Default to true if null/undefined
+      available: row.available ?? true, // Default to true if null/undefined
+      createdAt: row.created_at ? new Date(row.created_at) : undefined,
+      updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
       
       // Additional properties
-      preparationTime: r.preparation_time || r.tempo_preparo,
-      trackStock: r.track_stock ?? r.controla_estoque ?? false,
-      stockQuantity: r.stock_quantity ?? r.quantidade_estoque ?? 0,
-      minStockQuantity: r.min_stock_quantity ?? r.quantidade_minima ?? 0,
-      maxStockQuantity: r.max_stock_quantity ?? r.quantidade_maxima ?? 0,
-      unit: r.unit || r.unidade_medida || 'un',
-      supplierId: r.supplier_id || r.fornecedor_padrao_id
-    } as Product;
+      preparationTime: row.preparation_time || undefined,
+      trackStock: row.track_stock ?? false,
+      stockQuantity: row.stock_quantity ?? 0,
+      minStockQuantity: row.min_stock_quantity ?? 0,
+      maxStockQuantity: row.max_stock_quantity ?? 0,
+      unit: row.unit || 'un',
+      supplierId: row.supplier_id || undefined
+    };
   };
 
   // Initial Data Fetch
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoading(true);
         // Fetch categories (table: menu_categories)
         const { data: cats, error: catError } = await supabase
           .from('menu_categories')
           .select('*');
         
-        if (catError) throw catError;
+        if (catError) {
+          console.error('Error fetching categories:', catError);
+          // Don't throw, continue to fetch dishes even if categories fail (might show uncategorized)
+        }
 
         // Fetch all products (table: dishes)
         const { data: prods, error: prodError } = await supabase
@@ -84,11 +89,12 @@ export default function MenuDigital() {
         if (prods) {
           const mappedProds = prods.map(mapToProduct);
           // Client-side filter
-          const availableProds = mappedProds.filter(p => p.isActive !== false); // Default true
+          const availableProds = mappedProds.filter(p => p.isActive === true && p.isAvailableOnDigitalMenu === true); 
           setProducts(availableProds);
         }
       } catch (error) {
         console.error('Error fetching menu:', error);
+        setError('Não foi possível carregar o menu. Por favor, verifique a sua conexão e tente novamente.');
       } finally {
         setIsLoading(false);
       }
@@ -105,14 +111,14 @@ export default function MenuDigital() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dishes' }, (payload) => {
         console.log('Product change received:', payload);
         if (payload.eventType === 'INSERT') {
-          const newProduct = mapToProduct(payload.new);
-          if (newProduct.isActive !== false) {
+          const newProduct = mapToProduct(payload.new as DishRow);
+          if (newProduct.isActive === true && newProduct.isAvailableOnDigitalMenu === true) {
             setProducts(prev => [...prev, newProduct]);
           }
         } else if (payload.eventType === 'UPDATE') {
-          const updatedProduct = mapToProduct(payload.new);
+          const updatedProduct = mapToProduct(payload.new as DishRow);
           // Check availability
-          if (updatedProduct.isActive !== false) {
+          if (updatedProduct.isActive === true && updatedProduct.isAvailableOnDigitalMenu === true) {
             setProducts(prev => {
               const exists = prev.some(p => p.id === updatedProduct.id);
               return exists 
@@ -137,34 +143,34 @@ export default function MenuDigital() {
         if (!payload.new && payload.eventType !== 'DELETE') return;
 
         if (payload.eventType === 'INSERT') {
-          const c = payload.new as any;
+          const c = payload.new as MenuCategoryRow;
           const newCat: MenuCategory = {
              id: c.id,
              name: c.name,
-             sortOrder: c.sort_order,
-             isActive: c.is_active,
-             parentId: c.parent_id,
-             isAvailableOnDigitalMenu: c.is_available_on_digital_menu,
-             availableOnDigitalMenu: c.is_available_on_digital_menu,
+             sortOrder: c.sort_order ?? 0,
+             isActive: c.is_active ?? true,
+             parentId: c.parent_id || undefined,
+             isAvailableOnDigitalMenu: c.is_available_on_digital_menu ?? true,
+             availableOnDigitalMenu: c.is_available_on_digital_menu ?? true,
              createdAt: c.created_at ? new Date(c.created_at) : undefined,
              updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
-             deletedAt: c.deleted_at
-          } as MenuCategory;
+             deletedAt: c.deleted_at || undefined
+          };
           setCategories(prev => [...prev, newCat].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
         } else if (payload.eventType === 'UPDATE') {
            const c = payload.new as MenuCategoryRow;
            const updatedCat: MenuCategory = {
              id: c.id,
              name: c.name,
-             sortOrder: c.sort_order,
-             isActive: c.is_active,
-             parentId: c.parent_id,
-             isAvailableOnDigitalMenu: c.is_available_on_digital_menu,
-             availableOnDigitalMenu: c.is_available_on_digital_menu,
+             sortOrder: c.sort_order ?? 0,
+             isActive: c.is_active ?? true,
+             parentId: c.parent_id || undefined,
+             isAvailableOnDigitalMenu: c.is_available_on_digital_menu ?? true,
+             availableOnDigitalMenu: c.is_available_on_digital_menu ?? true,
              createdAt: c.created_at ? new Date(c.created_at) : undefined,
              updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
-             deletedAt: c.deleted_at
-          } as MenuCategory;
+             deletedAt: c.deleted_at || undefined
+          };
           setCategories(prev => prev.map(cat => cat.id === updatedCat.id ? updatedCat : cat).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
         } else if (payload.eventType === 'DELETE') {
           setCategories(prev => prev.filter(c => c.id !== payload.old.id));
@@ -209,12 +215,32 @@ export default function MenuDigital() {
   }, [filteredProducts, categories, selectedCategory]);
 
   const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(val);
+    val.toLocaleString('pt-AO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' AKZ';
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+        <div className="text-center p-8 max-w-md">
+          <div className="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+            <UtensilsCrossed className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Erro ao carregar menu</h2>
+          <p className="text-slate-400 mb-6">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-emerald-500 text-white px-6 py-2 rounded-full font-bold hover:bg-emerald-400 transition-colors"
+          >
+            Tentar Novamente
+          </button>
+        </div>
       </div>
     );
   }
@@ -227,7 +253,7 @@ export default function MenuDigital() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shadow-lg flex items-center justify-center">
-                 <img src="/logo.png" alt="Tasca do Vereda" className="w-full h-full object-cover" />
+                 <Image src="/logo.png" alt="Tasca do Vereda" fill style={{ objectFit: 'cover' }} />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white leading-none mb-1">Tasca do Vereda</h1>
@@ -318,10 +344,14 @@ export default function MenuDigital() {
                     {/* Image */}
                     <div className="w-24 h-24 sm:w-full sm:h-48 rounded-xl overflow-hidden flex-shrink-0 bg-slate-800 relative">
                        {product.imageUrl ? (
-                         <img 
-                           src={product.imageUrl} 
-                           alt={product.name} 
-                           className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                         <Image
+                           src={product.imageUrl}
+                           alt={product.name}
+                           fill
+                           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                           style={{ objectFit: 'cover' }}
+                           placeholder="blur"
+                           blurDataURL="/placeholder-image.jpg"
                            onError={(e) => {
                              (e.target as HTMLImageElement).src = '/placeholder-food.png';
                            }}

@@ -54,7 +54,7 @@ jest.mock('@/services/supabaseAuth.service', () => ({
 }));
 
 const createMockStore = (preloadedState: any) => configureStore({
-  reducer: { auth: authReducer },
+  reducer: { auth: authReducer } as any,
   preloadedState
 });
 

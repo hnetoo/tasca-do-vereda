@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -55,7 +55,10 @@ const Analytics = () => {
   const avgDaily = useMemo(() => totalRevenue / (selectedPeriod || 1), [totalRevenue, selectedPeriod]);
 
   const COLORS = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444'];
-  const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE'];
+  const paymentMethods: PaymentMethod[] = useMemo(
+    () => ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE'],
+    []
+  );
   const paymentLabels: Record<PaymentMethod, string> = {
     NUMERARIO: 'Numerário',
     TPA: 'Cartão',
@@ -66,7 +69,7 @@ const Analytics = () => {
     OTHER: 'Outros',
   };
 
-  const extractPayments = (order: typeof activeOrders[number]) => {
+  const extractPayments = useCallback((order: typeof activeOrders[number]) => {
     if (order.splitPayments && order.splitPayments.length > 0) {
       return order.splitPayments.map((p: any) => ({ method: p.method, amount: p.amount }));
     }
@@ -77,7 +80,7 @@ const Analytics = () => {
       return [{ method: order.paymentMethod, amount: order.total }];
     }
     return [];
-  };
+  }, []);
 
   const paymentDateRange = useMemo(() => {
     const today = normalizeDate(new Date());
@@ -159,7 +162,7 @@ const Analytics = () => {
         profitByMethod
       };
     });
-  }, [paymentDateRange, activeOrders, expenses, revenues, paymentMethods]);
+  }, [paymentDateRange, activeOrders, expenses, revenues, paymentMethods, extractPayments]);
 
   const paymentChartData = useMemo(() => {
     return paymentDailyData.map(row => {
@@ -187,7 +190,7 @@ const Analytics = () => {
             { header: 'Data', dataKey: 'date' },
             { header: 'Vendas Totais', dataKey: 'totalSales' },
             { header: 'Total Pedidos', dataKey: 'totalOrders' },
-            { header: 'Ticket Médio', dataKey: 'averageOrder' }
+            { header: 'Valor Médio', dataKey: 'averageOrder' }
           ],
           fileName: `vendas_${selectedPeriod}d`,
           title: `Relatório de Vendas (${selectedPeriod} dias)`
@@ -313,7 +316,7 @@ const Analytics = () => {
           {[
             { label: 'Faturamento Total', value: totalRevenue, icon: ShoppingBag, trend: 'up', suffix: undefined },
             { label: 'Lucro Total Estimado', value: totalProfit, icon: TrendingUp, trend: 'up', suffix: undefined },
-            { label: 'Ticket Médio', value: avgOrderValue, icon: Target, trend: 'stable', suffix: undefined },
+            { label: 'Valor Médio', value: avgOrderValue, icon: Target, trend: 'stable', suffix: undefined },
             { label: 'Total Pedidos', value: totalOrders, icon: Zap, trend: 'up', isCurrency: false, suffix: undefined }
           ].map((kpi, i) => {
             const Icon = kpi.icon;
