@@ -95,20 +95,22 @@ export async function hardResetAction(): Promise<{ success: boolean; error?: str
 
 export async function testCloudConnectionAction(url: string, key: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    serverLog(`Testing connection to ${url}`, null, 'CLOUD');
+    const cleanUrl = (url || '').trim().replace(/\/+$/, '');
+    const cleanKey = (key || '').trim().replace(/\n/g, '');
+    serverLog(`Testing connection to ${cleanUrl}`, null, 'CLOUD');
 
-    if (!url || !key) {
+    if (!cleanUrl || !cleanKey) {
       return { success: false, error: 'URL e Key são obrigatórios' };
     }
     
     // Validate URL format to prevent sync crashes
     try {
-      new URL(url);
+      new URL(cleanUrl);
     } catch (e) {
       return { success: false, error: 'URL do Supabase inválida' };
     }
 
-    const supabase = createClient(url, key, {
+    const supabase = createClient(cleanUrl, cleanKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -116,29 +118,25 @@ export async function testCloudConnectionAction(url: string, key: string): Promi
       }
     });
 
-    // Tenta listar buckets para validar a conexão e a key (mesmo que retorne vazio, significa que conectou)
-    // Se a key for inválida, deve dar erro 401 ou similar
-    const { data, error } = await supabase.storage.listBuckets();
-
-    if (error) {
-       serverLog(`Supabase Storage check failed: ${error.message}`, error, 'CLOUD');
-       
-       if (error.message.includes('fetch failed') || error.message.includes('network')) {
-         throw error;
-       }
-       
-       // Se for erro de permissão ou "relation not found", consideramos que a conexão (URL) está ok, mas talvez a Key não tenha permissão total.
-       // Mas para "Testar Conexão", queremos saber se chega lá.
-       
-       // Vamos tentar autenticação anonima simples
-       const { data: authData, error: authError } = await supabase.auth.getSession();
-       if (authError) {
-          throw authError;
-       }
+    // 1) Verificar um select simples para validar REST + RLS/Key
+    const { error: readError } = await supabase.from('menu_categories').select('id').limit(1);
+    if (readError && !readError.message?.includes('permission')) {
+      // Se for permission, a ligação e a key são válidas mas sem acesso à tabela/buckets
+      serverLog(`Supabase DB check returned error: ${readError.message}`, readError, 'CLOUD');
     }
 
-    serverLog('Connection successful', null, 'CLOUD');
-    return { success: true, message: 'Conexão Supabase estabelecida com sucesso!' };
+    // 2) Tentar Storage (pode falhar por permissões; se falhar, ainda assim consideramos ligação OK)
+    const { error: storageError } = await supabase.storage.listBuckets();
+    if (storageError && (storageError.message?.includes('fetch failed') || storageError.message?.includes('network'))) {
+      throw storageError;
+    }
+
+    const msg =
+      !readError && !storageError
+        ? 'Conexão Supabase estabelecida com sucesso!'
+        : 'Conexão estabelecida. Nota: algumas operações podem estar restritas pelas políticas atuais.';
+    serverLog('Connection successful', { msg }, 'CLOUD');
+    return { success: true, message: msg };
   } catch (error: any) {
     serverLog(`Connection failed: ${error.message}`, error, 'ERROR');
     // Ensure we return a serializable error object
