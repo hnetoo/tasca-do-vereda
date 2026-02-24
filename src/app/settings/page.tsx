@@ -1960,6 +1960,30 @@ const Settings = () => {
                       >
                         Configurar Políticas
                       </button>
+                      <div className="mt-3 flex gap-3">
+                        <button
+                          onClick={async () => {
+                            addNotification('warning', 'A desativar RLS (temporário)…');
+                            const res = await (await import('@/app/actions/settings')).disableRLSAction();
+                            if (res.success) addNotification('success', 'RLS desativada temporariamente. Teste os dados.');
+                            else addNotification('error', `Falha ao desativar RLS: ${res.error}`);
+                          }}
+                          className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:underline"
+                        >
+                          Desativar RLS (Diagnóstico)
+                        </button>
+                        <button
+                          onClick={async () => {
+                            addNotification('info', 'A reativar RLS com políticas seguras…');
+                            const res = await (await import('@/app/actions/settings')).enableRLSSafeAction();
+                            if (res.success) addNotification('success', 'RLS reativada com leitura pública segura.');
+                            else addNotification('error', `Falha ao reativar RLS: ${res.error}`);
+                          }}
+                          className="text-[9px] font-black text-emerald-400 uppercase tracking-widest hover:underline"
+                        >
+                          Reativar RLS Segura
+                        </button>
+                      </div>
                     </div>
 
                     <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5 space-y-4">

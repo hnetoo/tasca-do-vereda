@@ -126,6 +126,43 @@ export async function renameCategoryGrelhoesAction(): Promise<{ success: boolean
   }
 }
 
+export async function disableRLSAction(tables: string[] = ['revenues','expenses','orders','financial_transactions']): Promise<{ success: boolean; policies?: any[]; error?: string }> {
+  try {
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) return { success: false, error: 'DATABASE_URL não configurado' };
+    const sql = postgres(dbUrl, { ssl: { rejectUnauthorized: false }, max: 1, connect_timeout: 5 });
+    const { 0: rows } = await sql`SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public'`;
+    for (const t of tables) {
+      await sql`ALTER TABLE ${sql('public', t)} DISABLE ROW LEVEL SECURITY`;
+    }
+    await sql.end();
+    serverLog('RLS disabled temporarily', { tables }, 'SECURITY');
+    return { success: true, policies: rows || [] };
+  } catch (error: any) {
+    serverLog('Error disabling RLS', { error: error.message }, 'ERROR');
+    return { success: false, error: error.message };
+  }
+}
+
+export async function enableRLSSafeAction(tables: string[] = ['revenues','expenses','orders','financial_transactions']): Promise<{ success: boolean; error?: string }> {
+  try {
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) return { success: false, error: 'DATABASE_URL não configurado' };
+    const sql = postgres(dbUrl, { ssl: { rejectUnauthorized: false }, max: 1, connect_timeout: 5 });
+    for (const t of tables) {
+      await sql`ALTER TABLE ${sql('public', t)} ENABLE ROW LEVEL SECURITY`;
+      // Garantir leitura pública apenas para SELECT
+      await sql`DROP POLICY IF EXISTS ${sql(`${t}_public_select`)} ON ${sql('public', t)}`;
+      await sql`CREATE POLICY ${sql(`${t}_public_select`)} ON ${sql('public', t)} FOR SELECT USING (true)`;
+    }
+    await sql.end();
+    serverLog('RLS re-enabled with safe public SELECT policies', { tables }, 'SECURITY');
+    return { success: true };
+  } catch (error: any) {
+    serverLog('Error enabling RLS', { error: error.message }, 'ERROR');
+    return { success: false, error: error.message };
+  }
+}
 export async function testCloudConnectionAction(url: string, key: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const cleanUrl = (url || '').trim().replace(/\/+$/, '');
