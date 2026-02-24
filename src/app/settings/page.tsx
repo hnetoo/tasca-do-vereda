@@ -163,6 +163,26 @@ const CloudImportPanel = () => {
     </div>
   );
 };
+const mainTabs = [
+  { id: 'general', label: 'Geral', icon: <SettingsIcon size={16} /> },
+  { id: 'fiscal', label: 'Fiscal', icon: <DollarSign size={16} /> },
+  { id: 'tables', label: 'Mesas', icon: <ChefHat size={16} /> },
+  { id: 'qr', label: 'Menu QR', icon: <QrCode size={16} /> },
+  { id: 'system', label: 'Sistema', icon: <MonitorPlay size={16} /> },
+];
+
+const systemSubTabs = [
+  { id: 'users', label: 'Utilizadores', icon: <Users size={16} /> },
+  { id: 'roles', label: 'Cargos', icon: <Shield size={16} /> },
+  { id: 'integrations', label: 'Integrações', icon: <Share2 size={16} /> },
+  { id: 'monitoring', label: 'Monitorização', icon: <Terminal size={16} /> },
+  { id: 'cloud', label: 'Nuvem / App', icon: <UploadCloud size={16} /> },
+  { id: 'bd', label: 'Backup / Restore', icon: <Database size={16} /> },
+  { id: 'agt', label: 'AGT', icon: <ShieldCheck size={16} /> },
+  { id: 'dlp', label: 'DLP', icon: <Lock size={16} /> },
+  { id: 'history', label: 'Histórico', icon: <DollarSign size={16} /> },
+];
+
 const Settings = () => {
   const { 
     settings, updateSettings, addNotification, categories, dishes, hardResetMenu, tables, removeTable, addTable, updateTable,
@@ -214,26 +234,6 @@ const Settings = () => {
   const [editingTable, setEditingTable] = useState<any>(null);
   const [newTableData, setNewTableData] = useState({ name: '', seats: 4, zone: 'Interior' });
   
-  const mainTabs = [
-    { id: 'general', label: 'Geral', icon: <SettingsIcon size={16} /> },
-    { id: 'fiscal', label: 'Fiscal', icon: <DollarSign size={16} /> },
-    { id: 'tables', label: 'Mesas', icon: <ChefHat size={16} /> },
-    { id: 'qr', label: 'Menu QR', icon: <QrCode size={16} /> },
-    { id: 'system', label: 'Sistema', icon: <MonitorPlay size={16} /> },
-  ];
-
-  const systemSubTabs = [
-    { id: 'users', label: 'Utilizadores', icon: <Users size={16} /> },
-    { id: 'roles', label: 'Cargos', icon: <Shield size={16} /> },
-    { id: 'integrations', label: 'Integrações', icon: <Share2 size={16} /> },
-    { id: 'monitoring', label: 'Monitorização', icon: <Terminal size={16} /> },
-    { id: 'cloud', label: 'Nuvem / App', icon: <UploadCloud size={16} /> },
-    { id: 'bd', label: 'Backup / Restore', icon: <Database size={16} /> },
-    { id: 'agt', label: 'AGT', icon: <ShieldCheck size={16} /> },
-    { id: 'dlp', label: 'DLP', icon: <Lock size={16} /> },
-    { id: 'history', label: 'Histórico', icon: <DollarSign size={16} /> },
-  ];
-  
   useEffect(() => {
     if (activeTab === 'system') {
       const validIds = systemSubTabs.map(t => t.id);
@@ -241,7 +241,7 @@ const Settings = () => {
         setActiveSystemSubTab('cloud' as any);
       }
     }
-  }, [activeTab, activeSystemSubTab, systemSubTabs]);
+  }, [activeTab, activeSystemSubTab]);
   
   // Cloud State (managed within localSettings)
   const [isTestingCloud, setIsTestingCloud] = useState(false);

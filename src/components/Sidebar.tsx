@@ -106,15 +106,13 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   return (
     <>
       {/* Mobile Toggle Button */}
-      {showSidebar && (
-        <button 
-          onClick={toggleMobileMenu}
-          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-lg shadow-lg border border-slate-800"
-          aria-label="Toggle Menu"
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      )}
+      <button 
+        onClick={toggleMobileMenu}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-lg shadow-lg border border-slate-800"
+        aria-label="Toggle Menu"
+      >
+        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
 
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
