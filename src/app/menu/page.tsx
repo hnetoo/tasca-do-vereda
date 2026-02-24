@@ -7,10 +7,10 @@ import type { Database } from '@/types/supabase';
 type DishRow = Database['public']['Tables']['dishes']['Row'];
 type CategoryRow = Database['public']['Tables']['menu_categories']['Row'];
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(
-    Number.isFinite(n) ? n : 0
-  );
+const fmt = (n: number) => {
+  const val = Number.isFinite(n) ? n : 0;
+  return val.toLocaleString('pt-AO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' AKZ';
+};
 
 export default function PublicMenuPage() {
   const [dishes, setDishes] = useState<DishRow[]>([]);
@@ -34,7 +34,13 @@ export default function PublicMenuPage() {
       supabase.from('menu_categories').select('*').order('sort_order', { ascending: true }),
       supabase.from('dishes').select('*')
     ]);
-    if (!c.error && c.data) setCategories(c.data as CategoryRow[]);
+    if (!c.error && c.data) {
+      const mapped = (c.data as CategoryRow[]).map(cat => ({
+        ...cat,
+        name: (typeof cat.name === 'string' && cat.name.trim().toLowerCase() === 'grelhoes') ? 'Grelhados' : cat.name
+      }));
+      setCategories(mapped);
+    }
     if (!d.error && d.data) setDishes(d.data as DishRow[]);
     setReady(true);
   };
@@ -75,21 +81,29 @@ export default function PublicMenuPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
-      <header className="p-6 border-b border-white/10">
+      <header className="sticky top-0 z-30 p-6 border-b border-white/10 bg-slate-950/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-4">
-          <h1 className="text-2xl font-black text-white uppercase tracking-wider">Ementa</h1>
-          <div className="flex-1" />
+          <div className="flex items-center gap-3 flex-1">
+            <img src="/logo.png" alt="Logo" style={{ width: 200, height: 60, objectFit: 'contain' }} />
+            <div className="min-w-0">
+              <div className="text-[18px] md:text-[20px] font-black text-white tracking-wider">Tasca do Vereda</div>
+              <div className="text-xs text-slate-400 max-w-md truncate">Faça a sua encomenda e acompanhe os melhores grelhados da casa.</div>
+            </div>
+          </div>
+          <a href="tel:976825520" className="px-3 py-2 rounded-lg bg-emerald-600 text-white font-bold text-[16px] hover:bg-emerald-500 transition-colors">
+            976 825 520
+          </a>
+        </div>
+        <div className="max-w-6xl mx-auto mt-4 flex items-center gap-3">
           <input
             placeholder="Pesquisar prato..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full md:w-80 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none"
+            className="flex-1 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none"
           />
-        </div>
-        <div className="max-w-6xl mx-auto mt-4">
           <a
             href="#encomendar"
-            className="block w-full text-center px-4 py-3 rounded-xl bg-primary text-black font-black uppercase text-[10px] tracking-widest shadow-glow hover:brightness-110 transition-all"
+            className="px-4 py-3 rounded-xl bg-primary text-black font-black uppercase text-[10px] tracking-widest shadow-glow hover:brightness-110 transition-all"
           >
             Faça a sua encomenda
           </a>
