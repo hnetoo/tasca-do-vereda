@@ -24,6 +24,18 @@ CREATE POLICY "Public read access" ON menu_categories FOR SELECT TO anon USING (
 CREATE POLICY "Authenticated read access" ON dishes FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated read access" ON menu_categories FOR SELECT TO authenticated USING (true);
 
--- Ensure replication is enabled for realtime updates
-ALTER PUBLICATION supabase_realtime ADD TABLE dishes;
-ALTER PUBLICATION supabase_realtime ADD TABLE menu_categories;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'dishes'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE dishes;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'menu_categories'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE menu_categories;
+  END IF;
+END $$;
