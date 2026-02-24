@@ -49,8 +49,19 @@ begin
   end if;
 end $$;
 
--- Realtime publication
--- Ensure the public schema/tables are in the supabase_realtime publication
-alter publication supabase_realtime add table public.revenues;
-alter publication supabase_realtime add table public.expenses;
-
+-- Realtime publication (idempotent)
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'revenues'
+  ) then
+    alter publication supabase_realtime add table public.revenues;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'expenses'
+  ) then
+    alter publication supabase_realtime add table public.expenses;
+  end if;
+end $$;
