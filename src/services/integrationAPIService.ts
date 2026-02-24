@@ -873,12 +873,42 @@ export class IntegrationAPIService {
   async getDashboardSummary(startDate: string, endDate: string): Promise<SupabaseResponse<DashboardSummary>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     try {
-      const { data, error } = await this.client.rpc('get_dashboard_summary', {
-        start_date: startDate,
-        end_date: endDate
-      });
-      if (error) throw error;
-      return { success: true, data: data as DashboardSummary };
+      // Substituir RPC por queries diretas usando supabase.from()
+      const [ordersResult, dishesResult] = await Promise.all([
+        this.client
+          .from('orders')
+          .select('*')
+          .gte('created_at', startDate)
+          .lte('created_at', endDate),
+        
+        this.client
+          .from('dishes')
+          .select('price, cost_price')
+      ]);
+
+      if (ordersResult.error) throw ordersResult.error;
+      if (dishesResult.error) throw dishesResult.error;
+
+      const orders = ordersResult.data || [];
+      const dishes = dishesResult.data || [];
+
+      // Calcular estatísticas do dashboard
+      const totalRevenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+      const totalOrders = orders.length;
+      const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      
+      const totalCost = dishes.reduce((sum, dish) => sum + (dish.cost_price || 0), 0);
+      const totalSales = dishes.reduce((sum, dish) => sum + (dish.price || 0), 0);
+      const profitMargin = totalSales > 0 ? ((totalSales - totalCost) / totalSales) * 100 : 0;
+
+      const dashboardSummary: DashboardSummary = {
+        totalRevenue,
+        totalExpenses: 0, // TODO: Implementar cálculo de despesas
+        totalOrders,
+        activeOrders: orders.filter(order => order.status === 'active' || order.status === 'pending').length
+      };
+
+      return { success: true, data: dashboardSummary };
     } catch (error: any) {
       logger.error('Failed to get dashboard summary', { error: error.message }, 'IntegrationAPIService');
       return { success: false, error: error.message };

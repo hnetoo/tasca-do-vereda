@@ -11,7 +11,7 @@ import {
   getCategoriesAction,
   getDishesAction
 } from '@/app/actions';
-import { getMenuData } from '@/app/actions/menu';
+import { getMenuDataClient } from '@/utils/clientActions';
 import { logger } from '@/services/logger';
 import { integrationAPIService } from '@/services/integrationAPIService';
 import { MOCK_MENU, MOCK_CATEGORIES } from '@/constants';
@@ -685,7 +685,7 @@ export const createMenuSlice: StateCreator<
       logger.info('Starting menu load from SQL (Server Action)...', undefined, 'DATABASE');
       
       // Removed strict timeout to allow retry logic in directOperations to complete
-      const result = await getMenuData();
+      const result = await getMenuDataClient();
 
       if (!result.success) {
         logger.error('Failed to load menu exclusively from SQL via Server Action', { error: result.error }, 'DATABASE');

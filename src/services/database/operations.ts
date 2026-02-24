@@ -82,11 +82,43 @@ export async function executeQuery<T = any>(supabaseOrSql: SupabaseClient<Databa
 
     const runner = async () => {
       const start = now();
-      const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+      
+      // Para queries SELECT, tentar usar supabase.from() quando possível
+      let result: T[];
+      const trimmedSql = sql.trim().toUpperCase();
+      
+      if (trimmedSql.startsWith('SELECT') && !trimmedSql.includes('JOIN') && !trimmedSql.includes('GROUP BY') && !trimmedSql.includes('ORDER BY') && !trimmedSql.includes('LIMIT')) {
+        // Tentar extrair nome da tabela para queries simples
+        const tableMatch = sql.match(/FROM\s+(\w+)/i);
+        if (tableMatch) {
+          const tableName = tableMatch[1];
+          try {
+            // Usar type assertion para contornar verificação estrita de tipos
+            const { data, error } = await (supabase as any).from(tableName).select('*');
+            if (error) throw error;
+            result = (data ?? []) as T[];
+          } catch (e) {
+            // Fallback para RPC se supabase.from() falhar
+            const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+            if (error) throw error;
+            result = (data ?? []) as T[];
+          }
+        } else {
+          // Fallback para RPC se não conseguir extrair tabela
+          const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+          if (error) throw error;
+          result = (data ?? []) as T[];
+        }
+      } else {
+        // Para queries complexas ou não-SELECT, manter RPC por enquanto
+        const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+        if (error) throw error;
+        result = (data ?? []) as T[];
+      }
+      
       const duration = now() - start;
       logger.info('DB QUERY', { sql, params: parameters, durationMs: duration }, 'DATABASE');
-      if (error) throw error;
-      return (data ?? []) as T[];
+      return result;
     };
 
     const result = await withRetry(runner, 'executeQuery');
