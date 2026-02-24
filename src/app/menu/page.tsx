@@ -86,6 +86,14 @@ export default function PublicMenuPage() {
             className="w-full md:w-80 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none"
           />
         </div>
+        <div className="max-w-6xl mx-auto mt-4">
+          <a
+            href="#encomendar"
+            className="block w-full text-center px-4 py-3 rounded-xl bg-primary text-black font-black uppercase text-[10px] tracking-widest shadow-glow hover:brightness-110 transition-all"
+          >
+            Faça a sua encomenda
+          </a>
+        </div>
         <div className="max-w-6xl mx-auto mt-4 overflow-x-auto no-scrollbar">
           <div className="flex gap-2">
             <button
@@ -138,4 +146,3 @@ export default function PublicMenuPage() {
     </div>
   );
 }
-

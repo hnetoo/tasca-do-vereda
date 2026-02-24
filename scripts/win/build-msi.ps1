@@ -38,8 +38,13 @@ Write-Host "=== Build MSI (Tauri + WiX) ==="
 
 if (-not $SkipBuild -and -not $ValidateOnly) {
   Write-Host "1) Construindo aplicação para bundle MSI..."
+  # Limpar MSIs antigos para evitar confusão de versão
+  $msiOutDir = "src-tauri\target\release\bundle\msi"
+  if (Test-Path $msiOutDir) {
+    Get-ChildItem $msiOutDir -Filter *.msi -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+  }
   npm run build:tauri
-  tauri build --target "msi"
+  tauri build
 }
 
 $msiPath = Find-MSI
