@@ -94,7 +94,11 @@ export async function saveCategoryAction(category: MenuCategory): Promise<{ succ
     const cfg = await getStoredDatabaseConfig();
     if (cfg.type === 'sqlite') {
       const res = await sqliteOperations.saveCategory(category);
-      if (res.success) return { success: true };
+      if (res.success) {
+        // Best-effort cloud sync to Supabase if configured
+        try { await adminOperations.saveCategory(category); } catch (_) {}
+        return { success: true };
+      }
       return { success: false, error: { message: res.error || 'SQLite operation failed' } };
     }
     const result = await adminOperations.saveCategory(category);
@@ -127,7 +131,11 @@ export async function deleteCategoryAction(id: UUID): Promise<{ success: boolean
     const cfg = await getStoredDatabaseConfig();
     if (cfg.type === 'sqlite') {
       const res = await sqliteOperations.deleteCategory(id);
-      if (res.success) return { success: true };
+      if (res.success) {
+        // Best-effort cloud sync delete
+        try { await adminOperations.deleteCategory(id as string); } catch (_) {}
+        return { success: true };
+      }
       return { success: false, error: { message: res.error || 'SQLite operation failed' } };
     }
     // Uses admin operations to bypass RLS/Auth issues
@@ -150,7 +158,11 @@ export async function saveDishAction(dish: Dish): Promise<{ success: boolean; er
     const cfg = await getStoredDatabaseConfig();
     if (cfg.type === 'sqlite') {
       const res = await sqliteOperations.saveDish(dish);
-      if (res.success) return { success: true };
+      if (res.success) {
+        // Best-effort cloud sync to Supabase if configured
+        try { await adminOperations.saveDish(dish); } catch (_) {}
+        return { success: true };
+      }
       return { success: false, error: { message: res.error || 'SQLite operation failed' } };
     }
     // 1. Try admin operations (Supabase Service Role)
@@ -185,7 +197,11 @@ export async function deleteDishAction(id: UUID): Promise<{ success: boolean; er
     const cfg = await getStoredDatabaseConfig();
     if (cfg.type === 'sqlite') {
       const res = await sqliteOperations.deleteDish(id as string);
-      if (res.success) return { success: true };
+      if (res.success) {
+        // Best-effort cloud sync delete
+        try { await adminOperations.deleteDish(id as string); } catch (_) {}
+        return { success: true };
+      }
       return { success: false, error: { message: res.error || 'SQLite operation failed' } };
     }
     const result = await adminOperations.deleteDish(id);
