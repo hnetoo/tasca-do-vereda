@@ -27,6 +27,10 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
     () => !noSidebarRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)),
     [pathname]
   );
+  const showCta = useMemo(
+    () => pathname === '/menu' || pathname.startsWith('/menu/'),
+    [pathname]
+  );
 
   useEffect(() => {
     // Strict Guard: If initialized and not authenticated on a protected route, force redirect immediately
@@ -71,16 +75,18 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
             {!pathname.startsWith('/owner') && <Breadcrumbs />} 
             
             {/* Elemento de Marketing */}
-            <div className="fixed bottom-4 right-4 md:absolute md:top-4 md:right-4 z-50">
-              <a 
-                href="https://wa.me/244976825520" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 bg-primary text-black px-3 py-1.5 md:px-4 md:py-2 rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs shadow-[0_0_20px_rgba(250,204,21,0.5)] hover:scale-105 transition-transform animate-pulse"
-              >
-                <span>FAÇA A SUA ENCOMENDA</span>
-              </a>
-            </div>
+            {showCta && (
+              <div className="fixed bottom-4 right-4 md:absolute md:top-4 md:right-4 z-50">
+                <a 
+                  href="https://wa.me/244976825520" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-primary text-black px-3 py-1.5 md:px-4 md:py-2 rounded-full font-black uppercase tracking-widest text-[10px] md:text-xs shadow-[0_0_20px_rgba(250,204,21,0.5)] hover:scale-105 transition-transform animate-pulse"
+                >
+                  <span>FAÇA A SUA ENCOMENDA</span>
+                </a>
+              </div>
+            )}
 
             {children}
           </main>
