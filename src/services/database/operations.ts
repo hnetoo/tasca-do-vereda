@@ -9,37 +9,110 @@ import { generateUUID } from '@/utils/uuid';
 import { translateDatabaseError } from './errors';
 import { Order, OrderItem, Table, MenuCategory, Dish, CashShift, Expense, Revenue, Fornecedor, User, AttendanceRecord, PayrollRecord, SystemSettings, Customer, Employee, StockItem, LayoutBackup, Reservation, Delivery } from '../../types';
 
+// Kwanza ORM Config (centralized)
+const KWANZA_CONFIG = {
+  retry: { attempts: 3, baseMs: 200 },
+  timeouts: { queryMs: 30000, connectMs: 10000 },
+  cache: { ttlMs: 10000, enabled: true },
+};
+
+type CacheEntry = { data: any; expiresAt: number };
+const queryCache = new Map<string, CacheEntry>();
+
+const makeCacheKey = (sql: string, params: any[]) => `${sql}::${JSON.stringify(params ?? [])}`;
+const now = () => Date.now();
+
+const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Query timeout after ${ms}ms`)), ms)),
+  ]);
+};
+
+const withRetry = async <T>(fn: () => Promise<T>, context: string): Promise<T> => {
+  const { attempts, baseMs } = KWANZA_CONFIG.retry;
+  let lastError: any;
+  for (let i = 0; i < attempts; i++) {
+    const start = now();
+    try {
+      const result = await withTimeout(fn(), KWANZA_CONFIG.timeouts.queryMs);
+      const duration = now() - start;
+      logger.info('DB QUERY OK', { context, durationMs: duration }, 'DATABASE');
+      return result;
+    } catch (e: any) {
+      lastError = e;
+      const duration = now() - start;
+      logger.warn('DB QUERY RETRY', { context, attempt: i + 1, durationMs: duration, error: e?.message }, 'DATABASE');
+      await new Promise(res => setTimeout(res, baseMs * Math.pow(2, i)));
+    }
+  }
+  logger.error('DB QUERY FAILED', { context, error: lastError?.message }, 'DATABASE');
+  throw lastError;
+};
+
+export const invalidateCache = (sql?: string) => {
+  if (!KWANZA_CONFIG.cache.enabled) return;
+  if (!sql) {
+    queryCache.clear();
+    return;
+  }
+  for (const key of queryCache.keys()) {
+    if (key.startsWith(sql)) queryCache.delete(key);
+  }
+};
+
 
 export async function executeQuery<T = any>(sql: string, params?: any[]): Promise<T[]>;
 export async function executeQuery<T = any>(supabase: SupabaseClient<Database>, sql: string, params?: any[]): Promise<T[]>;
 export async function executeQuery<T = any>(supabaseOrSql: SupabaseClient<Database> | string, sqlOrParams?: string | any[], params?: any[]): Promise<T[]> {
-    if (typeof supabaseOrSql === 'string') {
-        // Handle case where first arg is sql string (legacy compatibility: executeQuery(sql, params))
-        const sql = supabaseOrSql;
-        const parameters = Array.isArray(sqlOrParams) ? sqlOrParams : [];
-        const client = await supabaseClientPromise;
-        const { data, error } = await (client as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
-            if (error) {
-            logger.error(`Error executing query from Supabase`, { error }, 'DATABASE');
-            throw error;
-        }
-        return (data ?? []) as T[];
+    const isStringMode = typeof supabaseOrSql === 'string';
+    const supabase = isStringMode ? await supabaseClientPromise : (supabaseOrSql as SupabaseClient<Database>);
+    const sql = (isStringMode ? supabaseOrSql : (sqlOrParams as string)) as string;
+    const parameters = (isStringMode ? (Array.isArray(sqlOrParams) ? sqlOrParams : []) : (params || [])) as any[];
+
+    const cacheable = KWANZA_CONFIG.cache.enabled && sql.trim().toUpperCase().startsWith('SELECT');
+    const key = cacheable ? makeCacheKey(sql, parameters) : '';
+    if (cacheable) {
+      const entry = queryCache.get(key);
+      if (entry && entry.expiresAt > now()) {
+        logger.info('DB CACHE HIT', { sql }, 'DATABASE');
+        return entry.data as T[];
+      }
     }
-    
-    // Handle standard case: executeQuery(supabase, sql, params)
-    const supabase = supabaseOrSql;
-    const sql = sqlOrParams as string;
-    const parameters = params || [];
-    
-    const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
-    if (error) throw error;
-    return (data ?? []) as T[];
+
+    const runner = async () => {
+      const start = now();
+      const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql, vars: parameters });
+      const duration = now() - start;
+      logger.info('DB QUERY', { sql, params: parameters, durationMs: duration }, 'DATABASE');
+      if (error) throw error;
+      return (data ?? []) as T[];
+    };
+
+    const result = await withRetry(runner, 'executeQuery');
+    if (cacheable) {
+      queryCache.set(key, { data: result, expiresAt: now() + KWANZA_CONFIG.cache.ttlMs });
+    } else {
+      // Invalidate cache on writes
+      if (!sql.trim().toUpperCase().startsWith('SELECT')) invalidateCache();
+    }
+    return result;
 }
 
 const selectQuery = async <T>(supabase: SupabaseClient<Database>, sql: string, params?: any[]): Promise<T[]> => {
-    const { data, error } = await (supabase as any).rpc('execute_sql', { sql_query: sql });
-    if (error) throw error;
-    return (data ?? []) as unknown as T[];
+    return executeQuery<T>(supabase, sql, params);
+};
+
+export const withTransaction = async <T>(supabase: SupabaseClient<Database>, fn: () => Promise<T>): Promise<T> => {
+  await executeQuery(supabase, 'BEGIN');
+  try {
+    const res = await fn();
+    await executeQuery(supabase, 'COMMIT');
+    return res;
+  } catch (e) {
+    try { await executeQuery(supabase, 'ROLLBACK'); } catch {}
+    throw e;
+  }
 };
 
 export const databaseOperations = {
@@ -55,6 +128,39 @@ export const databaseOperations = {
       const friendlyError = translateDatabaseError(e);
       return { success: false, error: friendlyError };
     }
+  },
+  
+  runMigrations: async (): Promise<{ success: boolean; error?: string }> => {
+    return databaseOperations._handleDatabaseOperation(async (supabase) => {
+      await executeQuery(supabase, `
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+          id TEXT PRIMARY KEY,
+          checksum TEXT NOT NULL,
+          applied_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      const migrations: { id: string; sql: string; checksum: string }[] = [
+        { id: '006_daily_analytics', sql: `
+          CREATE TABLE IF NOT EXISTS daily_analytics (
+            id BIGSERIAL PRIMARY KEY,
+            date DATE NOT NULL,
+            total_orders INTEGER DEFAULT 0,
+            total_sales NUMERIC DEFAULT 0
+          );
+        `, checksum: 'm006' }
+      ];
+      for (const m of migrations) {
+        const exists = await selectQuery<{ count: number }>(supabase, `SELECT COUNT(*)::int AS count FROM schema_migrations WHERE id = '${m.id}'`);
+        if (!exists[0] || exists[0].count === 0) {
+          await withTransaction(supabase, async () => {
+            await executeQuery(supabase, m.sql);
+            await executeQuery(supabase, `INSERT INTO schema_migrations (id, checksum) VALUES ('${m.id}', '${m.checksum}')`);
+          });
+          logger.info('Migration applied', { id: m.id }, 'DATABASE');
+        }
+      }
+      return true;
+    }, 'run migrations', 'DATABASE');
   },
   /**
    * Completely clears and recreates menu schema.
@@ -738,6 +844,20 @@ export const databaseOperations = {
       return data as StockItem[];
     }, 'get stock items', 'DATABASE');
     return result.success ? (result.data || []) : [];
+  },
+  
+  renameCategoryName: async (oldName: string, newName: string): Promise<{ success: boolean; error?: string }> => {
+    return databaseOperations._handleDatabaseOperation(async (supabase) => {
+      await withTransaction(supabase, async () => {
+        const rows = await selectQuery<{ id: string }>(supabase, `SELECT id FROM menu_categories WHERE LOWER(name) = LOWER('${oldName}')`);
+        if (rows.length === 0) return;
+        for (const r of rows) {
+          await executeQuery(supabase, `UPDATE menu_categories SET name = '${newName}', updated_at = CURRENT_TIMESTAMP WHERE id = '${r.id}'`);
+        }
+      });
+      invalidateCache('SELECT');
+      return true;
+    }, 'rename category', 'DATABASE');
   },
 
   getTables: async (): Promise<Table[]> => {
