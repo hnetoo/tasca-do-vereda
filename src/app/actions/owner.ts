@@ -36,7 +36,7 @@ export async function getOwnerFinancialData(period: 'HOJE'|'SEMANA'|'MES'|'CUSTO
   // Prefer Supabase if configured
   if (supabaseUrl && supabaseKey) {
     const supabase = await createSupabaseClient();
-    const txQuery = supabase.from('financial_transactions').select('*').order('date', { ascending: false });
+    const txQuery = (supabase as any).from('financial_transactions').select('*').order('date', { ascending: false });
     let txRes;
     if (range.start && range.end) txRes = await txQuery.gte('date', range.start).lte('date', range.end);
     else if (range.start) txRes = await txQuery.gte('date', range.start);
@@ -127,7 +127,7 @@ export async function syncFinancialToSqlite(): Promise<{ success: boolean; error
       supabase.from('revenues').select('*'),
       supabase.from('expenses').select('*'),
       supabase.from('orders').select('*'),
-      supabase.from('financial_transactions').select('*'),
+      (supabase as any).from('financial_transactions').select('*'),
     ]);
     const r = rRes.data || [];
     const e = eRes.data || [];
