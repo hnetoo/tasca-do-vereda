@@ -198,4 +198,49 @@ export const sqliteOperations = {
       return { success: false, error: err.message };
     }
   },
+
+  async getFinancialTransactions(params?: {
+    startDate?: string;
+    endDate?: string;
+    order?: 'asc' | 'desc';
+  }): Promise<{ success: boolean; data: Array<{ id: string; date: string; amount: number; description: string; category: string; type: 'REVENUE' | 'EXPENSE'; status?: string }>; error?: string }> {
+    try {
+      await ensureSqliteSchema();
+      const db = getSQLiteClient();
+      const start = params?.startDate;
+      const end = params?.endDate;
+      const dir = params?.order === 'asc' ? 'ASC' : 'DESC';
+
+      const whereRevenue = start && end ? `WHERE created_at BETWEEN ? AND ?` : start ? `WHERE created_at >= ?` : end ? `WHERE created_at <= ?` : '';
+      const whereExpense = whereRevenue; // same bounds
+      const args: any[] = [];
+      if (start && end) { args.push(start, end, start, end); }
+      else if (start) { args.push(start, start); }
+      else if (end) { args.push(end, end); }
+
+      const sql = `
+        SELECT id, created_at as date, amount, description, COALESCE(category, 'REVENUE') as category, 'REVENUE' as type, COALESCE(status, 'COMPLETED') as status
+        FROM revenues ${whereRevenue}
+        UNION ALL
+        SELECT id, created_at as date, amount, description, COALESCE(category, 'EXPENSE') as category, 'EXPENSE' as type, COALESCE(status, 'COMPLETED') as status
+        FROM expenses ${whereExpense}
+        ORDER BY date ${dir};
+      `;
+      const res = await db.execute({ sql, args });
+      const rows = (res.rows as any[]).map(r => ({
+        id: String(r.id),
+        date: String(r.date),
+        amount: Number(r.amount || 0),
+        description: (r.description as string) || '',
+        category: (r.category as string) || '',
+        type: (r.type as 'REVENUE' | 'EXPENSE'),
+        status: (r.status as string) || undefined
+      }));
+      return { success: true, data: rows };
+    } catch (e: unknown) {
+      const err = e as Error;
+      logger.error('SQLite getFinancialTransactions failed', { error: err.message }, 'DATABASE_SQLITE');
+      return { success: false, data: [], error: err.message };
+    }
+  },
 };
