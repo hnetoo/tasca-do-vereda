@@ -35,7 +35,7 @@ export async function getOwnerFinancialData(period: 'HOJE'|'SEMANA'|'MES'|'CUSTO
 
   // Prefer Supabase if configured
   if (supabaseUrl && supabaseKey) {
-    const supabase = createSupabaseClient(cookieStore);
+    const supabase = await createSupabaseClient();
     const txQuery = supabase.from('financial_transactions').select('*').order('date', { ascending: false });
     let txRes;
     if (range.start && range.end) txRes = await txQuery.gte('date', range.start).lte('date', range.end);
@@ -117,7 +117,7 @@ export async function syncFinancialToSqlite(): Promise<{ success: boolean; error
     if (!supabaseUrl || !supabaseKey) return { success: false, error: 'Supabase não configurado' };
     const sqlitePath = process.env.DB_SQLITE_PATH || process.env.SQLITE_DB || process.env.DATABASE_FILE || '/tmp/tasca.db';
     const cookieStore = await cookies();
-    const supabase = createSupabaseClient(cookieStore);
+    const supabase = await createSupabaseClient();
     const client = createLibsqlClient({ url: `file:${sqlitePath}` });
     await client.execute(`CREATE TABLE IF NOT EXISTS revenues (id TEXT PRIMARY KEY, amount REAL, description TEXT, category TEXT, created_at TEXT)`);
     await client.execute(`CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, amount REAL, description TEXT, category TEXT, created_at TEXT)`);
