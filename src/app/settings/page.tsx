@@ -1982,6 +1982,18 @@ const Settings = () => {
                         >
                           Reativar RLS Segura
                         </button>
+                        <button
+                          onClick={async () => {
+                            addNotification('info', 'A sincronizar dados para SQLite...');
+                            const { syncFinancialToSqlite } = await import('@/app/actions/owner');
+                            const res = await syncFinancialToSqlite();
+                            if (res.success) addNotification('success', `Sincronizado: R${res.counts?.revenues} • E${res.counts?.expenses} • O${res.counts?.orders} • T${res.counts?.transactions}`);
+                            else addNotification('error', `Falha na sincronização: ${res.error}`);
+                          }}
+                          className="text-[9px] font-black text-emerald-400 uppercase tracking-widest hover:underline"
+                        >
+                          Sincronizar Finanças → SQLite
+                        </button>
                       </div>
                     </div>
 

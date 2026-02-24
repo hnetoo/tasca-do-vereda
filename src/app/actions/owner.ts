@@ -9,7 +9,7 @@ type Tx = { id: string; date: string; amount: number; description: string; categ
 export async function getOwnerFinancialData(period: 'HOJE'|'SEMANA'|'MES'|'CUSTOM' = 'HOJE', start?: string, end?: string) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const sqlitePath = process.env.DB_SQLITE_PATH || process.env.SQLITE_DB || process.env.DATABASE_FILE || 'tasca.db';
+  const sqlitePath = process.env.DB_SQLITE_PATH || process.env.SQLITE_DB || process.env.DATABASE_FILE || '/tmp/tasca.db';
   const cookieStore = await cookies();
 
   const range = (() => {
@@ -107,5 +107,47 @@ export async function getOwnerFinancialData(period: 'HOJE'|'SEMANA'|'MES'|'CUSTO
     return { source: 'sqlite', transactions, revenueTotal, expenseTotal, monthTotal, ordersCount };
   } catch (e: any) {
     return { source: 'none', error: e?.message || String(e), transactions: [], revenueTotal: 0, expenseTotal: 0, monthTotal: 0, ordersCount: 0 };
+  }
+}
+
+export async function syncFinancialToSqlite(): Promise<{ success: boolean; error?: string; counts?: Record<string, number> }> {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) return { success: false, error: 'Supabase não configurado' };
+    const sqlitePath = process.env.DB_SQLITE_PATH || process.env.SQLITE_DB || process.env.DATABASE_FILE || '/tmp/tasca.db';
+    const cookieStore = await cookies();
+    const supabase = createSupabaseClient(cookieStore);
+    const client = createLibsqlClient({ url: `file:${sqlitePath}` });
+    await client.execute(`CREATE TABLE IF NOT EXISTS revenues (id TEXT PRIMARY KEY, amount REAL, description TEXT, category TEXT, created_at TEXT)`);
+    await client.execute(`CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, amount REAL, description TEXT, category TEXT, created_at TEXT)`);
+    await client.execute(`CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, total REAL, created_at TEXT)`);
+    await client.execute(`CREATE TABLE IF NOT EXISTS financial_transactions (id TEXT PRIMARY KEY, date TEXT, amount REAL, description TEXT, category TEXT, type TEXT, status TEXT)`);
+    const [rRes, eRes, oRes, tRes] = await Promise.all([
+      supabase.from('revenues').select('*'),
+      supabase.from('expenses').select('*'),
+      supabase.from('orders').select('*'),
+      supabase.from('financial_transactions').select('*'),
+    ]);
+    const r = rRes.data || [];
+    const e = eRes.data || [];
+    const o = oRes.data || [];
+    const t = tRes.data || [];
+    for (const it of r) {
+      await client.execute(`INSERT OR REPLACE INTO revenues (id, amount, description, category, created_at) VALUES (?, ?, ?, ?, ?)`, [String(it.id), Number(it.amount||0), String(it.description||''), String(it.category||''), String(it.created_at||'')]);
+    }
+    for (const it of e) {
+      await client.execute(`INSERT OR REPLACE INTO expenses (id, amount, description, category, created_at) VALUES (?, ?, ?, ?, ?)`, [String(it.id), Number(it.amount||0), String(it.description||''), String(it.category||''), String(it.created_at||'')]);
+    }
+    for (const it of o) {
+      await client.execute(`INSERT OR REPLACE INTO orders (id, total, created_at) VALUES (?, ?, ?)`, [String(it.id), Number(it.total||0), String(it.created_at||'')]);
+    }
+    for (const it of t) {
+      await client.execute(`INSERT OR REPLACE INTO financial_transactions (id, date, amount, description, category, type, status) VALUES (?, ?, ?, ?, ?, ?, ?)`, [String(it.id), String(it.date||it.created_at||''), Number(it.amount||0), String(it.description||''), String(it.category||''), String(it.type||'REVENUE'), it.status ? String(it.status) : null]);
+    }
+    await client.close();
+    return { success: true, counts: { revenues: r.length, expenses: e.length, orders: o.length, transactions: t.length } };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }

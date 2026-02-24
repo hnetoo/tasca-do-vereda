@@ -1,0 +1,51 @@
+import { createClient } from '@/lib/supabase/client';
+
+export async function syncFinancialClientToSqlite(sqliteUrl: string = 'sqlite:tasca.db'): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { default: Database } = await import('@tauri-apps/plugin-sql');
+    const supabase = createClient();
+    const db = await Database.load(sqliteUrl);
+    await db.execute(`CREATE TABLE IF NOT EXISTS revenues (id TEXT PRIMARY KEY, amount REAL, description TEXT, category TEXT, created_at TEXT)`);
+    await db.execute(`CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, amount REAL, description TEXT, category TEXT, created_at TEXT)`);
+    await db.execute(`CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, total REAL, created_at TEXT)`);
+    await db.execute(`CREATE TABLE IF NOT EXISTS financial_transactions (id TEXT PRIMARY KEY, date TEXT, amount REAL, description TEXT, category TEXT, type TEXT, status TEXT)`);
+    const [rRes, eRes, oRes, tRes] = await Promise.all([
+      supabase.from('revenues').select('*'),
+      supabase.from('expenses').select('*'),
+      supabase.from('orders').select('*'),
+      supabase.from('financial_transactions').select('*'),
+    ]);
+    for (const it of rRes.data || []) {
+      await db.execute(`INSERT OR REPLACE INTO revenues (id, amount, description, category, created_at) VALUES (?, ?, ?, ?, ?)`, [String(it.id), Number(it.amount||0), String(it.description||''), String(it.category||''), String(it.created_at||'')]);
+    }
+    for (const it of eRes.data || []) {
+      await db.execute(`INSERT OR REPLACE INTO expenses (id, amount, description, category, created_at) VALUES (?, ?, ?, ?, ?)`, [String(it.id), Number(it.amount||0), String(it.description||''), String(it.category||''), String(it.created_at||'')]);
+    }
+    for (const it of oRes.data || []) {
+      await db.execute(`INSERT OR REPLACE INTO orders (id, total, created_at) VALUES (?, ?, ?)`, [String(it.id), Number(it.total||0), String(it.created_at||'')]);
+    }
+    for (const it of tRes.data || []) {
+      await db.execute(`INSERT OR REPLACE INTO financial_transactions (id, date, amount, description, category, type, status) VALUES (?, ?, ?, ?, ?, ?, ?)`, [String(it.id), String(it.date||it.created_at||''), Number(it.amount||0), String(it.description||''), String(it.category||''), String(it.type||'REVENUE'), it.status ? String(it.status) : null]);
+    }
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+export async function fetchOwnerDataFromSqlite(sqliteUrl: string = 'sqlite:tasca.db') {
+  const { default: Database } = await import('@tauri-apps/plugin-sql');
+  const db = await Database.load(sqliteUrl);
+  const txRows = await db.select<Array<{ id: string; date: string; amount: number; description: string; category: string; type: string; status?: string }>>(`SELECT id, date, amount, description, category, type, status FROM financial_transactions ORDER BY datetime(date) DESC`);
+  const todayStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString();
+  const rToday = await db.select<Array<{ amount: number }>>(`SELECT amount FROM revenues WHERE created_at >= ?`, [todayStartIso]);
+  const eToday = await db.select<Array<{ amount: number }>>(`SELECT amount FROM expenses WHERE created_at >= ?`, [todayStartIso]);
+  const ordersToday = await db.select<Array<{ id: string }>>(`SELECT id FROM orders WHERE created_at >= ?`, [todayStartIso]);
+  const monthStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const rMonth = await db.select<Array<{ amount: number }>>(`SELECT amount FROM revenues WHERE created_at >= ?`, [monthStartIso]);
+  const revenueTotal = (rToday || []).reduce((a, r) => a + Number(r.amount||0), 0);
+  const expenseTotal = (eToday || []).reduce((a, r) => a + Number(r.amount||0), 0);
+  const monthTotal = (rMonth || []).reduce((a, r) => a + Number(r.amount||0), 0);
+  const ordersCount = (ordersToday || []).length;
+  return { transactions: txRows || [], revenueTotal, expenseTotal, monthTotal, ordersCount };
+}
