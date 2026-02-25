@@ -1,7 +1,6 @@
 'use client';
 
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectUser } from '@/store/slices/authSlice';
@@ -24,7 +23,7 @@ import { formatKz, formatKzDetailed } from '@/services/utils/currencyFormatter';
 import { normalizeDishImage } from '@/utils/imageUtils';
 import { formatDateInLuanda } from '@/utils/date';
 import { useTables } from '@/hooks/useTables';
-
+import { getSQLiteClient, ensureSqliteSchema } from '@/lib/sqlite';
 
 
 const POS = () => {
