@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { logger } from '@/services/logger';
+import { env } from '@/utils/env';
 
 import { saveSettingsAction, saveSupplierAction } from '@/app/actions';
 import { integrationAPIService } from '@/services/integrationAPIService';
@@ -141,11 +142,8 @@ export const useStore = create<StoreState>()(
             
             logger.info('Supabase config for sync:', { config: updated.supabaseConfig }, 'STORE');
             logger.info('IntegrationAPIService is connected:', { isConnected: integrationAPIService.isConnected() }, 'STORE');
-            logger.info('process.env.NEXT_PUBLIC_SUPABASE_URL in updateSettings:', { url: process.env.NEXT_PUBLIC_SUPABASE_URL }, 'STORE');
-            logger.info('updated.supabaseConfig.url in updateSettings:', { url: updated.supabaseConfig?.url }, 'STORE');
-
-            // Check if Supabase environment variables are available
-            const isSupabaseConfigured = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            logger.info('env.SUPABASE_URL in updateSettings:', { url: env.SUPABASE_URL }, 'STORE');
+            const isSupabaseConfigured = !!env.SUPABASE_URL && !!env.SUPABASE_ANON_KEY;
 
             if (isSupabaseConfigured) {
                 // If configured, ensure enabled and autoSync are true by default if not explicitly set to false
@@ -157,8 +155,8 @@ export const useStore = create<StoreState>()(
                     updated.supabaseConfig = {
                         enabled: true,
                         autoSync: true,
-                        url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                        url: env.SUPABASE_URL!,
+                        key: env.SUPABASE_ANON_KEY!
                     };
                 }
             } else {
@@ -193,7 +191,7 @@ export const useStore = create<StoreState>()(
 
           const { supabaseConfig } = state.settings;
 
-          logger.info('process.env.NEXT_PUBLIC_SUPABASE_URL:', { url: process.env.NEXT_PUBLIC_SUPABASE_URL }, 'STORE');
+          logger.info('env.SUPABASE_URL:', { url: env.SUPABASE_URL }, 'STORE');
           logger.info('state.settings.supabaseConfig.url before init:', { url: supabaseConfig?.url }, 'STORE');
 
           // Initialize IntegrationAPIService if Supabase is enabled and not already connected
