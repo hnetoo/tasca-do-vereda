@@ -1,10 +1,51 @@
 import { createClient } from '@/lib/supabase/client';
+import { getStoredDatabaseConfigSync } from '@/lib/config-manager-simple';
+
+let client: any = null;
+let initialized = false;
+
+function normalizeSqliteUrl(conn?: string): string {
+  // Accept formats: 'sqlite:tasca.db', 'file:tasca.db', or absolute file paths
+  if (!conn || conn.trim() === '') return 'file:tasca.db';
+  const trimmed = conn.trim();
+  if (trimmed.startsWith('file:')) return trimmed;
+  if (trimmed.startsWith('sqlite:')) {
+    return 'file:' + trimmed.slice('sqlite:'.length);
+  }
+  // If path without scheme, assume file:
+  return 'file:' + trimmed;
+}
+
+export async function getSQLiteClient() {
+  if (client) return client;
+  const cfg = getStoredDatabaseConfigSync();
+  const url = normalizeSqliteUrl(cfg.connectionString);
+  
+  // Detectar se está no ambiente Tauri
+  const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+  
+  if (isTauri) {
+    try {
+      const { default: Database } = await import('@tauri-apps/plugin-sql');
+      client = Database.load(url);
+      return client;
+    } catch (error) {
+      console.error('Erro ao carregar plugin SQLite Tauri:', error);
+      // Fallback para Supabase se falhar
+      const { createClient: createSupabaseClient } = await import('@/lib/supabase/client');
+      return createSupabaseClient();
+    }
+  } else {
+    // Ambiente Web: usar Supabase client
+    const { createClient: createSupabaseClient } = await import('@/lib/supabase/client');
+    return createSupabaseClient();
+  }
+}
 
 export async function syncFinancialClientToSqlite(sqliteUrl: string = 'sqlite:tasca.db'): Promise<{ success: boolean; error?: string }> {
   try {
-    const { default: Database } = await import('@tauri-apps/plugin-sql');
+    const db = await getSQLiteClient();
     const supabase = createClient();
-    const db = await Database.load(sqliteUrl);
     await db.execute(`CREATE TABLE IF NOT EXISTS revenues (id TEXT PRIMARY KEY, amount REAL, description TEXT, category TEXT, created_at TEXT)`);
     await db.execute(`CREATE TABLE IF NOT EXISTS expenses (id TEXT PRIMARY KEY, amount REAL, description TEXT, category TEXT, created_at TEXT)`);
     await db.execute(`CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, total REAL, created_at TEXT)`);

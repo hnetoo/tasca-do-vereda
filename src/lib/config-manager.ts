@@ -1,4 +1,4 @@
-import fs from 'fs/promises';
+import fs from 'fs';
 import { readFileSync, existsSync, constants as FS_CONSTANTS } from 'fs';
 import path from 'path';
 
@@ -42,13 +42,13 @@ export async function getStoredDatabaseConfig(): Promise<DatabaseConfig> {
 
 export function getStoredDatabaseConfigSync(): DatabaseConfig {
   try {
-    if (!existsSync(CONFIG_FILE)) {
-      return { type: 'local_storage' };
+    if (existsSync(CONFIG_FILE)) {
+      const configData = readFileSync(CONFIG_FILE, 'utf8');
+      return JSON.parse(configData) as DatabaseConfig;
     }
-    const data = readFileSync(CONFIG_FILE, 'utf-8');
-    return JSON.parse(data);
   } catch (error) {
-    return { type: 'local_storage' };
+    console.error('Failed to load database config:', error);
+    return { type: 'sqlite', connectionString: 'file:tasca.db' };
   }
 }
 
@@ -59,13 +59,7 @@ export async function saveStoredDatabaseConfig(config: DatabaseConfig): Promise<
   };
   try {
     await fs.writeFile(CONFIG_FILE, JSON.stringify(configToSave, null, 2), 'utf-8');
-  } catch (error: any) {
-    // Attempt fallback to /tmp if primary path failed (read-only FS)
-    const fallbackPath = path.join('/tmp', 'database-config.json');
-    try {
-      await fs.writeFile(fallbackPath, JSON.stringify(configToSave, null, 2), 'utf-8');
-    } catch (err: any) {
-      throw error;
-    }
+  } catch (error) {
+    console.error('Failed to save database config:', error);
   }
 }
