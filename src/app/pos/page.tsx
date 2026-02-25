@@ -48,6 +48,7 @@ const POS = () => {
   const [currentPayments, setCurrentPayments] = useState<OrderPayment[]>([]);
   const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
   const [correctionOrderId, setCorrectionOrderId] = useState<string | null>(null);
+  const [lastAddedProduct, setLastAddedProduct] = useState<string | null>(null);
   const [correctionReason, setCorrectionReason] = useState('');
   const [isSubAccountModalOpen, setIsSubAccountModalOpen] = useState(false);
   const [isCloseTableModalOpen, setIsCloseTableModalOpen] = useState(false);
@@ -175,6 +176,10 @@ const POS = () => {
        // Pass specificOrderId to avoid race conditions
        if (targetOrderId) {
          addToOrder(targetTableId!, product, 1, '', targetOrderId!, user?.id);
+         // Visual feedback
+         setLastAddedProduct(product.id);
+         setTimeout(() => setLastAddedProduct(null), 300);
+         addNotification('success', `${product.name} adicionado ao pedido`);
        }
     }
   };
@@ -1274,7 +1279,9 @@ const POS = () => {
                               key={dish.id} 
                               type="button"
                               onClick={() => handleProductClick(dish)} 
-                              className={`group relative bg-slate-800/20 rounded-[2rem] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 overflow-hidden flex flex-col active:scale-95 cursor-pointer shadow-lg text-left w-full`}
+                              className={`group relative bg-slate-800/20 rounded-[2rem] border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 overflow-hidden flex flex-col active:scale-95 cursor-pointer shadow-lg text-left w-full ${
+                                lastAddedProduct === dish.id ? 'ring-2 ring-primary ring-offset-2 ring-offset-slate-900 scale-105' : ''
+                              }`}
                           >
                               <div className="aspect-square w-full overflow-hidden relative">
                                   <Image 
