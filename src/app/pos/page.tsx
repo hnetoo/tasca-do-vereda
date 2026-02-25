@@ -1057,6 +1057,15 @@ const POS = () => {
             <Menu size={24} />
          </button>
          
+         {/* Navigation Button */}
+         <button 
+           onClick={() => window.location.href = '/dashboard'} 
+           className="w-14 h-14 shrink-0 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 hover:bg-blue-500 hover:text-white transition-all group mb-2" 
+           title="Voltar ao Menu Principal"
+         >
+           <LayoutGrid size={24} />
+         </button>
+         
          {/* Fixed Action Buttons - Moved to Top */}
          <div className="flex flex-col gap-3 shrink-0 mb-4">
             <button onClick={() => setIsHistoryModalOpen(true)} className="w-12 h-12 rounded-2xl bg-slate-800 text-purple-400 flex items-center justify-center hover:bg-purple-400 hover:text-black transition-all" title="Histórico de Pedidos">
