@@ -141,13 +141,13 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div 
-          className={`fixed inset-0 bg-black/80 z-40 backdrop-blur-sm ${showSidebar ? 'md:hidden' : ''}`}
+          className={`fixed inset-0 bg-black/80 z-[55] backdrop-blur-sm ${showSidebar ? 'md:hidden' : ''}`}
           onClick={toggleMobileMenu}
         />
       )}
 
       <div className={`
-        fixed ${showSidebar ? 'md:static' : ''} inset-y-0 left-0 z-50
+        fixed ${showSidebar ? 'md:static' : ''} inset-y-0 left-0 z-[60]
         h-full bg-slate-900 text-white flex flex-col border-r border-slate-800 
         transition-all duration-300 ease-in-out
         ${(showSidebar || isMobileMenuOpen) ? 'translate-x-0 w-72' : '-translate-x-full w-0'}
