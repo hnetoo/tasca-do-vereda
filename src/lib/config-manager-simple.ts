@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const CONFIG_FILE = path.join(process.cwd(), 'database-config.json');
 
@@ -17,6 +17,9 @@ export function getStoredDatabaseConfigSync(): DatabaseConfig {
     }
   } catch (error) {
     console.error('Failed to load database config:', error);
+    return { type: 'sqlite', connectionString: 'file:tasca.db' };
+  }
+  finally {
     return { type: 'sqlite', connectionString: 'file:tasca.db' };
   }
 }

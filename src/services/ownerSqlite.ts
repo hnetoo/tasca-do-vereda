@@ -75,25 +75,94 @@ export async function syncFinancialClientToSqlite(sqliteUrl: string = 'sqlite:ta
 }
 
 export async function fetchOwnerDataFromSqlite(sqliteUrl: string = 'sqlite:tasca.db') {
-  const { default: Database } = await import('@tauri-apps/plugin-sql');
-  const db = await Database.load(sqliteUrl);
-  const txRows = await db.select<Array<{ id: string; date: string; amount: number; description: string; category: string; type: 'REVENUE' | 'EXPENSE'; status?: string }>>(`SELECT id, date, amount, description, category, type, status FROM financial_transactions ORDER BY datetime(date) DESC`);
-  const todayStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString();
-  const rToday = await db.select<Array<{ amount: number }>>(`SELECT amount FROM revenues WHERE created_at >= ?`, [todayStartIso]);
-  const eToday = await db.select<Array<{ amount: number }>>(`SELECT amount FROM expenses WHERE created_at >= ?`, [todayStartIso]);
-  const ordersToday = await db.select<Array<{ id: string }>>(`SELECT id FROM orders WHERE created_at >= ?`, [todayStartIso]);
-  const monthStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-  const rMonth = await db.select<Array<{ amount: number }>>(`SELECT amount FROM revenues WHERE created_at >= ?`, [monthStartIso]);
-  const revenueTotal = (rToday || []).reduce((a, r) => a + Number(r.amount||0), 0);
-  const expenseTotal = (eToday || []).reduce((a, r) => a + Number(r.amount||0), 0);
-  const monthTotal = (rMonth || []).reduce((a, r) => a + Number(r.amount||0), 0);
-  const ordersCount = (ordersToday || []).length;
-  return { 
-    success: true, 
-    transactions: txRows || [], 
-    revenueTotal, 
-    expenseTotal, 
-    monthTotal, 
-    ordersCount 
-  };
+  console.log('🔍 fetchOwnerDataFromSqlite - Iniciando');
+  console.log('📁 sqliteUrl:', sqliteUrl);
+  
+  const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+  console.log('🔍 Ambiente Tauri detectado:', isTauri);
+  
+  if (isTauri) {
+    console.log('🔍 Usando plugin SQLite Tauri');
+    try {
+      const { default: Database } = await import('@tauri-apps/plugin-sql');
+      const db = await Database.load(sqliteUrl);
+      console.log('🔍 Database SQLite carregado com sucesso');
+      
+      const txRows = await db.select<Array<{ id: string; date: string; amount: number; description: string; category: string; type: 'REVENUE' | 'EXPENSE'; status?: string }>>(`SELECT id, date, amount, description, category, type, status FROM financial_transactions ORDER BY datetime(date) DESC`);
+      console.log('🔍 Transações encontradas:', txRows.length);
+      
+      const todayStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString();
+      const rToday = await db.select<Array<{ amount: number }>>(`SELECT amount FROM revenues WHERE created_at >= ?`, [todayStartIso]);
+      const eToday = await db.select<Array<{ amount: number }>>(`SELECT amount FROM expenses WHERE created_at >= ?`, [todayStartIso]);
+      const ordersToday = await db.select<Array<{ id: string }>>(`SELECT id FROM orders WHERE created_at >= ?`, [todayStartIso]);
+      const monthStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const rMonth = await db.select<Array<{ amount: number }>>(`SELECT amount FROM revenues WHERE created_at >= ?`, [monthStartIso]);
+      
+      const revenueTotal = (rToday || []).reduce((a, r) => a + Number(r.amount||0), 0);
+      const expenseTotal = (eToday || []).reduce((a, r) => a + Number(r.amount||0), 0);
+      const monthTotal = (rMonth || []).reduce((a, r) => a + Number(r.amount||0), 0);
+      const ordersCount = (ordersToday || []).length;
+      
+      console.log('📊 Dados calculados:', { revenueTotal, expenseTotal, monthTotal, ordersCount });
+      
+      return { 
+        success: true, 
+        transactions: txRows || [], 
+        revenueTotal, 
+        expenseTotal, 
+        monthTotal, 
+        ordersCount
+      };
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar dados SQLite:', error);
+      return { 
+        success: false, 
+        transactions: [], 
+        revenueTotal: 0, 
+        expenseTotal: 0, 
+        monthTotal: 0, 
+        ordersCount: 0,
+        error: error.message
+      };
+    }
+  } else {
+    console.log('🌐 Ambiente Web detectado - usando Supabase fallback');
+    // Fallback para Supabase se não for Tauri
+    try {
+      const { createClient: createSupabaseClient } = await import('@/lib/supabase/client');
+      const supabase = createSupabaseClient();
+      
+      const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString();
+      
+      const [rRes, eRes, oRes] = await Promise.all([
+        supabase.from('revenues').select('*'),
+        supabase.from('expenses').select('*'),
+        supabase.from('orders').select('*'),
+      ]);
+      
+      const revenueTotal = (rRes.data || []).reduce((sum, r) => sum + Number(r.amount || 0), 0);
+      const expenseTotal = (eRes.data || []).reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      const ordersCount = (oRes.data || []).length;
+      
+      return { 
+        success: true, 
+        transactions: [], 
+        revenueTotal, 
+        expenseTotal, 
+        monthTotal: 0, 
+        ordersCount
+      };
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar dados Supabase:', error);
+      return { 
+        success: false, 
+        transactions: [], 
+        revenueTotal: 0, 
+        expense: 0, 
+        monthTotal: 0, 
+        ordersCount: 0,
+        error: error.message
+      };
+    }
+  }
 }
