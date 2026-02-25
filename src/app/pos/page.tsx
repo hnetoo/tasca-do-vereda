@@ -1307,26 +1307,47 @@ const POS = () => {
       </div>
 
       {/* Cart Sidebar */}
-      <div className={`w-96 border-l border-white/5 flex flex-col h-full z-30 bg-slate-950 shadow-2xl transition-all duration-500 ${!activeTableId ? 'translate-x-full' : ''}`}>
-        {activeTableId ? (
+      <div className={`w-96 border-l border-white/5 flex flex-col h-full z-30 bg-slate-950 shadow-2xl transition-all duration-500 ${(!activeTableId && (!activeOrderId || !currentOrder || !currentOrder.items || currentOrder.items.length === 0)) ? 'translate-x-full' : ''}`}>
+        {(activeTableId || (currentOrder && currentOrder.items && currentOrder.items.length > 0)) ? (
           <>
-            <div className="p-8 pb-4 h-fit flex flex-col border-b border-white/5 shrink-0">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary border border-primary/20">
-                      <Utensils size={20} />
-                   </div>
-                   <div>
-                      <h2 className="text-xl font-black text-white uppercase italic tracking-tighter">{activeTable?.name}</h2>
-                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Sessão Ativa</p>
-                   </div>
+            {activeTableId ? (
+              <div className="p-8 pb-4 h-fit flex flex-col border-b border-white/5 shrink-0">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary border border-primary/20">
+                        <Utensils size={20} />
+                     </div>
+                     <div>
+                        <h2 className="text-xl font-black text-white uppercase italic tracking-tighter">{activeTable?.name}</h2>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Sessão Ativa</p>
+                     </div>
+                  </div>
+                  <button onClick={() => setIsSubAccountModalOpen(true)} className="w-10 h-10 rounded-xl bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center">
+                     <UserPlus size={20} />
+                  </button>
                 </div>
-                <button onClick={() => setIsSubAccountModalOpen(true)} className="w-10 h-10 rounded-xl bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center">
-                   <UserPlus size={20} />
-                </button>
               </div>
+            ) : (
+              <div className="p-8 pb-4 h-fit flex flex-col border-b border-white/5 shrink-0">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary border border-primary/20">
+                        <ShoppingBasket size={20} />
+                     </div>
+                     <div>
+                        <h2 className="text-xl font-black text-white uppercase italic tracking-tighter">Carrinho</h2>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Balcão</p>
+                     </div>
+                  </div>
+                  <button onClick={() => setActiveTable('balcao-999')} className="w-10 h-10 rounded-xl bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center">
+                     <Utensils size={20} />
+                  </button>
+                </div>
+              </div>
+            )}
 
-              {/* Sub-account tabs within the table */}
+            {/* Sub-account tabs within the table - only show if table is active */}
+            {activeTableId && (
               <div className="flex gap-2 flex-wrap pb-2">
                  {openOrdersForTable.map((order: Order) => (
                     <div key={order.id} className="relative group">
@@ -1369,7 +1390,7 @@ const POS = () => {
                     </div>
                  ))}
               </div>
-            </div>
+            )}
             
             <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-3">
                 {currentOrder?.items?.map((item: OrderItem, idx: number) => { 
