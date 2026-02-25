@@ -123,11 +123,16 @@ const TableLayout = () => {
     if (!isEditMode) return;
     e.stopPropagation();
     try {
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', id);
-      e.dataTransfer.setData('application/json', JSON.stringify({ id, type: 'TABLE' }));
+      // Tauri compatibility: ensure dataTransfer works
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', id);
+        e.dataTransfer.setData('application/json', JSON.stringify({ id, type: 'TABLE' }));
+      }
     } catch (err) {
       console.error('Drag start error:', err);
+      // Fallback for Tauri
+      console.log('Drag started for table:', id);
     }
     setDraggedTableId(id);
     setSelectedTableId(id);
