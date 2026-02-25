@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { AVAILABLE_ICONS } from '@/constants/client-constants';
 import Image from 'next/image';
-import { saveOrderAction } from '@/app/actions/operational';
 import { PaymentMethod, Order, TableZone, Table, OrderPayment, Dish, Product, AuditLog, OrderItem } from '@/types';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { availableMonitors, primaryMonitor } from '@tauri-apps/api/window';
