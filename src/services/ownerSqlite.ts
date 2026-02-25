@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import { getStoredDatabaseConfigSync } from '@/lib/config-manager-simple';
+import { getStoredDatabaseConfigSync } from '@/lib/config-manager';
 
 let client: any = null;
 let initialized = false;
