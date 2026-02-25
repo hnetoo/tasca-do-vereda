@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
+import DishModal from '@/components/DishModal';
+import { normalizeDishImage } from '@/utils/imageUtils';
 
 type DishRow = Database['public']['Tables']['dishes']['Row'];
 type CategoryRow = Database['public']['Tables']['menu_categories']['Row'];
@@ -18,6 +20,8 @@ export default function PublicMenuPage() {
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [ready, setReady] = useState(false);
+  const [selectedDish, setSelectedDish] = useState<DishRow | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -27,6 +31,16 @@ export default function PublicMenuPage() {
     const s = search.trim().toLowerCase();
     return byCat.filter(d => d.name.toLowerCase().includes(s) || (d.description || '').toLowerCase().includes(s));
   }, [dishes, activeCategory, search]);
+
+  const openDishModal = (dish: DishRow) => {
+    setSelectedDish(dish);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedDish(null);
+  };
 
   const loadAll = async () => {
     const supabase = createClient();
@@ -141,22 +155,70 @@ export default function PublicMenuPage() {
         {ready && filtered.length === 0 ? (
           <div className="text-sm text-slate-400">Sem itens disponíveis.</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {filtered.map(d => (
-              <div key={d.id} className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-bold text-white">{d.name}</div>
-                  <div className="text-sm font-mono text-emerald-400">{fmt(Number(d.price))}</div>
+              <div 
+                key={d.id} 
+                className="group cursor-pointer bg-white/5 rounded-2xl border border-white/10 overflow-hidden hover:bg-white/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+                onClick={() => openDishModal(d)}
+              >
+                {/* Image Container */}
+                <div className="aspect-video bg-slate-800 relative overflow-hidden">
+                  <img
+                    src={normalizeDishImage(d.image_url || undefined)}
+                    alt={d.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/logo.png';
+                    }}
+                  />
+                  {d.available === false && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <div className="px-3 py-1 bg-red-600 rounded-full">
+                        <span className="text-white text-xs font-bold">Indisponível</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {!!d.description && <div className="text-xs text-slate-400">{d.description}</div>}
-                {d.available === false && (
-                  <div className="mt-2 text-[10px] font-black uppercase tracking-widest text-red-400">Indisponível</div>
-                )}
+                
+                {/* Content */}
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-bold text-white group-hover:text-primary transition-colors">{d.name}</div>
+                    <div className="text-sm font-mono text-emerald-400">{fmt(Number(d.price))}</div>
+                  </div>
+                  {!!d.description && (
+                    <div className="text-xs text-slate-400 line-clamp-2">{d.description}</div>
+                  )}
+                  
+                  {/* Additional Info */}
+                  <div className="mt-3 flex items-center gap-3 text-xs text-slate-500">
+                    {d.preparation_time && (
+                      <span className="flex items-center gap-1">
+                        <span>⏱️</span>
+                        <span>{d.preparation_time}min</span>
+                      </span>
+                    )}
+                    {d.track_stock && (d.stock_quantity || 0) > 0 && (
+                      <span className="flex items-center gap-1">
+                        <span>📦</span>
+                        <span>{d.stock_quantity}un</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         )}
       </main>
+      
+      {/* Dish Modal */}
+      <DishModal 
+        isOpen={isModalOpen} 
+        onClose={closeModal} 
+        dish={selectedDish} 
+      />
     </div>
   );
 }

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getOwnerFinancialData } from '@/app/actions/owner';
-import { syncFinancialClientToSqlite, fetchOwnerDataFromSqlite } from '@/services/ownerSqlite';
+import { ownerRealtimeService } from '@/services/ownerRealtimeService';
 import type { Database } from '@/types/supabase';
 
 type RevenueRow = Database['public']['Tables']['revenues']['Row'];
@@ -26,6 +26,7 @@ type Tx = {
 };
 
 export default function OwnerRealtime() {
+  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [revenues, setRevenues] = useState<RevenueRow[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
@@ -37,8 +38,43 @@ export default function OwnerRealtime() {
   const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES' | 'CUSTOM'>('HOJE');
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Verificar autenticação independente
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const auth = localStorage.getItem('owner_auth');
+        const timestamp = localStorage.getItem('owner_timestamp');
+        
+        if (auth !== 'true' || !timestamp) {
+          router.push('/owner/login');
+          return;
+        }
+        
+        const authTime = parseInt(timestamp);
+        const now = Date.now();
+        const hoursPassed = (now - authTime) / (1000 * 60 * 60);
+        
+        // Sessão válida por 24 horas
+        if (hoursPassed >= 24) {
+          localStorage.removeItem('owner_auth');
+          localStorage.removeItem('owner_timestamp');
+          router.push('/owner/login');
+          return;
+        }
+        
+        setAuthChecking(false);
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        router.push('/owner/login');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const computeRange = () => {
     const now = new Date();
@@ -68,20 +104,20 @@ export default function OwnerRealtime() {
     setLoading(true);
     setError(null);
     try {
-      const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
-      let res: any;
-      if (isTauri) {
-        res = await fetchOwnerDataFromSqlite();
+      const { start, end } = computeRange();
+      const result = await ownerRealtimeService.getFinancialData(period, start, end);
+      
+      if (result.success) {
+        const { transactions, revenueTotal, expenseTotal, monthTotal, ordersCount, revenues, expenses } = result.data;
+        
+        setTransactions(transactions);
+        setRevenues(revenues);
+        setExpenses(expenses);
+        setMonthRevenues([{ id: 'month', amount: monthTotal } as any]);
+        setOrders(new Array(ordersCount).fill(0).map((_, i) => ({ id: `o-${i}`, total: 0 } as any)));
       } else {
-        const { start, end } = computeRange();
-        res = await getOwnerFinancialData(period, start || undefined, end || undefined);
+        setError(result.error || 'Falha ao carregar dados');
       }
-      if (res.error) setError(res.error);
-      setTransactions(res.transactions || []);
-      setRevenues([{ id: 'today', amount: res.revenueTotal } as any]);
-      setExpenses([{ id: 'today', amount: res.expenseTotal } as any]);
-      setOrders(new Array(res.ordersCount || 0).fill(0).map((_, i) => ({ id: `o-${i}`, total: 0 } as any)));
-      setMonthRevenues([{ id: 'month', amount: res.monthTotal } as any]);
     } catch (e: any) {
       setError(e.message || 'Falha ao carregar dados');
     } finally {
@@ -91,18 +127,23 @@ export default function OwnerRealtime() {
   };
 
   useEffect(() => {
+    if (authChecking) return;
+    
     loadAll();
-    const id = setInterval(loadAll, 5000);
-    const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
-    let syncId: any = null;
-    if (isTauri) {
-      syncId = setInterval(() => { syncFinancialClientToSqlite().catch(() => {}); }, 30000);
-    }
+    
+    // Inscrever para atualizações em tempo real
+    const subscriptionId = ownerRealtimeService.subscribeToFinancialUpdates(() => {
+      loadAll(); // Recarregar dados quando houver mudanças
+    });
+    
+    // Atualização periódica como fallback
+    const intervalId = setInterval(loadAll, 10000);
+    
     return () => {
-      clearInterval(id);
-      if (syncId) clearInterval(syncId);
+      ownerRealtimeService.unsubscribe(subscriptionId);
+      clearInterval(intervalId);
     };
-  }, [period, startDate, endDate]);
+  }, [period, startDate, endDate, authChecking]);
 
   const totals = useMemo(() => {
     const revenueTotal = revenues.reduce((acc, r) => acc + Number(r.amount || 0), 0);
@@ -112,7 +153,22 @@ export default function OwnerRealtime() {
     return { revenueTotal, expenseTotal, net, monthTotal };
   }, [revenues, expenses, monthRevenues]);
 
-  
+  const handleLogout = () => {
+    localStorage.removeItem('owner_auth');
+    localStorage.removeItem('owner_timestamp');
+    router.push('/owner/login');
+  };
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-200 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-6 md:p-8">
@@ -129,6 +185,12 @@ export default function OwnerRealtime() {
             <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-800 text-slate-400 border border-white/10">
               Conectando...
             </span>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+            >
+              Sair
+            </button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
