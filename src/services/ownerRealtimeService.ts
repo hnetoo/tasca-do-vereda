@@ -31,36 +31,39 @@ export class OwnerRealtimeService {
     const range = this.computeDateRange(period, start, end);
     
     try {
-      // Buscar dados das tabelas
-      const [revenuesRes, expensesRes, ordersRes] = await Promise.all([
-        this.supabase
-          .from('revenues')
-          .select('*')
-          .gte('created_at', range.start)
-          .lte('created_at', range.end)
-          .order('created_at', { ascending: false }),
-        this.supabase
-          .from('expenses')
-          .select('*')
-          .gte('created_at', range.start)
-          .lte('created_at', range.end)
-          .order('created_at', { ascending: false }),
-        this.supabase
-          .from('orders')
-          .select('id,total,created_at')
-          .gte('created_at', range.start)
-          .lte('created_at', range.end)
-          .order('created_at', { ascending: false })
-      ]);
+      console.log('Buscando dados financeiros no período:', range);
+      
+      // Buscar dados das tabelas de forma mais simples
+      const revenuesRes = await this.supabase
+        .from('revenues')
+        .select('*')
+        .gte('created_at', range.start)
+        .lte('created_at', range.end)
+        .order('created_at', { ascending: false });
+
+      const expensesRes = await this.supabase
+        .from('expenses')
+        .select('*')
+        .gte('created_at', range.start)
+        .lte('created_at', range.end)
+        .order('created_at', { ascending: false });
+
+      const ordersRes = await this.supabase
+        .from('orders')
+        .select('id,total,created_at')
+        .gte('created_at', range.start)
+        .lte('created_at', range.end)
+        .order('created_at', { ascending: false });
+
+      console.log('Resultados:', { revenues: revenuesRes.data, expenses: expensesRes.data, orders: ordersRes.data });
+      console.log('Erros:', { revenues: revenuesRes.error, expenses: expensesRes.error, orders: ordersRes.error });
 
       // Buscar totais do mês
       const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-      const [monthRevenueRes] = await Promise.all([
-        this.supabase
-          .from('revenues')
-          .select('amount')
-          .gte('created_at', monthStart)
-      ]);
+      const monthRevenueRes = await this.supabase
+        .from('revenues')
+        .select('amount')
+        .gte('created_at', monthStart);
 
       // Processar transações
       const transactions: FinancialTx[] = [];
@@ -99,6 +102,8 @@ export class OwnerRealtimeService {
       const expenseTotal = (expensesRes.data as ExpenseRow[] || []).reduce((sum: number, e: ExpenseRow) => sum + Number(e.amount || 0), 0);
       const monthTotal = (monthRevenueRes.data as RevenueRow[] || []).reduce((sum: number, r: RevenueRow) => sum + Number(r.amount || 0), 0);
       const ordersCount = (ordersRes.data || []).length;
+
+      console.log('Totais calculados:', { revenueTotal, expenseTotal, monthTotal, ordersCount });
 
       return {
         success: true,

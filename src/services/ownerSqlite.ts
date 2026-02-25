@@ -36,7 +36,7 @@ export async function syncFinancialClientToSqlite(sqliteUrl: string = 'sqlite:ta
 export async function fetchOwnerDataFromSqlite(sqliteUrl: string = 'sqlite:tasca.db') {
   const { default: Database } = await import('@tauri-apps/plugin-sql');
   const db = await Database.load(sqliteUrl);
-  const txRows = await db.select<Array<{ id: string; date: string; amount: number; description: string; category: string; type: string; status?: string }>>(`SELECT id, date, amount, description, category, type, status FROM financial_transactions ORDER BY datetime(date) DESC`);
+  const txRows = await db.select<Array<{ id: string; date: string; amount: number; description: string; category: string; type: 'REVENUE' | 'EXPENSE'; status?: string }>>(`SELECT id, date, amount, description, category, type, status FROM financial_transactions ORDER BY datetime(date) DESC`);
   const todayStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString();
   const rToday = await db.select<Array<{ amount: number }>>(`SELECT amount FROM revenues WHERE created_at >= ?`, [todayStartIso]);
   const eToday = await db.select<Array<{ amount: number }>>(`SELECT amount FROM expenses WHERE created_at >= ?`, [todayStartIso]);
@@ -47,5 +47,12 @@ export async function fetchOwnerDataFromSqlite(sqliteUrl: string = 'sqlite:tasca
   const expenseTotal = (eToday || []).reduce((a, r) => a + Number(r.amount||0), 0);
   const monthTotal = (rMonth || []).reduce((a, r) => a + Number(r.amount||0), 0);
   const ordersCount = (ordersToday || []).length;
-  return { transactions: txRows || [], revenueTotal, expenseTotal, monthTotal, ordersCount };
+  return { 
+    success: true, 
+    transactions: txRows || [], 
+    revenueTotal, 
+    expenseTotal, 
+    monthTotal, 
+    ordersCount 
+  };
 }

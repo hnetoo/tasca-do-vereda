@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { ownerRealtimeService } from '@/services/ownerRealtimeService';
+import { fetchOwnerDataFromSqlite, syncFinancialClientToSqlite } from '@/services/ownerSqlite';
+import { addRealTestData } from '@/app/actions/addRealData';
 import type { Database } from '@/types/supabase';
 
 type RevenueRow = Database['public']['Tables']['revenues']['Row'];
@@ -11,7 +11,7 @@ type ExpenseRow = Database['public']['Tables']['expenses']['Row'];
 type OrderRow = Database['public']['Tables']['orders']['Row'];
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(
+  new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AKZ', maximumFractionDigits: 0 }).format(
     Number.isFinite(n) ? n : 0
   );
 
@@ -23,6 +23,16 @@ type Tx = {
   category: string;
   type: 'REVENUE' | 'EXPENSE';
   status?: string;
+};
+
+type SqliteDataResult = {
+  success: boolean;
+  transactions?: Tx[];
+  revenueTotal: number;
+  expenseTotal: number;
+  monthTotal: number;
+  ordersCount: number;
+  error?: string;
 };
 
 export default function OwnerRealtime() {
@@ -39,6 +49,7 @@ export default function OwnerRealtime() {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
+  const [addingTestData, setAddingTestData] = useState(false);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -104,19 +115,25 @@ export default function OwnerRealtime() {
     setLoading(true);
     setError(null);
     try {
-      const { start, end } = computeRange();
-      const result = await ownerRealtimeService.getFinancialData(period, start, end);
+      // Usar SQLite em todas as plataformas
+      console.log('Usando SQLite (todas as plataformas)');
+      const sqliteData = await fetchOwnerDataFromSqlite();
       
-      if (result.success) {
-        const { transactions, revenueTotal, expenseTotal, monthTotal, ordersCount, revenues, expenses } = result.data;
+      if (sqliteData.success) {
+        const { transactions, revenueTotal, expenseTotal, monthTotal, ordersCount } = sqliteData;
         
-        setTransactions(transactions);
-        setRevenues(revenues);
-        setExpenses(expenses);
+        setTransactions(transactions || []);
+        setRevenues([{ id: 'today', amount: revenueTotal } as any]);
+        setExpenses([{ id: 'today', amount: expenseTotal } as any]);
         setMonthRevenues([{ id: 'month', amount: monthTotal } as any]);
-        setOrders(new Array(ordersCount).fill(0).map((_, i) => ({ id: `o-${i}`, total: 0 } as any)));
+        setOrders(new Array(ordersCount || 0).fill(0).map((_, i) => ({ id: `o-${i}`, total: 0 } as any)));
+        
+        // Sincronizar com Supabase em background (se disponível)
+        if (supabaseUrl && supabaseKey) {
+          syncFinancialClientToSqlite().catch(() => {});
+        }
       } else {
-        setError(result.error || 'Falha ao carregar dados');
+        setError((sqliteData as SqliteDataResult & { error: string }).error || 'Falha ao carregar dados SQLite');
       }
     } catch (e: any) {
       setError(e.message || 'Falha ao carregar dados');
@@ -131,17 +148,19 @@ export default function OwnerRealtime() {
     
     loadAll();
     
-    // Inscrever para atualizações em tempo real
-    const subscriptionId = ownerRealtimeService.subscribeToFinancialUpdates(() => {
-      loadAll(); // Recarregar dados quando houver mudanças
-    });
+    // SQLite por padrão - atualizar a cada 10 segundos
+    const reloadInterval = setInterval(loadAll, 10000);
     
-    // Atualização periódica como fallback
-    const intervalId = setInterval(loadAll, 10000);
+    // Sincronizar com Supabase em background (se disponível)
+    const syncInterval = setInterval(() => {
+      if (supabaseUrl && supabaseKey) {
+        syncFinancialClientToSqlite().catch(() => {});
+      }
+    }, 30000);
     
     return () => {
-      ownerRealtimeService.unsubscribe(subscriptionId);
-      clearInterval(intervalId);
+      clearInterval(reloadInterval);
+      clearInterval(syncInterval);
     };
   }, [period, startDate, endDate, authChecking]);
 
@@ -157,6 +176,25 @@ export default function OwnerRealtime() {
     localStorage.removeItem('owner_auth');
     localStorage.removeItem('owner_timestamp');
     router.push('/owner/login');
+  };
+
+  const handleAddTestData = async () => {
+    setAddingTestData(true);
+    try {
+      // Adicionar dados e sincronizar com SQLite
+      const result = await addRealTestData();
+      if (result.success) {
+        // Forçar sincronização após adicionar dados
+        await syncFinancialClientToSqlite();
+        loadAll();
+      } else {
+        setError(result.error || 'Falha ao adicionar dados de teste');
+      }
+    } catch (e: any) {
+      setError(e.message || 'Erro ao adicionar dados de teste');
+    } finally {
+      setAddingTestData(false);
+    }
   };
 
   if (authChecking) {
@@ -183,13 +221,20 @@ export default function OwnerRealtime() {
               Atualizado
             </span>
             <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-800 text-slate-400 border border-white/10">
-              Conectando...
+              SQLite
             </span>
             <button
               onClick={handleLogout}
               className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
             >
               Sair
+            </button>
+            <button
+              onClick={handleAddTestData}
+              disabled={addingTestData}
+              className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+            >
+              {addingTestData ? 'Adicionando...' : 'Adicionar Dados'}
             </button>
           </div>
         </div>

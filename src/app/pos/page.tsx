@@ -1462,7 +1462,7 @@ const POS = () => {
                 <div className="flex justify-between items-end mb-6">
                     <div>
                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Total Parcial</span>
-                      <h3 className="text-3xl font-mono font-bold text-primary leading-none mt-1">{formatKz(totalWithTax)}</h3>
+                      <h3 className="text-2xl font-mono font-bold text-primary leading-none mt-1">{formatKz(totalWithTax)}</h3>
                     </div>
                 </div>
                 <div className="grid grid-cols-4 gap-3 mb-3">
@@ -1620,11 +1620,11 @@ const POS = () => {
               <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="p-8 bg-primary/5 border border-primary/20 rounded-[2rem] flex flex-col justify-center">
                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total a Pagar</p>
-                   <p className="font-mono font-bold text-primary text-glow whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.75rem,6vw,3rem)]">{formatKz(totalWithTax)}</p>
+                   <p className="font-mono font-bold text-primary text-glow whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,4vw,2rem)]">{formatKz(totalWithTax)}</p>
                 </div>
                 <div className="p-8 bg-white/5 border border-white/10 rounded-[2rem] flex flex-col justify-center">
                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Faltante</p>
-                   <p className={`font-mono font-bold whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.75rem,6vw,3rem)] ${Math.max(0, totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                   <p className={`font-mono font-bold whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,4vw,2rem)] ${Math.max(0, totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>
                      {formatKz(Math.max(0, totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0)))}
                    </p>
                 </div>
