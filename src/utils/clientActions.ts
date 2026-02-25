@@ -9,6 +9,15 @@ import { logger } from "@/services/logger";
 import { MenuCategory, Product, SystemSettings, Fornecedor, Employee } from "@/types";
 import { supabaseService } from '@/services/supabaseService';
 
+// Helper function to validate supabase client
+function getValidatedSupabaseClient() {
+  const supabase = supabaseService.getClient();
+  if (!supabase) {
+    throw new Error('Supabase client not available');
+  }
+  return supabase;
+}
+
 // Função client-side para substituir getMenuData Server Action
 export async function getMenuDataClient(): Promise<{ success: boolean; categories?: MenuCategory[]; dishes?: Product[]; error?: string }> {
   try {
@@ -39,7 +48,7 @@ export async function getMenuDataClient(): Promise<{ success: boolean; categorie
 // Client-side Settings Actions
 export async function saveSettingsAction(settings: SystemSettings): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const supabase = supabaseService.getClient();
+    const supabase = getValidatedSupabaseClient();
     const result = await databaseOperations.saveSettings(settings, supabase);
     if (!result.success) {
       logger.error('Failed to save settings via client action', { error: result.error }, 'CLIENT_ACTION');
@@ -55,11 +64,11 @@ export async function saveSettingsAction(settings: SystemSettings): Promise<{ su
 
 export async function saveSupplierAction(supplier: Fornecedor): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const supabase = supabaseService.getClient();
-    const success = await databaseOperations.saveSupplier(supplier, supabase);
-    if (!success) {
-      logger.error('Failed to save supplier via client action', { error: 'Operation returned false' }, 'CLIENT_ACTION');
-      return { success: false, error: 'Operation returned false' };
+    const supabase = getValidatedSupabaseClient();
+    const result = await databaseOperations.saveSupplier(supplier, supabase);
+    if (!result.success) {
+      logger.error('Failed to save supplier via client action', { error: result.error }, 'CLIENT_ACTION');
+      return { success: false, error: result.error };
     }
     return { success: true };
   } catch (error: unknown) {
@@ -71,7 +80,7 @@ export async function saveSupplierAction(supplier: Fornecedor): Promise<{ succes
 
 export async function saveEmployeesAction(employees: Employee[]): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const supabase = supabaseService.getClient();
+    const supabase = getValidatedSupabaseClient();
     const result = await databaseOperations.saveEmployees(employees, supabase);
     if (!result.success) {
       logger.error('Failed to save employees via client action', { error: result.error }, 'CLIENT_ACTION');
@@ -88,7 +97,7 @@ export async function saveEmployeesAction(employees: Employee[]): Promise<{ succ
 // Client-side Menu Actions
 export async function saveMenuAction(dishes: Product[], categories: MenuCategory[]): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const supabase = supabaseService.getClient();
+    const supabase = getValidatedSupabaseClient();
     const result = await databaseOperations.saveMenu(dishes, categories, supabase);
     if (!result.success) {
       logger.error('Failed to save menu via client action', { error: result.error }, 'CLIENT_ACTION');
@@ -105,7 +114,7 @@ export async function saveMenuAction(dishes: Product[], categories: MenuCategory
 // Client-side Auth Actions
 export async function loginAction(email: string, password: string): Promise<{ success: boolean; error?: string; user?: any }> {
   try {
-    const supabase = supabaseService.getClient();
+    const supabase = getValidatedSupabaseClient();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -126,7 +135,7 @@ export async function loginAction(email: string, password: string): Promise<{ su
 
 export async function logoutAction(): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = supabaseService.getClient();
+    const supabase = getValidatedSupabaseClient();
     const { error } = await supabase.auth.signOut();
 
     if (error) {
@@ -145,7 +154,7 @@ export async function logoutAction(): Promise<{ success: boolean; error?: string
 // Client-side User Actions
 export async function saveUsersAction(users: any[]): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const supabase = supabaseService.getClient();
+    const supabase = getValidatedSupabaseClient();
     const result = await databaseOperations.saveUsers(users, supabase);
     if (!result.success) {
       logger.error('Failed to save users via client action', { error: result.error }, 'CLIENT_ACTION');
