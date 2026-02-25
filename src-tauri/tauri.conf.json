@@ -39,7 +39,10 @@
             "language": ["pt-PT", "en-US"],
             "upgradeCode": "{6B0F7E1A-3B8F-4B08-9A9E-7F50B6F9A2B1}"
         }
-    }
+    },
+    "resources": [
+      "src-tauri/scripts/inject-env.js"
+    ]
   },
   "plugins": {
       "sql": {

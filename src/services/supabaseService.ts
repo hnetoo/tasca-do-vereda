@@ -5,6 +5,7 @@ import type { Database } from '@/types/supabase';
 import { logger } from './logger';
 import { exponentialBackoff } from '@/utils/retry';
 import { calculateHash } from '@/utils/crypto';
+import { env } from '@/utils/env';
 
 export class SupabaseService {
   private client: SupabaseClient | null = null;
@@ -333,7 +334,7 @@ export class SupabaseService {
   }
 
   async calculateHash(data: string): Promise<string> {
-    return calculateHash(data);
+    return await calculateHash(data);
   }
 
   async subscribeToTableChanges(tableName: string, handler: (payload: any) => void, eventType: '*' | 'INSERT' | 'UPDATE' | 'DELETE' = '*'): Promise<void> {
