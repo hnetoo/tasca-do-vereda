@@ -729,6 +729,67 @@ export const databaseOperations = {
       return { success: true };
   },
 
+  saveMenu: async (dishes: Dish[], categories: MenuCategory[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+    return databaseOperations._handleDatabaseOperation(async (supabase) => {
+      // Use transaction to ensure both dishes and categories are saved together
+      return await withTransaction(supabase, async () => {
+        // Save categories first
+        for (const category of categories) {
+          const dbCategory = {
+              id: category.id,
+              name: category.name,
+              icon: category.icon,
+              sort_order: category.sortOrder || 0,
+              is_active: category.isActive ?? true,
+              parent_id: category.parentId || null,
+              is_available_on_digital_menu: category.isAvailableOnDigitalMenu ?? true,
+              updated_at: new Date().toISOString()
+          };
+
+          const { error: categoryError } = await supabase
+              .from('menu_categories')
+              .upsert(dbCategory);
+
+          if (categoryError) throw categoryError;
+        }
+
+        // Save dishes
+        for (const dish of dishes) {
+          const dbDish = {
+              id: dish.id,
+              name: dish.name,
+              description: dish.description || null,
+              price: dish.price,
+              cost_price: dish.costPrice || 0,
+              category_id: dish.categoryId || null,
+              image_url: dish.imageUrl || null,
+              tax_code: dish.taxCode || null,
+              tax_percentage: dish.taxPercentage || null,
+              preparation_time: dish.preparationTime || null,
+              is_active: dish.isActive ?? true,
+              available: dish.available ?? true,
+              is_available_on_digital_menu: dish.isAvailableOnDigitalMenu ?? true,
+              track_stock: dish.trackStock ?? false,
+              stock_quantity: dish.stockQuantity || 0,
+              min_stock_quantity: dish.minStockQuantity || 0,
+              max_stock_quantity: dish.maxStockQuantity || null,
+              unit: dish.unit || 'unidade',
+              supplier_id: dish.supplierId || null,
+              updated_at: new Date().toISOString()
+          };
+
+          const { error: dishError } = await supabase
+              .from('dishes')
+              .upsert(dbDish);
+
+          if (dishError) throw dishError;
+        }
+
+        return true;
+      });
+    }, 'save menu', 'DATABASE', client);
+  },
+
   getDishes: async (): Promise<{ success: boolean; data: Dish[]; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         logger.debug('Fetching dishes from Supabase', undefined, 'DATABASE');
@@ -1242,19 +1303,18 @@ export const databaseOperations = {
     }, 'save settings', 'DATABASE', client);
   },
 
-  saveSupplier: async (supplier: Fornecedor, client?: SupabaseClient<Database>): Promise<boolean> => {
-    const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
+  saveSupplier: async (supplier: Fornecedor, client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+    return databaseOperations._handleDatabaseOperation(async (supabase) => {
       const { error } = await supabase.from('suppliers').upsert(supplier);
       if (error) throw error;
       return true;
     }, 'save supplier', 'DATABASE', client);
-    return result.success;
   },
   
   saveSuppliers: async (suppliers: Fornecedor[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
       for (const supplier of suppliers) {
           const result = await databaseOperations.saveSupplier(supplier, client);
-          if (!result) return { success: false, error: 'Failed to save supplier' };
+          if (!result.success) return result;
       }
       return { success: true };
   },
@@ -1308,7 +1368,7 @@ export const databaseOperations = {
     }, 'save attendance', 'DATABASE', client);
   },
   
-  saveUsers: async (users: User[]): Promise<{ success: boolean; error?: string }> => {
+  saveUsers: async (users: User[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         // Users are typically handled by Supabase Auth, but if we have a users table:
         // We'll assume a 'profiles' or 'users' table exists for application data
@@ -1321,7 +1381,7 @@ export const databaseOperations = {
         })));
         if (error) throw error;
         return true;
-    }, 'save users');
+    }, 'save users', 'DATABASE', client);
   },
   
   saveTables: async (tables: Table[]): Promise<{ success: boolean; error?: string }> => {
