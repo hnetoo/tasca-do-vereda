@@ -19,7 +19,7 @@ const serverLog = (message: string, data?: any, type: string = 'INFO') => {
 export async function getDatabaseConfigAction(): Promise<{ success: boolean; data?: DatabaseConfig; error?: string }> {
   try {
     const config = await getStoredDatabaseConfig();
-    return { success: true, data: config };
+    return { success: true, data: config as DatabaseConfig };
   } catch (error: any) {
     serverLog('Erro ao ler configuração de banco de dados', { error: error.message }, 'ERROR');
     return { success: false, error: error.message };

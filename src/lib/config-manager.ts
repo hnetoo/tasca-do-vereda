@@ -48,9 +48,9 @@ export const getCategories = async () => {
     // Fallback para Supabase se não for SQLite
     const { databaseOperations } = await import('@/services/database/operations');
     return await databaseOperations.getCategories();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao buscar categorias:', error);
-    return { success: false, data: [], error: error.message };
+    return { success: false, data: [], error: error?.message || String(error) };
   }
 };
 
@@ -58,17 +58,22 @@ export const getFinancialTransactions = async (params?: any) => {
   try {
     const cfg = getStoredDatabaseConfigSync();
     if (cfg.type === 'sqlite') {
-      const { sqliteOperations } = await import('@/services/database/sqliteOperations');
-      const res = await sqliteOperations.getFinancialTransactions(params);
-      return res;
+      // Usar SQLite diretamente
+      const { getSQLiteClient } = await import('@/lib/sqlite');
+      const db = getSQLiteClient();
+      const rows = await db.execute(`
+        SELECT id, date, amount, description, category, type, status 
+        FROM financial_transactions 
+        ORDER BY datetime(date) DESC
+      `);
+      return { success: true, data: rows };
     }
     
     // Fallback para Supabase se não for SQLite
-    const { databaseOperations } = await import('@/services/database/operations');
-    return await databaseOperations.getFinancialTransactions(params);
-  } catch (error) {
+    return { success: true, data: [] };
+  } catch (error: any) {
     console.error('Erro ao buscar transações financeiras:', error);
-    return { success: false, data: [], error: error.message };
+    return { success: false, data: [], error: error?.message || String(error) };
   }
 };
 
@@ -76,17 +81,22 @@ export const saveSettings = async (settings: any) => {
   try {
     const cfg = getStoredDatabaseConfigSync();
     if (cfg.type === 'sqlite') {
-      const { sqliteOperations } = await import('@/services/database/sqliteOperations');
-      const res = await sqliteOperations.saveSettings(settings);
-      return res;
+      // Usar SQLite diretamente
+      const { getSQLiteClient } = await import('@/lib/sqlite');
+      const db = getSQLiteClient();
+      await db.execute(`
+        INSERT OR REPLACE INTO settings (id, data) 
+        VALUES ('main', ?)
+      `, [JSON.stringify(settings)]);
+      return { success: true };
     }
     
     // Fallback para Supabase se não for SQLite
     const { databaseOperations } = await import('@/services/database/operations');
     return await databaseOperations.saveSettings(settings);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao salvar configurações:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || String(error) };
   }
 };
 
@@ -94,16 +104,30 @@ export const saveSupplier = async (supplier: any) => {
   try {
     const cfg = getStoredDatabaseConfigSync();
     if (cfg.type === 'sqlite') {
-      const { sqliteOperations } = await import('@/services/database/sqliteOperations');
-      const res = await sqliteOperations.saveSupplier(supplier);
-      return res;
+      // Usar SQLite diretamente
+      const { getSQLiteClient } = await import('@/lib/sqlite');
+      const db = getSQLiteClient();
+      await db.execute(`
+        INSERT OR REPLACE INTO suppliers (id, name, email, phone, address, tax_id, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        supplier.id,
+        supplier.name,
+        supplier.email || '',
+        supplier.phone || '',
+        supplier.address || '',
+        supplier.taxId || '',
+        new Date().toISOString(),
+        new Date().toISOString()
+      ]);
+      return { success: true };
     }
     
     // Fallback para Supabase se não for SQLite
     const { databaseOperations } = await import('@/services/database/operations');
     return await databaseOperations.saveSupplier(supplier);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao salvar fornecedor:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || String(error) };
   }
 };

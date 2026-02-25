@@ -278,13 +278,21 @@ const POS = () => {
     
     if (newOrder) {
       try {
-        const result = await saveOrderAction(newOrder);
-        if (!result.success) {
-           addNotification('error', `Erro ao salvar subconta: ${result.error}`);
-           logger.error('Failed to sync new sub-account', { error: result.error }, 'POS');
-        } else {
-           addNotification('success', `Subconta "${name}" criada e sincronizada.`);
-        }
+        // Usar SQLite diretamente
+        const db = getSQLiteClient();
+        const todayStartIso = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString();
+        
+        await db.execute(`
+          INSERT INTO orders (id, total, status, created_at, updated_at) 
+          VALUES (?, ?, 'ABERTO', ?, ?)
+        `, [
+          newOrder.id || '',
+          newOrder.total || 0,
+          todayStartIso,
+          todayStartIso
+        ]);
+        
+        addNotification('success', `Subconta "${name}" criada e sincronizada.`);
       } catch (err) {
          logger.error('Exception syncing new sub-account', { error: err }, 'POS');
       }

@@ -7,13 +7,13 @@ import { SystemSettings, Fornecedor, Employee, AttendanceRecord, Dish, MenuCateg
 import { logger } from '@/services/logger';
 import { createClient } from '@/lib/supabase/client';
 import { sqliteOperations } from '@/services/database/sqliteOperations';
-import { getStoredDatabaseConfig, saveStoredDatabaseConfig, DatabaseConfig, getCategories, getFinancialTransactions } from '@/lib/config-manager';
+import { getStoredDatabaseConfig, saveStoredDatabaseConfig, DatabaseConfig, getCategories, getFinancialTransactions, saveSettings, saveSupplier } from '@/lib/config-manager';
 
 export async function saveSettingsAction(settings: SystemSettings): Promise<{ success: boolean; error?: string | Error }> {
   try {
     const cfg = await getStoredDatabaseConfig();
     if (cfg.type === 'sqlite') {
-      const res = await sqliteOperations.saveSettings(settings);
+      const res = await saveSettings(settings);
       if (res.success) {
         return { success: true };
       }
@@ -39,7 +39,7 @@ export async function saveSupplierAction(supplier: Fornecedor): Promise<{ succes
   try {
     const cfg = await getStoredDatabaseConfig();
     if (cfg.type === 'sqlite') {
-      const res = await sqliteOperations.saveSupplier(supplier);
+      const res = await saveSupplier(supplier);
       if (res.success) {
         return { success: true };
       }
