@@ -5,12 +5,22 @@ import { directOperations } from '@/services/database/directOperations';
 import { adminOperations } from '@/services/database/adminOperations';
 import { SystemSettings, Fornecedor, Employee, AttendanceRecord, Dish, MenuCategory, UUID } from '@/types';
 import { logger } from '@/services/logger';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/client';
 import { sqliteOperations } from '@/services/database/sqliteOperations';
-import { getStoredDatabaseConfig } from '@/lib/config-manager';
+import { getStoredDatabaseConfig, saveStoredDatabaseConfig, DatabaseConfig, getCategories, getFinancialTransactions } from '@/lib/config-manager';
 
 export async function saveSettingsAction(settings: SystemSettings): Promise<{ success: boolean; error?: string | Error }> {
   try {
+    const cfg = await getStoredDatabaseConfig();
+    if (cfg.type === 'sqlite') {
+      const res = await sqliteOperations.saveSettings(settings);
+      if (res.success) {
+        return { success: true };
+      }
+      return { success: false, error: res.error || 'SQLite operation failed' };
+    }
+    
+    // Fallback para Supabase se não for SQLite
     const supabase = await createClient();
     const result = await databaseOperations.saveSettings(settings, supabase);
     if (!result.success) {
@@ -27,6 +37,15 @@ export async function saveSettingsAction(settings: SystemSettings): Promise<{ su
 
 export async function saveSupplierAction(supplier: Fornecedor): Promise<{ success: boolean; error?: string | Error }> {
   try {
+    const cfg = await getStoredDatabaseConfig();
+    if (cfg.type === 'sqlite') {
+      const res = await sqliteOperations.saveSupplier(supplier);
+      if (res.success) {
+        return { success: true };
+      }
+      return { success: false, error: res.error || 'SQLite operation failed' };
+    }
+    
     const supabase = await createClient();
     const success = await databaseOperations.saveSupplier(supplier, supabase);
     if (!success) {

@@ -3,7 +3,7 @@ const nextConfig = {
   output: process.env.TAURI_BUILD === 'true' ? 'export' : undefined,
   distDir: process.env.TAURI_BUILD === 'true' ? 'dist' : '.next',
 
-  // Isso permite que o Tauri use a app como arquivos estáticos se necessário
+  // Isso permite que o Tauri use a app como arquivos estáticos
   // mas mantém a funcionalidade total na Vercel
   trailingSlash: true,
   images: { 
@@ -18,8 +18,7 @@ const nextConfig = {
   typescript: { 
     ignoreBuildErrors: false 
   },
-
-
+  
   // Configuração do Webpack para lidar com módulos node:
   webpack: (config, { isServer }) => {
     config.externals.push(({ request }, callback) => {
@@ -28,14 +27,15 @@ const nextConfig = {
       }
       callback();
     });
-
+    
+    // Desabilitar crypto polyfill no Tauri para evitar erros
     if (!isServer) {
       config.resolve.alias['node:crypto'] = false;
     }
-
+    
     return config;
   },
-
+  
   async redirects() {
     return [
       {
@@ -46,7 +46,7 @@ const nextConfig = {
       {
         source: '/',
         destination: '/menu',
-        permanent: false, // Pode ser alterado para true se for definitivo
+        permanent: false,
         has: [
           {
             type: 'header',
