@@ -52,21 +52,38 @@ if (typeof window !== 'undefined') {
 const customStorage: StateStorage = {
   getItem: (name: string): string | null => {
     if (typeof window !== 'undefined') {
-      try { return localStorage.getItem(name); } catch { return null; }
+      try { 
+        console.log('📦 Getting item from storage:', name);
+        const item = localStorage.getItem(name);
+        console.log('📦 Item retrieved:', item ? 'success' : 'null');
+        return item;
+      } catch (error) { 
+        console.error('📦 Error getting item:', error);
+        return null;
+      }
     }
-
-
-
     return null;
   },
   setItem: (name: string, value: string): void => {
     if (typeof window !== 'undefined') {
-      try { localStorage.setItem(name, value); } catch { }
+      try { 
+        console.log('📦 Setting item in storage:', name, 'size:', value.length);
+        localStorage.setItem(name, value);
+        console.log('📦 Item set successfully');
+      } catch (error) { 
+        console.error('📦 Error setting item:', error);
+      }
     }
   },
   removeItem: (name: string): void => {
     if (typeof window !== 'undefined') {
-      try { localStorage.removeItem(name); } catch { }
+      try { 
+        console.log('📦 Removing item from storage:', name);
+        localStorage.removeItem(name);
+        console.log('📦 Item removed successfully');
+      } catch (error) { 
+        console.error('📦 Error removing item:', error);
+      }
     }
   },
 };
