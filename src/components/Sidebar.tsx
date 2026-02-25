@@ -39,7 +39,11 @@ import {
   Menu,
   X,
   Tags,
-  Package
+  Package,
+  MonitorPlay,
+  Share2,
+  Save,
+  History as HistoryIcon
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/store/reduxStore';
@@ -82,7 +86,27 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   const generalMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
+    { 
+      path: '/settings', 
+      icon: <Settings size={24} />, 
+      label: 'Definições',
+      subItems: [
+        { path: '/settings#general', icon: <Settings size={20} />, label: 'Geral' },
+        { path: '/settings#fiscal', icon: <DollarSign size={20} />, label: 'Fiscal' },
+        { path: '/settings#tables', icon: <ChefHat size={20} />, label: 'Mesas' },
+        { path: '/settings#qr', icon: <QrCode size={20} />, label: 'Menu QR' },
+        { path: '/settings#system', icon: <MonitorPlay size={20} />, label: 'Sistema' },
+        { path: '/settings#system-users', icon: <Users size={20} />, label: 'Utilizadores' },
+        { path: '/settings#system-roles', icon: <Shield size={20} />, label: 'Cargos' },
+        { path: '/settings#system-integrations', icon: <Share2 size={20} />, label: 'Integrações' },
+        { path: '/settings#system-health', icon: <Activity size={20} />, label: 'Monitorização' },
+        { path: '/settings#system-cloud', icon: <Cloud size={20} />, label: 'Nuvem / App' },
+        { path: '/settings#system-backup', icon: <Save size={20} />, label: 'Backup / Restore' },
+        { path: '/settings#system-agt', icon: <FileText size={20} />, label: 'AGT' },
+        { path: '/settings#system-dlp', icon: <Lock size={20} />, label: 'DLP' },
+        { path: '/settings#system-history', icon: <HistoryIcon size={20} />, label: 'Histórico' },
+      ]
+    },
 
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Mesas' },
