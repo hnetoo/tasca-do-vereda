@@ -41,7 +41,7 @@
         }
     },
     "resources": [
-      "src-tauri/scripts/inject-env.js"
+      "scripts/inject-env.js"
     ]
   },
   "plugins": {
