@@ -13,7 +13,7 @@ export async function syncFinancialClientToSqlite(sqliteUrl: string = 'sqlite:ta
       supabase.from('revenues').select('*'),
       supabase.from('expenses').select('*'),
       supabase.from('orders').select('*'),
-      supabase.from('financial_transactions').select('*'),
+      (supabase as any).from('financial_transactions').select('*'),
     ]);
     for (const it of rRes.data || []) {
       await db.execute(`INSERT OR REPLACE INTO revenues (id, amount, description, category, created_at) VALUES (?, ?, ?, ?, ?)`, [String(it.id), Number(it.amount||0), String(it.description||''), String(it.category||''), String(it.created_at||'')]);
