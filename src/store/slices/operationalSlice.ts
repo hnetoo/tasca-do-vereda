@@ -1,8 +1,8 @@
 import { StateCreator } from 'zustand';
 import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID, OrderItem, Order } from '../../types';
 import { 
-  saveTableClientClient, 
-  deleteTableClientClient, 
+  saveTableAction, 
+  deleteTableAction, 
   saveCustomerAction, 
   deleteCustomerAction,
   saveReservationAction,
@@ -16,7 +16,7 @@ import {
   saveOrderItemAction,
   deleteOrderItemAction
 } from '@/app/actions/operational';
-import { saveTableClientClient as saveTableClient, deleteTableClientClient as deleteTableClient } from '@/utils/clientOperationalActions';
+import { saveTableActionClient as saveTableClient, deleteTableActionClient as deleteTableClient } from '@/utils/clientOperationalActions';
 import { logger } from '../../services/logger';
 import { generateUUID } from '../../utils/uuid';
 
