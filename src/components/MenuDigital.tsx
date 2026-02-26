@@ -6,38 +6,51 @@ import { supabase } from '@/lib/supabase';
 import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star } from 'lucide-react';
 import { Product, MenuCategory, SystemSettings } from '@/types';
 import { Database } from '@/types/supabase';
+import { useRealtimeCategoriesWithProducts } from '@/hooks/useSupabaseRealtime';
 
 type MenuCategoryRow = Database['public']['Tables']['menu_categories']['Row'];
 type DishRow = Database['public']['Tables']['dishes']['Row'];
 
 export default function MenuDigital() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<Partial<SystemSettings> | null>(null);
 
+  // Hook de tempo real para categorias e produtos
+  const { categories, loading: categoriesLoading } = useRealtimeCategoriesWithProducts();
+
+  // Extrair produtos das categorias em tempo real
+  const products = useMemo(() => {
+    const allProducts: Product[] = [];
+    categories.forEach(category => {
+      if (category.dishes) {
+        category.dishes.forEach((dish: any) => {
+          allProducts.push(mapToProduct(dish));
+        });
+      }
+    });
+    return allProducts;
+  }, [categories]);
+
   // Helper to map DB row to Product interface
   const mapToProduct = (row: DishRow): Product => {
-    if (!row) return {} as Product; // Should not happen with DishRow type, but as a safeguard
+    if (!row) return {} as Product;
     return {
       id: row.id,
       name: row.name,
       description: row.description,
       price: Number(row.price),
       categoryId: row.category_id || undefined,
-      imageUrl: row.image_url || undefined, // Use undefined if null
+      imageUrl: row.image_url || undefined,
       taxCode: row.tax_code || 'NOR',
       taxPercentage: row.tax_percentage || 0,
-      isActive: row.is_active ?? true, // Default to true if null/undefined
-      isAvailableOnDigitalMenu: row.is_available_on_digital_menu ?? true, // Default to true if null/undefined
-      available: row.available ?? true, // Default to true if null/undefined
+      isActive: row.is_active ?? true,
+      isAvailableOnDigitalMenu: row.is_available_on_digital_menu ?? true,
+      available: row.available ?? true,
       createdAt: row.created_at ? new Date(row.created_at) : undefined,
       updatedAt: row.updated_at ? new Date(row.updated_at) : undefined,
-      
-      // Additional properties
       preparationTime: row.preparation_time || undefined,
       trackStock: row.track_stock ?? false,
       stockQuantity: row.stock_quantity ?? 0,
@@ -48,148 +61,60 @@ export default function MenuDigital() {
     };
   };
 
-  // Initial Data Fetch
+  // Atualizar loading state baseado no hook de tempo real
   useEffect(() => {
-    const fetchData = async () => {
+    setIsLoading(categoriesLoading);
+  }, [categoriesLoading]);
+
+  // Fetch settings (branding) - mantido separado pois não é crítico para tempo real
+  useEffect(() => {
+    const fetchSettings = async () => {
       try {
-        setIsLoading(true);
-        // Fetch categories (table: menu_categories)
-        const { data: cats, error: catError } = await supabase
-          .from('menu_categories')
-          .select('*');
-        
-        if (catError) {
-          console.error('Error fetching categories:', catError);
-          // Don't throw, continue to fetch dishes even if categories fail (might show uncategorized)
-        }
-
-        // Fetch all products (table: dishes)
-        const { data: prods, error: prodError } = await supabase
-          .from('dishes')
-          .select('*');
-
-        if (prodError) throw prodError;
-        
-        // Fetch settings (branding)
         const { data: settingsRows } = await supabase.from('settings').select('*').limit(1);
         if (settingsRows && settingsRows.length > 0) {
           setSettings(settingsRows[0] as any);
         }
-
-        if (cats) {
-          // Client-side sort
-          const sortedCats = (cats as MenuCategoryRow[]).map(c => ({
-            id: c.id,
-            name: c.name,
-            sortOrder: c.sort_order,
-            isActive: c.is_active,
-            parentId: c.parent_id,
-            isAvailableOnDigitalMenu: c.is_available_on_digital_menu,
-            availableOnDigitalMenu: c.is_available_on_digital_menu,
-            createdAt: c.created_at ? new Date(c.created_at) : undefined,
-            updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
-            deletedAt: c.deleted_at
-          } as MenuCategory)).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-          setCategories(sortedCats);
-        }
-
-        if (prods) {
-          const mappedProds = prods.map(mapToProduct);
-          // Client-side filter
-          const availableProds = mappedProds.filter(p => p.isActive === true && p.isAvailableOnDigitalMenu === true); 
-          setProducts(availableProds);
-        }
       } catch (error) {
-        console.error('Error fetching menu:', error);
-        setError('Não foi possível carregar o menu. Por favor, verifique a sua conexão e tente novamente.');
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching settings:', error);
       }
     };
 
-    fetchData();
+    fetchSettings();
   }, []);
 
-  // Realtime Subscriptions
+  // Real-time subscriptions - simplificado
   useEffect(() => {
-    // Products Channel (table: dishes)
-    const productsChannel = supabase
-      .channel('menu-geral-dishes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'dishes' }, (payload) => {
-        console.log('Product change received:', payload);
-        if (payload.eventType === 'INSERT') {
-          const newProduct = mapToProduct(payload.new as DishRow);
-          if (newProduct.isActive === true && newProduct.isAvailableOnDigitalMenu === true) {
-            setProducts(prev => [...prev, newProduct]);
-          }
-        } else if (payload.eventType === 'UPDATE') {
-          const updatedProduct = mapToProduct(payload.new as DishRow);
-          // Check availability
-          if (updatedProduct.isActive === true && updatedProduct.isAvailableOnDigitalMenu === true) {
-            setProducts(prev => {
-              const exists = prev.some(p => p.id === updatedProduct.id);
-              return exists 
-                ? prev.map(p => p.id === updatedProduct.id ? updatedProduct : p)
-                : [...prev, updatedProduct];
-            });
-          } else {
-            // Remove if updated to unavailable
-            setProducts(prev => prev.filter(p => p.id !== updatedProduct.id));
-          }
-        } else if (payload.eventType === 'DELETE') {
-          setProducts(prev => prev.filter(p => p.id !== payload.old.id));
+    if (!supabase) return;
+
+    // Subscribe to categories changes
+    const categoriesSubscription = supabase
+      .channel('menu-categories-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'menu_categories' },
+        () => {
+          // As categorias já são atualizadas pelo hook useRealtimeCategoriesWithProducts
+          console.log('Categories updated in real-time');
         }
-      })
+      )
       .subscribe();
 
-    // Categories Channel (table: menu_categories)
-    const categoriesChannel = supabase
-      .channel('menu-geral-categories')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, (payload) => {
-        console.log('Category change received:', payload);
-        if (!payload.new && payload.eventType !== 'DELETE') return;
-
-        if (payload.eventType === 'INSERT') {
-          const c = payload.new as MenuCategoryRow;
-          const newCat: MenuCategory = {
-             id: c.id,
-             name: c.name,
-             sortOrder: c.sort_order ?? 0,
-             isActive: c.is_active ?? true,
-             parentId: c.parent_id || undefined,
-             isAvailableOnDigitalMenu: c.is_available_on_digital_menu ?? true,
-             availableOnDigitalMenu: c.is_available_on_digital_menu ?? true,
-             createdAt: c.created_at ? new Date(c.created_at) : undefined,
-             updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
-             deletedAt: c.deleted_at || undefined
-          };
-          setCategories(prev => [...prev, newCat].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
-        } else if (payload.eventType === 'UPDATE') {
-           const c = payload.new as MenuCategoryRow;
-           const updatedCat: MenuCategory = {
-             id: c.id,
-             name: c.name,
-             sortOrder: c.sort_order ?? 0,
-             isActive: c.is_active ?? true,
-             parentId: c.parent_id || undefined,
-             isAvailableOnDigitalMenu: c.is_available_on_digital_menu ?? true,
-             availableOnDigitalMenu: c.is_available_on_digital_menu ?? true,
-             createdAt: c.created_at ? new Date(c.created_at) : undefined,
-             updatedAt: c.updated_at ? new Date(c.updated_at) : undefined,
-             deletedAt: c.deleted_at || undefined
-          };
-          setCategories(prev => prev.map(cat => cat.id === updatedCat.id ? updatedCat : cat).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)));
-        } else if (payload.eventType === 'DELETE') {
-          setCategories(prev => prev.filter(c => c.id !== payload.old.id));
+    // Subscribe to dishes changes
+    const dishesSubscription = supabase
+      .channel('dishes-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'dishes' },
+        () => {
+          // Os produtos já são atualizados pelo hook useRealtimeCategoriesWithProducts
+          console.log('Dishes updated in real-time');
         }
-      })
+      )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(productsChannel);
-      supabase.removeChannel(categoriesChannel);
+      supabase.removeChannel(categoriesSubscription);
+      supabase.removeChannel(dishesSubscription);
     };
-  }, []);
+  }, [supabase]);
 
   // Filtering Logic
   const filteredProducts = useMemo(() => {

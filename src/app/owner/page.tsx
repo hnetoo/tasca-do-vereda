@@ -1,16 +1,19 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { addRealTestData } from '@/app/actions/addRealData';
 import type { Database } from '@/types/supabase';
+import { useRealtimeOrders, useRealtimeMetrics, useRealtimeTransactions } from '@/hooks/useSupabaseRealtime';
+import { supabaseService } from '@/services/supabaseService';
+import { useStore } from '@/store/useStore';
 
 type RevenueRow = Database['public']['Tables']['revenues']['Row'];
 type ExpenseRow = Database['public']['Tables']['expenses']['Row'];
 type OrderRow = Database['public']['Tables']['orders']['Row'];
 
 const fmt = (n: number) =>
-  new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AKZ', maximumFractionDigits: 0 }).format(
+  new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(
     Number.isFinite(n) ? n : 0
   );
 
@@ -24,355 +27,346 @@ type Tx = {
   status?: string;
 };
 
-type SqliteDataResult = {
-  success: boolean;
-  transactions?: Tx[];
-  revenueTotal: number;
-  expenseTotal: number;
-  monthTotal: number;
-  ordersCount: number;
-  error?: string;
-};
-
 export default function OwnerRealtime() {
   const router = useRouter();
+  const { addNotification } = useStore();
   const [ready, setReady] = useState(false);
-  const [revenues, setRevenues] = useState<RevenueRow[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
-  const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [monthRevenues, setMonthRevenues] = useState<RevenueRow[]>([]);
-  const [transactions, setTransactions] = useState<Tx[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES' | 'CUSTOM'>('HOJE');
-  const [startDate, setStartDate] = useState<string | null>(null);
-  const [endDate, setEndDate] = useState<string | null>(null);
+  const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [authChecking, setAuthChecking] = useState(true);
-  const [addingTestData, setAddingTestData] = useState(false);
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Verificar autenticação independente
+  // Hooks de tempo real
+  const { data: orders, loading: ordersLoading, error: ordersError } = useRealtimeOrders();
+  const { metrics, loading: metricsLoading } = useRealtimeMetrics();
+  const { data: transactions, loading: transactionsLoading } = useRealtimeTransactions();
+
+  // Estado para métricas calculadas
+  const realtimeStats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todayOrders = orders.filter(order => 
+      new Date(order.created_at) >= today
+    );
+    
+    const todaySales = todayOrders.reduce((sum, order) => 
+      sum + (order.total_amount || 0), 0
+    );
+    
+    const pendingOrders = orders.filter(order => 
+      order.status === 'pending' || order.status === 'preparing'
+    ).length;
+    
+    const activeTables = new Set(
+      todayOrders
+        .filter(order => order.table_id && order.status !== 'completed')
+        .map(order => order.table_id)
+    ).size;
+    
+    const averageTicket = todayOrders.length > 0 
+      ? todaySales / todayOrders.length 
+      : 0;
+
+    return {
+      todaySales,
+      todayOrders: todayOrders.length,
+      pendingOrders,
+      activeTables,
+      averageTicket
+    };
+  }, [orders]);
+
+  // Verificar autenticação
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       try {
-        const auth = localStorage.getItem('owner_auth');
-        const timestamp = localStorage.getItem('owner_timestamp');
-        
-        if (auth !== 'true' || !timestamp) {
-          router.push('/owner/login');
+        setAuthChecking(true);
+        const result = await supabaseService.client?.auth.getSession();
+        if (!result?.data?.session) {
+          window.location.href = '/login';
           return;
         }
-        
-        const authTime = parseInt(timestamp);
-        const now = Date.now();
-        const hoursPassed = (now - authTime) / (1000 * 60 * 60);
-        
-        // Sessão válida por 24 horas
-        if (hoursPassed >= 24) {
-          localStorage.removeItem('owner_auth');
-          localStorage.removeItem('owner_timestamp');
-          router.push('/owner/login');
-          return;
-        }
-        
-        setAuthChecking(false);
+        setReady(true);
       } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
-        router.push('/owner/login');
+        console.error('Auth check failed:', error);
+        window.location.href = '/login';
+      } finally {
+        setAuthChecking(false);
       }
     };
 
     checkAuth();
-  }, [router]);
+  }, []);
 
-  const computeRange = () => {
+  // Combinar transações de pedidos e transações financeiras
+  const combinedTransactions = useMemo(() => {
+    const txs: Array<{
+      id: string;
+      date: string;
+      description: string;
+      category: string;
+      type: 'REVENUE' | 'EXPENSE';
+      amount: number;
+    }> = [];
+
+    // Adicionar transações dos pedidos
+    orders.forEach(order => {
+      txs.push({
+        id: `order-${order.id}`,
+        date: order.created_at,
+        description: `Pedido #${order.order_number}`,
+        category: 'Vendas',
+        type: 'REVENUE',
+        amount: order.total_amount || 0
+      });
+    });
+
+    // Adicionar transações financeiras
+    transactions.forEach(transaction => {
+      txs.push({
+        id: transaction.id,
+        date: transaction.created_at,
+        description: transaction.description || 'Transação',
+        category: transaction.category || 'Geral',
+        type: transaction.type as 'REVENUE' | 'EXPENSE',
+        amount: transaction.amount || 0
+      });
+    });
+
+    return txs;
+  }, [orders, transactions]);
+
+  // Filtrar transações por período
+  const filteredTransactions = useMemo(() => {
     const now = new Date();
-    if (period === 'HOJE') {
-      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
-      return { start, end };
-    }
-    if (period === 'SEMANA') {
-      const d = new Date(now);
-      const day = d.getDay() || 7;
-      const startDate = new Date(d);
-      startDate.setDate(d.getDate() - day + 1);
-      const endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 7);
-      return { start: startDate.toISOString(), end: endDate.toISOString() };
-    }
-    if (period === 'MES') {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-      return { start, end };
-    }
-    return { start: startDate || undefined, end: endDate || undefined };
-  };
+    let filterStart: Date;
+    let filterEnd: Date;
 
-  const loadAll = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Dados mockados para teste - removendo dependências complexas
-      console.log('🔍 Carregando dados de exemplo para dashboard owner');
-      
-      // Dados de exemplo para demonstração
-      const mockData = {
-        transactions: [
-          { id: '1', date: new Date().toISOString(), amount: 50000, description: 'Venda do dia', category: 'Alimentação', type: 'REVENUE' as const },
-          { id: '2', date: new Date().toISOString(), amount: 15000, description: 'Compra de produtos', category: 'Custos', type: 'EXPENSE' as const },
-        ],
-        revenueTotal: 50000,
-        expenseTotal: 15000,
-        monthTotal: 85000,
-        ordersCount: 25
-      };
-      
-      setTransactions(mockData.transactions);
-      setRevenues([{ id: 'today', amount: mockData.revenueTotal } as any]);
-      setExpenses([{ id: 'today', amount: mockData.expenseTotal } as any]);
-      setMonthRevenues([{ id: 'month', amount: mockData.monthTotal } as any]);
-      setOrders(new Array(mockData.ordersCount).fill(0).map((_, i) => ({ id: `o-${i}`, total: 0 } as any)));
-      
-      console.log('✅ Dados carregados com sucesso:', mockData);
-    } catch (e: any) {
-      setError(e.message || 'Falha ao carregar dados');
-    } finally {
-      setLoading(false);
-      setReady(true);
+    switch (period) {
+      case 'HOJE':
+        filterStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        filterEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        break;
+      case 'SEMANA':
+        filterStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        filterEnd = now;
+        break;
+      case 'MES':
+        filterStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        filterEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      default:
+        filterStart = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        filterEnd = endDate ? new Date(endDate) : now;
     }
-  };
 
-  useEffect(() => {
-    if (authChecking) return;
-    
-    loadAll();
-    
-    // Reload automático a cada 10 segundos
-    const reloadInterval = setInterval(loadAll, 10000);
-    
-    return () => {
-      clearInterval(reloadInterval);
-    };
-  }, [period, startDate, endDate, authChecking]);
+    return combinedTransactions.filter(tx => {
+      const txDate = new Date(tx.date);
+      return txDate >= filterStart && txDate <= filterEnd;
+    });
+  }, [combinedTransactions, period, startDate, endDate]);
 
+  // Calcular totais
   const totals = useMemo(() => {
-    const revenueTotal = revenues.reduce((acc, r) => acc + Number(r.amount || 0), 0);
-    const expenseTotal = expenses.reduce((acc, e) => acc + Number(e.amount || 0), 0);
-    const net = revenueTotal - expenseTotal;
-    const monthTotal = monthRevenues.reduce((acc, r) => acc + Number(r.amount || 0), 0);
-    return { revenueTotal, expenseTotal, net, monthTotal };
-  }, [revenues, expenses, monthRevenues]);
+    const revenue = filteredTransactions
+      .filter(tx => tx.type === 'REVENUE')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    
+    const expense = filteredTransactions
+      .filter(tx => tx.type === 'EXPENSE')
+      .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const handleLogout = () => {
-    localStorage.removeItem('owner_auth');
-    localStorage.removeItem('owner_timestamp');
-    router.push('/owner/login');
-  };
+    return {
+      revenue,
+      expense,
+      net: revenue - expense,
+      count: filteredTransactions.length
+    };
+  }, [filteredTransactions]);
 
-  const handleAddTestData = async () => {
-    setAddingTestData(true);
-    try {
-      const result = await addRealTestData();
-      if (result.success) {
-        // Recarregar dados após adicionar dados de teste
-        loadAll();
-      } else {
-        setError(result.error || 'Falha ao adicionar dados de teste');
-      }
-    } catch (e: any) {
-      setError(e.message || 'Erro ao adicionar dados de teste');
-    } finally {
-      setAddingTestData(false);
-    }
-  };
-
-  if (authChecking) {
+  // Loading state
+  if (authChecking || ordersLoading || metricsLoading || transactionsLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-200 flex items-center justify-center">
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm">Verificando autenticação...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Carregando dados em tempo real...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Visão remota</h2>
-            <p className="text-slate-500 text-xs">Dashboard em Tempo Real (Nuvem)</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Atualizado
-            </span>
-            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-800 text-slate-400 border border-white/10">
-              SQLite
-            </span>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
-            >
-              Sair
-            </button>
-            <button
-              onClick={handleAddTestData}
-              disabled={addingTestData}
-              className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
-            >
-              {addingTestData ? 'Adicionando...' : 'Adicionar Dados'}
-            </button>
-          </div>
+  // Error state
+  if (ordersError) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">Erro ao carregar dados: {ordersError}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-red-600 px-4 py-2 rounded"
+          >
+            Recarregar
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex gap-2 bg-slate-900 border border-white/10 rounded-xl p-1">
-            {(['HOJE','SEMANA','MES','CUSTOM'] as const).map(p => (
+      </div>
+    );
+  }
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
+  // Renderizar dashboard em tempo real
+  return (
+    <div className="min-h-screen bg-black text-white p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2">Dashboard em Tempo Real</h1>
+        <p className="text-gray-400">Monitoramento ao vivo do restaurante</p>
+      </div>
+
+      {/* KPIs em Tempo Real */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-2xl border border-green-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-green-200 text-sm font-medium">Vendas Hoje</span>
+            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">{fmt(realtimeStats.todaySales)}</div>
+          <div className="text-green-200 text-sm">{realtimeStats.todayOrders} pedidos</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-2xl border border-blue-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-blue-200 text-sm font-medium">Mesas Ativas</span>
+            <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">{realtimeStats.activeTables}</div>
+          <div className="text-blue-200 text-sm">Ocupadas agora</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-600 to-orange-800 p-6 rounded-2xl border border-orange-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-orange-200 text-sm font-medium">Pedidos Pendentes</span>
+            <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">{realtimeStats.pendingOrders}</div>
+          <div className="text-orange-200 text-sm">Aguardando</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-6 rounded-2xl border border-purple-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-purple-200 text-sm font-medium">Ticket Médio</span>
+            <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">{fmt(realtimeStats.averageTicket)}</div>
+          <div className="text-purple-200 text-sm">Por pedido</div>
+        </div>
+      </div>
+
+      {/* Período Selector */}
+      <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10 mb-8">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex gap-2">
+            {(['HOJE', 'SEMANA', 'MES'] as const).map(p => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${period===p ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'}`}
+                className={`px-4 py-2 rounded-xl font-medium transition-all ${
+                  period === p 
+                    ? 'bg-primary text-black' 
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
               >
                 {p}
               </button>
             ))}
           </div>
-          {period === 'CUSTOM' && (
-            <>
-              <input type="datetime-local" className="bg-slate-900 border border-white/10 rounded-lg p-2 text-xs"
-                value={startDate || ''} onChange={e=>setStartDate(e.target.value)} />
-              <input type="datetime-local" className="bg-slate-900 border border-white/10 rounded-lg p-2 text-xs"
-                value={endDate || ''} onChange={e=>setEndDate(e.target.value)} />
-              <button onClick={loadAll} className="px-3 py-2 rounded-lg bg-primary text-black text-[10px] font-black uppercase tracking-widest">Aplicar</button>
-            </>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10 min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total Arrecadado</div>
-            <div className="font-black text-white leading-tight tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{fmt(totals.monthTotal)}</div>
-            <div className="text-[10px] text-slate-500 mt-1">Este mês</div>
+          
+          <div className="flex gap-2 items-center">
+            <input
+              type="date"
+              value={startDate || ''}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="bg-gray-800 px-3 py-2 rounded-lg text-white"
+            />
+            <span className="text-gray-400">até</span>
+            <input
+              type="date"
+              value={endDate || ''}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="bg-gray-800 px-3 py-2 rounded-lg text-white"
+            />
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10 min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Hoje</div>
-            <div className="font-black text-white leading-tight tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{fmt(totals.revenueTotal)}</div>
-            <div className="text-[10px] text-slate-500 mt-1">{orders.length} pedidos</div>
-          </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10 min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Despesas Hoje</div>
-            <div className="font-black text-red-400 leading-tight tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{fmt(totals.expenseTotal)}</div>
-            <div className="text-[10px] text-slate-500 mt-1">saídas</div>
-          </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10 min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Fluxo de Caixa</div>
-            <div className="font-black text-emerald-400 leading-tight tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{fmt(totals.net)}</div>
-            <div className="text-[10px] text-slate-500 mt-1">hoje</div>
-          </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Equipa</div>
-            <div className="text-2xl font-black text-white">0</div>
-            <div className="text-[10px] text-slate-500 mt-1">ao serviço</div>
-          </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Preparo Médio</div>
-            <div className="text-2xl font-black text-white">15m</div>
-            <div className="text-[10px] text-slate-500 mt-1">por encomenda</div>
-          </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Ativos</div>
-            <div className="text-2xl font-black text-white">0</div>
-            <div className="text-[10px] text-slate-500 mt-1">mesas ativas</div>
-          </div>
-          <div className="p-5 rounded-2xl bg-slate-900 border border-white/10">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Mesas Livres</div>
-            <div className="text-2xl font-black text-white">0</div>
-            <div className="text-[10px] text-slate-500 mt-1">disponível</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 bg-slate-900 rounded-2xl border border-white/10">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Receitas Recentes</div>
-            <div className="space-y-2">
-              {revenues.slice(0, 6).map((r) => (
-                <div key={r.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                  <span className="text-sm font-bold">{r.description || 'Venda'}</span>
-                  <span className="text-sm font-mono text-emerald-400">{fmt(Number(r.amount || 0))}</span>
-                </div>
-              ))}
-              {ready && revenues.length === 0 && (
-                <div className="text-xs text-slate-500">Sem receitas hoje.</div>
-              )}
-            </div>
-          </div>
-
-          <div className="p-6 bg-slate-900 rounded-2xl border border-white/10">
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Despesas Recentes</div>
-            <div className="space-y-2">
-              {expenses.slice(0, 6).map((e) => (
-                <div key={e.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                  <span className="text-sm font-bold">{e.description || 'Despesa'}</span>
-                  <span className="text-sm font-mono text-red-400">{fmt(Number(e.amount || 0))}</span>
-                </div>
-              ))}
-              {ready && expenses.length === 0 && (
-                <div className="text-xs text-slate-500">Sem despesas hoje.</div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 bg-slate-900 rounded-2xl border border-white/10">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Transações Financeiras</h3>
-            <div className="text-xs text-slate-500 font-mono">
-              Total Receitas: <span className="text-emerald-400">{fmt(transactions.filter(t=>t.type==='REVENUE').reduce((a,b)=>a+b.amount,0))}</span> •
-              Total Despesas: <span className="text-red-400">{fmt(transactions.filter(t=>t.type==='EXPENSE').reduce((a,b)=>a+b.amount,0))}</span>
-            </div>
-          </div>
-          {loading ? (
-            <div className="py-10 text-center text-slate-500 text-xs font-black uppercase tracking-widest">A carregar…</div>
-          ) : error ? (
-            <div className="py-10 text-center text-red-400 text-xs font-black uppercase tracking-widest">{error}</div>
-          ) : transactions.length === 0 ? (
-            <div className="py-10 text-center text-slate-500 text-xs font-black uppercase tracking-widest">Sem transações no período</div>
-          ) : (
-            <div className="overflow-auto rounded-xl border border-white/10">
-              <table className="min-w-full text-sm">
-                <thead className="bg-white/5 text-slate-400">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-bold">Data</th>
-                    <th className="px-4 py-2 text-left font-bold">Descrição</th>
-                    <th className="px-4 py-2 text-left font-bold">Categoria</th>
-                    <th className="px-4 py-2 text-left font-bold">Tipo</th>
-                    <th className="px-4 py-2 text-right font-bold">Valor</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {transactions.map((t) => (
-                    <tr key={t.id}>
-                      <td className="px-4 py-2 text-slate-300">{new Date(t.date).toLocaleString('pt-AO')}</td>
-                      <td className="px-4 py-2 text-white">{t.description}</td>
-                      <td className="px-4 py-2 text-slate-300">{t.category}</td>
-                      <td className="px-4 py-2">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${t.type==='REVENUE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                          {t.type}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-2 text-right font-mono ${t.type==='REVENUE' ? 'text-emerald-400' : 'text-red-400'}`}>{fmt(t.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Resumo Financeiro */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
+          <h3 className="text-xl font-bold mb-4 text-green-400">Receitas</h3>
+          <div className="text-3xl font-bold text-green-400">{fmt(totals.revenue)}</div>
+          <div className="text-gray-400 text-sm mt-2">{filteredTransactions.filter(t => t.type === 'REVENUE').length} transações</div>
+        </div>
+
+        <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
+          <h3 className="text-xl font-bold mb-4 text-red-400">Despesas</h3>
+          <div className="text-3xl font-bold text-red-400">{fmt(totals.expense)}</div>
+          <div className="text-gray-400 text-sm mt-2">{filteredTransactions.filter(t => t.type === 'EXPENSE').length} transações</div>
+        </div>
+
+        <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
+          <h3 className="text-xl font-bold mb-4">Lucro Líquido</h3>
+          <div className={`text-3xl font-bold ${totals.net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {fmt(totals.net)}
+          </div>
+          <div className="text-gray-400 text-sm mt-2">Margem: {totals.revenue > 0 ? ((totals.net / totals.revenue) * 100).toFixed(1) : 0}%</div>
+        </div>
+      </div>
+
+      {/* Transações Recentes */}
+      <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
+        <h3 className="text-xl font-bold mb-4">Transações Recentes</h3>
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {filteredTransactions.slice(0, 20).map(tx => (
+            <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+              <div className="flex-1">
+                <div className="font-medium">{tx.description}</div>
+                <div className="text-sm text-gray-400">{tx.category} • {new Date(tx.date).toLocaleTimeString()}</div>
+              </div>
+              <div className={`font-bold ${tx.type === 'REVENUE' ? 'text-green-400' : 'text-red-400'}`}>
+                {tx.type === 'REVENUE' ? '+' : '-'}{fmt(tx.amount)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Produtos Mais Vendidos */}
+      {metrics?.top_products && (
+        <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10 mt-8">
+          <h3 className="text-xl font-bold mb-4">Produtos Mais Vendidos</h3>
+          <div className="space-y-2">
+            {metrics.top_products.map((product: any, index: number) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                <div>
+                  <div className="font-medium">{product.name}</div>
+                  <div className="text-sm text-gray-400">{product.quantity} vendidos</div>
+                </div>
+                <div className="font-bold text-green-400">{fmt(product.revenue)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

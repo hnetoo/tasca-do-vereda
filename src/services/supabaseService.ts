@@ -8,13 +8,193 @@ import { calculateHash } from '@/utils/crypto';
 import { env } from '@/utils/env';
 
 export class SupabaseService {
-  private client: SupabaseClient | null = null;
+  public client: SupabaseClient | null = null;
   private config: { url: string; key: string } | null = null;
   private syncStatus: { status: 'idle' | 'success' | 'error' | 'retrying'; isConnected: boolean; lastSuccessAt: number | null; lastErrorAt: number | null; retries: number; errorMessage?: string; hasCriticalError: boolean; criticalErrorMessage?: string } = { status: 'idle', isConnected: false, lastSuccessAt: null, lastErrorAt: null, retries: 0, hasCriticalError: false };
   private circuitBreaker: { open: boolean; failures: number; threshold: number; openedAt: number; cooldownMs: number; halfOpenProbe: boolean } = { open: false, failures: 0, threshold: 3, openedAt: 0, cooldownMs: 30000, halfOpenProbe: false };
   private subscriptions: Map<string, RealtimeChannel> = new Map();
   private realtimeHandlers: Map<string, (payload: any) => void> = new Map();
   private statusHandler: ((status: typeof this.syncStatus) => void) | null = null;
+
+  // ========================================
+  // MÉTODOS ESPECÍFICOS PARA TASCA DO VEREDA
+  // ========================================
+
+  async getOrders() {
+    if (!this.client) throw new Error('Client not initialized');
+    return await this.client
+      .from('orders')
+      .select(`
+        *,
+        restaurant_tables:table_id (
+          number,
+          name,
+          capacity
+        ),
+        employees:waiter_id (
+          name,
+          email
+        ),
+        order_items (
+          *,
+          dishes:product_id (
+            name,
+            price,
+            image_url
+          )
+        )
+      `)
+      .order('created_at', { ascending: false });
+  }
+
+  async createOrder(orderData: any) {
+    if (!this.client) throw new Error('Client not initialized');
+    const orderNumber = `ORD-${Date.now()}`;
+    
+    const { data, error } = await this.client
+      .from('orders')
+      .insert({
+        ...orderData,
+        order_number: orderNumber,
+        status: 'pending',
+        payment_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateOrder(id: string, updates: any) {
+    if (!this.client) throw new Error('Client not initialized');
+    const { data, error } = await this.client
+      .from('orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getTables() {
+    if (!this.client) throw new Error('Client not initialized');
+    return await this.client
+      .from('restaurant_tables')
+      .select('*')
+      .order('number');
+  }
+
+  async updateTableStatus(id: string, status: string) {
+    if (!this.client) throw new Error('Client not initialized');
+    const { data, error } = await this.client
+      .from('restaurant_tables')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async getProducts() {
+    if (!this.client) throw new Error('Client not initialized');
+    return await this.client
+      .from('dishes')
+      .select(`
+        *,
+        menu_categories:category_id (
+          name,
+          color
+        )
+      `)
+      .eq('is_active', true)
+      .order('name');
+  }
+
+  async getFinancialMetrics() {
+    if (!this.client) throw new Error('Client not initialized');
+    const { data, error } = await this.client.rpc('calculate_realtime_metrics');
+    
+    if (error) throw error;
+    return data;
+  }
+
+  // ========================================
+  // MÉTODOS DE TEMPO REAL
+  // ========================================
+
+  subscribeToOrders(callback: (payload: any) => void) {
+    if (!this.client) throw new Error('Client not initialized');
+    
+    const channel = this.client
+      .channel('realtime-orders')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        callback
+      )
+      .subscribe();
+
+    this.subscriptions.set('orders', channel);
+    return channel;
+  }
+
+  subscribeToTables(callback: (payload: any) => void) {
+    if (!this.client) throw new Error('Client not initialized');
+    
+    const channel = this.client
+      .channel('realtime-tables')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'restaurant_tables' },
+        callback
+      )
+      .subscribe();
+
+    this.subscriptions.set('tables', channel);
+    return channel;
+  }
+
+  subscribeToProducts(callback: (payload: any) => void) {
+    if (!this.client) throw new Error('Client not initialized');
+    
+    const channel = this.client
+      .channel('realtime-products')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'dishes' },
+        callback
+      )
+      .subscribe();
+
+    this.subscriptions.set('products', channel);
+    return channel;
+  }
+
+  subscribeToTransactions(callback: (payload: any) => void) {
+    if (!this.client) throw new Error('Client not initialized');
+    
+    const channel = this.client
+      .channel('realtime-transactions')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        callback
+      )
+      .subscribe();
+
+    this.subscriptions.set('transactions', channel);
+    return channel;
+  }
+
+  unsubscribeAll() {
+    this.subscriptions.forEach((channel) => {
+      if (this.client) {
+        this.client.removeChannel(channel);
+      }
+    });
+    this.subscriptions.clear();
+  }
 
   async initialize(
     url?: string, 
