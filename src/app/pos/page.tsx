@@ -229,6 +229,15 @@ const POS = () => {
 
   
   const totalWithTax = currentOrder?.total || 0;
+  
+  // Fallback: Calcular total diretamente dos itens se o total da order for zero
+  const calculatedTotal = currentOrder?.items?.reduce((sum: number, item: any) => {
+    const dish = menu.find((d: Product) => d.id === (item.dishId || item.dish_id));
+    if (!dish) return sum;
+    return sum + (dish.price || 0) * (item.quantity || 0);
+  }, 0) || 0;
+  
+  const displayTotal = totalWithTax > 0 ? totalWithTax : calculatedTotal;
 
   const getExportConfig = () => {
     const shiftOrders = activeOrders.filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId);
@@ -872,11 +881,11 @@ const POS = () => {
   const addPayment = (method: PaymentMethod, amount: number) => {
     // Se já existe um pagamento que cobre o total e estamos adicionando outro,
     // verificar se é uma substituição de método (apenas se houver 1 pagamento e valor igual ao total)
-    if (currentPayments.length === 1 && Math.abs(currentPayments[0].amount - (totalWithTax || 0)) < 0.01) {
+    if (currentPayments.length === 1 && Math.abs(currentPayments[0].amount - (displayTotal || 0)) < 0.01) {
        const newPayment: OrderPayment = {
         id: `pay-${Date.now()}`,
         method,
-        amount: totalWithTax || 0, // Garante que o valor é exato
+        amount: displayTotal || 0, // Garante que o valor é exato
         timestamp: new Date().toISOString()
       };
       setCurrentPayments([newPayment]);
@@ -899,7 +908,7 @@ const POS = () => {
   const handlePayment = () => {
     if (activeOrderId && currentPayments.length > 0 && currentOrder) {
       const totalPaid = currentPayments.reduce((sum, p) => sum + p.amount, 0);
-      if (Math.abs(totalPaid - (totalWithTax || 0)) > 0.01) {
+      if (Math.abs(totalPaid - (displayTotal || 0)) > 0.01) {
         addNotification('error', 'O valor total pago deve ser igual ao total do pedido.');
         return;
       }
@@ -1090,7 +1099,10 @@ const POS = () => {
       {isImmersive && (
         <div className="fixed top-4 left-4 z-50 animate-in slide-in-from-left">
           <button 
-            onClick={toggleSidebar}
+            onClick={() => {
+              console.log('🔧 Botão Sair Fullscreen clicado');
+              toggleSidebar();
+            }} 
             className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-red-600/30 transition-all group hover:scale-110"
             title="Sair do Modo Fullscreen (ESC)"
           >
@@ -1104,7 +1116,14 @@ const POS = () => {
 
       {/* POS Internal Command Bar - Com animação suave */}
       <div className={`w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full transition-transform duration-500 ease-in-out ${isImmersive ? '-translate-x-full opacity-0' : 'translate-x-0 opacity-100'}`}>
-         <button onClick={toggleSidebar} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" title="Menu Principal / Fullscreen">
+         <button 
+           onClick={() => {
+             console.log('🔧 Botão Menu/Fullscreen clicado - isImmersive:', isImmersive);
+             toggleSidebar();
+           }} 
+           className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" 
+           title="Menu Principal / Fullscreen"
+         >
             <Menu size={24} />
          </button>
          
@@ -1531,7 +1550,7 @@ const POS = () => {
                 <div className="flex justify-between items-end mb-6">
                     <div>
                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Total Parcial</span>
-                      <h3 className="text-2xl font-mono font-bold text-primary leading-none mt-1">{formatKz(totalWithTax)}</h3>
+                      <h3 className="text-2xl font-mono font-bold text-primary leading-none mt-1">{formatKz(displayTotal)}</h3>
                     </div>
                 </div>
                 <div className="grid grid-cols-4 gap-3 mb-3">
@@ -1689,12 +1708,12 @@ const POS = () => {
               <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="p-8 bg-primary/5 border border-primary/20 rounded-[2rem] flex flex-col justify-center">
                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total a Pagar</p>
-                   <p className="font-mono font-bold text-primary text-glow whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,4vw,2rem)]">{formatKz(totalWithTax)}</p>
+                   <p className="font-mono font-bold text-primary text-glow whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,4vw,2rem)]">{formatKz(displayTotal)}</p>
                 </div>
                 <div className="p-8 bg-white/5 border border-white/10 rounded-[2rem] flex flex-col justify-center">
                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Faltante</p>
-                   <p className={`font-mono font-bold whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,4vw,2rem)] ${Math.max(0, totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                     {formatKz(Math.max(0, totalWithTax - currentPayments.reduce((sum, p) => sum + p.amount, 0)))}
+                   <p className={`font-mono font-bold whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,4vw,2rem)] ${Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                     {formatKz(Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)))}
                    </p>
                 </div>
               </div>
@@ -1735,7 +1754,7 @@ const POS = () => {
 
               <div className="grid grid-cols-2 gap-4 mb-10">
                  {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
-                   const remaining = (totalWithTax || 0) - currentPayments.reduce((sum, p) => sum + p.amount, 0);
+                   const remaining = (displayTotal || 0) - currentPayments.reduce((sum, p) => sum + p.amount, 0);
                    const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
                    const isDisabled = remaining <= 0.01 && !canSubstitute;
 
@@ -1743,7 +1762,7 @@ const POS = () => {
                      <button key={method} 
                       onClick={() => {
                         if (remaining > 0.01 || canSubstitute) {
-                          addPayment(method, remaining > 0 ? remaining : (totalWithTax || 0));
+                          addPayment(method, remaining > 0 ? remaining : (displayTotal || 0));
                         }
                       }}
                       disabled={isDisabled}
@@ -1756,7 +1775,7 @@ const POS = () => {
                  })}
               </div>
               <button 
-                disabled={Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - (totalWithTax || 0)) > 0.01} 
+                disabled={Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - (displayTotal || 0)) > 0.01} 
                 onClick={handlePayment} 
                 className="w-full py-6 bg-primary text-black rounded-3xl font-black uppercase tracking-widest shadow-glow disabled:opacity-10 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3"
               >

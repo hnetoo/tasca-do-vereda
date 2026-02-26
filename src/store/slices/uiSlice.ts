@@ -85,9 +85,13 @@ export const createUISlice: StateCreator<
     });
   },
   
-  toggleSidebar: () => set((state: StoreState) => ({ 
-    isSidebarCollapsed: !state.isSidebarCollapsed 
-  })),
+  toggleSidebar: () => {
+    console.log('🔧 toggleSidebar chamado - estado atual:', get().isSidebarCollapsed);
+    set((state: StoreState) => ({ 
+      isSidebarCollapsed: !state.isSidebarCollapsed 
+    }));
+    console.log('🔧 toggleSidebar - novo estado:', !get().isSidebarCollapsed);
+  },
 
   toggleMobileMenu: () => set((state: StoreState) => ({
     isMobileMenuOpen: !state.isMobileMenuOpen
