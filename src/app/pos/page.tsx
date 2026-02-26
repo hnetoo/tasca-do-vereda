@@ -1030,6 +1030,17 @@ const POS = () => {
     };
   }, [isSidebarCollapsed, toggleMobileMenu]);
 
+  // ESC key to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isImmersive) {
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isImmersive, toggleSidebar]);
+
   const getCategoryIcon = (name: string, predefinedIcon?: string) => {
     if (predefinedIcon) {
       const iconObj = AVAILABLE_ICONS.find(i => i.name === predefinedIcon);
@@ -1075,21 +1086,24 @@ const POS = () => {
   return (
     <div className={`flex h-full overflow-hidden relative bg-background font-sans text-slate-200 ${isImmersive ? 'pl-0' : ''}`}>
       
-      {/* Fullscreen Exit Button - Only visible when in immersive mode */}
+      {/* Fullscreen Exit Button - Apenas visível quando em modo immersive */}
       {isImmersive && (
-        <div className="fixed top-4 left-4 z-50">
+        <div className="fixed top-4 left-4 z-50 animate-in slide-in-from-left">
           <button 
             onClick={toggleSidebar}
-            className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-lg transition-all group"
-            title="Sair do Modo Tela Cheia"
+            className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-red-600/30 transition-all group hover:scale-110"
+            title="Sair do Modo Fullscreen (ESC)"
           >
             <X size={20} />
           </button>
+          <div className="absolute top-14 left-0 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Sair Fullscreen
+          </div>
         </div>
       )}
 
-      {/* POS Internal Command Bar */}
-      <div className={`w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full transition-all duration-300 ${isImmersive ? '-translate-x-full' : ''}`}>
+      {/* POS Internal Command Bar - Com animação suave */}
+      <div className={`w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full transition-transform duration-500 ease-in-out ${isImmersive ? '-translate-x-full opacity-0' : 'translate-x-0 opacity-100'}`}>
          <button onClick={toggleSidebar} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" title="Menu Principal / Fullscreen">
             <Menu size={24} />
          </button>
@@ -1236,9 +1250,27 @@ const POS = () => {
           {/* Product Menu Area */}
           <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
               <div className="h-20 flex items-center justify-between px-8 bg-slate-900/20 border-b border-white/5">
-                  <div className="flex-1 max-w-md relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                      <input type="text" placeholder="Pesquisar pratos ou códigos..." className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm text-white focus:outline-none focus:border-primary font-bold transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
+                  <div className="flex items-center gap-4">
+                    {/* Fullscreen Toggle Button - Bem visível */}
+                    <button
+                      onClick={toggleSidebar}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
+                        isImmersive 
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white' 
+                          : 'bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-black'
+                      }`}
+                      title={isImmersive ? 'Sair do Modo Fullscreen' : 'Entrar em Modo Fullscreen'}
+                    >
+                      {isImmersive ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                      <span className="hidden sm:inline">{isImmersive ? 'Sair' : 'Fullscreen'}</span>
+                    </button>
+                    
+                    <div className="w-px h-8 bg-white/10"></div>
+                    
+                    <div className="flex-1 max-w-md relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input type="text" placeholder="Pesquisar pratos ou códigos..." className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm text-white focus:outline-none focus:border-primary font-bold transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
+                    </div>
                   </div>
                   {activeTableId && (
                     <div className="ml-4 flex items-center gap-3 animate-in slide-in-from-right">
