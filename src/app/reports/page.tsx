@@ -99,30 +99,89 @@ const Reports = () => {
   }, [closedOrders]);
 
   const paymentChartData = useMemo(() => {
-      // Simplified payment chart data for reconstruction
-      return [];
-  }, []);
+    // Generate payment chart data based on filtered orders
+    const now = new Date();
+    let filteredOrders = closedOrders;
+    
+    // Filter by period
+    if (paymentPeriod === 'DIA') {
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      filteredOrders = closedOrders.filter(o => {
+        const orderDate = new Date(o.createdAt || o.created_at || new Date());
+        return orderDate >= today;
+      });
+    } else if (paymentPeriod === 'SEMANA') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      filteredOrders = closedOrders.filter(o => {
+        const orderDate = new Date(o.createdAt || o.created_at || new Date());
+        return orderDate >= weekAgo;
+      });
+    } else if (paymentPeriod === 'MES') {
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      filteredOrders = closedOrders.filter(o => {
+        const orderDate = new Date(o.createdAt || o.created_at || new Date());
+        return orderDate >= thisMonth;
+      });
+    } else if (paymentPeriod === 'ANO') {
+      filteredOrders = closedOrders.filter(o => {
+        const orderDate = new Date(o.createdAt || o.created_at || new Date());
+        return orderDate.getFullYear() === paymentYear;
+      });
+    }
+
+    // Aggregate by payment method
+    const paymentAggregates: Record<string, number> = {};
+    filteredOrders.forEach(order => {
+      const payments = extractPayments(order);
+      payments.forEach(payment => {
+        const key = payment.method;
+        const amount = payment.amount || 0;
+        paymentAggregates[key] = (paymentAggregates[key] || 0) + amount;
+      });
+    });
+
+    // Convert to chart format
+    return Object.entries(paymentAggregates).map(([method, amount]) => ({
+      name: method,
+      [method]: amount
+    }));
+  }, [closedOrders, paymentPeriod, paymentYear]);
   
   const paymentMethods = Object.keys(paymentLabels);
   const COLORS = ['#FFBB28', '#FF8042', '#0088FE', '#00C49F', '#8884d8', '#82ca9d', '#ffc658'];
 
   const handleExportPayments = async () => {
     if (chartRef.current) {
-        // await exportChartToPDF(chartRef.current, 'relatorio-pagamentos.pdf');
+      try {
+        await exportChartToPDF({
+          fileName: 'relatorio-pagamentos',
+          title: 'Relatório de Pagamentos',
+          periodLabel: paymentPeriod,
+          columns: [
+            { header: 'Método', dataKey: 'method' },
+            { header: 'Valor', dataKey: 'amount' }
+          ],
+          data: paymentChartData,
+          subtitle: `Período: ${paymentPeriod}`,
+          chartElement: chartRef.current
+        });
+      } catch (error) {
+        console.error('Failed to export PDF:', error);
+      }
     }
   };
 
   const generateReport = async () => {
-      setLoadingReport(true);
-      try {
-          const currentMonth = new Date().toLocaleString('pt-AO', { month: 'long' });
-          const rep = await generateMonthlyReport(orders, menu, currentMonth);
-          setReport(rep);
-      } catch (error) {
-          console.error("Failed to generate report", error);
-      } finally {
-          setLoadingReport(false);
-      }
+    setLoadingReport(true);
+    try {
+      const currentMonth = new Date().toLocaleString('pt-AO', { month: 'long' });
+      const rep = await generateMonthlyReport(orders, menu, currentMonth);
+      setReport(rep);
+    } catch (error) {
+      console.error("Failed to generate report", error);
+    } finally {
+      setLoadingReport(false);
+    }
   };
 
   return (
@@ -166,8 +225,12 @@ const Reports = () => {
               
               <ResponsiveContainer width="100%" height="100%">
                  {paymentChartData.length === 0 ? (
-                   <div className="flex items-center justify-center h-full text-slate-500">
-                     Sem dados para o período selecionado
+                   <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                     <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                       <BarChart3 size={32} />
+                     </div>
+                     <p className="text-sm font-medium">Sem dados para o período selecionado</p>
+                     <p className="text-xs text-slate-600 mt-2">Tente alterar o período ou aguardar novos pedidos</p>
                    </div>
                  ) : (
                    <div className="flex flex-col h-full">
