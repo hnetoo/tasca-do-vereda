@@ -1,16 +1,8 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { addRealTestData } from '@/app/actions/addRealData';
-import type { Database } from '@/types/supabase';
-import { useRealtimeOrders, useRealtimeMetrics, useRealtimeTransactions } from '@/hooks/useSupabaseRealtime';
-import { supabaseService } from '@/services/supabaseService';
 import { useStore } from '@/store/useStore';
-
-type RevenueRow = Database['public']['Tables']['revenues']['Row'];
-type ExpenseRow = Database['public']['Tables']['expenses']['Row'];
-type OrderRow = Database['public']['Tables']['orders']['Row'];
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(
@@ -27,85 +19,28 @@ type Tx = {
   status?: string;
 };
 
-export default function OwnerRealtime() {
+export default function OwnerPage() {
   const router = useRouter();
-  const { addNotification, orders: localOrders, dishes: localDishes, categories: localCategories } = useStore();
-  const [ready, setReady] = useState(false);
-  const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
   const [authChecking, setAuthChecking] = useState(true);
+  const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
+  
+  // Dados em tempo real do store local (SQLite)
+  const { 
+    orders, 
+    expenses,
+    dishes,
+    categories 
+  } = useStore();
 
-  // Verificar autenticação primeiro
+  // Verificar autenticação
   useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const isAuth = localStorage.getItem('owner_authenticated');
-        if (isAuth !== 'true') {
-          router.push('/owner/login');
-          return;
-        }
-        setAuthChecking(false);
-        setReady(true);
-      } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
-        router.push('/owner/login');
-      }
-    };
-
-    checkAuth();
-  }, [router]);
-
-  // Usar apenas dados locais para estabilidade máxima
-  const orders = useMemo(() => {
-    return localOrders || [];
-  }, [localOrders]);
-
-  const transactions = useMemo(() => {
-    // Criar transações a partir dos pedidos locais
-    const txs: Array<{
-      id: string;
-      date: string;
-      description: string;
-      category: string;
-      type: 'REVENUE' | 'EXPENSE';
-      amount: number;
-    }> = [];
-    
-    if (orders && orders.length > 0) {
-      orders.forEach(order => {
-        if (order && order.id) {
-          txs.push({
-            id: `order-${order.id}`,
-            date: (order.created_at instanceof Date ? order.created_at.toISOString() : order.created_at) || new Date().toISOString(),
-            description: `Pedido #${order.order_number || 'N/A'}`,
-            category: 'Vendas',
-            type: 'REVENUE' as const,
-            amount: order.total || 0
-          });
-        }
-      });
+    const isAuth = localStorage.getItem('owner_authenticated');
+    if (isAuth !== 'true') {
+      router.push('/owner/login');
+      return;
     }
-    return txs;
-  }, [orders]);
-
-  // Verificar se Supabase está configurado
-  useEffect(() => {
-    const checkSupabaseConfig = () => {
-      try {
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        
-        if (!url || !key) {
-          console.warn('Supabase não configurado. Usando dados do store local.');
-        }
-      } catch (error) {
-        console.error('Erro ao verificar configuração Supabase:', error);
-      }
-    };
-
-    checkSupabaseConfig();
-  }, []);
+    setAuthChecking(false);
+  }, [router]);
 
   // Estado para métricas calculadas
   const realtimeStats = useMemo(() => {
@@ -168,10 +103,55 @@ export default function OwnerRealtime() {
     }
   }, [orders]);
 
-  // Combinar transações de pedidos e transações financeiras
+  // Combinar transações - PRIORIDADE LOCAL
   const combinedTransactions = useMemo(() => {
-    return transactions; // Já criado acima
-  }, [transactions]);
+    const txs: Array<{
+      id: string;
+      date: string;
+      description: string;
+      category: string;
+      type: 'REVENUE' | 'EXPENSE';
+      amount: number;
+    }> = [];
+
+    try {
+      // Adicionar transações dos pedidos (local)
+      if (orders && orders.length > 0) {
+        orders.forEach(order => {
+          if (order && order.id) {
+            txs.push({
+              id: `order-${order.id}`,
+              date: (order.created_at instanceof Date ? order.created_at.toISOString() : order.created_at) || new Date().toISOString(),
+              description: `Pedido #${order.order_number || 'N/A'}`,
+              category: 'Vendas',
+              type: 'REVENUE' as const,
+              amount: order.total || 0
+            });
+          }
+        });
+      }
+
+      // Adicionar transações financeiras (local)
+      if (expenses && expenses.length > 0) {
+        expenses.forEach(expense => {
+          if (expense && expense.id) {
+            txs.push({
+              id: `expense-${expense.id}`,
+              date: expense.date || new Date().toISOString(),
+              description: expense.description || 'Despesa',
+              category: expense.category || 'Outros',
+              type: 'EXPENSE',
+              amount: expense.amount || 0
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao combinar transações:', error);
+    }
+
+    return txs;
+  }, [orders, expenses]);
 
   // Filtrar transações por período
   const filteredTransactions = useMemo(() => {
@@ -193,15 +173,15 @@ export default function OwnerRealtime() {
         filterEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         break;
       default:
-        filterStart = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        filterEnd = endDate ? new Date(endDate) : now;
+        filterStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        filterEnd = now;
     }
 
     return combinedTransactions.filter(tx => {
       const txDate = new Date(tx.date);
       return txDate >= filterStart && txDate <= filterEnd;
     });
-  }, [combinedTransactions, period, startDate, endDate]);
+  }, [combinedTransactions, period]);
 
   // Calcular totais
   const totals = useMemo(() => {
@@ -233,13 +213,6 @@ export default function OwnerRealtime() {
     );
   }
 
-  // Função para logout
-  const handleLogout = () => {
-    localStorage.removeItem('owner_authenticated');
-    localStorage.removeItem('owner_user');
-    localStorage.removeItem('owner_login_time');
-    router.push('/owner/login');
-  };
   // Renderizar dashboard em tempo real
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -251,10 +224,15 @@ export default function OwnerRealtime() {
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-400">
-            {localStorage.getItem('owner_user')?.toUpperCase() || 'OWNER'}
+            OWNER
           </span>
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              localStorage.removeItem('owner_authenticated');
+              localStorage.removeItem('owner_user');
+              localStorage.removeItem('owner_login_time');
+              router.push('/owner/login');
+            }}
             className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
           >
             Sair
@@ -319,22 +297,6 @@ export default function OwnerRealtime() {
               </button>
             ))}
           </div>
-          
-          <div className="flex gap-2 items-center">
-            <input
-              type="date"
-              value={startDate || ''}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-gray-800 px-3 py-2 rounded-lg text-white"
-            />
-            <span className="text-gray-400">até</span>
-            <input
-              type="date"
-              value={endDate || ''}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-gray-800 px-3 py-2 rounded-lg text-white"
-            />
-          </div>
         </div>
       </div>
 
@@ -378,9 +340,6 @@ export default function OwnerRealtime() {
           ))}
         </div>
       </div>
-
-      {/* Produtos Mais Vendidos */}
-      {/* Removido seção de produtos mais vendidos para evitar erros com metrics */}
     </div>
   );
 }

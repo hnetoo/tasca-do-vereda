@@ -79,6 +79,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
     { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
+    { path: '/owner', icon: <Shield size={24} />, label: 'Owner' },
 
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Mesas' },
