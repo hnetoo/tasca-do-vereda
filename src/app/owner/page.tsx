@@ -34,8 +34,20 @@ export default function OwnerPage() {
 
   // Verificar autenticação
   useEffect(() => {
-    const isAuth = localStorage.getItem('owner_authenticated');
-    if (isAuth !== 'true') {
+    // Verificar cookie de autenticação owner (compatível com mobile)
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return null;
+    };
+    
+    const isAuth = getCookie('owner_authenticated') === 'true' || 
+                   localStorage.getItem('owner_authenticated') === 'true';
+    
+    console.log('🔐 Owner auth check:', { cookie: getCookie('owner_authenticated'), localStorage: localStorage.getItem('owner_authenticated'), isAuth });
+    
+    if (!isAuth) {
       router.push('/owner/login');
       return;
     }

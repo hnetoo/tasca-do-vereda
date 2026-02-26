@@ -26,9 +26,18 @@ export default function OwnerLoginPage() {
   };
 
   useEffect(() => {
-    // Verificar se já está autenticado
-    const isAuth = localStorage.getItem('owner_authenticated');
-    if (isAuth === 'true') {
+    // Verificar se já está autenticado (cookie + localStorage)
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return null;
+    };
+    
+    const isAuth = getCookie('owner_authenticated') === 'true' || 
+                   localStorage.getItem('owner_authenticated') === 'true';
+    
+    if (isAuth) {
       router.push('/owner');
     } else {
       // Verificar se há autenticação normal e limpar se existir
@@ -63,6 +72,13 @@ export default function OwnerLoginPage() {
       localStorage.setItem('owner_authenticated', 'true');
       localStorage.setItem('owner_user', credentials.username);
       localStorage.setItem('owner_login_time', new Date().toISOString());
+      
+      // Definir cookie para compatibilidade mobile (expira em 24 horas)
+      const expires = new Date();
+      expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000));
+      document.cookie = `owner_authenticated=true; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+      
+      console.log('🔐 Owner auth set:', { cookie: 'owner_authenticated=true', localStorage: 'owner_authenticated=true' });
       
       // Redirecionar para página owner
       router.push('/owner');
