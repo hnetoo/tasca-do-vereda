@@ -27,9 +27,32 @@ export function createClient() {
       };
       supabaseBrowserClient = dummy as unknown as ReturnType<typeof createBrowserClient<Database>>;
     } else {
-      supabaseBrowserClient = createBrowserClient<Database>(url, key, {
-        auth: { persistSession: !isTauri() },
-      });
+      try {
+        supabaseBrowserClient = createBrowserClient<Database>(url, key, {
+          auth: { 
+            persistSession: !isTauri(),
+            // Disable lock manager to prevent timeout errors
+            lock: undefined
+          },
+        });
+      } catch (error) {
+        console.error('[SUPABASE] Error creating client:', error);
+        // Fallback to dummy client
+        const dummy: any = {
+          from() {
+            return {
+              select: async () => ({ data: [], error: null }),
+              insert: async () => ({ data: null, error: null }),
+              update: async () => ({ data: null, error: null }),
+              delete: async () => ({ data: null, error: null }),
+            };
+          },
+          auth: {
+            getUser: async () => ({ data: { user: null }, error: null }),
+          },
+        };
+        supabaseBrowserClient = dummy as unknown as ReturnType<typeof createBrowserClient<Database>>;
+      }
     }
   }
   return supabaseBrowserClient!;
