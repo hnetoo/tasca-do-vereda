@@ -3,10 +3,11 @@
 import Image from 'next/image';
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star } from 'lucide-react';
+import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import { Product, MenuCategory, SystemSettings } from '@/types';
 import { Database } from '@/types/supabase';
 import { useRealtimeCategoriesWithProducts } from '@/hooks/useSupabaseRealtime';
+import { useOfflineMenu } from '@/hooks/useOfflineCache';
 
 type MenuCategoryRow = Database['public']['Tables']['menu_categories']['Row'];
 type DishRow = Database['public']['Tables']['dishes']['Row'];
@@ -17,22 +18,57 @@ export default function MenuDigital() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<Partial<SystemSettings> | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
+  // Offline cache hook
+  const { data: offlineMenu, loading: offlineLoading, updateCache, isExpired } = useOfflineMenu();
+  
   // Hook de tempo real para categorias e produtos
   const { categories, loading: categoriesLoading } = useRealtimeCategoriesWithProducts();
+
+  useEffect(() => {
+    const updateOnlineStatus = () => {
+      setIsOnline(navigator.onLine);
+      if (navigator.onLine) {
+        setLastSync(new Date());
+      }
+    };
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Update cache when realtime data changes
+    if (isOnline && categories && !categoriesLoading) {
+      updateCache(categories);
+    }
+  }, [categories, isOnline, categoriesLoading, updateCache]);
+
+  // Determine which data to use
+  const menuData = isOnline && categories ? categories : offlineMenu;
+  const loading = isOnline ? categoriesLoading : offlineLoading;
 
   // Extrair produtos das categorias em tempo real
   const products = useMemo(() => {
     const allProducts: Product[] = [];
-    categories.forEach(category => {
-      if (category.dishes) {
-        category.dishes.forEach((dish: any) => {
-          allProducts.push(mapToProduct(dish));
-        });
-      }
-    });
+    if (menuData && menuData.categories) {
+      menuData.categories.forEach((category: any) => {
+        if (category.dishes) {
+          category.dishes.forEach((dish: any) => {
+            allProducts.push(mapToProduct(dish));
+          });
+        }
+      });
+    }
     return allProducts;
-  }, [categories]);
+  }, [menuData]);
 
   // Helper to map DB row to Product interface
   const mapToProduct = (row: DishRow): Product => {
@@ -79,8 +115,10 @@ export default function MenuDigital() {
       }
     };
 
-    fetchSettings();
-  }, []);
+    if (isOnline) {
+      fetchSettings();
+    }
+  }, [isOnline]);
 
   // Real-time subscriptions - simplificado
   useEffect(() => {
@@ -126,25 +164,27 @@ export default function MenuDigital() {
     });
   }, [products, selectedCategory, searchTerm]);
 
-  // Group products by category for the view (optional, but good for mobile lists)
+  // Group products by category for view (optional, but good for mobile lists)
   const productsByCategory = useMemo(() => {
     if (selectedCategory !== 'all') {
       return { [selectedCategory]: filteredProducts };
     }
     const grouped: Record<string, Product[]> = {};
-    categories.forEach(cat => {
-      const catProducts = filteredProducts.filter(p => p.categoryId === cat.id);
-      if (catProducts.length > 0) {
-        grouped[cat.id] = catProducts;
+    if (menuData && menuData.categories) {
+      menuData.categories.forEach((cat: any) => {
+        const catProducts = filteredProducts.filter(p => p.categoryId === cat.id);
+        if (catProducts.length > 0) {
+          grouped[cat.id] = catProducts;
+        }
+      });
+      // Add products without category or with unknown category
+      const uncategorized = filteredProducts.filter(p => !p.categoryId || !menuData.categories.find((c: any) => c.id === p.categoryId));
+      if (uncategorized.length > 0) {
+        grouped['uncategorized'] = uncategorized;
       }
-    });
-    // Add products without category or with unknown category
-    const uncategorized = filteredProducts.filter(p => !p.categoryId || !categories.find(c => c.id === p.categoryId));
-    if (uncategorized.length > 0) {
-      grouped['uncategorized'] = uncategorized;
     }
     return grouped;
-  }, [filteredProducts, categories, selectedCategory]);
+  }, [filteredProducts, selectedCategory, menuData]);
 
   const formatCurrency = (val: number) => 
     val.toLocaleString('pt-AO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' AKZ';
@@ -225,7 +265,7 @@ export default function MenuDigital() {
             >
               TODOS
             </button>
-            {categories.map(cat => (
+            {menuData?.categories?.map((cat: any) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -245,7 +285,7 @@ export default function MenuDigital() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8 pb-24">
         {Object.entries(productsByCategory).map(([catId, items]) => {
-          const category = categories.find(c => c.id === catId);
+          const category = menuData?.categories?.find((c: any) => c.id === catId);
           const categoryName = category ? category.name : (catId === 'uncategorized' ? 'Outros' : '');
           
           if (items.length === 0) return null;

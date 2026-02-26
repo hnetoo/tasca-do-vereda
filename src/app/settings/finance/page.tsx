@@ -63,13 +63,7 @@ export default function SettingsFinancePage() {
     historicalRevenue: 0
   });
 
-  // Valores fixos para evitar Date.now() no render
-const YESTERDAY = new Date(Date.now() - 86400000).toISOString();
-const TWO_DAYS_AGO = new Date(Date.now() - 172800000).toISOString();
-const ONE_MONTH_FROM_NOW = new Date(Date.now() + 2592000000).toISOString();
-const THREE_MONTHS_FROM_NOW = new Date(Date.now() + 7776000000).toISOString();
-
-const [transactions, setTransactions] = useState<Transaction[]>([
+  const [transactions, setTransactions] = useState<Transaction[]>([
     {
       id: '1',
       type: 'revenue',
@@ -86,7 +80,7 @@ const [transactions, setTransactions] = useState<Transaction[]>([
       description: 'Compra de matéria-prima',
       amount: 120000,
       category: 'custos',
-      date: YESTERDAY,
+      date: new Date(Date.now() - 86400000).toISOString(),
       paymentMethod: 'transferência',
       status: 'completed'
     },
@@ -96,7 +90,7 @@ const [transactions, setTransactions] = useState<Transaction[]>([
       description: 'Eventos especiais',
       amount: 85000,
       category: 'eventos',
-      date: TWO_DAYS_AGO,
+      date: new Date(Date.now() - 172800000).toISOString(),
       paymentMethod: 'dinheiro',
       status: 'completed'
     }
@@ -108,7 +102,7 @@ const [transactions, setTransactions] = useState<Transaction[]>([
       title: 'Meta Mensal de Vendas',
       targetAmount: 15000000,
       currentAmount: 13500000,
-      deadline: ONE_MONTH_FROM_NOW,
+      deadline: new Date(Date.now() + 2592000000).toISOString(),
       category: 'monthly'
     },
     {
@@ -116,7 +110,7 @@ const [transactions, setTransactions] = useState<Transaction[]>([
       title: 'Meta Trimestral',
       targetAmount: 45000000,
       currentAmount: 38000000,
-      deadline: THREE_MONTHS_FROM_NOW,
+      deadline: new Date(Date.now() + 7776000000).toISOString(),
       category: 'quarterly'
     }
   ]);
