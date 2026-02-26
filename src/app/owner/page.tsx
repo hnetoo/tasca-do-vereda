@@ -36,25 +36,58 @@ export default function OwnerRealtime() {
   const [endDate, setEndDate] = useState<string>('');
   const [authChecking, setAuthChecking] = useState(true);
 
-  // Hooks de tempo real - sempre chamados na mesma ordem
-  const { data: supabaseOrders, loading: ordersLoading, error: ordersError } = useRealtimeOrders();
-  const { metrics, loading: metricsLoading } = useRealtimeMetrics();
-  const { data: transactions, loading: transactionsLoading } = useRealtimeTransactions();
-
-  // Combinar dados locais com dados do Supabase
-  const orders = useMemo(() => {
-    try {
-      // Priorizar dados do Supabase se disponíveis, senão usar dados locais
-      if (supabaseOrders && supabaseOrders.length > 0) {
-        return supabaseOrders;
+  // Verificar autenticação primeiro
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const isAuth = localStorage.getItem('owner_authenticated');
+        if (isAuth !== 'true') {
+          router.push('/owner/login');
+          return;
+        }
+        setAuthChecking(false);
+        setReady(true);
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        router.push('/owner/login');
       }
-      // Fallback para dados locais (SQLite/LocalStorage)
-      return localOrders || [];
-    } catch (error) {
-      console.error('Erro ao combinar dados de pedidos:', error);
-      return localOrders || [];
+    };
+
+    checkAuth();
+  }, [router]);
+
+  // Usar apenas dados locais para estabilidade máxima
+  const orders = useMemo(() => {
+    return localOrders || [];
+  }, [localOrders]);
+
+  const transactions = useMemo(() => {
+    // Criar transações a partir dos pedidos locais
+    const txs: Array<{
+      id: string;
+      date: string;
+      description: string;
+      category: string;
+      type: 'REVENUE' | 'EXPENSE';
+      amount: number;
+    }> = [];
+    
+    if (orders && orders.length > 0) {
+      orders.forEach(order => {
+        if (order && order.id) {
+          txs.push({
+            id: `order-${order.id}`,
+            date: (order.created_at instanceof Date ? order.created_at.toISOString() : order.created_at) || new Date().toISOString(),
+            description: `Pedido #${order.order_number || 'N/A'}`,
+            category: 'Vendas',
+            type: 'REVENUE' as const,
+            amount: order.total || 0
+          });
+        }
+      });
     }
-  }, [supabaseOrders, localOrders]);
+    return txs;
+  }, [orders]);
 
   // Verificar se Supabase está configurado
   useEffect(() => {
@@ -65,7 +98,6 @@ export default function OwnerRealtime() {
         
         if (!url || !key) {
           console.warn('Supabase não configurado. Usando dados do store local.');
-          // Não fazer nada - deixar os hooks tentarem buscar dados
         }
       } catch (error) {
         console.error('Erro ao verificar configuração Supabase:', error);
@@ -136,75 +168,10 @@ export default function OwnerRealtime() {
     }
   }, [orders]);
 
-  // Verificar autenticação
-  useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const isAuth = localStorage.getItem('owner_authenticated');
-        if (isAuth !== 'true') {
-          router.push('/owner/login');
-          return;
-        }
-        setAuthChecking(false);
-        setReady(true);
-      } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
-        router.push('/owner/login');
-      }
-    };
-
-    checkAuth();
-  }, [router]);
-
   // Combinar transações de pedidos e transações financeiras
   const combinedTransactions = useMemo(() => {
-    const txs: Array<{
-      id: string;
-      date: string;
-      description: string;
-      category: string;
-      type: 'REVENUE' | 'EXPENSE';
-      amount: number;
-    }> = [];
-
-    try {
-      // Adicionar transações dos pedidos
-      if (orders && orders.length > 0) {
-        orders.forEach(order => {
-          if (order && order.id) {
-            txs.push({
-              id: `order-${order.id}`,
-              date: order.created_at || new Date().toISOString(),
-              description: `Pedido #${order.order_number || 'N/A'}`,
-              category: 'Vendas',
-              type: 'REVENUE',
-              amount: order.total || 0
-            });
-          }
-        });
-      }
-
-      // Adicionar transações financeiras
-      if (transactions && transactions.length > 0) {
-        transactions.forEach(transaction => {
-          if (transaction && transaction.id) {
-            txs.push({
-              id: `transaction-${transaction.id}`,
-              date: transaction.date || new Date().toISOString(),
-              description: transaction.description || 'Transação',
-              category: transaction.category || 'Outros',
-              type: transaction.type || 'EXPENSE',
-              amount: transaction.amount || 0
-            });
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao combinar transações:', error);
-    }
-
-    return txs;
-  }, [orders, transactions]);
+    return transactions; // Já criado acima
+  }, [transactions]);
 
   // Filtrar transações por período
   const filteredTransactions = useMemo(() => {
@@ -261,23 +228,6 @@ export default function OwnerRealtime() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p>Verificando autenticação...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (ordersError) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 mb-4">Erro ao carregar dados: {ordersError}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="bg-red-600 px-4 py-2 rounded"
-          >
-            Recarregar
-          </button>
         </div>
       </div>
     );
@@ -430,22 +380,7 @@ export default function OwnerRealtime() {
       </div>
 
       {/* Produtos Mais Vendidos */}
-      {metrics?.top_products && (
-        <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10 mt-8">
-          <h3 className="text-xl font-bold mb-4">Produtos Mais Vendidos</h3>
-          <div className="space-y-2">
-            {metrics.top_products.map((product: any, index: number) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
-                <div>
-                  <div className="font-medium">{product.name}</div>
-                  <div className="text-sm text-gray-400">{product.quantity} vendidos</div>
-                </div>
-                <div className="font-bold text-green-400">{fmt(product.revenue)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Removido seção de produtos mais vendidos para evitar erros com metrics */}
     </div>
   );
 }
