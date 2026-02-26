@@ -29,7 +29,7 @@ type Tx = {
 
 export default function OwnerRealtime() {
   const router = useRouter();
-  const { addNotification } = useStore();
+  const { addNotification, orders: localOrders, dishes: localDishes, categories: localCategories } = useStore();
   const [ready, setReady] = useState(false);
   const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
   const [startDate, setStartDate] = useState<string>('');
@@ -37,9 +37,19 @@ export default function OwnerRealtime() {
   const [authChecking, setAuthChecking] = useState(true);
 
   // Hooks de tempo real - sempre chamados na mesma ordem
-  const { data: orders, loading: ordersLoading, error: ordersError } = useRealtimeOrders();
+  const { data: supabaseOrders, loading: ordersLoading, error: ordersError } = useRealtimeOrders();
   const { metrics, loading: metricsLoading } = useRealtimeMetrics();
   const { data: transactions, loading: transactionsLoading } = useRealtimeTransactions();
+
+  // Combinar dados locais com dados do Supabase
+  const orders = useMemo(() => {
+    // Priorizar dados do Supabase se disponíveis, senão usar dados locais
+    if (supabaseOrders && supabaseOrders.length > 0) {
+      return supabaseOrders;
+    }
+    // Fallback para dados locais (SQLite/LocalStorage)
+    return localOrders || [];
+  }, [supabaseOrders, localOrders]);
 
   // Verificar se Supabase está configurado
   useEffect(() => {
@@ -49,10 +59,8 @@ export default function OwnerRealtime() {
         const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
         
         if (!url || !key) {
-          console.warn('Supabase não configurado. Usando dados mock.');
-          // Usar dados mock quando Supabase não está configurado
-          setReady(true);
-          setAuthChecking(false);
+          console.warn('Supabase não configurado. Usando dados do store local.');
+          // Não fazer nada - deixar os hooks tentarem buscar dados
         }
       } catch (error) {
         console.error('Erro ao verificar configuração Supabase:', error);
@@ -64,17 +72,19 @@ export default function OwnerRealtime() {
 
   // Estado para métricas calculadas
   const realtimeStats = useMemo(() => {
-    // Se não há dados (Supabase não configurado), retornar dados mock
+    // Se não há dados, retornar zeros
     if (!orders || orders.length === 0) {
       return {
-        todaySales: 1500000,
-        todayOrders: 45,
-        todayRevenue: 1250000,
-        activeTables: 8,
-        totalRevenue: 45000000,
-        totalOrders: 1250,
-        avgTicket: 36000,
-        growth: 12.5
+        todaySales: 0,
+        todayOrders: 0,
+        todayRevenue: 0,
+        activeTables: 0,
+        totalRevenue: 0,
+        totalOrders: 0,
+        avgTicket: 0,
+        growth: 0,
+        pendingOrders: 0,
+        averageTicket: 0
       };
     }
 
@@ -124,6 +134,15 @@ export default function OwnerRealtime() {
 
     checkAuth();
   }, [router]);
+
+  // Forçar atualização dos dados em tempo real
+  useEffect(() => {
+    // Se temos dados locais, já estamos prontos
+    if (localOrders && localOrders.length > 0) {
+      setReady(true);
+      setAuthChecking(false);
+    }
+  }, [localOrders]);
 
   // Combinar transações de pedidos e transações financeiras
   const combinedTransactions = useMemo(() => {
