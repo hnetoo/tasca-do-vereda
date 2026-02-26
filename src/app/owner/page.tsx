@@ -36,7 +36,7 @@ export default function OwnerRealtime() {
   const [endDate, setEndDate] = useState<string>('');
   const [authChecking, setAuthChecking] = useState(true);
 
-  // Hooks de tempo real
+  // Hooks de tempo real - sempre chamados na mesma ordem
   const { data: orders, loading: ordersLoading, error: ordersError } = useRealtimeOrders();
   const { metrics, loading: metricsLoading } = useRealtimeMetrics();
   const { data: transactions, loading: transactionsLoading } = useRealtimeTransactions();
@@ -79,25 +79,23 @@ export default function OwnerRealtime() {
 
   // Verificar autenticação
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuth = () => {
       try {
-        setAuthChecking(true);
-        const result = await supabaseService.client?.auth.getSession();
-        if (!result?.data?.session) {
-          window.location.href = '/login';
+        const isAuth = localStorage.getItem('owner_authenticated');
+        if (isAuth !== 'true') {
+          router.push('/owner/login');
           return;
         }
+        setAuthChecking(false);
         setReady(true);
       } catch (error) {
-        console.error('Auth check failed:', error);
-        window.location.href = '/login';
-      } finally {
-        setAuthChecking(false);
+        console.error('Erro ao verificar autenticação:', error);
+        router.push('/owner/login');
       }
     };
 
     checkAuth();
-  }, []);
+  }, [router]);
 
   // Combinar transações de pedidos e transações financeiras
   const combinedTransactions = useMemo(() => {
@@ -214,23 +212,33 @@ export default function OwnerRealtime() {
     );
   }
 
-  if (!ready) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Verificando autenticação...</p>
-        </div>
-      </div>
-    );
-  }
+  // Função para logout
+  const handleLogout = () => {
+    localStorage.removeItem('owner_authenticated');
+    localStorage.removeItem('owner_user');
+    localStorage.removeItem('owner_login_time');
+    router.push('/owner/login');
+  };
   // Renderizar dashboard em tempo real
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="min-h-screen bg-black text-white p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Dashboard em Tempo Real</h1>
-        <p className="text-gray-400">Monitoramento ao vivo do restaurante</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Dashboard em Tempo Real</h1>
+          <p className="text-gray-400">Monitoramento ao vivo do restaurante</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-400">
+            {localStorage.getItem('owner_user')?.toUpperCase() || 'OWNER'}
+          </span>
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            Sair
+          </button>
+        </div>
       </div>
 
       {/* KPIs em Tempo Real */}

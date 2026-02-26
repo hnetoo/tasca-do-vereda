@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Tasca Do VEREDA",
-  "version": "1.0.97",
-  "identifier": "com.tascadovereda.app",
+  "version": "1.0.99",
+  "identifier": "com.tascadovereda.dev",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "cmd /c set TAURI_BUILD=true && npm run build",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Tasca Do VEREDA",
+        "title": "Tasca Do VEREDA (DEV)",
         "width": 1200,
         "height": 800,
         "visible": false,
