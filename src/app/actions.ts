@@ -110,16 +110,27 @@ export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]
 
 export async function saveCategoryAction(category: MenuCategory): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
+    console.log('🔧 saveCategoryAction: Iniciando...', { categoryId: category.id, name: category.name });
+    
     const cfg = await getStoredDatabaseConfig();
+    console.log('🔧 saveCategoryAction: Config DB:', cfg);
+    
     if (cfg.type === 'sqlite') {
+      console.log('🔧 saveCategoryAction: Usando SQLite...');
       const res = await sqliteOperations.saveCategory(category);
+      console.log('🔧 saveCategoryAction: Resultado SQLite:', res);
+      
       if (res.success) {
+        console.log('✅ saveCategoryAction: Sucesso SQLite');
         // Best-effort cloud sync to Supabase if configured
         try { await adminOperations.saveCategory(category); } catch (_) {}
         return { success: true };
       }
+      console.error('❌ saveCategoryAction: Falha SQLite:', res.error);
       return { success: false, error: { message: res.error || 'SQLite operation failed' } };
     }
+    
+    console.log('🔧 saveCategoryAction: Usando Supabase (não SQLite)...');
     const result = await adminOperations.saveCategory(category);
     if (result.success) {
       return { success: true };
@@ -140,6 +151,7 @@ export async function saveCategoryAction(category: MenuCategory): Promise<{ succ
     return { success: false, error: { message: JSON.stringify(errorToLog) } };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    console.error('❌ saveCategoryAction: Exceção:', errorToLog);
     logger.error('Exception saving category via server action', { error: errorToLog, categoryId: category.id }, 'SERVER_ACTION');
     return { success: false, error: errorToLog };
   }
@@ -174,16 +186,27 @@ export async function deleteCategoryAction(id: UUID): Promise<{ success: boolean
 
 export async function saveDishAction(dish: Dish): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
+    console.log('🔧 saveDishAction: Iniciando...', { dishId: dish.id, name: dish.name });
+    
     const cfg = await getStoredDatabaseConfig();
+    console.log('🔧 saveDishAction: Config DB:', cfg);
+    
     if (cfg.type === 'sqlite') {
+      console.log('🔧 saveDishAction: Usando SQLite...');
       const res = await sqliteOperations.saveDish(dish);
+      console.log('🔧 saveDishAction: Resultado SQLite:', res);
+      
       if (res.success) {
+        console.log('✅ saveDishAction: Sucesso SQLite');
         // Best-effort cloud sync to Supabase if configured
         try { await adminOperations.saveDish(dish); } catch (_) {}
         return { success: true };
       }
+      console.error('❌ saveDishAction: Falha SQLite:', res.error);
       return { success: false, error: { message: res.error || 'SQLite operation failed' } };
     }
+    
+    console.log('🔧 saveDishAction: Usando Supabase (não SQLite)...');
     // 1. Try admin operations (Supabase Service Role)
     const result = await adminOperations.saveDish(dish);
     if (result.success) {
@@ -206,6 +229,7 @@ export async function saveDishAction(dish: Dish): Promise<{ success: boolean; er
     return { success: false, error: { message: JSON.stringify(errorToLog) } };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
+    console.error('❌ saveDishAction: Exceção:', errorToLog);
     logger.error('Exception saving dish via server action', { error: errorToLog }, 'SERVER_ACTION');
     return { success: false, error: errorToLog };
   }
