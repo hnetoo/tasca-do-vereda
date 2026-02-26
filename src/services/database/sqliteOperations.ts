@@ -1,6 +1,7 @@
 import { ensureSqliteSchema, getSQLiteClient } from '@/lib/sqlite';
 import { logger } from '@/services/logger';
 import { MenuCategory, Dish } from '@/types';
+import { adminOperations } from './adminOperations';
 
 export const sqliteOperations = {
   async getCategories(): Promise<{ success: boolean; data: MenuCategory[]; error?: string }> {
@@ -26,6 +27,24 @@ export const sqliteOperations = {
     } catch (e: unknown) {
       const err = e as Error;
       logger.error('SQLite getCategories failed', { error: err.message }, 'DATABASE_SQLITE');
+      
+      // Fallback automático para Supabase se SQLite falhar
+      if (err.message.includes('ConnectionFailed') || err.message.includes('Unable to open connection')) {
+        logger.warn('SQLite unavailable, falling back to Supabase for getCategories', {}, 'DATABASE_SQLITE');
+        try {
+          const result = await adminOperations.getCategories();
+          if (result.success) {
+            logger.info('Fallback to Supabase successful for getCategories', { count: result.data?.length || 0 }, 'DATABASE_SQLITE');
+            return { success: true, data: result.data || [] };
+          }
+          logger.error('Fallback to Supabase failed for getCategories', { error: result.error }, 'DATABASE_SQLITE');
+          return { success: false, data: [], error: `SQLite unavailable: ${err.message}. Supabase fallback also failed: ${result.error}` };
+        } catch (fallbackError: any) {
+          logger.error('Exception in Supabase fallback for getCategories', { error: fallbackError.message }, 'DATABASE_SQLITE');
+          return { success: false, data: [], error: `SQLite unavailable: ${err.message}. Supabase fallback exception: ${fallbackError.message}` };
+        }
+      }
+      
       return { success: false, data: [], error: err.message };
     }
   },
@@ -63,6 +82,24 @@ export const sqliteOperations = {
     } catch (e: unknown) {
       const err = e as Error;
       logger.error('SQLite saveCategory failed', { error: err.message }, 'DATABASE_SQLITE');
+      
+      // Fallback automático para Supabase se SQLite falhar
+      if (err.message.includes('ConnectionFailed') || err.message.includes('Unable to open connection')) {
+        logger.warn('SQLite unavailable, falling back to Supabase for saveCategory', { categoryId: category.id }, 'DATABASE_SQLITE');
+        try {
+          const result = await adminOperations.saveCategory(category);
+          if (result.success) {
+            logger.info('Fallback to Supabase successful for saveCategory', { categoryId: category.id }, 'DATABASE_SQLITE');
+            return { success: true };
+          }
+          logger.error('Fallback to Supabase failed for saveCategory', { categoryId: category.id, error: result.error }, 'DATABASE_SQLITE');
+          return { success: false, error: `SQLite unavailable: ${err.message}. Supabase fallback also failed: ${result.error}` };
+        } catch (fallbackError: any) {
+          logger.error('Exception in Supabase fallback for saveCategory', { categoryId: category.id, error: fallbackError.message }, 'DATABASE_SQLITE');
+          return { success: false, error: `SQLite unavailable: ${err.message}. Supabase fallback exception: ${fallbackError.message}` };
+        }
+      }
+      
       return { success: false, error: err.message };
     }
   },
@@ -117,6 +154,24 @@ export const sqliteOperations = {
     } catch (e: unknown) {
       const err = e as Error;
       logger.error('SQLite getDishes failed', { error: err.message }, 'DATABASE_SQLITE');
+      
+      // Fallback automático para Supabase se SQLite falhar
+      if (err.message.includes('ConnectionFailed') || err.message.includes('Unable to open connection')) {
+        logger.warn('SQLite unavailable, falling back to Supabase for getDishes', {}, 'DATABASE_SQLITE');
+        try {
+          const result = await adminOperations.getDishes();
+          if (result.success) {
+            logger.info('Fallback to Supabase successful for getDishes', { count: result.data?.length || 0 }, 'DATABASE_SQLITE');
+            return { success: true, data: result.data || [] };
+          }
+          logger.error('Fallback to Supabase failed for getDishes', { error: result.error }, 'DATABASE_SQLITE');
+          return { success: false, data: [], error: `SQLite unavailable: ${err.message}. Supabase fallback also failed: ${result.error}` };
+        } catch (fallbackError: any) {
+          logger.error('Exception in Supabase fallback for getDishes', { error: fallbackError.message }, 'DATABASE_SQLITE');
+          return { success: false, data: [], error: `SQLite unavailable: ${err.message}. Supabase fallback exception: ${fallbackError.message}` };
+        }
+      }
+      
       return { success: false, data: [], error: err.message };
     }
   },
@@ -182,6 +237,24 @@ export const sqliteOperations = {
     } catch (e: unknown) {
       const err = e as Error;
       logger.error('SQLite saveDish failed', { error: err.message }, 'DATABASE_SQLITE');
+      
+      // Fallback automático para Supabase se SQLite falhar
+      if (err.message.includes('ConnectionFailed') || err.message.includes('Unable to open connection')) {
+        logger.warn('SQLite unavailable, falling back to Supabase for saveDish', { dishId: dish.id }, 'DATABASE_SQLITE');
+        try {
+          const result = await adminOperations.saveDish(dish);
+          if (result.success) {
+            logger.info('Fallback to Supabase successful for saveDish', { dishId: dish.id }, 'DATABASE_SQLITE');
+            return { success: true };
+          }
+          logger.error('Fallback to Supabase failed for saveDish', { dishId: dish.id, error: result.error }, 'DATABASE_SQLITE');
+          return { success: false, error: `SQLite unavailable: ${err.message}. Supabase fallback also failed: ${result.error}` };
+        } catch (fallbackError: any) {
+          logger.error('Exception in Supabase fallback for saveDish', { dishId: dish.id, error: fallbackError.message }, 'DATABASE_SQLITE');
+          return { success: false, error: `SQLite unavailable: ${err.message}. Supabase fallback exception: ${fallbackError.message}` };
+        }
+      }
+      
       return { success: false, error: err.message };
     }
   },
