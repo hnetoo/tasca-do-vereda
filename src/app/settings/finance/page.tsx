@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { 
   DollarSign, TrendingUp, TrendingDown, Calendar, Clock, 
@@ -9,6 +9,10 @@ import {
   Filter, Search, Plus, Edit2, Trash2, Eye,
   Calculator, FileText, Receipt, Wallet, PiggyBank
 } from 'lucide-react';
+import { 
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
+  CartesianGrid, AreaChart, Area, LineChart, Line, PieChart as RechartsPieChart, Pie, Cell
+} from 'recharts';
 
 interface FinancialData {
   totalRevenue: number;
@@ -44,7 +48,7 @@ interface FinancialGoal {
 }
 
 export default function SettingsFinancePage() {
-  const { settings, updateSettings, addNotification } = useStore();
+  const { settings, updateSettings, addNotification, orders } = useStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'goals' | 'analytics'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -290,6 +294,81 @@ export default function SettingsFinancePage() {
     if (progress >= 50) return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
     return 'text-red-400 bg-red-500/10 border-red-500/20';
   };
+
+  // Analytics data processing
+  const analyticsData = useMemo(() => {
+    const closedOrders = orders.filter(o => o.status === 'FECHADO');
+    
+    // Revenue over time (last 30 days)
+    const revenueData = [];
+    const now = new Date();
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toLocaleDateString('pt-AO', { month: 'short', day: 'numeric' });
+      
+      const dayRevenue = closedOrders
+        .filter(order => {
+          const orderDate = new Date(order.createdAt || order.created_at || new Date());
+          return orderDate.toDateString() === date.toDateString();
+        })
+        .reduce((sum, order) => sum + (order.total || 0), 0);
+      
+      revenueData.push({
+        date: dateStr,
+        revenue: dayRevenue,
+        orders: closedOrders.filter(order => {
+          const orderDate = new Date(order.createdAt || order.created_at || new Date());
+          return orderDate.toDateString() === date.toDateString();
+        }).length
+      });
+    }
+
+    // Payment methods distribution
+    const paymentMethodsData: Record<string, number> = {};
+    closedOrders.forEach(order => {
+      if (order.paymentMethod) {
+        paymentMethodsData[order.paymentMethod] = (paymentMethodsData[order.paymentMethod] || 0) + (order.total || 0);
+      }
+    });
+
+    const paymentData = Object.entries(paymentMethodsData).map(([method, amount]) => ({
+      name: method,
+      value: amount,
+      percentage: ((amount / closedOrders.reduce((sum, o) => sum + (o.total || 0), 0)) * 100).toFixed(1)
+    }));
+
+    // Monthly comparison
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    const currentMonthRevenue = closedOrders
+      .filter(order => {
+        const orderDate = new Date(order.createdAt || order.created_at || new Date());
+        return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, order) => sum + (order.total || 0), 0);
+
+    const lastMonthRevenue = closedOrders
+      .filter(order => {
+        const orderDate = new Date(order.createdAt || order.created_at || new Date());
+        return orderDate.getMonth() === lastMonth && orderDate.getFullYear() === lastYear;
+      })
+      .reduce((sum, order) => sum + (order.total || 0), 0);
+
+    return {
+      revenueData,
+      paymentData,
+      monthlyComparison: {
+        current: currentMonthRevenue,
+        last: lastMonthRevenue,
+        growth: lastMonthRevenue > 0 ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100).toFixed(1) : '0'
+      }
+    };
+  }, [orders]);
 
   return (
     <div className="p-8 h-full overflow-y-auto bg-slate-950">
@@ -605,11 +684,181 @@ export default function SettingsFinancePage() {
 
       {activeTab === 'analytics' && (
         <div className="space-y-6">
-          <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
-            <h3 className="text-lg font-bold text-white mb-6">Análises Financeiras</h3>
-            <div className="h-64 bg-slate-800/50 rounded-xl flex items-center justify-center">
-              <p className="text-slate-400">Gráficos de análise financeira (implementar com biblioteca de gráficos)</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue Trend Chart */}
+            <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
+              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                <TrendingUp className="text-primary" size={20} />
+                Tendência de Receita (30 dias)
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={analyticsData.revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#94a3b8" 
+                    fontSize={12}
+                    tick={{ fill: '#94a3b8' }}
+                  />
+                  <YAxis 
+                    stroke="#94a3b8" 
+                    fontSize={12}
+                    tick={{ fill: '#94a3b8' }}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#0f172a', 
+                      borderColor: '#334155', 
+                      borderRadius: '12px',
+                      border: '1px solid #ffffff10'
+                    }}
+                    formatter={(value: number) => [
+                      `${(value / 1000).toFixed(1)}k AOA`,
+                      'Receita'
+                    ]}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#10b981" 
+                    fill="#10b98120"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
+
+            {/* Payment Methods Distribution */}
+            <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
+              <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                <CreditCard className="text-primary" size={20} />
+                Distribuição de Pagamentos
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <RechartsPieChart>
+                  <Pie
+                    data={analyticsData.paymentData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {analyticsData.paymentData.map((entry: any, index: number) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][index % 6]} 
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#0f172a', 
+                      borderColor: '#334155', 
+                      borderRadius: '12px',
+                      border: '1px solid #ffffff10'
+                    }}
+                    formatter={(value: number) => [
+                      `${(value / 1000).toFixed(1)}k AOA`,
+                      'Valor'
+                    ]}
+                  />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+              <div className="mt-4 space-y-2">
+                {analyticsData.paymentData.map((method: any, index: number) => (
+                  <div key={method.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ 
+                          backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][index % 6] 
+                        }}
+                      />
+                      <span className="text-slate-300">{method.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-white font-medium">
+                        {(method.value / 1000).toFixed(1)}k AOA
+                      </div>
+                      <div className="text-slate-500 text-xs">{method.percentage}%</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly Comparison */}
+          <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
+            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+              <BarChart3 className="text-primary" size={20} />
+              Comparação Mensal
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-white mb-2">
+                  {(analyticsData.monthlyComparison.current / 1000).toFixed(1)}k
+                </div>
+                <div className="text-sm text-slate-400">Mês Atual</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-slate-400 mb-2">
+                  {(analyticsData.monthlyComparison.last / 1000).toFixed(1)}k
+                </div>
+                <div className="text-sm text-slate-400">Mês Anterior</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-3xl font-bold mb-2 ${
+                  parseFloat(analyticsData.monthlyComparison.growth) >= 0 ? 'text-emerald-400' : 'text-red-400'
+                }`}>
+                  {parseFloat(analyticsData.monthlyComparison.growth) >= 0 ? '+' : ''}{analyticsData.monthlyComparison.growth}%
+                </div>
+                <div className="text-sm text-slate-400">Crescimento</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Orders Chart */}
+          <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
+            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+              <Activity className="text-primary" size={20} />
+              Pedidos Diários (30 dias)
+            </h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={analyticsData.revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#94a3b8" 
+                  fontSize={12}
+                  tick={{ fill: '#94a3b8' }}
+                />
+                <YAxis 
+                  stroke="#94a3b8" 
+                  fontSize={12}
+                  tick={{ fill: '#94a3b8' }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#0f172a', 
+                    borderColor: '#334155', 
+                    borderRadius: '12px',
+                    border: '1px solid #ffffff10'
+                  }}
+                  formatter={(value: number) => [value, 'Pedidos']}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="orders" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  dot={{ fill: '#3b82f6', r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}
