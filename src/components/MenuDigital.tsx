@@ -52,13 +52,13 @@ export default function MenuDigital() {
   }, [categories, isOnline, categoriesLoading, updateCache]);
 
   // Determine which data to use
-  const menuData = isOnline && categories ? categories : offlineMenu;
+  const menuData = isOnline && categories ? { categories } : offlineMenu;
   const loading = isOnline ? categoriesLoading : offlineLoading;
 
   // Extrair produtos das categorias em tempo real
   const products = useMemo(() => {
     const allProducts: Product[] = [];
-    if (menuData && menuData.categories) {
+    if (menuData && Array.isArray(menuData.categories)) {
       menuData.categories.forEach((category: any) => {
         if (category.dishes) {
           category.dishes.forEach((dish: any) => {
@@ -170,7 +170,7 @@ export default function MenuDigital() {
       return { [selectedCategory]: filteredProducts };
     }
     const grouped: Record<string, Product[]> = {};
-    if (menuData && menuData.categories) {
+    if (menuData && Array.isArray(menuData.categories)) {
       menuData.categories.forEach((cat: any) => {
         const catProducts = filteredProducts.filter(p => p.categoryId === cat.id);
         if (catProducts.length > 0) {
@@ -265,7 +265,7 @@ export default function MenuDigital() {
             >
               TODOS
             </button>
-            {menuData?.categories?.map((cat: any) => (
+            {menuData && Array.isArray(menuData.categories) && menuData.categories.map((cat: any) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -285,7 +285,7 @@ export default function MenuDigital() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8 pb-24">
         {Object.entries(productsByCategory).map(([catId, items]) => {
-          const category = menuData?.categories?.find((c: any) => c.id === catId);
+          const category = menuData && Array.isArray(menuData.categories) ? menuData.categories.find((c: any) => c.id === catId) : null;
           const categoryName = category ? category.name : (catId === 'uncategorized' ? 'Outros' : '');
           
           if (items.length === 0) return null;
