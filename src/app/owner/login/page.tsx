@@ -156,7 +156,8 @@ export default function OwnerLoginPage() {
             </button>
           </form>
 
-          {/* Credenciais Info */}
+          {/* Credenciais Info - REMOVIDO POR SEGURANÇA */}
+          {/* 
           <div className="mt-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
             <p className="text-xs text-slate-400 mb-2">Credenciais de acesso:</p>
             <div className="space-y-1">
@@ -168,12 +169,16 @@ export default function OwnerLoginPage() {
               </p>
             </div>
           </div>
+          */}
         </div>
 
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-slate-500 text-sm">
             Área restrita ao proprietário e administradores
+          </p>
+          <p className="text-slate-600 text-xs mt-2">
+            Para acesso, contacte o administrador do sistema
           </p>
         </div>
       </div>
