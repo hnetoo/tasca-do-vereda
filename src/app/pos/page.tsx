@@ -35,7 +35,7 @@ const POS = () => {
     createNewOrder, addToOrder, removeFromOrder, 
     checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
     settings, addNotification,
-    currentShiftId, openShift, toggleMobileMenu,
+    currentShiftId, openShift, toggleMobileMenu, isSidebarCollapsed,
     addTable, auditLogs
   } = useStore();
   const user = useSelector(selectUser);
@@ -1011,6 +1011,24 @@ const POS = () => {
   };
 
   const isImmersive = settings.isSidebarCollapsed;
+
+  // Auto-hide sidebar when entering POS
+  useEffect(() => {
+    // Auto-collapse sidebar when POS loads
+    if (!isSidebarCollapsed) {
+      toggleMobileMenu();
+    }
+  }, [isSidebarCollapsed, toggleMobileMenu]);
+
+  // Restore sidebar when leaving POS
+  useEffect(() => {
+    return () => {
+      // Restore sidebar when component unmounts (leaving POS)
+      if (isSidebarCollapsed) {
+        toggleMobileMenu();
+      }
+    };
+  }, [isSidebarCollapsed, toggleMobileMenu]);
 
   const getCategoryIcon = (name: string, predefinedIcon?: string) => {
     if (predefinedIcon) {
