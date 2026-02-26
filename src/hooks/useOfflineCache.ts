@@ -322,19 +322,19 @@ export function useOfflineCache<T>(key: string, options: OfflineCacheOptions = {
 
 // Specialized hooks for different data types
 export function useOfflineProducts() {
-  return useOfflineCache('products', { ttl: 24 * 60 * 60 * 1000 }); // 24 hours
+  return useOfflineCache<any[]>('products', { ttl: 24 * 60 * 60 * 1000 }); // 24 hours
 }
 
 export function useOfflineOrders() {
-  return useOfflineCache('orders', { ttl: 60 * 60 * 1000 }); // 1 hour
+  return useOfflineCache<any[]>('orders', { ttl: 60 * 60 * 1000 }); // 1 hour
 }
 
 export function useOfflineMenu() {
-  return useOfflineCache('menu', { ttl: 12 * 60 * 60 * 1000 }); // 12 hours
+  return useOfflineCache<any>('menu', { ttl: 12 * 60 * 60 * 1000 }); // 12 hours
 }
 
 export function useOfflineSettings() {
-  return useOfflineCache('settings', { ttl: 7 * 24 * 60 * 60 * 1000 }); // 7 days
+  return useOfflineCache<any>('settings', { ttl: 7 * 24 * 60 * 60 * 1000 }); // 7 days
 }
 
 export { cacheManager };
