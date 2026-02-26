@@ -43,7 +43,8 @@ import {
   MonitorPlay,
   Share2,
   Save,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/store/reduxStore';
@@ -62,15 +63,6 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   const pathname = usePathname();
   const { settings, isMobileMenuOpen, toggleMobileMenu } = useStore();
   const dispatch = useDispatch<AppDispatch>();
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
-
-  const toggleExpanded = (path: string) => {
-    setExpandedItems(prev => 
-      prev.includes(path) 
-        ? prev.filter(p => p !== path) 
-        : [...prev, path]
-    );
-  };
 
   const isActive = (path: string) => pathname === path || (path !== '/' && pathname.startsWith(path + '/'));
 
@@ -86,27 +78,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   const generalMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { 
-      path: '/settings', 
-      icon: <Settings size={24} />, 
-      label: 'Definições',
-      subItems: [
-        { path: '/settings/general', icon: <Settings size={20} />, label: 'Geral' },
-        { path: '/settings/fiscal', icon: <DollarSign size={20} />, label: 'Fiscal' },
-        { path: '/settings/tables', icon: <ChefHat size={20} />, label: 'Mesas' },
-        { path: '/settings/qr', icon: <QrCode size={20} />, label: 'Menu QR' },
-        { path: '/settings/system', icon: <MonitorPlay size={20} />, label: 'Sistema' },
-        { path: '/settings/system/users', icon: <Users size={20} />, label: 'Utilizadores' },
-        { path: '/settings/system/roles', icon: <Shield size={20} />, label: 'Cargos' },
-        { path: '/settings/system/integrations', icon: <Share2 size={20} />, label: 'Integrações' },
-        { path: '/settings/system/health', icon: <Activity size={20} />, label: 'Monitorização' },
-        { path: '/settings/system/cloud', icon: <Cloud size={20} />, label: 'Nuvem / App' },
-        { path: '/settings/system/backup', icon: <Save size={20} />, label: 'Backup / Restore' },
-        { path: '/settings/system/agt', icon: <FileText size={20} />, label: 'AGT' },
-        { path: '/settings/system/dlp', icon: <Lock size={20} />, label: 'DLP' },
-        { path: '/settings/system/history', icon: <HistoryIcon size={20} />, label: 'Histórico' },
-      ]
-    },
+    { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
 
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Mesas' },
@@ -155,13 +127,13 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           {(showSidebar || isMobileMenuOpen) && (
             <div className="flex items-center gap-3">
-              {settings?.appLogoUrl ? (
-              <Image src={settings.appLogoUrl} alt="App Logo" className="h-10 w-10 object-contain" width={40} height={40} />
-            ) : (
-              <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                 <ChefHat className="text-primary" size={24} />
-              </div>
-            )}
+              {settings?.logo ? (
+                <img src={settings.logo} alt="Restaurant Logo" className="h-10 w-10 object-contain rounded-lg" width={40} height={40} />
+              ) : (
+                <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                   <ImageIcon className="text-primary" size={24} />
+                </div>
+              )}
               <div className="flex flex-col">
                 <h1 className="font-bold text-lg text-white leading-none tracking-wide">
                   Tasca Do <span className="font-black">VEREDA</span>
@@ -179,67 +151,21 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
           <ul className="space-y-1 px-2">
             {menuItems.map((item) => {
               const active = isActive(item.path);
-              const expanded = expandedItems.includes(item.path);
 
               return (
                 <li key={item.path}>
-                  {item.subItems ? (
-                    <>
-                      <button
-                        onClick={() => toggleExpanded(item.path)}
-                        className={`flex items-center justify-between w-full gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                          active 
-                            ? 'bg-gradient-to-br from-slate-100 to-slate-300 text-slate-900 shadow-md transform scale-[1.02]' 
-                            : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {item.icon}
-                          {(showSidebar || isMobileMenuOpen) && <span>{item.label}</span>}
-                        </div>
-                        {(showSidebar || isMobileMenuOpen) && (
-                          expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
-                        )}
-                      </button>
-
-                      {(showSidebar || isMobileMenuOpen) && expanded && (
-                        <ul className="mt-1 ml-4 space-y-1 border-l border-slate-700 pl-2">
-                          {item.subItems.map((sub) => {
-                            const subActive = isActive(sub.path);
-                            return (
-                              <li key={sub.path}>
-                                <Link
-                                  href={sub.path}
-                                  className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                                    subActive
-                                      ? 'text-white bg-white/10'
-                                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                  }`}
-                                  onClick={() => isMobileMenuOpen && toggleMobileMenu()}
-                                >
-                                  {sub.icon}
-                                  <span>{sub.label}</span>
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </>
-                  ) : (
-                    <Link 
-                      href={item.path}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                        active 
-                          ? 'bg-gradient-to-br from-slate-100 to-slate-300 text-slate-900 shadow-md transform scale-[1.02]' 
-                          : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
-                      }`}
-                      onClick={() => isMobileMenuOpen && toggleMobileMenu()}
-                    >
-                      {item.icon}
-                      {(showSidebar || isMobileMenuOpen) && <span>{item.label}</span>}
-                    </Link>
-                  )}
+                  <Link 
+                    href={item.path}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                      active 
+                        ? 'bg-gradient-to-br from-slate-100 to-slate-300 text-slate-900 shadow-md transform scale-[1.02]' 
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white hover:translate-x-1'
+                    }`}
+                    onClick={() => isMobileMenuOpen && toggleMobileMenu()}
+                  >
+                    {item.icon}
+                    {(showSidebar || isMobileMenuOpen) && <span>{item.label}</span>}
+                  </Link>
                 </li>
               );
             })}

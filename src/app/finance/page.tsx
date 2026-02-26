@@ -1,77 +1,42 @@
-// @ts-nocheck
 'use client';
+
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { 
   DollarSign, TrendingUp, Calendar, CreditCard, 
   Download, Filter, ChevronDown, ChevronUp, PieChart,
-  ArrowUpRight, ArrowDownRight, Printer
+  ArrowUpRight, ArrowDownRight, Printer, Plus, Eye,
+  Edit2, Trash2, Search, RefreshCw, BarChart3,
+  Wallet, Receipt, Target, Activity, AlertCircle
 } from 'lucide-react';
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  LineElement, 
-  Title, 
-  Tooltip, 
-  Legend, 
-  ArcElement,
-  BarElement
-} from 'chart.js';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { formatDateInLuanda } from '@/utils/date';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-  BarElement
-);
-
 export default function FinancePage() {
   const { 
     orders, 
     dishes, 
-    generateFinancialReport,
-    activeShift,
-    shifts,
     settings,
     expenses,
-    fixedExpenses,
-    payroll,
+    employees,
     addExpense,
-    updateExpense,
-    removeExpense,
-    addFixedExpense,
-    updateFixedExpense,
-    removeFixedExpense,
-    addPayrollRecord,
-    updatePayrollRecord,
-    removePayrollRecord,
-    employees
+    addNotification
   } = useStore();
 
-  const [dateRange, setDateRange] = useState('today'); // today, week, month, year
+  const [dateRange, setDateRange] = useState('today');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'payroll' | 'reports'>('overview');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Calculate financial metrics
   const calculateMetrics = () => {
-    // Safety check for orders
     const currentOrders = orders || [];
     const currentDishes = dishes || [];
     
-    // Mock data for now based on orders
     const completedOrders = currentOrders.filter(o => o.status === 'FECHADO');
     const currentRevenue = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
     const totalRevenue = currentRevenue + (settings?.legacyTotalRevenue || 0);
@@ -81,302 +46,403 @@ export default function FinancePage() {
       totalRevenue,
       orderCount: completedOrders.length,
       avgTicket,
-      topProducts: currentDishes.slice(0, 5) // Mock top products
+      topProducts: currentDishes.slice(0, 5)
     };
   };
 
   const metrics = calculateMetrics();
 
-  // Real-time updates for financial data
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Force re-render to update metrics
-      // This will recalculate based on current store data
-    }, 5000); // Update every 5 seconds
+  // Mock data for charts
+  const weeklyRevenue = [
+    { day: 'Seg', value: 120000 },
+    { day: 'Ter', value: 190000 },
+    { day: 'Qua', value: 150000 },
+    { day: 'Qui', value: 220000 },
+    { day: 'Sex', value: 280000 },
+    { day: 'Sáb', value: 350000 },
+    { day: 'Dom', value: 310000 }
+  ];
 
-    return () => clearInterval(interval);
-  }, [orders, expenses, payroll]);
+  const paymentMethods = [
+    { name: 'Dinheiro', value: 45, color: 'bg-green-500' },
+    { name: 'Multicaixa', value: 35, color: 'bg-blue-500' },
+    { name: 'Transferência', value: 20, color: 'bg-yellow-500' }
+  ];
 
-  // Listen for store changes
-  useEffect(() => {
-    // This will trigger when store data changes
-    const handleStoreChange = () => {
-      // Metrics will be recalculated automatically
-    };
-    
-    // Setup store listener if available
-    return () => {};
-  }, [orders, expenses, payroll]);
-
-  // Chart data configuration
-  const revenueData = {
-    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
-    datasets: [
-      {
-        label: 'Receita (KZ)',
-        data: [12000, 19000, 15000, 22000, 28000, 35000, 31000],
-        borderColor: 'rgb(234, 179, 8)',
-        backgroundColor: 'rgba(234, 179, 8, 0.5)',
-        tension: 0.4
-      }
-    ]
-  };
-
-  const paymentMethodsData = {
-    labels: ['Dinheiro', 'Multicaixa', 'Transferência'],
-    datasets: [
-      {
-        data: [45, 35, 20],
-        backgroundColor: [
-          'rgba(34, 197, 94, 0.8)',
-          'rgba(59, 130, 246, 0.8)',
-          'rgba(234, 179, 8, 0.8)'
-        ],
-        borderWidth: 0
-      }
-    ]
-  };
+  const filteredExpenses = expenses?.filter(expense => 
+    expense.description.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   return (
-    <div className="p-8 h-full overflow-y-auto bg-slate-950">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-6 h-full overflow-y-auto bg-slate-950">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Finanças</h1>
-          <p className="text-slate-400">Gestão financeira e relatórios de vendas</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-white">Finanças</h1>
+          <p className="text-slate-400 text-sm">Gestão financeira e relatórios de vendas</p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-400 hover:bg-slate-800"
+            className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-400 hover:bg-slate-800 text-sm"
           >
-            <Filter size={20} />
-            Filtros
+            <Filter size={16} />
+            <span className="hidden sm:inline">Filtros</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90">
-            <Download size={20} />
-            Exportar Relatório
+          <button className="flex items-center gap-2 px-3 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 text-sm">
+            <Download size={16} />
+            <span className="hidden sm:inline">Exportar</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800 min-w-0">
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-green-900/20 rounded-lg">
-              <DollarSign className="text-green-500" size={24} />
-            </div>
-            <span className="flex items-center text-green-500 text-sm font-medium bg-green-900/10 px-2 py-1 rounded">
-              <ArrowUpRight size={16} className="mr-1" />
-              +12.5%
-            </span>
-          </div>
-          <h3 className="text-slate-400 text-sm font-medium mb-1">Receita Total</h3>
-          <p className="font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{metrics.totalRevenue.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</p>
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-blue-900/20 rounded-lg">
-              <TrendingUp className="text-blue-500" size={24} />
-            </div>
-            <span className="flex items-center text-green-500 text-sm font-medium bg-green-900/10 px-2 py-1 rounded">
-              <ArrowUpRight size={16} className="mr-1" />
-              +5.2%
-            </span>
-          </div>
-          <h3 className="text-slate-400 text-sm font-medium mb-1">Valor Médio</h3>
-          <p className="font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{metrics.avgTicket.toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' AKZ'}</p>
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-purple-900/20 rounded-lg">
-              <CreditCard className="text-purple-500" size={24} />
-            </div>
-            <span className="flex items-center text-red-500 text-sm font-medium bg-red-900/10 px-2 py-1 rounded">
-              <ArrowDownRight size={16} className="mr-1" />
-              -2.1%
-            </span>
-          </div>
-          <h3 className="text-slate-400 text-sm font-medium mb-1">Total Pedidos</h3>
-          <p className="font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,3vw,2rem)]">{metrics.orderCount}</p>
-        </div>
-
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-orange-900/20 rounded-lg">
-              <PieChart className="text-orange-500" size={24} />
-            </div>
-            <span className="text-slate-400 text-xs">Hoje</span>
-          </div>
-          <h3 className="text-slate-400 text-sm font-medium mb-1">Turno Atual</h3>
-          <p className="text-lg font-bold text-white">{activeShift ? 'Aberto' : 'Fechado'}</p>
-        </div>
-      </div>
-
-      {/* Despesas & Salários */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Despesas Variáveis */}
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800 min-w-0">
-          <h3 className="text-lg font-bold text-white mb-4">Despesas Variáveis</h3>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const form = e.target as HTMLFormElement;
-              const desc = (form.elements.namedItem('desc') as HTMLInputElement).value;
-              const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value);
-              if (!desc || !Number.isFinite(amount)) return;
-              addExpense({ id: `exp-${Date.now()}`, description: desc, amount, date: new Date(), category: 'VARIAVEL' } as any);
-              form.reset();
-            }}
-            className="flex gap-2 mb-4"
-          >
-            <input name="desc" placeholder="Descrição" className="flex-1 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
-            <input name="amount" type="number" placeholder="Valor" className="w-32 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
-            <button className="px-4 py-2 bg-primary text-black font-bold rounded-lg">Adicionar</button>
-          </form>
-          <div className="space-y-2">
-            {(expenses || []).map(e => (
-              <div key={e.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                <span className="text-sm font-bold">{e.description}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono text-red-400">{formatKz(Number(e.amount || 0))}</span>
-                  <button onClick={() => removeExpense(e.id as any)} className="text-xs text-slate-400 hover:text-red-400">Apagar</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Despesas Fixas */}
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
-          <h3 className="text-lg font-bold text-white mb-4">Despesas Fixas</h3>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const form = e.target as HTMLFormElement;
-              const desc = (form.elements.namedItem('fdesc') as HTMLInputElement).value;
-              const amount = Number((form.elements.namedItem('famount') as HTMLInputElement).value);
-              if (!desc || !Number.isFinite(amount)) return;
-              addFixedExpense({ id: `fix-${Date.now()}`, description: desc, amount, frequency: 'MENSAL' } as any);
-              form.reset();
-            }}
-            className="flex gap-2 mb-4"
-          >
-            <input name="fdesc" placeholder="Descrição" className="flex-1 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
-            <input name="famount" type="number" placeholder="Valor" className="w-32 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
-            <button className="px-4 py-2 bg-primary text黑 font-bold rounded-lg">Adicionar</button>
-          </form>
-          <div className="space-y-2">
-            {(fixedExpenses || []).map(e => (
-              <div key={e.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                <span className="text-sm font-bold">{e.description}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono text-red-400">{formatKz(Number(e.amount || 0))}</span>
-                  <button onClick={() => removeFixedExpense(e.id as any)} className="text-xs text-slate-400 hover:text-red-400">Apagar</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Folha de Salários */}
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
-          <h3 className="text-lg font-bold text-white mb-4">Folha de Salários</h3>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const form = e.target as HTMLFormElement;
-              const empId = (form.elements.namedItem('emp') as HTMLSelectElement).value;
-              const amount = Number((form.elements.namedItem('samount') as HTMLInputElement).value);
-              const month = Number((form.elements.namedItem('smonth') as HTMLInputElement).value);
-              const year = Number((form.elements.namedItem('syear') as HTMLInputElement).value);
-              if (!empId || !Number.isFinite(amount)) return;
-              addPayrollRecord({ id: `pay-${Date.now()}`, employeeId: empId as any, amount, month, year, status: 'PENDENTE' } as any);
-              form.reset();
-            }}
-            className="grid grid-cols-2 gap-2 mb-4"
-          >
-            <select name="emp" className="p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none">
-              {(employees || []).map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}
+      {/* Filters */}
+      {showFilters && (
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <select 
+              value={dateRange} 
+              onChange={(e) => setDateRange(e.target.value)}
+              className="p-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+            >
+              <option value="today">Hoje</option>
+              <option value="week">Esta Semana</option>
+              <option value="month">Este Mês</option>
+              <option value="year">Este Ano</option>
+              <option value="custom">Personalizado</option>
             </select>
-            <input name="samount" type="number" placeholder="Valor" className="p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
-            <input name="smonth" type="number" placeholder="Mês" className="p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
-            <input name="syear" type="number" placeholder="Ano" className="p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none" />
-            <button className="px-4 py-2 bg-primary text-black font-bold rounded-lg col-span-2">Registar Pagamento</button>
-          </form>
-          <div className="space-y-2">
-            {(payroll || []).map(p => (
-              <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                <span className="text-sm font-bold">Emp: {p.employeeId} • {p.month}/{p.year}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono text-emerald-400">{formatKz(Number(p.amount || 0))}</span>
-                  <button onClick={() => removePayrollRecord(p.id as any)} className="text-xs text-slate-400 hover:text-red-400">Apagar</button>
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="p-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+              placeholder="Data Início"
+            />
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="p-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+              placeholder="Data Fim"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 bg-slate-900/50 p-1 rounded-lg border border-slate-800 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all text-sm whitespace-nowrap ${
+            activeTab === 'overview'
+              ? 'bg-primary text-black'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <BarChart3 size={16} />
+          Visão Geral
+        </button>
+        <button
+          onClick={() => setActiveTab('expenses')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all text-sm whitespace-nowrap ${
+            activeTab === 'expenses'
+              ? 'bg-primary text-black'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Receipt size={16} />
+          Despesas
+        </button>
+        <button
+          onClick={() => setActiveTab('payroll')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all text-sm whitespace-nowrap ${
+            activeTab === 'payroll'
+              ? 'bg-primary text-black'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Wallet size={16} />
+          Folha Salarial
+        </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all text-sm whitespace-nowrap ${
+            activeTab === 'reports'
+              ? 'bg-primary text-black'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Target size={16} />
+          Relatórios
+        </button>
+      </div>
+
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* KPI Cards - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+              <div className="flex justify-between items-start mb-3">
+                <div className="p-2 bg-green-900/20 rounded-lg">
+                  <DollarSign className="text-green-500" size={20} />
+                </div>
+                <span className="flex items-center text-green-500 text-xs font-medium bg-green-900/10 px-2 py-1 rounded">
+                  <ArrowUpRight size={12} className="mr-1" />
+                  +12.5%
+                </span>
+              </div>
+              <h3 className="text-slate-400 text-xs font-medium mb-1">Receita Total</h3>
+              <p className="font-bold text-white text-lg truncate">
+                {formatKz(metrics.totalRevenue)}
+              </p>
+            </div>
+
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+              <div className="flex justify-between items-start mb-3">
+                <div className="p-2 bg-blue-900/20 rounded-lg">
+                  <TrendingUp className="text-blue-500" size={20} />
+                </div>
+                <span className="flex items-center text-green-500 text-xs font-medium bg-green-900/10 px-2 py-1 rounded">
+                  <ArrowUpRight size={12} className="mr-1" />
+                  +5.2%
+                </span>
+              </div>
+              <h3 className="text-slate-400 text-xs font-medium mb-1">Valor Médio</h3>
+              <p className="font-bold text-white text-lg truncate">
+                {formatKz(metrics.avgTicket)}
+              </p>
+            </div>
+
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+              <div className="flex justify-between items-start mb-3">
+                <div className="p-2 bg-purple-900/20 rounded-lg">
+                  <CreditCard className="text-purple-500" size={20} />
+                </div>
+                <span className="flex items-center text-red-500 text-xs font-medium bg-red-900/10 px-2 py-1 rounded">
+                  <ArrowDownRight size={12} className="mr-1" />
+                  -2.1%
+                </span>
+              </div>
+              <h3 className="text-slate-400 text-xs font-medium mb-1">Total Pedidos</h3>
+              <p className="font-bold text-white text-lg truncate">{metrics.orderCount}</p>
+            </div>
+
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+              <div className="flex justify-between items-start mb-3">
+                <div className="p-2 bg-orange-900/20 rounded-lg">
+                  <Activity className="text-orange-500" size={20} />
+                </div>
+                <span className="text-slate-400 text-xs">Turno</span>
+              </div>
+              <h3 className="text-slate-400 text-xs font-medium mb-1">Status</h3>
+              <p className="font-bold text-white text-lg truncate">
+                Operacional
+              </p>
+            </div>
+          </div>
+
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Weekly Revenue Chart */}
+            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
+              <h3 className="text-lg font-bold text-white mb-4">Receita Semanal</h3>
+              <div className="h-64 flex items-end justify-between gap-2">
+                {weeklyRevenue.map((day, index) => (
+                  <div key={index} className="flex-1 flex flex-col items-center gap-2">
+                    <div 
+                      className="w-full bg-gradient-to-t from-primary to-primary/50 rounded-t-lg transition-all hover:from-primary hover:to-primary"
+                      style={{ height: `${(day.value / 350000) * 100}%` }}
+                    />
+                    <span className="text-xs text-slate-400">{day.day}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Payment Methods */}
+            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
+              <h3 className="text-lg font-bold text-white mb-4">Métodos de Pagamento</h3>
+              <div className="space-y-3">
+                {paymentMethods.map((method, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${method.color}`} />
+                      <span className="text-sm text-slate-300">{method.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 bg-slate-700 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${method.color}`}
+                          style={{ width: `${method.value}%` }}
+                        />
+                      </div>
+                      <span className="text-sm text-slate-400 w-10 text-right">{method.value}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'expenses' && (
+        <div className="space-y-6">
+          {/* Add Expense Form */}
+          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
+            <h3 className="text-lg font-bold text-white mb-4">Adicionar Despesa</h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const desc = (form.elements.namedItem('desc') as HTMLInputElement).value;
+                const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value);
+                if (!desc || !Number.isFinite(amount)) return;
+                addExpense({ 
+                  id: `exp-${Date.now()}`, 
+                  description: desc, 
+                  amount, 
+                  date: new Date(), 
+                  category: 'VARIAVEL' 
+                } as any);
+                form.reset();
+                addNotification('success', 'Despesa adicionada com sucesso!');
+              }}
+              className="grid grid-cols-1 md:grid-cols-4 gap-4"
+            >
+              <input 
+                name="desc" 
+                placeholder="Descrição" 
+                className="p-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:border-primary outline-none" 
+              />
+              <input 
+                name="amount" 
+                type="number" 
+                placeholder="Valor (AOA)" 
+                className="p-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:border-primary outline-none" 
+              />
+              <select className="p-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:border-primary outline-none">
+                <option value="VARIAVEL">Variável</option>
+                <option value="FIXA">Fixa</option>
+                <option value="EMERGENCIA">Emergência</option>
+              </select>
+              <button type="submit" className="px-4 py-3 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors">
+                <Plus size={16} className="inline mr-2" />
+                Adicionar
+              </button>
+            </form>
+          </div>
+
+          {/* Expenses List */}
+          <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+            <div className="p-4 border-b border-slate-800">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white">Lista de Despesas</h3>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Buscar despesas..."
+                    className="pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:border-primary outline-none w-64"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
-            ))}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-800/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Data</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Descrição</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Categoria</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Valor</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {filteredExpenses.slice(0, 10).map((expense: any) => (
+                    <tr key={expense.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="px-4 py-3 text-sm text-slate-400">
+                        {formatDateInLuanda(expense.date)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-white truncate max-w-xs">{expense.description}</td>
+                      <td className="px-4 py-3 text-sm text-slate-400">{expense.category}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-white">{formatKz(expense.amount)}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex gap-2">
+                          <button className="text-blue-400 hover:text-blue-300 transition-colors">
+                            <Eye size={16} />
+                          </button>
+                          <button className="text-yellow-400 hover:text-yellow-300 transition-colors">
+                            <Edit2 size={16} />
+                          </button>
+                          <button className="text-red-400 hover:text-red-300 transition-colors">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
-          <h3 className="text-lg font-bold text-white mb-6">Evolução de Vendas</h3>
-          <div className="h-[300px]">
-            <Line options={{ maintainAspectRatio: false }} data={revenueData} />
+      {activeTab === 'payroll' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
+            <h3 className="text-lg font-bold text-white mb-4">Folha Salarial</h3>
+            <div className="text-center py-8">
+              <Wallet className="mx-auto h-12 w-12 text-slate-600 mb-4" />
+              <h4 className="text-lg font-medium text-white mb-2">Gestão de Folha Salarial</h4>
+              <p className="text-slate-400 mb-4">Funcionalidade em desenvolvimento</p>
+            </div>
           </div>
         </div>
-        
-        <div className="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
-          <h3 className="text-lg font-bold text-white mb-6">Métodos de Pagamento</h3>
-          <div className="h-[300px] flex justify-center">
-            <Doughnut options={{ maintainAspectRatio: false }} data={paymentMethodsData} />
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* Recent Transactions */}
-      <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
-        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-          <h3 className="text-lg font-bold text-white">Transações Recentes</h3>
-          <button className="text-primary text-sm font-medium hover:underline">Ver todas</button>
+      {activeTab === 'reports' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
+            <h3 className="text-lg font-bold text-white mb-4">Relatórios Financeiros</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left">
+                <div className="flex items-center gap-3 mb-2">
+                  <BarChart3 className="text-primary" size={20} />
+                  <span className="font-medium text-white">Relatório de Vendas</span>
+                </div>
+                <p className="text-sm text-slate-400">Análise detalhada das vendas por período</p>
+              </button>
+              <button className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left">
+                <div className="flex items-center gap-3 mb-2">
+                  <Receipt className="text-primary" size={20} />
+                  <span className="font-medium text-white">Relatório de Despesas</span>
+                </div>
+                <p className="text-sm text-slate-400">Controle detalhado de todas as despesas</p>
+              </button>
+              <button className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left">
+                <div className="flex items-center gap-3 mb-2">
+                  <Target className="text-primary" size={20} />
+                  <span className="font-medium text-white">Relatório de Metas</span>
+                </div>
+                <p className="text-sm text-slate-400">Acompanhamento de metas e objetivos</p>
+              </button>
+              <button className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left">
+                <div className="flex items-center gap-3 mb-2">
+                  <Activity className="text-primary" size={20} />
+                  <span className="font-medium text-white">Relatório Completo</span>
+                </div>
+                <p className="text-sm text-slate-400">Visão geral completa do negócio</p>
+              </button>
+            </div>
+          </div>
         </div>
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-50 text-slate-500">
-            <tr>
-              <th className="px-6 py-3 font-medium">ID Pedido</th>
-              <th className="px-6 py-3 font-medium">Data/Hora</th>
-              <th className="px-6 py-3 font-medium">Mesa</th>
-              <th className="px-6 py-3 font-medium">Total</th>
-              <th className="px-6 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {orders.slice(0, 5).map(order => (
-              <tr key={order.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 font-medium text-slate-800">#{order.id.slice(0, 8)}</td>
-                <td className="px-6 py-4 text-slate-500">
-                  {formatDateInLuanda(order.createdAt, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                </td>
-                <td className="px-6 py-4 text-slate-500">Mesa {order.tableId}</td>
-                <td className="px-6 py-4 font-medium text-slate-800">
-                  {formatKz(order.total)}
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    order.status === 'FECHADO' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {order.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      )}
     </div>
   );
 }
