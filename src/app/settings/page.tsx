@@ -59,7 +59,7 @@ const Settings = () => {
   const [webhookEvents, setWebhookEvents] = useState<string[]>(['order.created']);
 
   // Database Config State
-  const [dbConfig, setDbConfig] = useState<{ type: 'local_storage' | 'postgres' | 'sqlite', connectionString?: string }>({ type: 'local_storage' });
+  const [dbConfig, setDbConfig] = useState<{ type: 'local_storage' | 'postgres' | 'sqlite', connectionString?: string }>({ type: 'sqlite', connectionString: 'tasca.db' });
 
   useEffect(() => {
     getDatabaseConfigActionClient().then(res => {
@@ -88,7 +88,16 @@ const Settings = () => {
 
   // Funções do conteúdo original
   const handleTestCloudConnection = async () => {
-    addNotification('info', 'Função temporariamente desativada para build');
+    const result = await testCloudConnectionActionClient(
+      settings.supabaseConfig?.url || '',
+      settings.supabaseConfig?.key || ''
+    );
+    
+    if (result.success) {
+      addNotification('success', 'Conexão com Supabase estabelecida com sucesso!');
+    } else {
+      addNotification('error', 'Falha na conexão: ' + (result.error || 'Erro desconhecido'));
+    }
   };
 
   const handleSetupRLS = async () => {

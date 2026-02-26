@@ -22,8 +22,8 @@ export async function getDatabaseConfigActionClient(): Promise<{ success: boolea
   try {
     // Para ambiente client-side, usar localStorage ou configuração padrão
     const config: DatabaseConfig = {
-      type: 'local_storage',
-      connectionString: undefined
+      type: 'sqlite', // Mudar padrão para SQLite
+      connectionString: 'tasca.db' // Arquivo SQLite padrão
     };
     
     // Tentar obter do localStorage se disponível
@@ -61,6 +61,28 @@ export async function testDatabaseConnectionActionClient(type: string, connectio
     if (type === 'local_storage') {
       // Local storage sempre funciona
       return { success: true };
+    }
+    
+    if (type === 'sqlite' && connectionString) {
+      // Testar conexão SQLite
+      try {
+        const { createClient } = await import('@libsql/client');
+        
+        // Normalizar URL SQLite
+        let url = connectionString;
+        if (!url.startsWith('file:') && !url.startsWith('sqlite:')) {
+          url = 'file:' + url;
+        }
+        
+        const client = createClient({ url });
+        
+        // Testar conexão executando uma query simples
+        await client.execute('SELECT 1');
+        
+        return { success: true };
+      } catch (error: any) {
+        return { success: false, error: `Erro na conexão SQLite: ${error.message}` };
+      }
     }
     
     if (type === 'postgres' && connectionString) {
