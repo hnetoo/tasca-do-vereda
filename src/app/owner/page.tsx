@@ -54,6 +54,24 @@ export default function OwnerPage() {
     setAuthChecking(false);
   }, [router]);
 
+  // Função para calcular total da order com fallback
+  const calculateOrderTotal = (order: any) => {
+    if (order.total && order.total > 0) {
+      return order.total;
+    }
+    
+    // Fallback: calcular dos itens
+    if (order.items && order.items.length > 0) {
+      return order.items.reduce((sum: number, item: any) => {
+        const dish = dishes?.find((d: any) => d.id === (item.dishId || item.dish_id));
+        if (!dish) return sum;
+        return sum + (dish.price || 0) * (item.quantity || 0);
+      }, 0);
+    }
+    
+    return 0;
+  };
+
   // Estado para métricas calculadas
   const realtimeStats = useMemo(() => {
     // Se não há dados, retornar zeros estáveis
@@ -81,7 +99,7 @@ export default function OwnerPage() {
       );
       
       const todaySales = todayOrders.reduce((sum, order) => 
-        sum + (order.total || 0), 0
+        sum + calculateOrderTotal(order), 0
       );
       
       const todayRevenue = todaySales * 0.85; // 85% de margem
@@ -91,7 +109,7 @@ export default function OwnerPage() {
         todayOrders: todayOrders.length,
         todayRevenue,
         activeTables: todayOrders.filter(o => o && o.status === 'ABERTO').length,
-        totalRevenue: orders.reduce((sum, order) => sum + (order.total || 0), 0),
+        totalRevenue: orders.reduce((sum, order) => sum + calculateOrderTotal(order), 0),
         totalOrders: orders.length,
         avgTicket: todayOrders.length > 0 ? todaySales / todayOrders.length : 0,
         growth: 0, // Sem cálculo de crescimento para evitar instabilidade
@@ -137,7 +155,7 @@ export default function OwnerPage() {
               description: `Pedido #${order.order_number || 'N/A'}`,
               category: 'Vendas',
               type: 'REVENUE' as const,
-              amount: order.total || 0
+              amount: calculateOrderTotal(order)
             });
           }
         });
