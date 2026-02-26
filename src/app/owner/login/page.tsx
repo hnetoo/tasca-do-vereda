@@ -30,6 +30,14 @@ export default function OwnerLoginPage() {
     const isAuth = localStorage.getItem('owner_authenticated');
     if (isAuth === 'true') {
       router.push('/owner');
+    } else {
+      // Verificar se há autenticação normal e limpar se existir
+      const normalAuth = localStorage.getItem('authenticated');
+      if (normalAuth === 'true') {
+        localStorage.removeItem('authenticated');
+        localStorage.removeItem('user');
+        localStorage.removeItem('login_time');
+      }
     }
   }, [router]);
 
@@ -46,7 +54,12 @@ export default function OwnerLoginPage() {
       (credentials.username === OWNER_CREDENTIALS.username && credentials.password === OWNER_CREDENTIALS.password) ||
       (credentials.username === ADMIN_CREDENTIALS.username && credentials.password === ADMIN_CREDENTIALS.password)
     ) {
-      // Salvar autenticação
+      // Limpar qualquer autenticação normal existente
+      localStorage.removeItem('authenticated');
+      localStorage.removeItem('user');
+      localStorage.removeItem('login_time');
+      
+      // Salvar autenticação owner
       localStorage.setItem('owner_authenticated', 'true');
       localStorage.setItem('owner_user', credentials.username);
       localStorage.setItem('owner_login_time', new Date().toISOString());
