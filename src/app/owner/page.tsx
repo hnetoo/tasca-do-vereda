@@ -231,12 +231,12 @@ export default function OwnerRealtime() {
   }, [filteredTransactions]);
 
   // Loading state
-  if (authChecking || ordersLoading || metricsLoading || transactionsLoading) {
+  if (authChecking) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Carregando dados em tempo real...</p>
+          <p>Verificando autenticação...</p>
         </div>
       </div>
     );

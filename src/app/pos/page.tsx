@@ -35,7 +35,7 @@ const POS = () => {
     createNewOrder, addToOrder, removeFromOrder, 
     checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
     settings, addNotification,
-    currentShiftId, openShift, toggleMobileMenu, isSidebarCollapsed,
+    currentShiftId, openShift, toggleMobileMenu, isSidebarCollapsed, toggleSidebar,
     addTable, auditLogs
   } = useStore();
   const user = useSelector(selectUser);
@@ -1079,7 +1079,7 @@ const POS = () => {
       {isImmersive && (
         <div className="fixed top-4 left-4 z-50">
           <button 
-            onClick={toggleMobileMenu}
+            onClick={toggleSidebar}
             className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-lg transition-all group"
             title="Sair do Modo Tela Cheia"
           >
@@ -1090,7 +1090,7 @@ const POS = () => {
 
       {/* POS Internal Command Bar */}
       <div className={`w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full transition-all duration-300 ${isImmersive ? '-translate-x-full' : ''}`}>
-         <button onClick={toggleMobileMenu} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" title="Menu Principal">
+         <button onClick={toggleSidebar} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" title="Menu Principal / Fullscreen">
             <Menu size={24} />
          </button>
          
