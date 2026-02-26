@@ -43,12 +43,17 @@ export default function OwnerRealtime() {
 
   // Combinar dados locais com dados do Supabase
   const orders = useMemo(() => {
-    // Priorizar dados do Supabase se disponíveis, senão usar dados locais
-    if (supabaseOrders && supabaseOrders.length > 0) {
-      return supabaseOrders;
+    try {
+      // Priorizar dados do Supabase se disponíveis, senão usar dados locais
+      if (supabaseOrders && supabaseOrders.length > 0) {
+        return supabaseOrders;
+      }
+      // Fallback para dados locais (SQLite/LocalStorage)
+      return localOrders || [];
+    } catch (error) {
+      console.error('Erro ao combinar dados de pedidos:', error);
+      return localOrders || [];
     }
-    // Fallback para dados locais (SQLite/LocalStorage)
-    return localOrders || [];
   }, [supabaseOrders, localOrders]);
 
   // Verificar se Supabase está configurado
@@ -72,7 +77,7 @@ export default function OwnerRealtime() {
 
   // Estado para métricas calculadas
   const realtimeStats = useMemo(() => {
-    // Se não há dados, retornar zeros
+    // Se não há dados, retornar zeros estáveis
     if (!orders || orders.length === 0) {
       return {
         todaySales: 0,
@@ -88,31 +93,47 @@ export default function OwnerRealtime() {
       };
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todayOrders = orders.filter(order => 
-      new Date(order.created_at) >= today
-    );
-    
-    const todaySales = todayOrders.reduce((sum, order) => 
-      sum + (order.total || 0), 0
-    );
-    
-    const todayRevenue = todaySales * 0.85; // 85% de margem
-    
-    return {
-      todaySales,
-      todayOrders: todayOrders.length,
-      todayRevenue,
-      activeTables: todayOrders.filter(o => o.status === 'ABERTO').length,
-      totalRevenue: orders.reduce((sum, order) => sum + (order.total || 0), 0),
-      totalOrders: orders.length,
-      avgTicket: orders.length > 0 ? todaySales / todayOrders.length : 0,
-      growth: 12.5, // Mock growth
-      pendingOrders: todayOrders.filter(o => o.status === 'ABERTO').length,
-      averageTicket: orders.length > 0 ? todaySales / todayOrders.length : 0
-    };
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayOrders = orders.filter(order => 
+        order && order.created_at && new Date(order.created_at) >= today
+      );
+      
+      const todaySales = todayOrders.reduce((sum, order) => 
+        sum + (order.total || 0), 0
+      );
+      
+      const todayRevenue = todaySales * 0.85; // 85% de margem
+      
+      return {
+        todaySales,
+        todayOrders: todayOrders.length,
+        todayRevenue,
+        activeTables: todayOrders.filter(o => o && o.status === 'ABERTO').length,
+        totalRevenue: orders.reduce((sum, order) => sum + (order.total || 0), 0),
+        totalOrders: orders.length,
+        avgTicket: todayOrders.length > 0 ? todaySales / todayOrders.length : 0,
+        growth: 0, // Sem cálculo de crescimento para evitar instabilidade
+        pendingOrders: todayOrders.filter(o => o && o.status === 'ABERTO').length,
+        averageTicket: todayOrders.length > 0 ? todaySales / todayOrders.length : 0
+      };
+    } catch (error) {
+      console.error('Erro ao calcular estatísticas:', error);
+      return {
+        todaySales: 0,
+        todayOrders: 0,
+        todayRevenue: 0,
+        activeTables: 0,
+        totalRevenue: 0,
+        totalOrders: 0,
+        avgTicket: 0,
+        growth: 0,
+        pendingOrders: 0,
+        averageTicket: 0
+      };
+    }
   }, [orders]);
 
   // Verificar autenticação
@@ -135,15 +156,6 @@ export default function OwnerRealtime() {
     checkAuth();
   }, [router]);
 
-  // Forçar atualização dos dados em tempo real
-  useEffect(() => {
-    // Se temos dados locais, já estamos prontos
-    if (localOrders && localOrders.length > 0) {
-      setReady(true);
-      setAuthChecking(false);
-    }
-  }, [localOrders]);
-
   // Combinar transações de pedidos e transações financeiras
   const combinedTransactions = useMemo(() => {
     const txs: Array<{
@@ -155,29 +167,41 @@ export default function OwnerRealtime() {
       amount: number;
     }> = [];
 
-    // Adicionar transações dos pedidos
-    orders.forEach(order => {
-      txs.push({
-        id: `order-${order.id}`,
-        date: order.created_at,
-        description: `Pedido #${order.order_number}`,
-        category: 'Vendas',
-        type: 'REVENUE',
-        amount: order.total_amount || 0
-      });
-    });
+    try {
+      // Adicionar transações dos pedidos
+      if (orders && orders.length > 0) {
+        orders.forEach(order => {
+          if (order && order.id) {
+            txs.push({
+              id: `order-${order.id}`,
+              date: order.created_at || new Date().toISOString(),
+              description: `Pedido #${order.order_number || 'N/A'}`,
+              category: 'Vendas',
+              type: 'REVENUE',
+              amount: order.total || 0
+            });
+          }
+        });
+      }
 
-    // Adicionar transações financeiras
-    transactions.forEach(transaction => {
-      txs.push({
-        id: transaction.id,
-        date: transaction.created_at,
-        description: transaction.description || 'Transação',
-        category: transaction.category || 'Geral',
-        type: transaction.type as 'REVENUE' | 'EXPENSE',
-        amount: transaction.amount || 0
-      });
-    });
+      // Adicionar transações financeiras
+      if (transactions && transactions.length > 0) {
+        transactions.forEach(transaction => {
+          if (transaction && transaction.id) {
+            txs.push({
+              id: `transaction-${transaction.id}`,
+              date: transaction.date || new Date().toISOString(),
+              description: transaction.description || 'Transação',
+              category: transaction.category || 'Outros',
+              type: transaction.type || 'EXPENSE',
+              amount: transaction.amount || 0
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao combinar transações:', error);
+    }
 
     return txs;
   }, [orders, transactions]);
