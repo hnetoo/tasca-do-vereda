@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?if $(sys.BUILDARCH)="x86"?>
+    <?define Win64 = "no" ?>
+    <?define PlatformProgramFilesFolder = "ProgramFilesFolder" ?>
+<?elseif $(sys.BUILDARCH)="x64"?>
+    <?define Win64 = "yes" ?>
+    <?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
+<?elseif $(sys.BUILDARCH)="arm64"?>
+    <?define Win64 = "yes" ?>
+    <?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
+<?else?>
+    <?error Unsupported value of sys.BUILDARCH=$(sys.BUILDARCH)?>
+<?endif?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product
+            Id="*"
+            Name="Tasca Do VEREDA (DEV)"
+            UpgradeCode="6b0f7e1a-3b8f-4b08-9a9e-7f50b6f9a2b1"
+            Language="!(loc.TauriLanguage)"
+            Manufacturer="tascadovereda"
+            Version="1.0.99">
+
+        <!-- Propriedade de logging detalhado -->
+        <Property Id="MsiLogging" Value="v" />
+        
+        <!-- Propriedade para caminho do aplicativo -->
+        <Property Id="CAMINHO_DO_APP" Secure="yes" />
+        
+        <!-- Validar permissões de escrita -->
+        <CustomAction Id="CheckWritePermissions" 
+                    BinaryKey="WixCA" 
+                    DllEntry="CheckWritePermissions" 
+                    Execute="immediate" 
+                    Return="check" />
+        
+        <InstallExecuteSequence>
+            <Custom Action="CheckWritePermissions" Before="LaunchConditions">NOT Installed</Custom>
+            <RemoveShortcuts>Installed AND NOT UPGRADINGPRODUCTCODE</RemoveShortcuts>
+        </InstallExecuteSequence>
+
+        <Package Id="*"
+                 Keywords="Installer"
+                 InstallerVersion="450"
+                 Languages="0"
+                 Compressed="yes"
+                 InstallScope="perMachine"
+                 SummaryCodepage="!(loc.TauriCodepage)"/>
+
+        <!-- Auto launch app after installation -->
+        <Property Id="AUTOLAUNCHAPP" Secure="yes" />
+        <Property Id="LAUNCHAPPARGS" Secure="yes" />
+
+        <MajorUpgrade Schedule="afterInstallInitialize" AllowDowngrades="yes" />
+
+        <Media Id="1" Cabinet="app.cab" EmbedCab="yes" />
+
+        <Icon Id="ProductIcon" SourceFile="C:\Users\hneto\tasca-do-vereda_actual\src-tauri\target\release\resources\icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
+
+        <!-- SpawnDialogs para erros -->
+        <UIRef Id="WixUI_ErrorDialog" />
+        
+        <Dialog Id="ErrorWritePermissions" Width="260" Height="85" Title="[ProductName] Setup" NoModal="yes">
+            <Control Id="Text" Type="Text" X="48" Y="15" Width="194" Height="30">
+                <Text>Erro: Sem permissões de escrita na pasta [CAMINHO_DO_APP]. Execute o instalador como Administrador.</Text>
+            </Control>
+            <Control Id="OK" Type="PushButton" X="112" Y="57" Width="56" Height="17" Default="yes" Cancel="yes" Text="OK">
+                <Publish Event="EndDialog" Value="Return">1</Publish>
+            </Control>
+        </Dialog>
+
+        <Dialog Id="ErrorInstallFailed" Width="260" Height="85" Title="[ProductName] Setup" NoModal="yes">
+            <Control Id="Text" Type="Text" X="48" Y="15" Width="194" Height="30">
+                <Text>Falha na instalação. Verifique o log de erros para detalhes.</Text>
+            </Control>
+            <Control Id="OK" Type="PushButton" X="112" Y="57" Width="56" Height="17" Default="yes" Cancel="yes" Text="OK">
+                <Publish Event="EndDialog" Value="Return">1</Publish>
+            </Control>
+        </Dialog>
+
+        <Dialog Id="ErrorConfigFailed" Width="260" Height="85" Title="[ProductName] Setup" NoModal="yes">
+            <Control Id="Text" Type="Text" X="48" Y="15" Width="194" Height="30">
+                <Text>Erro na configuração do aplicativo. Verifique o log para detalhes.</Text>
+            </Control>
+            <Control Id="OK" Type="PushButton" X="112" Y="57" Width="56" Height="17" Default="yes" Cancel="yes" Text="OK">
+                <Publish Event="EndDialog" Value="Return">1</Publish>
+            </Control>
+        </Dialog>
+
+        <!-- Publish Events com SpawnDialog para erros -->
+        <InstallUISequence>
+            <Show Dialog="ErrorWritePermissions" OnExit="error">NOT WIX_UPGRADE_DETECTED AND NOT Installed</Show>
+            <Show Dialog="ErrorInstallFailed" OnExit="error">WIX_UPGRADE_DETECTED</Show>
+            <Show Dialog="ErrorConfigFailed" OnExit="error">Installed AND UPGRADINGPRODUCTCODE</Show>
+        </InstallUISequence>
+
+        <!-- Estrutura de diretórios simplificada -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="$(var.PlatformProgramFilesFolder)">
+                <Directory Id="INSTALLDIR" Name="Tasca Do VEREDA">
+                    <!-- Componentes do aplicativo -->
+                    <Component Id="MainExecutable" Guid="*">
+                        <File Id="TascaDoVeredaExe" 
+                              Source="C:\Users\hneto\tasca-do-vereda_actual\src-tauri\target\release\tasca-do-vereda-app.exe" 
+                              KeyPath="yes" />
+                    </Component>
+                    <Component Id="Resources" Guid="*">
+                        <File Id="IconFile" 
+                              Source="C:\Users\hneto\tasca-do-vereda_actual\src-tauri\target\release\resources\icon.ico" />
+                    </Component>
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <!-- Feature principal -->
+        <Feature Id="Complete" Title="Complete" Description="Instalação completa do Tasca Do VEREDA" Level="1">
+            <ComponentRef Id="MainExecutable" />
+            <ComponentRef Id="Resources" />
+        </Feature>
+
+        <!-- Propriedades de logging adicionais -->
+        <Property Id="LOGFILEPATH" Value="[TempFolder]\TascaDoVereda_Install.log" />
+        <Property Id="MsiLogFileLocation" Value="[LOGFILEPATH]" />
+        
+        <!-- Configuração de logging detalhado -->
+        <Property Id="MsiLogging" Value="vvoicewarmupx" />
+        
+        <!-- Eventos de logging -->
+        <InstallExecuteSequence>
+            <Custom Action="WixRollbackInstall" After="InstallInitialize">REMOVE="ALL"</Custom>
+            <Custom Action="WixFailInstall" After="InstallFinalize">NOT Installed</Custom>
+        </InstallExecuteSequence>
+
+    </Product>
+</Wix>

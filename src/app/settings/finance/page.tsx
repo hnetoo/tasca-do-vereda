@@ -20,6 +20,7 @@ interface FinancialData {
   costs: number;
   profit: number;
   profitMargin: number;
+  historicalRevenue?: number; // Valor arrecadado antes de usar o app
 }
 
 interface Transaction {
@@ -58,10 +59,17 @@ export default function SettingsFinancePage() {
     averageTicket: 43850,
     costs: 8500000,
     profit: 4000000,
-    profitMargin: 32
+    profitMargin: 32,
+    historicalRevenue: 0
   });
 
-  const [transactions, setTransactions] = useState<Transaction[]>([
+  // Valores fixos para evitar Date.now() no render
+const YESTERDAY = new Date(Date.now() - 86400000).toISOString();
+const TWO_DAYS_AGO = new Date(Date.now() - 172800000).toISOString();
+const ONE_MONTH_FROM_NOW = new Date(Date.now() + 2592000000).toISOString();
+const THREE_MONTHS_FROM_NOW = new Date(Date.now() + 7776000000).toISOString();
+
+const [transactions, setTransactions] = useState<Transaction[]>([
     {
       id: '1',
       type: 'revenue',
@@ -78,7 +86,7 @@ export default function SettingsFinancePage() {
       description: 'Compra de matéria-prima',
       amount: 120000,
       category: 'custos',
-      date: new Date(Date.now() - 86400000).toISOString(),
+      date: YESTERDAY,
       paymentMethod: 'transferência',
       status: 'completed'
     },
@@ -88,7 +96,7 @@ export default function SettingsFinancePage() {
       description: 'Eventos especiais',
       amount: 85000,
       category: 'eventos',
-      date: new Date(Date.now() - 172800000).toISOString(),
+      date: TWO_DAYS_AGO,
       paymentMethod: 'dinheiro',
       status: 'completed'
     }
@@ -100,7 +108,7 @@ export default function SettingsFinancePage() {
       title: 'Meta Mensal de Vendas',
       targetAmount: 15000000,
       currentAmount: 13500000,
-      deadline: new Date(Date.now() + 2592000000).toISOString(),
+      deadline: ONE_MONTH_FROM_NOW,
       category: 'monthly'
     },
     {
@@ -108,18 +116,24 @@ export default function SettingsFinancePage() {
       title: 'Meta Trimestral',
       targetAmount: 45000000,
       currentAmount: 38000000,
-      deadline: new Date(Date.now() + 7776000000).toISOString(),
+      deadline: THREE_MONTHS_FROM_NOW,
       category: 'quarterly'
     }
   ]);
 
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [showHistoricalRevenue, setShowHistoricalRevenue] = useState(false);
   const [manualEntry, setManualEntry] = useState({
     type: 'revenue' as 'revenue' | 'expense',
     description: '',
     amount: 0,
     category: '',
     paymentMethod: ''
+  });
+  const [historicalRevenue, setHistoricalRevenue] = useState({
+    amount: 0,
+    description: '',
+    date: new Date().toISOString().split('T')[0]
   });
 
   const filteredTransactions = transactions.filter(transaction => {
@@ -171,6 +185,37 @@ export default function SettingsFinancePage() {
     addNotification('success', 'Receita atualizada com sucesso!');
   };
 
+  const handleHistoricalRevenueUpdate = () => {
+    if (historicalRevenue.amount <= 0) {
+      addNotification('error', 'Valor histórico deve ser maior que zero!');
+      return;
+    }
+
+    setFinancialData(prev => ({
+      ...prev,
+      historicalRevenue: historicalRevenue.amount,
+      totalRevenue: prev.totalRevenue + historicalRevenue.amount,
+      profit: prev.profit + historicalRevenue.amount
+    }));
+
+    // Criar transação histórica
+    const historicalTransaction: Transaction = {
+      id: 'historical-' + Date.now(),
+      type: 'revenue',
+      description: `Valor histórico arrecadado: ${historicalRevenue.description || 'Anterior ao sistema atual'}`,
+      amount: historicalRevenue.amount,
+      category: 'historico',
+      date: historicalRevenue.date,
+      paymentMethod: 'sistema_anterior',
+      status: 'completed'
+    };
+
+    setTransactions([historicalTransaction, ...transactions]);
+    setShowHistoricalRevenue(false);
+    setHistoricalRevenue({ amount: 0, description: '', date: new Date().toISOString().split('T')[0] });
+    addNotification('success', `Valor histórico de €${(historicalRevenue.amount / 100).toFixed(2)} adicionado com sucesso!`);
+  };
+
   const handleResetFinancialData = () => {
     if (confirm('Tem certeza que deseja resetar todos os dados financeiros? Esta ação não pode ser desfeita e irá zerar todas as métricas para produção do zero.')) {
       const resetData: FinancialData = {
@@ -182,7 +227,8 @@ export default function SettingsFinancePage() {
         averageTicket: 0,
         costs: 0,
         profit: 0,
-        profitMargin: 0
+        profitMargin: 0,
+        historicalRevenue: 0
       };
 
       setFinancialData(resetData);
@@ -198,6 +244,7 @@ export default function SettingsFinancePage() {
       financialData,
       transactions,
       goals,
+      historicalRevenue: financialData.historicalRevenue,
       exportDate: new Date().toISOString()
     };
 
@@ -219,7 +266,10 @@ export default function SettingsFinancePage() {
         try {
           const importedData = JSON.parse(e.target?.result as string);
           if (importedData.financialData) {
-            setFinancialData(importedData.financialData);
+            setFinancialData({
+              ...importedData.financialData,
+              historicalRevenue: importedData.historicalRevenue || importedData.financialData.historicalRevenue || 0
+            });
           }
           if (importedData.transactions) {
             setTransactions(importedData.transactions);
@@ -312,6 +362,13 @@ export default function SettingsFinancePage() {
           Inserir Receita Manual
         </button>
         <button
+          onClick={() => setShowHistoricalRevenue(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition-colors"
+        >
+          <PiggyBank size={20} />
+          Adicionar Valor Histórico
+        </button>
+        <button
           onClick={handleExportData}
           className="flex items-center gap-2 px-6 py-3 bg-slate-700 text-white rounded-xl hover:bg-slate-600 transition-colors"
         >
@@ -356,6 +413,11 @@ export default function SettingsFinancePage() {
               <p className="text-2xl font-black text-white tracking-tighter">
                 {financialData.totalRevenue.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
               </p>
+              {financialData.historicalRevenue && financialData.historicalRevenue > 0 && (
+                <p className="text-xs text-blue-400 mt-2">
+                  Incluindo €{(financialData.historicalRevenue / 100).toFixed(2)} histórico
+                </p>
+              )}
             </div>
 
             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6">
@@ -651,6 +713,70 @@ export default function SettingsFinancePage() {
                 className="px-6 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors"
               >
                 Inserir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Adicionar Valor Histórico */}
+      {showHistoricalRevenue && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+              <PiggyBank className="text-blue-500" size={24} />
+              Adicionar Valor Histórico
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Valor Arrecadado (AOA)</label>
+                <input
+                  type="number"
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg outline-none focus:border-primary text-white"
+                  placeholder="Ex: 5000000"
+                  value={historicalRevenue.amount}
+                  onChange={(e) => setHistoricalRevenue({ ...historicalRevenue, amount: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Descrição (Opcional)</label>
+                <input
+                  type="text"
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg outline-none focus:border-primary text-white"
+                  placeholder="Ex: Vendas do sistema anterior"
+                  value={historicalRevenue.description}
+                  onChange={(e) => setHistoricalRevenue({ ...historicalRevenue, description: e.target.value })}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Data de Referência</label>
+                <input
+                  type="date"
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg outline-none focus:border-primary text-white"
+                  value={historicalRevenue.date}
+                  onChange={(e) => setHistoricalRevenue({ ...historicalRevenue, date: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowHistoricalRevenue(false);
+                  setHistoricalRevenue({ amount: 0, description: '', date: new Date().toISOString().split('T')[0] });
+                }}
+                className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleHistoricalRevenueUpdate}
+                className="px-6 py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Adicionar Valor
               </button>
             </div>
           </div>
