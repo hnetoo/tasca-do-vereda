@@ -1073,10 +1073,23 @@ const POS = () => {
   }
 
   return (
-    <div className="flex h-full overflow-hidden relative bg-background font-sans text-slate-200">
+    <div className={`flex h-full overflow-hidden relative bg-background font-sans text-slate-200 ${isImmersive ? 'pl-0' : ''}`}>
       
+      {/* Fullscreen Exit Button - Only visible when in immersive mode */}
+      {isImmersive && (
+        <div className="fixed top-4 left-4 z-50">
+          <button 
+            onClick={toggleMobileMenu}
+            className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-lg transition-all group"
+            title="Sair do Modo Tela Cheia"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      )}
+
       {/* POS Internal Command Bar */}
-      <div className="w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full">
+      <div className={`w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full transition-all duration-300 ${isImmersive ? '-translate-x-full' : ''}`}>
          <button onClick={toggleMobileMenu} className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" title="Menu Principal">
             <Menu size={24} />
          </button>
@@ -1143,7 +1156,7 @@ const POS = () => {
          </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col overflow-hidden ${isImmersive ? 'ml-0' : ''}`}>
         
         {/* TOP SESSION TABS - NOVO SISTEMA MULTI-MESA */}
         <div className="h-16 bg-slate-900/80 border-b border-white/5 flex items-center px-4 gap-2 shrink-0">
@@ -1351,7 +1364,7 @@ const POS = () => {
       </div>
 
       {/* Cart Sidebar */}
-      <div className={`w-96 border-l border-white/5 flex flex-col h-full z-30 bg-slate-950 shadow-2xl transition-all duration-500 ${(!activeTableId && (!activeOrderId || !currentOrder || !currentOrder.items || currentOrder.items.length === 0)) ? 'translate-x-full' : ''}`}>
+      <div className={`w-96 border-l border-white/5 flex flex-col h-full z-30 bg-slate-950 shadow-2xl transition-all duration-500 ${isImmersive ? 'right-0' : ''} ${(!activeTableId && (!activeOrderId || !currentOrder || !currentOrder.items || currentOrder.items.length === 0)) ? 'translate-x-full' : ''}`}>
         {(activeTableId || (currentOrder && currentOrder.items && currentOrder.items.length > 0)) ? (
           <>
             {activeTableId ? (
