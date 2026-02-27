@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Smartphone, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Calendar, ArrowUpRight, ArrowDownRight, LogOut } from 'lucide-react';
-import { useStore } from '@/hooks/useStore';
+import { useStore } from '@/store/useStore';
 
 export default function OwnerMobilePage() {
   const router = useRouter();
