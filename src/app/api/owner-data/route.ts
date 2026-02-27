@@ -65,7 +65,16 @@ export async function GET() {
       categories: result.categories.length
     });
     
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    });
     
   } catch (error: any) {
     console.error('❌ API Error:', error);
