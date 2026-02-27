@@ -9,6 +9,13 @@ export default function OwnerMobilePage() {
   const router = useRouter();
   const [authChecking, setAuthChecking] = useState(true);
   const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
+  const [supabaseData, setSupabaseData] = useState<any>({
+    orders: [],
+    expenses: [],
+    dishes: [],
+    categories: []
+  });
+  const [loadingSupabase, setLoadingSupabase] = useState(false);
   
   // Dados em tempo real do store local (SQLite)
   const { 
@@ -18,17 +25,67 @@ export default function OwnerMobilePage() {
     categories 
   } = useStore();
 
+  // Fallback: Carregar dados da API se store local estiver vazio
+  useEffect(() => {
+    const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
+    
+    if (!hasLocalData && !loadingSupabase) {
+      console.log('🔄 Loading data from API (fallback for mobile)');
+      loadApiData();
+    }
+  }, [orders, expenses, loadingSupabase]);
+
+  const loadApiData = async () => {
+    setLoadingSupabase(true);
+    try {
+      const response = await fetch('/api/owner-data');
+      const data = await response.json();
+      
+      setSupabaseData({
+        orders: data.orders || [],
+        expenses: data.expenses || [],
+        dishes: data.dishes || [],
+        categories: data.categories || []
+      });
+      
+      console.log('✅ API data loaded for mobile:', {
+        orders: data.orders?.length || 0,
+        expenses: data.expenses?.length || 0,
+        dishes: data.dishes?.length || 0,
+        categories: data.categories?.length || 0
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error loading API data for mobile:', error);
+    } finally {
+      setLoadingSupabase(false);
+    }
+  };
+
+  // Usar dados do store local ou API
+  const currentData = {
+    orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
+    expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
+    dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
+    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories
+  };
+
   // Debug para verificar se dados estão carregados
   useEffect(() => {
     const debugInfo = {
-      ordersCount: orders?.length || 0,
-      expensesCount: expenses?.length || 0,
-      dishesCount: dishes?.length || 0,
-      categoriesCount: categories?.length || 0,
-      isMobile: true
+      localOrders: orders?.length || 0,
+      localExpenses: expenses?.length || 0,
+      localDishes: dishes?.length || 0,
+      localCategories: categories?.length || 0,
+      apiOrders: supabaseData.orders.length,
+      apiExpenses: supabaseData.expenses.length,
+      finalOrders: currentData.orders.length,
+      finalExpenses: currentData.expenses.length,
+      isMobile: true,
+      loadingSupabase
     };
     
-    console.log('📊 Owner Mobile Store Data:', debugInfo);
+    console.log('📊 Owner Mobile Data Debug:', debugInfo);
   }, [orders, expenses, dishes, categories]);
 
   // Verificar autenticação mobile
