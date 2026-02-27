@@ -224,7 +224,7 @@ export default function OwnerPage() {
         totalOrders: currentData.orders.length,
         avgTicket: todayOrders.length > 0 ? todaySales / todayOrders.length : 0,
         growth: 0, // Sem cálculo de crescimento para evitar instabilidade
-        pendingOrders: todayOrders.filter(o => o && o.status === 'ABERTO').length,
+        pendingOrders: todayOrders.filter((o: any) => o && o.status === 'ABERTO').length,
         averageTicket: todayOrders.length > 0 ? todaySales / todayOrders.length : 0
       };
     } catch (error) {
