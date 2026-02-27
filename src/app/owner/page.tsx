@@ -75,11 +75,13 @@ export default function OwnerPage() {
   // Estado para métricas calculadas
   const realtimeStats = useMemo(() => {
     console.log('📊 Owner Stats Debug:', {
+      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR',
+      isMobile: typeof window !== 'undefined' ? /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) : 'SSR',
       orders: orders?.length || 0,
       dishes: dishes?.length || 0,
       categories: categories?.length || 0,
-      sampleOrders: orders?.slice(0, 2),
-      sampleDishes: dishes?.slice(0, 2)
+      sampleOrders: orders?.slice(0, 2).map(o => ({ id: o.id, total: o.total, itemsCount: o.items?.length || 0 })),
+      sampleDishes: dishes?.slice(0, 2).map(d => ({ id: d.id, name: d.name, price: d.price }))
     });
     
     // Se não há dados, retornar zeros estáveis
