@@ -38,7 +38,8 @@ export async function updateSession(request: NextRequest) {
   // Check for our custom auth cookie set by the mock login
   const tascaAuthToken = request.cookies.get('tasca_auth_token')
   const pinSession = request.cookies.get('pin_session')
-  const isAuthenticated = !!user || !!tascaAuthToken || !!pinSession
+  const ownerAuthenticated = request.cookies.get('owner_authenticated')?.value === 'true'
+  const isAuthenticated = !!user || !!tascaAuthToken || !!pinSession || ownerAuthenticated
 
   const url = request.nextUrl.clone()
   const path = url.pathname
