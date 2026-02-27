@@ -45,6 +45,7 @@ export default function OwnerMobilePage() {
 
   // Forçar reload manual
   const forceReload = () => {
+    alert('Botão clicado! Forçando reload...');
     console.log('🔄 Forcing manual reload...');
     loadApiData();
   };
