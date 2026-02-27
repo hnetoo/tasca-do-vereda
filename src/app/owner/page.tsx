@@ -23,6 +23,13 @@ export default function OwnerPage() {
   const router = useRouter();
   const [authChecking, setAuthChecking] = useState(true);
   const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
+  const [supabaseData, setSupabaseData] = useState<any>({
+    orders: [],
+    expenses: [],
+    dishes: [],
+    categories: []
+  });
+  const [loadingSupabase, setLoadingSupabase] = useState(false);
   
   // Dados em tempo real do store local (SQLite)
   const { 
@@ -32,17 +39,66 @@ export default function OwnerPage() {
     categories 
   } = useStore();
 
+  // Fallback: Carregar dados da API se store local estiver vazio
+  useEffect(() => {
+    const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
+    
+    if (!hasLocalData && !loadingSupabase) {
+      console.log('🔄 Loading data from API (fallback for owner desktop)');
+      loadApiData();
+    }
+  }, [orders, expenses, loadingSupabase]);
+
+  const loadApiData = async () => {
+    setLoadingSupabase(true);
+    try {
+      const response = await fetch('/api/owner-data');
+      const data = await response.json();
+      
+      setSupabaseData({
+        orders: data.orders || [],
+        expenses: data.expenses || [],
+        dishes: data.dishes || [],
+        categories: data.categories || []
+      });
+      
+      console.log('✅ API data loaded for owner desktop:', {
+        orders: data.orders?.length || 0,
+        expenses: data.expenses?.length || 0,
+        dishes: data.dishes?.length || 0,
+        categories: data.categories?.length || 0
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error loading API data for owner desktop:', error);
+    } finally {
+      setLoadingSupabase(false);
+    }
+  };
+
+  // Usar dados do store local ou API
+  const currentData = {
+    orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
+    expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
+    dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
+    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories
+  };
+
   // Debug para verificar se dados estão carregados
   useEffect(() => {
     const debugInfo = {
-      ordersCount: orders?.length || 0,
-      expensesCount: expenses?.length || 0,
-      dishesCount: dishes?.length || 0,
-      categoriesCount: categories?.length || 0,
+      localOrders: orders?.length || 0,
+      localExpenses: expenses?.length || 0,
+      localDishes: dishes?.length || 0,
+      localCategories: categories?.length || 0,
+      apiOrders: supabaseData.orders.length,
+      apiExpenses: supabaseData.expenses.length,
+      finalOrders: currentData.orders.length,
+      finalExpenses: currentData.expenses.length,
       isMobile: typeof window !== 'undefined' ? /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) : 'SSR'
     };
     
-    console.log('📊 Owner Store Data:', debugInfo);
+    console.log('📊 Owner Desktop Data Debug:', debugInfo);
     
     // Adicionar debug visual na página
     const debugElement = document.getElementById('mobile-debug');
@@ -119,7 +175,7 @@ export default function OwnerPage() {
     });
     
     // Se não há dados, retornar zeros estáveis
-    if (!orders || orders.length === 0) {
+    if (!currentData.orders || currentData.orders.length === 0) {
       console.log('📊 No orders found, returning zeros');
       return {
         todaySales: 0,
@@ -139,23 +195,33 @@ export default function OwnerPage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const todayOrders = orders.filter(order => 
-        order && order.created_at && new Date(order.created_at) >= today
-      );
+      const todayOrders = currentData.orders.filter((order: any) => {
+        const orderDate = new Date(order.created_at || new Date());
+        return orderDate >= today;
+      });
       
-      const todaySales = todayOrders.reduce((sum, order) => 
-        sum + calculateOrderTotal(order), 0
-      );
+      const todaySales = todayOrders.reduce((sum: number, order: any) => {
+        return sum + (order.total || 0);
+      }, 0);
       
       const todayRevenue = todaySales * 0.85; // 85% de margem
       
+      const totalRevenue = currentData.orders.reduce((sum: number, order: any) => {
+        return sum + (order.total || 0);
+      }, 0);
+
+      // Contar mesas ativas (orders que não estão fechadas)
+      const activeTables = currentData.orders.filter((order: any) => 
+        order.status !== 'closed' && order.status !== 'paid'
+      ).length;
+
       return {
         todaySales,
         todayOrders: todayOrders.length,
         todayRevenue,
-        activeTables: todayOrders.filter(o => o && o.status === 'ABERTO').length,
-        totalRevenue: orders.reduce((sum, order) => sum + calculateOrderTotal(order), 0),
-        totalOrders: orders.length,
+        activeTables,
+        totalRevenue,
+        totalOrders: currentData.orders.length,
         avgTicket: todayOrders.length > 0 ? todaySales / todayOrders.length : 0,
         growth: 0, // Sem cálculo de crescimento para evitar instabilidade
         pendingOrders: todayOrders.filter(o => o && o.status === 'ABERTO').length,
