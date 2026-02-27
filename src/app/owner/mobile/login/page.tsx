@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Eye, EyeOff, Lock, User, Smartphone } from 'lucide-react';
+import Head from 'next/head';
 
 export default function OwnerMobileLoginPage() {
   const router = useRouter();
@@ -13,6 +14,31 @@ export default function OwnerMobileLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Forçar limpeza de cache ao entrar
+  useEffect(() => {
+    console.log('🧹 Forçando limpeza de cache...');
+    
+    // Limpar service workers
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+          console.log('🗑️ Service worker removido');
+        }
+      });
+    }
+    
+    // Limpar caches
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        names.forEach(function(name) {
+          caches.delete(name);
+          console.log('🗑️ Cache removido:', name);
+        });
+      });
+    }
+  }, []);
 
   // Credenciais hardcoded para owner e admin
   const OWNER_CREDENTIALS = {
@@ -69,9 +95,24 @@ export default function OwnerMobileLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
+    <>
+      <Head>
+        <title>Owner Mobile Login</title>
+        <meta name="cache-control" content="no-cache, no-store, must-revalidate" />
+        <meta name="pragma" content="no-cache" />
+        <meta name="expires" content="0" />
+        <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="pragma" content="no-cache" />
+        <meta http-equiv="expires" content="0" />
+      </Head>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
+        
+        {/* Debug Info */}
+        <div className="absolute top-4 left-4 bg-red-600 text-white p-2 text-xs z-50">
+          DEBUG: Mobile Login Page - No Redirects Allowed
+        </div>
       
       {/* Mobile Frame */}
       <div className="relative z-10 w-full max-w-md">
@@ -174,5 +215,6 @@ export default function OwnerMobileLoginPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

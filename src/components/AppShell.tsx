@@ -8,8 +8,8 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import { useAuth } from '@/hooks/useAuth';
 import { Menu, X } from 'lucide-react';
 
-const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner/login'];
-const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner', '/owner/login'];
+const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner/login', '/owner/mobile', '/owner/mobile/login'];
+const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner', '/owner/login', '/owner/mobile', '/owner/mobile/login'];
 
 const AppShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
