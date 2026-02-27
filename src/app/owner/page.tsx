@@ -65,10 +65,21 @@ export default function OwnerPage() {
       return null;
     };
     
-    const isAuth = getCookie('owner_authenticated') === 'true' || 
-                   localStorage.getItem('owner_authenticated') === 'true';
+    const cookieValue = getCookie('owner_authenticated');
+    const localStorageValue = localStorage.getItem('owner_authenticated');
+    const isAuth = cookieValue === 'true' || localStorageValue === 'true';
     
-    console.log('🔐 Owner auth check:', { cookie: getCookie('owner_authenticated'), localStorage: localStorage.getItem('owner_authenticated'), isAuth });
+    console.log('🔐 Owner auth check:', { cookie: cookieValue, localStorage: localStorageValue, isAuth });
+    
+    // Debug visual para mostrar o estado da autenticação
+    const authDebugElement = document.getElementById('auth-debug');
+    if (authDebugElement) {
+      authDebugElement.innerHTML = `
+        <div style="position: fixed; top: 60px; right: 10px; background: orange; color: black; padding: 10px; z-index: 9999; font-size: 12px;">
+          🔐 AUTH DEBUG: cookie=${cookieValue} | localStorage=${localStorageValue} | isAuth=${isAuth}
+        </div>
+      `;
+    }
     
     if (!isAuth) {
       router.push('/owner/login');
@@ -282,6 +293,7 @@ export default function OwnerPage() {
     <div className="min-h-screen bg-black text-white p-8">
       {/* Debug Visual para Mobile */}
       <div id="mobile-debug"></div>
+      <div id="auth-debug"></div>
       
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
