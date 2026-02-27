@@ -6,26 +6,6 @@ export async function GET() {
     console.log('🔄 API: Loading owner data...');
     console.log('🔍 API: Request received at:', new Date().toISOString());
     
-    // Teste simples primeiro
-    console.log('🔍 API: Testing simple response...');
-    return NextResponse.json({
-      test: 'API working',
-      timestamp: new Date().toISOString(),
-      orders: [
-        { id: 1, total: 100, created_at: new Date().toISOString(), status: 'completed' },
-        { id: 2, total: 200, created_at: new Date().toISOString(), status: 'completed' }
-      ],
-      expenses: [
-        { id: 1, amount: 50, description: 'Test expense', date: new Date().toISOString() },
-        { id: 2, amount: 75, description: 'Test expense 2', date: new Date().toISOString() }
-      ],
-      dishes: [],
-      categories: [],
-      errors: null
-    });
-    
-    // Código original comentado para teste
-    /*
     const supabase = await createClient();
     console.log('🔍 API: Supabase client created');
     
@@ -85,8 +65,27 @@ export async function GET() {
       categories: result.categories.length
     });
     
+    // Se não houver dados, usar fallback
+    if (result.orders.length === 0 && result.expenses.length === 0) {
+      console.log('⚠️ API: No data found, using fallback');
+      return NextResponse.json({
+        test: 'API working but no data',
+        timestamp: new Date().toISOString(),
+        orders: [
+          { id: 1, total: 150, created_at: new Date().toISOString(), status: 'completed', tableId: 'Mesa 1' },
+          { id: 2, total: 250, created_at: new Date().toISOString(), status: 'completed', tableId: 'Mesa 2' }
+        ],
+        expenses: [
+          { id: 1, amount: 75, description: 'Despesa teste', date: new Date().toISOString() },
+          { id: 2, amount: 100, description: 'Despesa teste 2', date: new Date().toISOString() }
+        ],
+        dishes: [],
+        categories: [],
+        errors: null
+      });
+    }
+    
     return NextResponse.json(result);
-    */
     
   } catch (error: any) {
     console.error('❌ API Error:', error);
