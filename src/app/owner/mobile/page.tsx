@@ -123,7 +123,7 @@ export default function OwnerMobilePage() {
 
   // Estatísticas em tempo real
   const realtimeStats = useMemo(() => {
-    if (!orders || orders.length === 0) {
+    if (!currentData.orders || currentData.orders.length === 0) {
       return {
         todaySales: 0,
         todayOrders: 0,
@@ -135,21 +135,21 @@ export default function OwnerMobilePage() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const todayOrders = orders.filter(order => {
+    const todayOrders = currentData.orders.filter((order: any) => {
       const orderDate = new Date(order.created_at || new Date());
       return orderDate >= today;
     });
 
-    const todaySales = todayOrders.reduce((sum, order) => {
+    const todaySales = todayOrders.reduce((sum: number, order: any) => {
       return sum + calculateOrderTotal(order);
     }, 0);
 
-    const totalRevenue = orders.reduce((sum, order) => {
+    const totalRevenue = currentData.orders.reduce((sum: number, order: any) => {
       return sum + calculateOrderTotal(order);
     }, 0);
 
     // Contar mesas ativas (orders que não estão fechadas)
-    const activeTables = orders.filter(order => 
+    const activeTables = currentData.orders.filter((order: any) => 
       order.status !== 'closed' && order.status !== 'paid'
     ).length;
 
@@ -159,7 +159,7 @@ export default function OwnerMobilePage() {
       activeTables,
       totalRevenue
     };
-  }, [orders]);
+  }, [currentData.orders]);
 
   // Combinar transações (orders + expenses)
   const combinedTransactions = useMemo(() => {
@@ -167,8 +167,8 @@ export default function OwnerMobilePage() {
     
     try {
       // Adicionar orders como transações de revenue
-      if (orders && orders.length > 0) {
-        orders.forEach(order => {
+      if (currentData.orders && currentData.orders.length > 0) {
+        currentData.orders.forEach((order: any) => {
           if (order && order.id) {
             txs.push({
               id: `order-${order.id}`,
@@ -183,8 +183,8 @@ export default function OwnerMobilePage() {
       }
       
       // Adicionar expenses como transações
-      if (expenses && expenses.length > 0) {
-        expenses.forEach(expense => {
+      if (currentData.expenses && currentData.expenses.length > 0) {
+        currentData.expenses.forEach((expense: any) => {
           if (expense && expense.id) {
             txs.push({
               id: `expense-${expense.id}`,
@@ -202,7 +202,7 @@ export default function OwnerMobilePage() {
     }
 
     return txs;
-  }, [orders, expenses]);
+  }, [currentData.orders, currentData.expenses]);
 
   // Filtrar transações por período
   const filteredTransactions = useMemo(() => {
