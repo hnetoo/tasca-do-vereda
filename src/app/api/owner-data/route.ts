@@ -6,6 +6,26 @@ export async function GET() {
     console.log('🔄 API: Loading owner data...');
     console.log('🔍 API: Request received at:', new Date().toISOString());
     
+    // Teste simples primeiro
+    console.log('🔍 API: Testing simple response...');
+    return NextResponse.json({
+      test: 'API working',
+      timestamp: new Date().toISOString(),
+      orders: [
+        { id: 1, total: 100, created_at: new Date().toISOString(), status: 'completed' },
+        { id: 2, total: 200, created_at: new Date().toISOString(), status: 'completed' }
+      ],
+      expenses: [
+        { id: 1, amount: 50, description: 'Test expense', date: new Date().toISOString() },
+        { id: 2, amount: 75, description: 'Test expense 2', date: new Date().toISOString() }
+      ],
+      dishes: [],
+      categories: [],
+      errors: null
+    });
+    
+    // Código original comentado para teste
+    /*
     const supabase = await createClient();
     console.log('🔍 API: Supabase client created');
     
@@ -66,6 +86,7 @@ export async function GET() {
     });
     
     return NextResponse.json(result);
+    */
     
   } catch (error: any) {
     console.error('❌ API Error:', error);
