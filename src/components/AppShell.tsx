@@ -74,8 +74,8 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <>
-      {/* Botão de toggle da sidebar - aparece quando a sidebar está escondida */}
-      {!showSidebar && !noSidebarRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)) && <SidebarToggle />}
+      {/* Botão de toggle da sidebar - aparece quando a sidebar está escondida, mas NÃO em páginas owner */}
+      {!showSidebar && !pathname.startsWith('/owner') && <SidebarToggle />}
       
       <div className="min-h-[100dvh] bg-slate-950 text-white flex transition-opacity duration-300">
           <Sidebar showSidebar={showSidebar} />
