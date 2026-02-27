@@ -1,8 +1,8 @@
 import { type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
 
+// MIDDLEWARE DESATIVADO - NÃO INTERFERE EM NADA
 export async function middleware(request: NextRequest) {
-  return await updateSession(request)
+  return undefined
 }
 
 export const config = {
