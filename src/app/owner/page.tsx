@@ -34,13 +34,25 @@ export default function OwnerPage() {
 
   // Debug para verificar se dados estão carregados
   useEffect(() => {
-    console.log('📊 Owner Store Data:', {
+    const debugInfo = {
       ordersCount: orders?.length || 0,
       expensesCount: expenses?.length || 0,
       dishesCount: dishes?.length || 0,
       categoriesCount: categories?.length || 0,
       isMobile: typeof window !== 'undefined' ? /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) : 'SSR'
-    });
+    };
+    
+    console.log('📊 Owner Store Data:', debugInfo);
+    
+    // Adicionar debug visual na página
+    const debugElement = document.getElementById('mobile-debug');
+    if (debugElement) {
+      debugElement.innerHTML = `
+        <div style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-size: 12px;">
+          📊 DEBUG: ${JSON.stringify(debugInfo)}
+        </div>
+      `;
+    }
   }, [orders, expenses, dishes, categories]);
 
   // Verificar autenticação
@@ -268,6 +280,9 @@ export default function OwnerPage() {
   // Renderizar dashboard em tempo real
   return (
     <div className="min-h-screen bg-black text-white p-8">
+      {/* Debug Visual para Mobile */}
+      <div id="mobile-debug"></div>
+      
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
