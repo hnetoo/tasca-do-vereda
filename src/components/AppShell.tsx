@@ -1,22 +1,21 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import SmartAlertsPanel from '@/components/SmartAlertsPanel';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import SidebarToggle from '@/components/SidebarToggle';
 import { useAuth } from '@/hooks/useAuth';
-import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext'; // Importar o hook useAuth do Redux
+import { Menu, X } from 'lucide-react';
 
 const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner/login'];
 const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner', '/owner/login'];
 
-const AppShellContent = ({ children }: { children: React.ReactNode }) => {
+const AppShell = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth();
-  const { isMainSidebarHidden } = useSidebar(); // Usar contexto
+  const [sidebarHidden, setSidebarHidden] = useState(false);
 
   // Considerar a aplicação inicializada quando o estado de autenticação não está mais a carregar
   const isInitialized = !loading;
@@ -26,10 +25,9 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
     [pathname]
   );
 
-  // Modificar showSidebar para considerar o estado do contexto
   const showSidebar = useMemo(
-    () => !noSidebarRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)) && !isMainSidebarHidden,
-    [pathname, isMainSidebarHidden]
+    () => !noSidebarRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)) && !sidebarHidden,
+    [pathname, sidebarHidden]
   );
   
   const showCta = useMemo(
@@ -74,12 +72,31 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <>
-      {/* Botão de toggle da sidebar - aparece quando a sidebar está escondida, mas NÃO em páginas owner */}
-      {!showSidebar && !pathname.startsWith('/owner') && <SidebarToggle />}
+      {/* Botão de toggle da sidebar - aparece quando a sidebar está escondida */}
+      {!showSidebar && !pathname.startsWith('/owner') && (
+        <button
+          onClick={() => setSidebarHidden(false)}
+          className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-black shadow-lg shadow-primary/30 hover:scale-110 transition-all"
+          title="Mostrar Menu"
+        >
+          <Menu size={20} />
+        </button>
+      )}
       
       <div className="min-h-[100dvh] bg-slate-950 text-white flex transition-opacity duration-300">
           <Sidebar showSidebar={showSidebar} />
           <main className={`flex-1 min-w-0 ${showSidebar ? '' : 'ml-0'}`}>
+            {/* Botão para esconder sidebar - aparece quando sidebar está visível */}
+            {showSidebar && !pathname.startsWith('/owner') && (
+              <button
+                onClick={() => setSidebarHidden(true)}
+                className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg flex items-center justify-center bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-all"
+                title="Esconder Menu"
+              >
+                <X size={20} />
+              </button>
+            )}
+            
             {!pathname.startsWith('/owner') && <Breadcrumbs />} 
             
             {/* Elemento de Marketing */}
@@ -101,15 +118,6 @@ const AppShellContent = ({ children }: { children: React.ReactNode }) => {
       </div>
       <SmartAlertsPanel />
     </>
-  );
-};
-
-// Wrapper component that provides the sidebar context
-const AppShell = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <SidebarProvider>
-      <AppShellContent>{children}</AppShellContent>
-    </SidebarProvider>
   );
 };
 
