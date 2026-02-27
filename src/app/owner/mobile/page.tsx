@@ -38,7 +38,13 @@ export default function OwnerMobilePage() {
   const loadApiData = async () => {
     setLoadingSupabase(true);
     try {
+      console.log('🔄 Starting API call to /api/owner-data');
       const response = await fetch('/api/owner-data');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
       setSupabaseData({
@@ -52,11 +58,13 @@ export default function OwnerMobilePage() {
         orders: data.orders?.length || 0,
         expenses: data.expenses?.length || 0,
         dishes: data.dishes?.length || 0,
-        categories: data.categories?.length || 0
+        categories: data.categories?.length || 0,
+        errors: data.errors
       });
       
     } catch (error: any) {
       console.error('❌ Error loading API data for mobile:', error);
+      console.error('❌ Error details:', error.message);
     } finally {
       setLoadingSupabase(false);
     }
