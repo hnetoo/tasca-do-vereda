@@ -32,6 +32,17 @@ export default function OwnerPage() {
     categories 
   } = useStore();
 
+  // Debug para verificar se dados estão carregados
+  useEffect(() => {
+    console.log('📊 Owner Store Data:', {
+      ordersCount: orders?.length || 0,
+      expensesCount: expenses?.length || 0,
+      dishesCount: dishes?.length || 0,
+      categoriesCount: categories?.length || 0,
+      isMobile: typeof window !== 'undefined' ? /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) : 'SSR'
+    });
+  }, [orders, expenses, dishes, categories]);
+
   // Verificar autenticação
   useEffect(() => {
     // Verificar cookie de autenticação owner (compatível com mobile)
