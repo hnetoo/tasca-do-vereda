@@ -90,18 +90,41 @@ export default function OwnerMobilePage() {
 
   // Verificar autenticação mobile
   useEffect(() => {
+    // Debug inicial
+    console.log('🔍 MOBILE DEBUG START');
+    console.log('🔍 User Agent:', navigator.userAgent);
+    console.log('🔍 Current URL:', window.location.href);
+    
     const isAuth = localStorage.getItem('owner_mobile_authenticated') === 'true';
     
     console.log('🔐 Owner Mobile auth check:', { 
       localStorage: localStorage.getItem('owner_mobile_authenticated'), 
-      isAuth
+      isAuth,
+      timestamp: localStorage.getItem('owner_mobile_login_time')
     });
     
+    // Debug visual na página
+    const debugElement = document.getElementById('mobile-auth-debug');
+    if (debugElement) {
+      debugElement.innerHTML = `
+        <div style="position: fixed; top: 10px; left: 10px; background: red; color: white; padding: 10px; z-index: 99999; font-size: 12px;">
+          🔍 MOBILE DEBUG:<br>
+          URL: ${window.location.href}<br>
+          Auth: ${isAuth}<br>
+          Storage: ${localStorage.getItem('owner_mobile_authenticated')}<br>
+          Time: ${localStorage.getItem('owner_mobile_login_time')}
+        </div>
+      `;
+    }
+    
     if (!isAuth) {
-      console.log('🚫 Not authenticated, redirecting to mobile login...');
+      console.log('🚫 Not authenticated, redirecting to MOBILE login...');
+      console.log('🚫 Redirecting to: /owner/mobile/login');
       router.push('/owner/mobile/login');
       return;
     }
+    
+    console.log('✅ Auth OK, staying on mobile page');
     setAuthChecking(false);
   }, [router]);
 
@@ -275,6 +298,8 @@ export default function OwnerMobilePage() {
   // Renderizar dashboard mobile
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Debug Visual para Mobile */}
+      <div id="mobile-auth-debug"></div>
       {/* Header Mobile */}
       <div className="bg-slate-900 border-b border-slate-800 p-4">
         <div className="flex items-center justify-between mb-4">
