@@ -75,7 +75,7 @@ export default function OwnerMobilePage() {
     today.setHours(0, 0, 0, 0);
     
     const todayOrders = orders.filter(order => {
-      const orderDate = new Date(order.created_at || order.date);
+      const orderDate = new Date(order.created_at);
       return orderDate >= today;
     });
 
@@ -111,7 +111,7 @@ export default function OwnerMobilePage() {
           if (order && order.id) {
             txs.push({
               id: `order-${order.id}`,
-              date: order.created_at || order.date || new Date().toISOString(),
+              date: order.created_at || new Date().toISOString(),
               description: `Mesa ${order.table_name || order.tableId || 'N/A'}`,
               category: 'Vendas',
               type: 'REVENUE',
