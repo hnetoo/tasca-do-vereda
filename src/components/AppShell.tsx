@@ -5,15 +5,18 @@ import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import SmartAlertsPanel from '@/components/SmartAlertsPanel';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { useAuth } from '@/hooks/useAuth'; // Importar o hook useAuth do Redux
+import SidebarToggle from '@/components/SidebarToggle';
+import { useAuth } from '@/hooks/useAuth';
+import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext'; // Importar o hook useAuth do Redux
 
 const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner/login'];
 const noSidebarRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner', '/owner/login'];
 
-const AppShell = ({ children }: { children: React.ReactNode }) => {
+const AppShellContent = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, loading } = useAuth(); // Usar o hook useAuth do Redux
+  const { isAuthenticated, loading } = useAuth();
+  const { isMainSidebarHidden } = useSidebar(); // Usar contexto
 
   // Considerar a aplicação inicializada quando o estado de autenticação não está mais a carregar
   const isInitialized = !loading;
@@ -23,10 +26,12 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
     [pathname]
   );
 
+  // Modificar showSidebar para considerar o estado do contexto
   const showSidebar = useMemo(
-    () => !noSidebarRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)),
-    [pathname]
+    () => !noSidebarRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)) && !isMainSidebarHidden,
+    [pathname, isMainSidebarHidden]
   );
+  
   const showCta = useMemo(
     () => pathname === '/menu' || pathname.startsWith('/menu/'),
     [pathname]
@@ -69,6 +74,9 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <>
+      {/* Botão de toggle da sidebar - aparece quando a sidebar está escondida */}
+      {!showSidebar && !noSidebarRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)) && <SidebarToggle />}
+      
       <div className="min-h-[100dvh] bg-slate-950 text-white flex transition-opacity duration-300">
           <Sidebar showSidebar={showSidebar} />
           <main className={`flex-1 min-w-0 ${showSidebar ? '' : 'ml-0'}`}>
@@ -93,6 +101,15 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
       </div>
       <SmartAlertsPanel />
     </>
+  );
+};
+
+// Wrapper component that provides the sidebar context
+const AppShell = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <SidebarProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </SidebarProvider>
   );
 };
 
