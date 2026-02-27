@@ -59,6 +59,8 @@ export default function OwnerMobilePage() {
       const timestamp = new Date().getTime();
       const url = `/api/owner-data?t=${timestamp}`;
       
+      console.log('🔍 Mobile Debug: Fetching URL:', url);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -67,11 +69,20 @@ export default function OwnerMobilePage() {
         }
       });
       
+      console.log('🔍 Mobile Debug: Response status:', response.status);
+      console.log('🔍 Mobile Debug: Response headers:', response.headers);
+      
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
+      
+      console.log('🔍 Mobile Debug: RAW API Response:', data);
+      console.log('🔍 Mobile Debug: Orders count:', data.orders?.length || 0);
+      console.log('🔍 Mobile Debug: Expenses count:', data.expenses?.length || 0);
+      console.log('🔍 Mobile Debug: Data type:', typeof data);
+      console.log('🔍 Mobile Debug: Data keys:', Object.keys(data));
       
       setSupabaseData({
         orders: data.orders || [],
@@ -91,6 +102,7 @@ export default function OwnerMobilePage() {
     } catch (error: any) {
       console.error('❌ Error loading API data for mobile:', error);
       console.error('❌ Error details:', error.message);
+      console.error('❌ Error stack:', error.stack);
     } finally {
       setLoadingSupabase(false);
     }
