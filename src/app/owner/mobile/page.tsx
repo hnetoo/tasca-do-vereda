@@ -29,11 +29,25 @@ export default function OwnerMobilePage() {
   useEffect(() => {
     const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
     
+    console.log('🔍 Data Check Effect:', {
+      hasLocalData,
+      ordersLength: orders?.length || 0,
+      expensesLength: expenses?.length || 0,
+      loadingSupabase,
+      shouldLoad: !hasLocalData && !loadingSupabase
+    });
+    
     if (!hasLocalData && !loadingSupabase) {
       console.log('🔄 Loading data from API (fallback for mobile)');
       loadApiData();
     }
   }, [orders, expenses, loadingSupabase]);
+
+  // Forçar reload manual
+  const forceReload = () => {
+    console.log('🔄 Forcing manual reload...');
+    loadApiData();
+  };
 
   const loadApiData = async () => {
     setLoadingSupabase(true);
@@ -307,7 +321,13 @@ export default function OwnerMobilePage() {
         Final Orders: {currentData.orders.length}<br/>
         Final Expenses: {currentData.expenses.length}<br/>
         Loading: {loadingSupabase ? 'YES' : 'NO'}<br/>
-        Has Local: {(orders?.length || 0) > 0 || (expenses?.length || 0) > 0 ? 'YES' : 'NO'}
+        Has Local: {(orders?.length || 0) > 0 || (expenses?.length || 0) > 0 ? 'YES' : 'NO'}<br/>
+        <button 
+          onClick={forceReload}
+          className="mt-2 bg-red-600 text-white px-2 py-1 rounded text-xs w-full"
+        >
+          🔄 FORÇAR RELOAD
+        </button>
       </div>
       {/* Header Mobile */}
       <div className="bg-slate-900 border-b border-slate-800 p-4">
