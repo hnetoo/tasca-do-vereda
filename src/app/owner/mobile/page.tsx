@@ -75,7 +75,7 @@ export default function OwnerMobilePage() {
     today.setHours(0, 0, 0, 0);
     
     const todayOrders = orders.filter(order => {
-      const orderDate = new Date(order.created_at);
+      const orderDate = new Date(order.created_at || new Date());
       return orderDate >= today;
     });
 
@@ -102,7 +102,7 @@ export default function OwnerMobilePage() {
 
   // Combinar transações (orders + expenses)
   const combinedTransactions = useMemo(() => {
-    const txs = [];
+    const txs: any[] = [];
     
     try {
       // Adicionar orders como transações de revenue
@@ -112,7 +112,7 @@ export default function OwnerMobilePage() {
             txs.push({
               id: `order-${order.id}`,
               date: order.created_at || new Date().toISOString(),
-              description: `Mesa ${order.table_name || order.tableId || 'N/A'}`,
+              description: `Mesa ${order.tableId || 'N/A'}`,
               category: 'Vendas',
               type: 'REVENUE',
               amount: calculateOrderTotal(order)
