@@ -290,7 +290,7 @@ export default function OwnerPage() {
 
   // Renderizar dashboard em tempo real
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <div className="min-h-screen bg-black text-white p-8" style={{marginLeft: '0', paddingLeft: '8px', paddingRight: '8px'}}>
       {/* Debug Visual para Mobile */}
       <div id="mobile-debug"></div>
       <div id="auth-debug"></div>
