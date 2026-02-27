@@ -238,6 +238,17 @@ const POS = () => {
   }, 0) || 0;
   
   const displayTotal = totalWithTax > 0 ? totalWithTax : calculatedTotal;
+  
+  // Debug logs
+  console.log('💰 POS Total Debug:', {
+    currentOrderId: currentOrder?.id,
+    totalWithTax,
+    calculatedTotal,
+    displayTotal,
+    itemsCount: currentOrder?.items?.length,
+    menuItems: menu.length,
+    sampleItems: currentOrder?.items?.slice(0, 2)
+  });
 
   const getExportConfig = () => {
     const shiftOrders = activeOrders.filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId);
@@ -1415,7 +1426,7 @@ const POS = () => {
       </div>
 
       {/* Cart Sidebar */}
-      <div className={`w-96 border-l border-white/5 flex flex-col h-full z-30 bg-slate-950 shadow-2xl transition-all duration-500 ${isImmersive ? 'right-0' : ''} ${(!activeTableId && (!activeOrderId || !currentOrder || !currentOrder.items || currentOrder.items.length === 0)) ? 'translate-x-full' : ''}`}>
+      <div className={`w-96 border-l border-white/5 flex flex-col h-full z-30 bg-slate-950 shadow-2xl transition-all duration-500 ${isImmersive ? 'fixed right-0 top-0 h-screen' : ''} ${(!activeTableId && (!activeOrderId || !currentOrder || !currentOrder.items || currentOrder.items.length === 0)) ? 'translate-x-full' : ''}`}>
         {(activeTableId || (currentOrder && currentOrder.items && currentOrder.items.length > 0)) ? (
           <>
             {activeTableId ? (
