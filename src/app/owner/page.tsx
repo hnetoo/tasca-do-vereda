@@ -74,8 +74,17 @@ export default function OwnerPage() {
 
   // Estado para métricas calculadas
   const realtimeStats = useMemo(() => {
+    console.log('📊 Owner Stats Debug:', {
+      orders: orders?.length || 0,
+      dishes: dishes?.length || 0,
+      categories: categories?.length || 0,
+      sampleOrders: orders?.slice(0, 2),
+      sampleDishes: dishes?.slice(0, 2)
+    });
+    
     // Se não há dados, retornar zeros estáveis
     if (!orders || orders.length === 0) {
+      console.log('📊 No orders found, returning zeros');
       return {
         todaySales: 0,
         todayOrders: 0,
