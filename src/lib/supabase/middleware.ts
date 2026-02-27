@@ -49,6 +49,8 @@ export async function updateSession(request: NextRequest) {
     '/login',
     '/owner/login',
     '/owner',
+    '/owner/mobile',
+    '/owner/mobile/login',
     '/publicmenu', 
     '/customer-display', 
     '/qrscanner', 
