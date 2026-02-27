@@ -341,6 +341,12 @@ export default function OwnerMobilePage() {
               <p className="text-xs text-slate-400">Dashboard em tempo real</p>
             </div>
           </div>
+          <button 
+            onClick={forceReload}
+            className="bg-red-600 text-white px-3 py-2 rounded-lg text-xs"
+          >
+            🔄 Reload
+          </button>
           <button
             onClick={() => {
               localStorage.removeItem('owner_mobile_authenticated');
