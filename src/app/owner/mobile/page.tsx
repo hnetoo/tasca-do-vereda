@@ -35,9 +35,13 @@ export default function OwnerMobilePage() {
   useEffect(() => {
     const isAuth = localStorage.getItem('owner_mobile_authenticated') === 'true';
     
-    console.log('🔐 Owner Mobile auth check:', { localStorage: localStorage.getItem('owner_mobile_authenticated'), isAuth });
+    console.log('🔐 Owner Mobile auth check:', { 
+      localStorage: localStorage.getItem('owner_mobile_authenticated'), 
+      isAuth
+    });
     
     if (!isAuth) {
+      console.log('🚫 Not authenticated, redirecting to mobile login...');
       router.push('/owner/mobile/login');
       return;
     }
