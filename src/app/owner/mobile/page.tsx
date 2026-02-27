@@ -90,42 +90,30 @@ export default function OwnerMobilePage() {
 
   // Verificar autenticação mobile
   useEffect(() => {
-    // Debug inicial
-    console.log('🔍 MOBILE DEBUG START');
-    console.log('🔍 User Agent:', navigator.userAgent);
-    console.log('🔍 Current URL:', window.location.href);
+    // Timeout para evitar loop infinito
+    const timeout = setTimeout(() => {
+      console.log('� Auth timeout - forcing redirect to mobile login');
+      router.push('/owner/mobile/login');
+    }, 3000); // 3 segundos timeout
     
     const isAuth = localStorage.getItem('owner_mobile_authenticated') === 'true';
     
     console.log('🔐 Owner Mobile auth check:', { 
       localStorage: localStorage.getItem('owner_mobile_authenticated'), 
-      isAuth,
-      timestamp: localStorage.getItem('owner_mobile_login_time')
+      isAuth
     });
     
-    // Debug visual na página
-    const debugElement = document.getElementById('mobile-auth-debug');
-    if (debugElement) {
-      debugElement.innerHTML = `
-        <div style="position: fixed; top: 10px; left: 10px; background: red; color: white; padding: 10px; z-index: 99999; font-size: 12px;">
-          🔍 MOBILE DEBUG:<br>
-          URL: ${window.location.href}<br>
-          Auth: ${isAuth}<br>
-          Storage: ${localStorage.getItem('owner_mobile_authenticated')}<br>
-          Time: ${localStorage.getItem('owner_mobile_login_time')}
-        </div>
-      `;
-    }
-    
-    if (!isAuth) {
-      console.log('🚫 Not authenticated, redirecting to MOBILE login...');
-      console.log('🚫 Redirecting to: /owner/mobile/login');
+    if (isAuth) {
+      clearTimeout(timeout);
+      console.log('✅ Auth OK, staying on mobile page');
+      setAuthChecking(false);
+    } else {
+      clearTimeout(timeout);
+      console.log('🚫 Not authenticated, redirecting to mobile login...');
       router.push('/owner/mobile/login');
-      return;
     }
     
-    console.log('✅ Auth OK, staying on mobile page');
-    setAuthChecking(false);
+    return () => clearTimeout(timeout);
   }, [router]);
 
   // Função para calcular total da order com fallback
