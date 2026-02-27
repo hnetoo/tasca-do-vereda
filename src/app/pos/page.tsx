@@ -1127,25 +1127,7 @@ const POS = () => {
 
       {/* POS Internal Command Bar - Com animação suave */}
       <div className={`w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full transition-transform duration-500 ease-in-out ${isImmersive ? '-translate-x-full opacity-0' : 'translate-x-0 opacity-100'}`}>
-         <button 
-           onClick={() => {
-             console.log('🔧 Botão Menu/Fullscreen clicado - isImmersive:', isImmersive);
-             toggleSidebar();
-           }} 
-           className="w-14 h-14 shrink-0 rounded-2xl bg-white/5 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all group mb-2" 
-           title="Menu Principal / Fullscreen"
-         >
-            <Menu size={24} />
-         </button>
-         
-         {/* Navigation Button */}
-         <button 
-           onClick={() => window.location.href = '/dashboard'} 
-           className="w-14 h-14 shrink-0 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 hover:bg-blue-500 hover:text-white transition-all group mb-2" 
-           title="Voltar ao Menu Principal"
-         >
-           <LayoutGrid size={24} />
-         </button>
+         {/* Navigation Button removido - já não é necessário */}
          
          {/* Fixed Action Buttons - Moved to Top */}
          <div className="flex flex-col gap-3 shrink-0 mb-4">
@@ -1281,19 +1263,7 @@ const POS = () => {
           <div className="flex-1 flex flex-col h-full bg-background overflow-hidden relative">
               <div className="h-20 flex items-center justify-between px-8 bg-slate-900/20 border-b border-white/5">
                   <div className="flex items-center gap-4">
-                    {/* Fullscreen Toggle Button - Bem visível */}
-                    <button
-                      onClick={toggleSidebar}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
-                        isImmersive 
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white' 
-                          : 'bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-black'
-                      }`}
-                      title={isImmersive ? 'Sair do Modo Fullscreen' : 'Entrar em Modo Fullscreen'}
-                    >
-                      {isImmersive ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                      <span className="hidden sm:inline">{isImmersive ? 'Sair' : 'Fullscreen'}</span>
-                    </button>
+                    {/* Fullscreen Toggle Button removido - já não é necessário */}
                     
                     <div className="w-px h-8 bg-white/10"></div>
                     
