@@ -8,14 +8,15 @@ if (!supabaseUrl) {
     console.error('Missing NEXT_PUBLIC_SUPABASE_URL');
 }
 
-if (!supabaseServiceRoleKey) {
+// Only check for service role key on server-side
+if (typeof window === 'undefined' && !supabaseServiceRoleKey) {
     console.warn('Missing SUPABASE_SERVICE_ROLE_KEY. Admin operations will fallback to Anon Key (RLS policies must allow this).');
 }
 
 // Create a Supabase client
-// If Service Role Key is available, use it (Bypasses RLS)
+// If Service Role Key is available (server-side), use it (Bypasses RLS)
 // If not, fallback to Anon Key (Subject to RLS)
-const keyToUse = supabaseServiceRoleKey || supabaseAnonKey;
+const keyToUse = (typeof window === 'undefined' && supabaseServiceRoleKey) ? supabaseServiceRoleKey : supabaseAnonKey;
 
 export const supabaseAdmin = supabaseUrl && keyToUse 
     ? createClient(supabaseUrl, keyToUse, {
