@@ -296,6 +296,19 @@ export default function OwnerMobilePage() {
     <div className="min-h-screen bg-black text-white">
       {/* Debug Visual para Mobile */}
       <div id="mobile-auth-debug"></div>
+      
+      {/* Debug Visual para Dados */}
+      <div className="fixed top-20 left-4 bg-yellow-600 text-black p-2 text-xs z-50 max-w-xs">
+        📊 DADOS DEBUG:<br/>
+        Local Orders: {orders?.length || 0}<br/>
+        Local Expenses: {expenses?.length || 0}<br/>
+        API Orders: {supabaseData.orders.length}<br/>
+        API Expenses: {supabaseData.expenses.length}<br/>
+        Final Orders: {currentData.orders.length}<br/>
+        Final Expenses: {currentData.expenses.length}<br/>
+        Loading: {loadingSupabase ? 'YES' : 'NO'}<br/>
+        Has Local: {(orders?.length || 0) > 0 || (expenses?.length || 0) > 0 ? 'YES' : 'NO'}
+      </div>
       {/* Header Mobile */}
       <div className="bg-slate-900 border-b border-slate-800 p-4">
         <div className="flex items-center justify-between mb-4">
