@@ -48,7 +48,6 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = [
     '/login',
     '/owner/login',
-    '/owner',
     '/publicmenu', 
     '/customer-display', 
     '/qrscanner', 
@@ -56,6 +55,24 @@ export async function updateSession(request: NextRequest) {
     '/menu',
     '/auth/callback'
   ]
+
+  // Special handling for owner routes
+  if (path.startsWith('/owner')) {
+    if (path === '/owner/login') {
+      // Allow access to owner login
+      return response
+    }
+    
+    // For other owner routes, check owner authentication
+    const ownerAuthenticated = request.cookies.get('owner_authenticated')?.value === 'true'
+    if (!ownerAuthenticated) {
+      url.pathname = '/owner/login'
+      return NextResponse.redirect(url)
+    }
+    
+    // Owner is authenticated, allow access
+    return response
+  }
 
   // Check if the current path starts with any of the public routes
   const isPublicRoute = publicRoutes.some(route => path === route || path.startsWith(`${route}/`))
