@@ -54,7 +54,18 @@ export default function OwnerMobilePage() {
     setLoadingSupabase(true);
     try {
       console.log('🔄 Starting API call to /api/owner-data');
-      const response = await fetch('/api/owner-data');
+      
+      // Adicionar timestamp para evitar cache
+      const timestamp = new Date().getTime();
+      const url = `/api/owner-data?t=${timestamp}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
