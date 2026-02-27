@@ -65,26 +65,6 @@ export async function GET() {
       categories: result.categories.length
     });
     
-    // Se não houver dados, usar fallback
-    if (result.orders.length === 0 && result.expenses.length === 0) {
-      console.log('⚠️ API: No data found, using fallback');
-      return NextResponse.json({
-        test: 'API working but no data',
-        timestamp: new Date().toISOString(),
-        orders: [
-          { id: 1, total: 150, created_at: new Date().toISOString(), status: 'completed', tableId: 'Mesa 1' },
-          { id: 2, total: 250, created_at: new Date().toISOString(), status: 'completed', tableId: 'Mesa 2' }
-        ],
-        expenses: [
-          { id: 1, amount: 75, description: 'Despesa teste', date: new Date().toISOString() },
-          { id: 2, amount: 100, description: 'Despesa teste 2', date: new Date().toISOString() }
-        ],
-        dishes: [],
-        categories: [],
-        errors: null
-      });
-    }
-    
     return NextResponse.json(result);
     
   } catch (error: any) {
