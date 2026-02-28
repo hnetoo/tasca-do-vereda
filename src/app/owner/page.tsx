@@ -386,7 +386,7 @@ export default function OwnerPage() {
       </div>
 
       {/* KPIs em Tempo Real */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <div className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-2xl border border-green-500/30">
           <div className="flex items-center justify-between mb-4">
             <span className="text-green-200 text-sm font-medium">Vendas Hoje</span>
@@ -403,6 +403,15 @@ export default function OwnerPage() {
           </div>
           <div className="text-3xl font-bold mb-1">{realtimeStats.activeTables}</div>
           <div className="text-blue-200 text-sm">Ocupadas agora</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-2xl border border-amber-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-amber-200 text-sm font-medium">Total Bruto</span>
+            <div className="w-3 h-3 bg-amber-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">{fmt(realtimeStats.totalRevenue)}</div>
+          <div className="text-amber-200 text-sm">todas as vendas</div>
         </div>
 
         <div className="bg-gradient-to-br from-orange-600 to-orange-800 p-6 rounded-2xl border border-orange-500/30">
@@ -446,7 +455,7 @@ export default function OwnerPage() {
       </div>
 
       {/* Resumo Financeiro */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
           <h3 className="text-xl font-bold mb-4 text-green-400">Receitas</h3>
           <div className="text-3xl font-bold text-green-400">{fmt(totals.revenue)}</div>
@@ -457,6 +466,12 @@ export default function OwnerPage() {
           <h3 className="text-xl font-bold mb-4 text-red-400">Despesas</h3>
           <div className="text-3xl font-bold text-red-400">{fmt(totals.expense)}</div>
           <div className="text-gray-400 text-sm mt-2">{filteredTransactions.filter(t => t.type === 'EXPENSE').length} transações</div>
+        </div>
+
+        <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
+          <h3 className="text-xl font-bold mb-4 text-amber-400">Total Bruto</h3>
+          <div className="text-3xl font-bold text-amber-400">{fmt(realtimeStats.totalRevenue)}</div>
+          <div className="text-gray-400 text-sm mt-2">todas as vendas históricas</div>
         </div>
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
