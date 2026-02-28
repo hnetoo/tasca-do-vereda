@@ -65,16 +65,16 @@ class OrderService {
         return false;
       }
 
-      // Criar cliente Supabase
+      // Criar cliente Supabase com SERVICE_ROLE_KEY (bypass completo do RLS e cache)
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
       
-      if (!supabaseUrl || !supabaseKey) {
-        logger.warn('Supabase environment variables not found', {}, 'OrderService');
+      if (!supabaseUrl || !supabaseServiceKey) {
+        logger.warn('Supabase SERVICE_ROLE_KEY environment variables not found', {}, 'OrderService');
         return false;
       }
 
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
       // Preparar dados para Supabase
       const supabaseOrder = {

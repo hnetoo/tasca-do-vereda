@@ -26,30 +26,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Criar triggers para tabelas críticas
-CREATE TRIGGER trigger_orders_realtime
-    AFTER INSERT OR UPDATE OR DELETE ON orders
-    FOR EACH ROW EXECUTE FUNCTION notify_realtime_change();
-
-CREATE TRIGGER trigger_order_items_realtime
-    AFTER INSERT OR UPDATE OR DELETE ON order_items
-    FOR EACH ROW EXECUTE FUNCTION notify_realtime_change();
-
-CREATE TRIGGER trigger_products_realtime
-    AFTER INSERT OR UPDATE OR DELETE ON products
-    FOR EACH ROW EXECUTE FUNCTION notify_realtime_change();
-
-CREATE TRIGGER trigger_categories_realtime
-    AFTER INSERT OR UPDATE OR DELETE ON categories
-    FOR EACH ROW EXECUTE FUNCTION notify_realtime_change();
-
-CREATE TRIGGER trigger_restaurant_tables_realtime
-    AFTER INSERT OR UPDATE OR DELETE ON restaurant_tables
-    FOR EACH ROW EXECUTE FUNCTION notify_realtime_change();
-
-CREATE TRIGGER trigger_transactions_realtime
-    AFTER INSERT OR UPDATE OR DELETE ON transactions
-    FOR EACH ROW EXECUTE FUNCTION notify_realtime_change();
+-- Criar triggers para tabelas críticas (serão criados depois)
+-- Todos os triggers serão criados nas migrations específicas das tabelas
 
 -- Função para calcular métricas em tempo real
 CREATE OR REPLACE FUNCTION calculate_realtime_metrics()
@@ -139,10 +117,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger para atualização automática de status de mesas
-CREATE TRIGGER trigger_auto_table_status
-    AFTER INSERT OR UPDATE ON orders
-    FOR EACH ROW EXECUTE FUNCTION update_table_status();
+-- Trigger para atualização automática de status de mesas (será criado depois)
+-- CREATE TRIGGER trigger_auto_table_status
+--     AFTER INSERT OR UPDATE ON orders
+--     FOR EACH ROW EXECUTE FUNCTION update_table_status();
 
 -- Função para auditoria automática
 CREATE OR REPLACE FUNCTION audit_changes()
@@ -171,15 +149,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Triggers de auditoria para tabelas críticas
-CREATE TRIGGER trigger_orders_audit
-    AFTER INSERT OR UPDATE OR DELETE ON orders
-    FOR EACH ROW EXECUTE FUNCTION audit_changes();
+-- Triggers de auditoria para tabelas críticas (serão criados depois)
+-- CREATE TRIGGER trigger_orders_audit
+--     AFTER INSERT OR UPDATE OR DELETE ON orders
+--     FOR EACH ROW EXECUTE FUNCTION audit_changes();
 
-CREATE TRIGGER trigger_transactions_audit
-    AFTER INSERT OR UPDATE OR DELETE ON transactions
-    FOR EACH ROW EXECUTE FUNCTION audit_changes();
+-- CREATE TRIGGER trigger_transactions_audit
+--     AFTER INSERT OR UPDATE OR DELETE ON transactions
+--     FOR EACH ROW EXECUTE FUNCTION audit_changes();
 
-CREATE TRIGGER trigger_products_audit
-    AFTER INSERT OR UPDATE OR DELETE ON products
-    FOR EACH ROW EXECUTE FUNCTION audit_changes();
+-- CREATE TRIGGER trigger_products_audit
+--     AFTER INSERT OR UPDATE OR DELETE ON products
+--     FOR EACH ROW EXECUTE FUNCTION audit_changes();
