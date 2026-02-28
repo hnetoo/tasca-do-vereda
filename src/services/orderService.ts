@@ -89,7 +89,6 @@ class OrderService {
       // Preparar dados para Supabase
       const supabaseOrder = {
         id: order.id,
-        table_id: order.tableId,
         status: order.status || 'pending',
         total: order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0,
         customer_name: order.customerName || '',
