@@ -67,14 +67,16 @@ export default function SettingsFinancePage() {
     historicalRevenue: 0
   });
 
+  const initialDate = useMemo(() => new Date('2026-02-28').getTime(), []);
+
   const [transactions, setTransactions] = useState<Transaction[]>([
     {
       id: '1',
       type: 'revenue',
-      description: 'Vendas do dia',
-      amount: 450000,
+      description: 'Vendas diárias',
+      amount: 250000,
       category: 'vendas',
-      date: new Date().toISOString(),
+      date: new Date(initialDate - 86400000).toISOString(),
       paymentMethod: 'multipagamento',
       status: 'completed'
     },
@@ -84,7 +86,7 @@ export default function SettingsFinancePage() {
       description: 'Compra de matéria-prima',
       amount: 120000,
       category: 'custos',
-      date: new Date(Date.now() - 86400000).toISOString(),
+      date: new Date(initialDate - 86400000).toISOString(),
       paymentMethod: 'transferência',
       status: 'completed'
     },
@@ -94,7 +96,7 @@ export default function SettingsFinancePage() {
       description: 'Eventos especiais',
       amount: 85000,
       category: 'eventos',
-      date: new Date(Date.now() - 172800000).toISOString(),
+      date: new Date(initialDate - 172800000).toISOString(),
       paymentMethod: 'dinheiro',
       status: 'completed'
     }
@@ -106,7 +108,7 @@ export default function SettingsFinancePage() {
       title: 'Meta Mensal de Vendas',
       targetAmount: 15000000,
       currentAmount: 13500000,
-      deadline: new Date(Date.now() + 2592000000).toISOString(),
+      deadline: new Date(initialDate + 2592000000).toISOString(),
       category: 'monthly'
     },
     {
@@ -114,7 +116,7 @@ export default function SettingsFinancePage() {
       title: 'Meta Trimestral',
       targetAmount: 45000000,
       currentAmount: 38000000,
-      deadline: new Date(Date.now() + 7776000000).toISOString(),
+      deadline: new Date(initialDate + 7776000000).toISOString(),
       category: 'quarterly'
     }
   ]);

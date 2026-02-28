@@ -11,15 +11,14 @@ interface PWAInstallPromptProps {
 export default function PWAInstallPrompt({ className = '' }: PWAInstallPromptProps) {
   const { isInstallable, isInstalled, platform, install, dismiss } = usePWA();
   const [showInstructions, setShowInstructions] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    // Check if user has previously dismissed
-    const wasDismissed = localStorage.getItem('pwa-install-dismissed');
-    if (wasDismissed) {
-      setDismissed(true);
-    }
-  }, []);
+  // Mover para estado inicial para evitar setState em effect
+  const [dismissed, setDismissed] = useState(() => {
+    const wasDismissed = typeof window !== 'undefined' 
+      ? localStorage.getItem('pwa-install-dismissed') 
+      : null;
+    return !!wasDismissed;
+  });
 
   const handleInstall = async () => {
     try {

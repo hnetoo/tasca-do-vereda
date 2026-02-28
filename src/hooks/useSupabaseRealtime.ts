@@ -444,26 +444,6 @@ export function useOfflineSync() {
   const [pendingActions, setPendingActions] = useState<any[]>([]);
   const supabase = createClient();
 
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      // Sincronizar ações pendentes
-      syncPendingActions();
-    };
-
-    const handleOffline = () => {
-      setIsOnline(false);
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
   const syncPendingActions = async () => {
     if (!isOnline || pendingActions.length === 0) return;
 
@@ -485,6 +465,26 @@ export function useOfflineSync() {
       console.error('Error syncing pending actions:', err);
     }
   };
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Sincronizar ações pendentes
+      syncPendingActions();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [syncPendingActions]);
 
   const addPendingAction = (action: any) => {
     setPendingActions(prev => [...prev, { ...action, id: Date.now() }]);

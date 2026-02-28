@@ -76,6 +76,46 @@ export default function OwnerPage() {
     }
   };
 
+  // Função para limpar dados de produção
+  const clearProductionData = async () => {
+    if (!confirm('⚠️ ATENÇÃO! Esta ação irá APAGAR TODOS os dados de produção (pedidos, despesas) do Supabase.\\n\\nEsta ação é IRREVERSÍVEL!\\n\\nDeseja continuar?')) {
+      return;
+    }
+
+    try {
+      setLoadingSupabase(true);
+      
+      // Limpar orders
+      const ordersResponse = await fetch('/api/clear-production-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'orders' })
+      });
+      
+      // Limpar expenses
+      const expensesResponse = await fetch('/api/clear-production-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'expenses' })
+      });
+      
+      if (ordersResponse.ok && expensesResponse.ok) {
+        alert('✅ Dados de produção limpos com sucesso!\\n\\nA página será recarregada.');
+        // Recarregar dados
+        setSupabaseData({ orders: [], expenses: [], dishes: [], categories: [] });
+        await loadApiData();
+      } else {
+        throw new Error('Falha ao limpar dados');
+      }
+      
+    } catch (error: any) {
+      alert('❌ Erro ao limpar dados de produção: ' + error.message);
+      console.error('Error clearing production data:', error);
+    } finally {
+      setLoadingSupabase(false);
+    }
+  };
+
   // Usar dados do store local ou API
   const currentData = {
     orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
@@ -371,6 +411,14 @@ export default function OwnerPage() {
           <span className="text-sm text-gray-400">
             OWNER
           </span>
+          <button
+            onClick={clearProductionData}
+            disabled={loadingSupabase}
+            className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-800 px-3 py-2 rounded-lg transition-colors text-sm"
+            title="Limpar dados de produção (pedidos e despesas)"
+          >
+            🗑️ Limpar Produção
+          </button>
           <button
             onClick={() => {
               localStorage.removeItem('owner_authenticated');
