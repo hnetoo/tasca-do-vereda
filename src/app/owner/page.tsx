@@ -76,36 +76,64 @@ export default function OwnerPage() {
     }
   };
 
-  // Função para limpar dados de produção
+  // Função para limpar dados de produção com proteções
   const clearProductionData = async () => {
-    if (!confirm('⚠️ ATENÇÃO! Esta ação irá APAGAR TODOS os dados de produção (pedidos, despesas) do Supabase.\\n\\nEsta ação é IRREVERSÍVEL!\\n\\nDeseja continuar?')) {
+    // Verificação 1: Tem dados para limpar?
+    const hasOrders = (orders?.length || 0) > 0 || (supabaseData.orders?.length || 0) > 0;
+    const hasExpenses = (expenses?.length || 0) > 0 || (supabaseData.expenses?.length || 0) > 0;
+    
+    if (!hasOrders && !hasExpenses) {
+      alert('ℹ️ Não há dados de produção para limpar.');
       return;
     }
+
+    // Verificação 2: Confirmação inicial
+    const confirm1 = confirm('🔄 Limpar Produção\n\nEsta ação irá limpar todos os pedidos e despesas do período atual.\n\nDeseja continuar?');
+    if (!confirm1) return;
+
+    // Verificação 3: Aviso forte
+    const confirm2 = confirm('⚠️ ATENÇÃO! ESTA AÇÃO É IRREVERSÍVEL!\n\nTodos os dados de pedidos e despesas serão APAGADOS permanentemente.\n\nÚltima chance: Tem certeza absoluta?');
+    if (!confirm2) return;
 
     try {
       setLoadingSupabase(true);
       
-      // Limpar orders
-      const ordersResponse = await fetch('/api/clear-production-data', {
+      // Backup automático dos dados
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        orders: currentData.orders,
+        expenses: currentData.expenses,
+        summary: {
+          totalOrders: currentData.orders.length,
+          totalExpenses: currentData.expenses.length,
+          totalRevenue: currentData.orders.reduce((sum: number, order: any) => sum + (order.total || 0), 0),
+          totalExpensesAmount: currentData.expenses.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0)
+        }
+      };
+
+      // Salvar backup no localStorage
+      localStorage.setItem('production_backup_' + Date.now(), JSON.stringify(backupData));
+      
+      // Limpar via API (melhorado para usar 'all')
+      const response = await fetch('/api/clear-production-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'orders' })
+        body: JSON.stringify({ type: 'all' })
       });
       
-      // Limpar expenses
-      const expensesResponse = await fetch('/api/clear-production-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'expenses' })
-      });
+      const result = await response.json();
       
-      if (ordersResponse.ok && expensesResponse.ok) {
-        alert('✅ Dados de produção limpos com sucesso!\\n\\nA página será recarregada.');
+      if (response.ok) {
+        alert('✅ Produção limpa com sucesso! Backup salvo automaticamente.');
+        
         // Recarregar dados
         setSupabaseData({ orders: [], expenses: [], dishes: [], categories: [] });
         await loadApiData();
+        
+        // Mostrar resumo no console
+        console.log('📦 Backup salvo:', backupData.summary);
       } else {
-        throw new Error('Falha ao limpar dados');
+        throw new Error(result.error || 'Falha ao limpar dados');
       }
       
     } catch (error: any) {
