@@ -65,8 +65,44 @@ export default function OwnerMobilePage() {
     try {
       console.log('🔄 Starting API call to /api/owner-data');
       
-      // Adicionar timestamp para evitar cache
+      // TESTE: Tentar API simples primeiro
+      console.log('🧪 Testing simple API first...');
       const timestamp = new Date().getTime();
+      const testUrl = `/api/test-mobile?t=${timestamp}`;
+      
+      console.log('🧪 Mobile Debug: Fetching TEST URL:', testUrl);
+      
+      const testResponse = await fetch(testUrl, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      console.log('🧪 Mobile Debug: Test Response status:', testResponse.status);
+      
+      if (testResponse.ok) {
+        const testData = await testResponse.json();
+        console.log('🧪 Mobile Debug: TEST API Response:', testData);
+        
+        // Se API de teste funcionar, usar dados dela
+        setSupabaseData({
+          orders: testData.orders || [],
+          expenses: testData.expenses || [],
+          dishes: [],
+          categories: []
+        });
+        
+        setForceUpdate(prev => prev + 1);
+        
+        console.log('✅ TEST API worked for mobile!');
+        return;
+      }
+      
+      // Se API de teste falhar, tentar a API original
+      console.log('⚠️ Test API failed, trying original API...');
+      
       const url = `/api/owner-data?t=${timestamp}`;
       
       console.log('🔍 Mobile Debug: Fetching URL:', url);
