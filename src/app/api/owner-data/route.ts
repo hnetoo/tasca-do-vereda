@@ -11,40 +11,21 @@ export async function GET() {
     console.log('🔍 API: SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT SET');
     console.log('🔍 API: SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET');
     
-    // Criar cliente Supabase com persistência para mobile
-    console.log('🔍 API: Creating Supabase client with mobile persistence...');
+    // Criar cliente Supabase SERVER-SIDE (sem storage custom)
+    console.log('🔍 API: Creating SERVER-SIDE Supabase client...');
     
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('Missing Supabase environment variables');
     }
     
+    // SERVER-SIDE: Não usar storage custom, apenas SERVICE_ROLE_KEY
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          flowType: 'pkce', // Melhor para mobile
-          storage: {
-            // Forçar storage compatível com mobile
-            getItem: (key) => {
-              console.log('🔍 API: Storage getItem:', key);
-              return null; // Server-side não tem storage
-            },
-            setItem: (key, value) => {
-              console.log('🔍 API: Storage setItem:', key);
-            },
-            removeItem: (key) => {
-              console.log('🔍 API: Storage removeItem:', key);
-            }
-          }
-        }
-      }
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+      // Sem auth config em server-side com SERVICE_ROLE_KEY
     );
     
-    console.log('🔍 API: Supabase client created with mobile persistence');
+    console.log('🔍 API: SERVER-SIDE Supabase client created with SERVICE_ROLE_KEY');
     
     // Testar conexão simples primeiro
     console.log('🔍 API: Testing connection...');
@@ -59,8 +40,8 @@ export async function GET() {
       throw new Error(`Supabase connection failed: ${testError.message}`);
     }
     
-    // Carregar orders sem filtros RLS
-    console.log('🔍 API: Loading orders with SERVICE_ROLE_KEY...');
+    // Carregar orders com SERVICE_ROLE_KEY (bypass RLS)
+    console.log('🔍 API: Loading orders with SERVICE_ROLE_KEY (bypass RLS)...');
     const { data: ordersData, error: ordersError } = await supabase
       .from('orders')
       .select('*')
@@ -68,8 +49,8 @@ export async function GET() {
     
     console.log('🔍 API: Orders loaded:', { count: ordersData?.length || 0, error: ordersError?.message });
     
-    // Carregar expenses sem filtros RLS
-    console.log('🔍 API: Loading expenses with SERVICE_ROLE_KEY...');
+    // Carregar expenses com SERVICE_ROLE_KEY (bypass RLS)
+    console.log('🔍 API: Loading expenses with SERVICE_ROLE_KEY (bypass RLS)...');
     const { data: expensesData, error: expensesError } = await supabase
       .from('expenses')
       .select('*')
@@ -88,7 +69,7 @@ export async function GET() {
       }
     };
     
-    console.log('✅ API: REAL data loaded with mobile persistence', {
+    console.log('✅ API: REAL data loaded with SERVER-SIDE SERVICE_ROLE_KEY', {
       orders: result.orders.length,
       expenses: result.expenses.length
     });
@@ -113,7 +94,7 @@ export async function GET() {
     return NextResponse.json(
       { 
         error: error.message,
-        details: 'Supabase mobile connection failed',
+        details: 'SERVER-SIDE Supabase connection failed',
         orders: [],
         expenses: [],
         dishes: [],
