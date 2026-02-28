@@ -56,11 +56,16 @@ class OrderService {
    * Sync order to Supabase
    */
   async syncOrderToSupabase(orderId: string): Promise<boolean> {
+    console.log('🚀 syncOrderToSupabase called with orderId:', orderId);
+    
     try {
       const store = useStore.getState();
       const order = store.activeOrders.find(o => o.id === orderId);
       
+      console.log('🔍 Order found:', order ? 'YES' : 'NO', 'orderId:', orderId);
+      
       if (!order) {
+        console.log('❌ Order not found for Supabase sync');
         logger.warn('Order not found for Supabase sync', { orderId }, 'OrderService');
         return false;
       }
@@ -70,6 +75,12 @@ class OrderService {
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
       
       // DEBUG: Verificar variáveis de ambiente
+      console.log('🔍 Supabase environment check:', { 
+        supabaseUrl: supabaseUrl ? 'SET' : 'NOT_SET',
+        supabaseServiceKey: supabaseServiceKey ? 'SET' : 'NOT_SET',
+        serviceKeyLength: supabaseServiceKey?.length || 0
+      });
+      
       logger.info('Supabase environment check', { 
         supabaseUrl: supabaseUrl ? 'SET' : 'NOT_SET',
         supabaseServiceKey: supabaseServiceKey ? 'SET' : 'NOT_SET',
@@ -77,6 +88,7 @@ class OrderService {
       }, 'OrderService');
       
       if (!supabaseUrl || !supabaseServiceKey) {
+        console.log('❌ Supabase SERVICE_ROLE_KEY environment variables not found');
         logger.warn('Supabase SERVICE_ROLE_KEY environment variables not found', { 
           supabaseUrl: !!supabaseUrl, 
           supabaseServiceKey: !!supabaseServiceKey 
@@ -85,6 +97,7 @@ class OrderService {
       }
 
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      console.log('✅ Supabase client created');
 
       // Preparar dados para Supabase
       const supabaseOrder = {
@@ -104,21 +117,29 @@ class OrderService {
         updated_at: new Date().toISOString()
       };
 
+      console.log('📦 Supabase order data:', supabaseOrder);
+
       // Inserir no Supabase
+      console.log('🔄 Inserting into Supabase...');
       const { data, error } = await supabase
         .from('orders')
         .insert(supabaseOrder)
         .select();
 
+      console.log('📊 Supabase insert result:', { data, error });
+
       if (error) {
+        console.log('❌ Failed to sync order to Supabase:', error.message);
         logger.error('Failed to sync order to Supabase', { orderId, error: error.message }, 'OrderService');
         return false;
       }
 
+      console.log('✅ Order synced to Supabase successfully:', data?.[0]?.id);
       logger.info('Order synced to Supabase successfully', { orderId, supabaseId: data?.[0]?.id }, 'OrderService');
       return true;
 
     } catch (error: any) {
+      console.log('❌ Error syncing order to Supabase:', error.message);
       logger.error('Error syncing order to Supabase', { orderId, error: error.message }, 'OrderService');
       return false;
     }
