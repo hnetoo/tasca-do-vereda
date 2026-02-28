@@ -8,43 +8,40 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 export default function SettingsSystemPage() {
   const { settings, updateSettings, addNotification } = useStore();
   const [dbConfig, setDbConfig] = useState({ type: 'local_storage', connectionString: '' });
-  const [healthReport, setHealthReport] = useState<any>(null);
-  const [metricsHistory, setMetricsHistory] = useState<any[]>([]);
-
-  useEffect(() => {
-    // Simular dados de health
-    setHealthReport({
-      uptime: 86400,
-      stabilityScore: 98,
-      performanceMetrics: {
-        cpuUsage: 15.2,
-        memoryUsage: 256,
-        networkLatency: 12,
-        latency: 8.5
-      }
-    });
-
+  const [healthReport, setHealthReport] = useState(() => ({
+    uptime: 86400,
+    stabilityScore: 98,
+    performanceMetrics: {
+      cpuUsage: 15.2,
+      memoryUsage: 256,
+      networkLatency: 12,
+      latency: 8.5
+    }
+  }));
+  const [metricsHistory, setMetricsHistory] = useState(() => {
     // Simular histórico de métricas
-    const history = Array.from({ length: 20 }, (_, i) => ({
+    return Array.from({ length: 20 }, (_, i) => ({
       time: new Date(Date.now() - (19 - i) * 60000).toLocaleTimeString(),
       cpu: Math.random() * 30 + 10,
       memory: Math.random() * 100 + 200,
       latency: Math.random() * 20 + 5
     }));
-    setMetricsHistory(history);
-  }, []);
+  });
 
   const handleTestCloudConnection = async () => {
-    addNotification('success', 'Conexão com cloud estabelecida com sucesso!');
+    // addNotification('success', 'Conexão com cloud estabelecida com sucesso!');
+    console.log('Cloud connection test');
   };
 
   const handleRunMigrations = async () => {
-    addNotification('success', 'Migrações executadas com sucesso!');
+    // addNotification('success', 'Migrações executadas com sucesso!');
+    console.log('Migrations run');
   };
 
   const handleHardReset = async () => {
     if (confirm('Tem certeza que deseja fazer hard reset? Isso irá apagar todos os dados!')) {
-      addNotification('success', 'Hard reset concluído com sucesso!');
+      // addNotification('success', 'Hard reset concluído com sucesso!');
+      console.log('Hard reset executed');
       setTimeout(() => window.location.reload(), 1500);
     }
   };

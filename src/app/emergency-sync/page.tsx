@@ -141,8 +141,8 @@ export default function EmergencySyncPage() {
         <div className="mt-8 text-xs text-gray-400">
           <h3 className="font-bold mb-2">📋 Instruções:</h3>
           <ol className="space-y-1">
-            <li>1. Clique em "Testar Conexão" para verificar API</li>
-            <li>2. Se OK, clique em "Sincronizar Dados Emergência"</li>
+            <li>1. Clique em &quot;Testar Conexão&quot; para verificar API</li>
+            <li>2. Se OK, clique em &quot;Sincronizar Dados Emergência&quot;</li>
             <li>3. Aguarde o processo completar</li>
             <li>4. Verifique resultado no console</li>
             <li>5. Teste mobile após sync</li>

@@ -130,7 +130,7 @@ export default function TestDatabasePage() {
           <h2 className="text-xl font-bold mb-4">📋 Logs</h2>
           <div className="bg-gray-900 p-4 rounded-xl h-96 overflow-y-auto font-mono text-sm">
             {logs.length === 0 ? (
-              <p className="text-gray-500">Clique em "Executar Testes" para começar</p>
+              <p className="text-gray-500">Clique em &quot;Executar Testes&quot; para começar</p>
             ) : (
               logs.map((log, i) => (
                 <div key={i} className="mb-1">{log}</div>
