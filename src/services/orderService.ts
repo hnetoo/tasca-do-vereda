@@ -166,7 +166,10 @@ class OrderService {
       store.fireOrderToKitchen(orderId);
 
       // 5. Sync to Supabase (async - não bloqueia)
-      this.syncOrderToSupabase(orderId).catch(error => {
+      logger.info('Starting Supabase sync for order', { orderId }, 'OrderService');
+      this.syncOrderToSupabase(orderId).then(success => {
+        logger.info('Supabase sync completed', { orderId, success }, 'OrderService');
+      }).catch(error => {
         logger.error('Background sync failed', { orderId, error }, 'OrderService');
       });
 
