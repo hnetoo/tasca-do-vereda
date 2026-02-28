@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
 
 export default function EmergencySyncPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -106,21 +105,21 @@ export default function EmergencySyncPage() {
         </div>
 
         <div className="space-y-4 mb-8">
-          <Button 
+          <button 
             onClick={testConnection}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
             disabled={isLoading}
           >
             🔍 Testar Conexão com API
-          </Button>
+          </button>
 
-          <Button 
+          <button 
             onClick={emergencySync}
-            className="w-full bg-red-600 hover:bg-red-700"
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
             disabled={isLoading}
           >
             {isLoading ? '🔄 Sincronizando...' : '🚨 SINCRONIZAR DADOS EMERGÊNCIA'}
-          </Button>
+          </button>
         </div>
 
         {error && (
