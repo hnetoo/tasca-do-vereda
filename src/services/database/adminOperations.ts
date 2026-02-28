@@ -522,7 +522,7 @@ export const adminOperations = {
 
       console.log('📦 dbOrder structure:', dbOrder);
 
-      const { data, error: orderError } = await supabaseAdmin.from('orders').insert(dbOrder).select();
+      const { data, error: orderError } = await supabaseAdmin.from('orders').upsert(dbOrder).select();
       if (orderError) {
         console.log('❌ Order insert error:', orderError);
         throw orderError;
