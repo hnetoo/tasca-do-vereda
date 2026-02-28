@@ -69,8 +69,18 @@ class OrderService {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
       
+      // DEBUG: Verificar variáveis de ambiente
+      logger.info('Supabase environment check', { 
+        supabaseUrl: supabaseUrl ? 'SET' : 'NOT_SET',
+        supabaseServiceKey: supabaseServiceKey ? 'SET' : 'NOT_SET',
+        serviceKeyLength: supabaseServiceKey?.length || 0
+      }, 'OrderService');
+      
       if (!supabaseUrl || !supabaseServiceKey) {
-        logger.warn('Supabase SERVICE_ROLE_KEY environment variables not found', {}, 'OrderService');
+        logger.warn('Supabase SERVICE_ROLE_KEY environment variables not found', { 
+          supabaseUrl: !!supabaseUrl, 
+          supabaseServiceKey: !!supabaseServiceKey 
+        }, 'OrderService');
         return false;
       }
 
