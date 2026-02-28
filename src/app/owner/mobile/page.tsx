@@ -39,7 +39,7 @@ export default function OwnerMobilePage() {
   useEffect(() => {
     const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
     
-    console.log('🔍 Data Check Effect:', {
+    console.log('� Data Check Effect:', {
       hasLocalData,
       ordersLength: orders?.length || 0,
       expensesLength: expenses?.length || 0,
@@ -47,8 +47,9 @@ export default function OwnerMobilePage() {
       shouldLoad: !hasLocalData && !loadingSupabase
     });
     
+    // FORÇAR reload da API se não houver dados locais
     if (!hasLocalData && !loadingSupabase) {
-      console.log('🔄 Loading data from API (fallback for mobile)');
+      console.log('🔄 No local data found, forcing API reload...');
       loadApiData();
     }
   }, [orders, expenses, loadingSupabase]);
@@ -167,6 +168,20 @@ export default function OwnerMobilePage() {
     dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
     categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories
   };
+
+  // Debug para verificar qual fonte de dados está sendo usada
+  useEffect(() => {
+    console.log('📊 Mobile Data Source Debug:', {
+      hasLocalOrders: (orders?.length || 0) > 0,
+      hasLocalExpenses: (expenses?.length || 0) > 0,
+      usingLocalOrders: (orders?.length || 0) > 0,
+      usingLocalExpenses: (expenses?.length || 0) > 0,
+      finalOrdersCount: currentData.orders.length,
+      finalExpensesCount: currentData.expenses.length,
+      supabaseOrdersCount: supabaseData.orders.length,
+      supabaseExpensesCount: supabaseData.expenses.length
+    });
+  }, [orders, expenses, supabaseData.orders, supabaseData.expenses]);
 
   // Debug para verificar se dados estão carregados
   useEffect(() => {
