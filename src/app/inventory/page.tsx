@@ -405,6 +405,100 @@ const InventoryContent = () => {
 
   const [isSyncing, setIsSyncing] = useState(false);
 
+  const handleSyncFromCloud = async () => {
+    if (!confirm('Esta ação irá buscar categorias e produtos do Supabase e atualizar o inventário local. Deseja continuar?')) {
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const response = await fetch('/api/sync-cloud-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'syncFromCloud' })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Falha na sincronização');
+      }
+
+      // Atualizar store local com dados do Supabase
+      const { categories, dishes } = result.data;
+      
+      // Sincronizar categorias
+      for (const category of result.data.categories) {
+        const existingCategory = categories.find((c: MenuCategory) => c.id === category.id);
+        if (!existingCategory) {
+          await addCategory(category);
+        } else {
+          await updateCategory(category);
+        }
+      }
+
+      // Sincronizar produtos
+      for (const dish of result.data.dishes) {
+        const existingDish = products.find((p: Product) => p.id === dish.id);
+        if (!existingDish) {
+          await addProduct(dish);
+        } else {
+          await updateProduct(dish);
+        }
+      }
+
+      addNotification('success', `Sincronização concluída! ${result.data.categories.length} categorias e ${result.data.dishes.length} produtos sincronizados.`);
+    } catch (error: any) {
+      console.error('❌ Error syncing from cloud:', error);
+      addNotification('error', `Falha na sincronização: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleRestoreFromCloud = async () => {
+    if (!confirm('⚠️ ATENÇÃO! Esta ação irá SUBSTITUIR todos os dados locais com os dados do Supabase. Esta ação é IRREVERSÍVEL!\\n\\nDeseja continuar?')) {
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const response = await fetch('/api/sync-cloud-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'restoreFromCloud' })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Falha na restauração');
+      }
+
+      // Substituir completamente os dados locais
+      const { categories, dishes } = result.data;
+      
+      // Limpar dados locais
+      setProducts([]);
+      
+      // Restaurar do Supabase
+      for (const category of result.data.categories) {
+        await addCategory(category);
+      }
+
+      for (const dish of result.data.dishes) {
+        await addProduct(dish);
+      }
+
+      addNotification('success', `Restauração concluída! ${result.data.categories.length} categorias e ${result.data.dishes.length} produtos restaurados do Supabase.`);
+    } catch (error: any) {
+      console.error('❌ Error restoring from cloud:', error);
+      addNotification('error', `Falha na restauração: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleForceSync = async () => {
     setIsSyncing(true);
     try {
@@ -441,12 +535,28 @@ const InventoryContent = () => {
         </div>
         <div className="flex gap-3">
           <button 
+            onClick={handleSyncFromCloud}
+            disabled={isSyncing}
+            className="bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all font-bold uppercase text-[10px] tracking-widest border border-blue-600/20"
+          >
+            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar Cloud'}
+          </button>
+          <button 
+            onClick={handleRestoreFromCloud}
+            disabled={isSyncing}
+            className="bg-orange-600/10 text-orange-600 hover:bg-orange-600/20 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all font-bold uppercase text-[10px] tracking-widest border border-orange-600/20"
+          >
+            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? 'Restaurando...' : 'Restaurar'}
+          </button>
+          <button 
             onClick={handleForceSync}
             disabled={isSyncing}
             className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all font-bold uppercase text-[10px] tracking-widest border border-primary/20"
           >
             <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-            {isSyncing ? 'Sincronizando...' : 'Sincronizar Cloud'}
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar Local'}
           </button>
           <button 
             onClick={handleExportFeed}
