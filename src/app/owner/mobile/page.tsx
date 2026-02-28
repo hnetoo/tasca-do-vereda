@@ -65,58 +65,25 @@ export default function OwnerMobilePage() {
     try {
       console.log('🔄 Starting API call to /api/owner-data');
       
-      // TESTE: Tentar API simples primeiro
-      console.log('🧪 Testing simple API first...');
+      // FORÇAR VERSÃO NOVA PARA QUEBRAR CACHE
       const timestamp = new Date().getTime();
-      const testUrl = `/api/test-mobile?t=${timestamp}`;
-      
-      console.log('🧪 Mobile Debug: Fetching TEST URL:', testUrl);
-      
-      const testResponse = await fetch(testUrl, {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-      
-      console.log('🧪 Mobile Debug: Test Response status:', testResponse.status);
-      
-      if (testResponse.ok) {
-        const testData = await testResponse.json();
-        console.log('🧪 Mobile Debug: TEST API Response:', testData);
-        
-        // Se API de teste funcionar, usar dados dela
-        setSupabaseData({
-          orders: testData.orders || [],
-          expenses: testData.expenses || [],
-          dishes: [],
-          categories: []
-        });
-        
-        setForceUpdate(prev => prev + 1);
-        
-        console.log('✅ TEST API worked for mobile!');
-        return;
-      }
-      
-      // Se API de teste falhar, tentar a API original
-      console.log('⚠️ Test API failed, trying original API...');
-      
-      const url = `/api/owner-data?t=${timestamp}`;
+      const random = Math.random().toString(36).substring(7);
+      const url = `/api/owner-data?t=${timestamp}&v=${random}&force=true`;
       
       console.log('🔍 Mobile Debug: Fetching URL:', url);
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'X-Force-Refresh': 'true'
         }
       });
       
       console.log('🔍 Mobile Debug: Response status:', response.status);
-      console.log('🔍 Mobile Debug: Response headers:', response.headers);
+      console.log('🔍 Mobile Debug: Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -125,28 +92,35 @@ export default function OwnerMobilePage() {
       const data = await response.json();
       
       console.log('🔍 Mobile Debug: RAW API Response:', data);
+      console.log('🔍 Mobile Debug: Response has error?', !!data.error);
+      console.log('🔍 Mobile Debug: Response has orders?', !!data.orders);
       console.log('🔍 Mobile Debug: Orders count:', data.orders?.length || 0);
       console.log('🔍 Mobile Debug: Expenses count:', data.expenses?.length || 0);
-      console.log('🔍 Mobile Debug: Data type:', typeof data);
-      console.log('🔍 Mobile Debug: Data keys:', Object.keys(data));
       
-      // SOLUÇÃO DEFINITIVA: Usar APENAS dados reais - sem mock
+      // Se houver erro na API, mostrar mensagem clara
+      if (data.error) {
+        console.error('❌ API returned error:', data.error);
+        alert(`❌ Erro na API: ${data.error}\n\nPor favor, verifique a conexão com o Supabase.`);
+        return;
+      }
+      
+      // Usar APENAS dados reais
       const finalOrders = data.orders || [];
       const finalExpenses = data.expenses || [];
       
-      console.log('🔍 Mobile Debug: Using ONLY real data - no mock!');
+      console.log('🔍 Mobile Debug: Using ONLY real data');
       console.log('🔍 Mobile Debug: Final orders count:', finalOrders.length);
       console.log('🔍 Mobile Debug: Final expenses count:', finalExpenses.length);
       
       // Se não houver dados reais, mostrar mensagem clara
       if (finalOrders.length === 0 && finalExpenses.length === 0) {
-        console.log('⚠️ Mobile Debug: NO REAL DATA FOUND - showing empty state');
-        alert('⚠️ Sem dados reais encontrados. Por favor, verifique se há vendas e despesas no sistema.');
+        console.log('⚠️ Mobile Debug: NO REAL DATA FOUND');
+        alert('⚠️ Sem dados reais encontrados.\n\nVerifique se há vendas e despesas no sistema Supabase.');
       }
       
       // Debug antes de setar estado
-      console.log('🔍 Mobile Debug: Before setSupabaseData - supabaseData.orders:', supabaseData.orders.length);
-      console.log('🔍 Mobile Debug: Before setSupabaseData - supabaseData.expenses:', supabaseData.expenses.length);
+      console.log('🔍 Mobile Debug: Before setSupabaseData - orders:', supabaseData.orders.length);
+      console.log('🔍 Mobile Debug: Before setSupabaseData - expenses:', supabaseData.expenses.length);
       
       setSupabaseData({
         orders: finalOrders,
@@ -160,22 +134,19 @@ export default function OwnerMobilePage() {
       
       // Debug depois de setar estado
       setTimeout(() => {
-        console.log('🔍 Mobile Debug: After setSupabaseData - supabaseData.orders:', supabaseData.orders.length);
-        console.log('🔍 Mobile Debug: After setSupabaseData - supabaseData.expenses:', supabaseData.expenses.length);
+        console.log('🔍 Mobile Debug: After setSupabaseData - orders:', supabaseData.orders.length);
+        console.log('🔍 Mobile Debug: After setSupabaseData - expenses:', supabaseData.expenses.length);
       }, 1000);
       
-      console.log('✅ API data loaded for mobile:', {
+      console.log('✅ REAL data loaded for mobile:', {
         orders: finalOrders.length,
-        expenses: finalExpenses.length,
-        dishes: data.dishes?.length || 0,
-        categories: data.categories?.length || 0,
-        errors: data.errors
+        expenses: finalExpenses.length
       });
       
     } catch (error: any) {
       console.error('❌ Error loading API data for mobile:', error);
       console.error('❌ Error details:', error.message);
-      console.error('❌ Error stack:', error.stack);
+      alert(`❌ Erro ao carregar dados: ${error.message}`);
     } finally {
       setLoadingSupabase(false);
     }
