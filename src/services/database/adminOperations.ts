@@ -505,58 +505,34 @@ export const adminOperations = {
   },
 
   saveOrder: async (order: Order): Promise<{ success: boolean; error?: string }> => {
+    console.log('🚀 saveOrder called with order:', order);
+    
     if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
     try {
-      // 1. Save Order
+      // 1. Save Order com estrutura correta da tabela
       const dbOrder = {
           id: order.id,
-          table_id: (order as any).table_id || order.tableId || null,
-          status: order.status || 'PENDENTE',
-          timestamp: order.timestamp instanceof Date ? order.timestamp.toISOString() : (order.timestamp || new Date().toISOString()),
+          status: order.status || 'pending',
           total: order.total || 0,
-          tax_total: (order as any).tax_total || order.taxTotal || 0,
-          payment_method: (order as any).payment_method || order.paymentMethod || null,
-          customer_id: (order as any).customer_id || order.customerId || null,
-          shift_id: (order as any).shift_id || order.shiftId || null,
-          sub_account_name: (order as any).sub_account_name || order.subAccountName || null,
-          invoice_number: (order as any).invoice_number || order.invoiceNumber || null,
-          hash: order.hash || null,
-          previous_hash: order.previous_hash || null,
-          signature: (order as any).signature || null,
-          jws_payload: order.jws_payload ? (typeof order.jws_payload === 'string' ? order.jws_payload : JSON.stringify(order.jws_payload)) : null,
-          is_synced_agt: order.is_synced_agt ? 1 : 0,
-          agt_submission_uuid: order.agt_submission_uuid || null,
-          user_id: (order as any).user_id || order.userId || null,
-          user_name: (order as any).user_name || order.userName || null
+          customer_name: order.customerName || '',
+          items: order.items || [],
+          created_at: order.createdAt || new Date().toISOString(),
+          updated_at: new Date().toISOString()
       };
 
-      const { error: orderError } = await supabaseAdmin.from('orders').upsert(dbOrder);
-      if (orderError) throw orderError;
+      console.log('📦 dbOrder structure:', dbOrder);
 
-      // 2. Delete existing items
-      const { error: deleteError } = await supabaseAdmin.from('order_items').delete().eq('order_id', order.id);
-      if (deleteError) throw deleteError;
-
-      // 3. Insert new items
-      if (order.items && order.items.length > 0) {
-          const dbItems = order.items.map(item => ({
-              id: item.id || uuidv4(),
-              order_id: order.id,
-              dish_id: (item as any).dish_id || item.dishId,
-              quantity: item.quantity || 1,
-              unit_price: (item as any).unit_price || item.unitPrice || item.price || 0,
-              tax_amount: (item as any).tax_amount || item.taxAmount || 0,
-              tax_percentage: (item as any).tax_percentage || item.taxPercentage || 14,
-              tax_code: (item as any).tax_code || item.taxCode || 'NOR',
-              notes: item.notes || null,
-              status: item.status || 'PENDENTE'
-          }));
-          const { error: itemsError } = await supabaseAdmin.from('order_items').insert(dbItems);
-          if (itemsError) throw itemsError;
+      const { data, error: orderError } = await supabaseAdmin.from('orders').insert(dbOrder).select();
+      if (orderError) {
+        console.log('❌ Order insert error:', orderError);
+        throw orderError;
       }
+
+      console.log('✅ Order saved successfully:', data);
 
       return { success: true };
     } catch (error: any) {
+      console.log('❌ Error saving order:', error.message);
       logger.error('Error saving order (admin)', { error: error.message }, 'DATABASE_ADMIN');
       return { success: false, error: error.message };
     }
