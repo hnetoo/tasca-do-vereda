@@ -1,5 +1,6 @@
 import { useStore } from '../store/useStore';
 import { logger } from './logger';
+import { createClient } from '@supabase/supabase-js';
 
 export interface CreateOrderDTO {
   tableId: string;
@@ -52,6 +53,69 @@ class OrderService {
   }
 
   /**
+   * Sync order to Supabase
+   */
+  async syncOrderToSupabase(orderId: string): Promise<boolean> {
+    try {
+      const store = useStore.getState();
+      const order = store.activeOrders.find(o => o.id === orderId);
+      
+      if (!order) {
+        logger.warn('Order not found for Supabase sync', { orderId }, 'OrderService');
+        return false;
+      }
+
+      // Criar cliente Supabase
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        logger.warn('Supabase environment variables not found', {}, 'OrderService');
+        return false;
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      // Preparar dados para Supabase
+      const supabaseOrder = {
+        id: order.id,
+        table_id: order.tableId,
+        status: order.status || 'pending',
+        total: order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0,
+        customer_name: order.customerName || '',
+        items: order.items?.map(item => ({
+          dish_id: item.dishId,
+          dish_name: item.dishId,
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          notes: item.notes || '',
+          status: item.status || 'pending'
+        })) || [],
+        created_at: order.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Inserir no Supabase
+      const { data, error } = await supabase
+        .from('orders')
+        .insert(supabaseOrder)
+        .select();
+
+      if (error) {
+        logger.error('Failed to sync order to Supabase', { orderId, error: error.message }, 'OrderService');
+        return false;
+      }
+
+      logger.info('Order synced to Supabase successfully', { orderId, supabaseId: data?.[0]?.id }, 'OrderService');
+      return true;
+
+    } catch (error: any) {
+      logger.error('Error syncing order to Supabase', { orderId, error: error.message }, 'OrderService');
+      return false;
+    }
+  }
+
+  /**
    * Creates a new order with full validation and stock management.
    * Acts as a RESTful POST /orders endpoint.
    */
@@ -92,7 +156,10 @@ class OrderService {
       // 4. Fire to Kitchen (Simulated "Send" action)
       store.fireOrderToKitchen(orderId);
 
-      // 5. Sync (if online)
+      // 5. Sync to Supabase (async - não bloqueia)
+      this.syncOrderToSupabase(orderId).catch(error => {
+        logger.error('Background sync failed', { orderId, error }, 'OrderService');
+      });
 
       // 6. Audit Log
       store.addAuditLog({
