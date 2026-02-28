@@ -6,17 +6,59 @@ export async function GET() {
   console.log('🔍 REAL API: Request received at:', new Date().toISOString());
   
   try {
+    // VALIDAÇÃO DETALHADA DAS VARIÁVEIS DE AMBIENTE
+    console.log('🔍 REAL API: Checking environment variables...');
+    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    console.log('🔍 REAL API: Environment check:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseServiceKey,
+      urlLength: supabaseUrl?.length || 0,
+      keyLength: supabaseServiceKey?.length || 0
+    });
+    
+    if (!supabaseUrl) {
+      const error = '❌ ERRO CRÍTICO: NEXT_PUBLIC_SUPABASE_URL não está configurada na Vercel';
+      console.error(error);
+      return NextResponse.json(
+        { 
+          error: error,
+          details: 'Configure NEXT_PUBLIC_SUPABASE_URL no dashboard da Vercel',
+          missing: 'NEXT_PUBLIC_SUPABASE_URL',
+          orders: [],
+          expenses: [],
+          dishes: [],
+          categories: []
+        },
+        { status: 500 }
+      );
+    }
+    
+    if (!supabaseServiceKey) {
+      const error = '❌ ERRO CRÍTICO: SUPABASE_SERVICE_ROLE_KEY não está configurada na Vercel';
+      console.error(error);
+      return NextResponse.json(
+        { 
+          error: error,
+          details: 'Configure SUPABASE_SERVICE_ROLE_KEY no dashboard da Vercel',
+          missing: 'SUPABASE_SERVICE_ROLE_KEY',
+          orders: [],
+          expenses: [],
+          dishes: [],
+          categories: []
+        },
+        { status: 500 }
+      );
+    }
+    
+    console.log('✅ REAL API: Environment variables validated successfully');
+    
     // Criar cliente Supabase SERVER-SIDE com SERVICE_ROLE_KEY
     console.log('🔍 REAL API: Creating SERVER-SIDE Supabase client...');
     
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Missing Supabase environment variables');
-    }
-    
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     console.log('🔍 REAL API: SERVER-SIDE Supabase client created');
     
