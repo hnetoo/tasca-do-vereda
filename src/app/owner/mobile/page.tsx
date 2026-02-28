@@ -1,9 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Smartphone, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Calendar, ArrowUpRight, ArrowDownRight, LogOut } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { 
+  Smartphone, 
+  Users, 
+  DollarSign, 
+  TrendingDown, 
+  ArrowUpRight, 
+  ArrowDownRight,
+  LogOut,
+  TrendingUp
+} from 'lucide-react';
 
 export default function OwnerMobilePage() {
   const router = useRouter();
@@ -16,6 +25,7 @@ export default function OwnerMobilePage() {
     categories: []
   });
   const [loadingSupabase, setLoadingSupabase] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0);
   
   // Dados em tempo real do store local (SQLite)
   const { 
@@ -94,6 +104,9 @@ export default function OwnerMobilePage() {
         dishes: data.dishes || [],
         categories: data.categories || []
       });
+      
+      // Forçar re-renderização
+      setForceUpdate(prev => prev + 1);
       
       // Debug depois de setar estado
       setTimeout(() => {
