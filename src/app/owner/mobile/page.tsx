@@ -36,7 +36,8 @@ export default function OwnerMobilePage() {
     expenses,
     dishes,
     categories,
-    addNotification
+    addNotification,
+    settings
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -542,6 +543,15 @@ export default function OwnerMobilePage() {
             </div>
             <div className="text-xl font-bold mb-1">{fmt(realtimeStats.totalRevenue)}</div>
             <div className="text-amber-200 text-xs">todas as vendas</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-600 to-yellow-800 p-4 rounded-2xl border border-yellow-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-yellow-200 text-xs font-medium">Total Histórico Bruto</span>
+              <TrendingUp size={16} className="text-yellow-400" />
+            </div>
+            <div className="text-xl font-bold mb-1">{fmt((settings?.legacyTotalRevenue || 0) + realtimeStats.totalRevenue)}</div>
+            <div className="text-yellow-200 text-xs">histórico + atual</div>
           </div>
 
           <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-4 rounded-2xl border border-purple-500/30">

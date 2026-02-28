@@ -36,7 +36,8 @@ export default function OwnerPage() {
     orders, 
     expenses,
     dishes,
-    categories 
+    categories,
+    settings
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -488,6 +489,15 @@ export default function OwnerPage() {
           </div>
           <div className="text-3xl font-bold mb-1">{fmt(realtimeStats.totalRevenue)}</div>
           <div className="text-amber-200 text-sm">todas as vendas</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-yellow-600 to-yellow-800 p-6 rounded-2xl border border-yellow-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-yellow-200 text-sm font-medium">Total Histórico Bruto</span>
+            <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">{fmt((settings.legacyTotalRevenue || 0) + realtimeStats.totalRevenue)}</div>
+          <div className="text-yellow-200 text-sm">histórico + atual</div>
         </div>
 
         <div className="bg-gradient-to-br from-orange-600 to-orange-800 p-6 rounded-2xl border border-orange-500/30">
