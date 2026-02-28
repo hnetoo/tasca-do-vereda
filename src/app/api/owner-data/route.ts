@@ -1,50 +1,84 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET() {
-  console.log('� EMERGENCY: API called at:', new Date().toISOString());
+  console.log('🔄 REAL API: Loading owner data...');
+  console.log('🔍 REAL API: Request received at:', new Date().toISOString());
   
   try {
-    // TESTE ULTRA-SIMPLES - SEM SUPABASE
-    console.log('� EMERGENCY: Returning simple test data');
+    // Criar cliente Supabase SERVER-SIDE com SERVICE_ROLE_KEY
+    console.log('🔍 REAL API: Creating SERVER-SIDE Supabase client...');
     
-    const simpleData = {
-      orders: [
-        { id: 1, total: 300, created_at: new Date().toISOString(), status: 'completed' },
-        { id: 2, total: 500, created_at: new Date().toISOString(), status: 'completed' }
-      ],
-      expenses: [
-        { id: 1, amount: 150, description: 'Despesa real', date: new Date().toISOString() }
-      ],
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing Supabase environment variables');
+    }
+    
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    
+    console.log('🔍 REAL API: SERVER-SIDE Supabase client created');
+    
+    // Carregar orders com SERVICE_ROLE_KEY (bypass RLS)
+    console.log('🔍 REAL API: Loading orders...');
+    const { data: ordersData, error: ordersError } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    console.log('🔍 REAL API: Orders loaded:', { count: ordersData?.length || 0, error: ordersError?.message });
+    
+    // Carregar expenses com SERVICE_ROLE_KEY (bypass RLS)
+    console.log('🔍 REAL API: Loading expenses...');
+    const { data: expensesData, error: expensesError } = await supabase
+      .from('expenses')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    console.log('🔍 REAL API: Expenses loaded:', { count: expensesData?.length || 0, error: expensesError?.message });
+    
+    const result = {
+      orders: ordersData || [],
+      expenses: expensesData || [],
       dishes: [],
       categories: [],
-      errors: null,
-      emergency: true,
-      message: 'DADOS DE TESTE - API ESTÁ SENDO CHAMADA'
+      errors: {
+        orders: ordersError?.message,
+        expenses: expensesError?.message
+      },
+      realData: true,
+      message: 'DADOS REAIS DO SUPABASE'
     };
     
-    console.log('🚨 EMERGENCY: Simple data returned');
+    console.log('✅ REAL API: REAL data loaded', {
+      orders: result.orders.length,
+      expenses: result.expenses.length
+    });
     
-    return NextResponse.json(simpleData, {
+    return NextResponse.json(result, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       }
     });
     
   } catch (error: any) {
-    console.error('🚨 EMERGENCY ERROR:', error);
+    console.error('❌ REAL API Error:', error);
+    console.error('❌ REAL API Error details:', error.message);
+    
     return NextResponse.json(
       { 
         error: error.message,
-        emergency: true,
         orders: [],
         expenses: [],
         dishes: [],
-        categories: []
+        categories: [],
+        realData: false
       },
       { status: 500 }
     );

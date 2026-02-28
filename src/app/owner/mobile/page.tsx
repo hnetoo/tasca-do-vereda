@@ -65,12 +65,12 @@ export default function OwnerMobilePage() {
     try {
       console.log('🔄 Starting API call to /api/owner-data');
       
-      // FORÇAR VERSÃO NOVA PARA QUEBRAR CACHE
+      // FORÇAR APENAS API ORIGINAL COM DADOS REAIS
       const timestamp = new Date().getTime();
       const random = Math.random().toString(36).substring(7);
       const url = `/api/owner-data?t=${timestamp}&v=${random}&force=true`;
       
-      console.log('🔍 Mobile Debug: Fetching URL:', url);
+      console.log('🔍 Mobile Debug: Fetching REAL API URL:', url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -96,6 +96,7 @@ export default function OwnerMobilePage() {
       console.log('🔍 Mobile Debug: Response has orders?', !!data.orders);
       console.log('🔍 Mobile Debug: Orders count:', data.orders?.length || 0);
       console.log('🔍 Mobile Debug: Expenses count:', data.expenses?.length || 0);
+      console.log('🔍 Mobile Debug: Is emergency data?', !!data.emergency);
       
       // Se houver erro na API, mostrar mensagem clara
       if (data.error) {
@@ -104,11 +105,18 @@ export default function OwnerMobilePage() {
         return;
       }
       
+      // Se for dados de teste (emergency), mostrar alerta
+      if (data.emergency) {
+        console.error('❌ Mobile is receiving TEST DATA instead of REAL data!');
+        alert('❌ ATENÇÃO: O mobile está a receber dados de teste em vez de dados reais!\n\nPor favor, limpe o cache e tente novamente.');
+        return;
+      }
+      
       // Usar APENAS dados reais
       const finalOrders = data.orders || [];
       const finalExpenses = data.expenses || [];
       
-      console.log('🔍 Mobile Debug: Using ONLY real data');
+      console.log('🔍 Mobile Debug: Using ONLY REAL data');
       console.log('🔍 Mobile Debug: Final orders count:', finalOrders.length);
       console.log('🔍 Mobile Debug: Final expenses count:', finalExpenses.length);
       
