@@ -116,7 +116,9 @@ export default function PublicMenuPage() {
             className="flex-1 p-3 bg-black/40 border border-white/10 rounded-xl text-white text-sm focus:border-primary outline-none"
           />
           <a
-            href="#encomendar"
+            href="https://wa.me/244976825520?text=Olá! Gostaria de fazer uma encomenda no menu digital da Tasca do Vereda."
+            target="_blank"
+            rel="noopener noreferrer"
             className="px-4 py-3 rounded-xl bg-primary text-black font-black uppercase text-[10px] tracking-widest shadow-glow hover:brightness-110 transition-all"
           >
             Faça a sua encomenda
