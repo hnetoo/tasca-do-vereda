@@ -84,12 +84,22 @@ export default function OwnerMobilePage() {
       console.log('🔍 Mobile Debug: Data type:', typeof data);
       console.log('🔍 Mobile Debug: Data keys:', Object.keys(data));
       
+      // Debug antes de setar estado
+      console.log('🔍 Mobile Debug: Before setSupabaseData - supabaseData.orders:', supabaseData.orders.length);
+      console.log('🔍 Mobile Debug: Before setSupabaseData - supabaseData.expenses:', supabaseData.expenses.length);
+      
       setSupabaseData({
         orders: data.orders || [],
         expenses: data.expenses || [],
         dishes: data.dishes || [],
         categories: data.categories || []
       });
+      
+      // Debug depois de setar estado
+      setTimeout(() => {
+        console.log('🔍 Mobile Debug: After setSupabaseData - supabaseData.orders:', supabaseData.orders.length);
+        console.log('🔍 Mobile Debug: After setSupabaseData - supabaseData.expenses:', supabaseData.expenses.length);
+      }, 1000);
       
       console.log('✅ API data loaded for mobile:', {
         orders: data.orders?.length || 0,
