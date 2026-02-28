@@ -11,7 +11,9 @@ import {
   ArrowUpRight, 
   ArrowDownRight,
   LogOut,
-  TrendingUp
+  TrendingUp,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function OwnerMobilePage() {
@@ -26,13 +28,15 @@ export default function OwnerMobilePage() {
   });
   const [loadingSupabase, setLoadingSupabase] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [isResetting, setIsResetting] = useState(false);
   
   // Dados em tempo real do store local (SQLite)
   const { 
     orders, 
     expenses,
     dishes,
-    categories 
+    categories,
+    addNotification
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -147,6 +151,81 @@ export default function OwnerMobilePage() {
       alert(`❌ Erro ao carregar dados: ${error.message}`);
     } finally {
       setLoadingSupabase(false);
+    }
+  };
+
+  // Função de Reset de Produção com Proteções
+  const handleResetProduction = async () => {
+    // Verificação 1: Tem dados para resetar?
+    const hasOrders = (orders?.length || 0) > 0 || (supabaseData.orders?.length || 0) > 0;
+    const hasExpenses = (expenses?.length || 0) > 0 || (supabaseData.expenses?.length || 0) > 0;
+    
+    if (!hasOrders && !hasExpenses) {
+      alert('ℹ️ Não há dados de produção para limpar.');
+      return;
+    }
+
+    // Verificação 2: Confirmação inicial
+    const confirm1 = confirm('🔄 Resetar Produção\n\nEsta ação irá limpar todos os pedidos e despesas do período atual.\n\nDeseja continuar?');
+    if (!confirm1) return;
+
+    // Verificação 3: Aviso forte
+    const confirm2 = confirm('⚠️ ATENÇÃO! ESTA AÇÃO É IRREVERSÍVEL!\n\nTodos os dados de pedidos e despesas serão APAGADOS permanentemente.\n\nÚltima chance: Tem certeza absoluta?');
+    if (!confirm2) return;
+
+    setIsResetting(true);
+    
+    try {
+      // Backup automático dos dados
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        orders: currentData.orders,
+        expenses: currentData.expenses,
+        summary: {
+          totalOrders: currentData.orders.length,
+          totalExpenses: currentData.expenses.length,
+          totalRevenue: currentData.orders.reduce((sum: number, order: any) => sum + (order.total || 0), 0),
+          totalExpensesAmount: currentData.expenses.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0)
+        }
+      };
+
+      // Salvar backup no localStorage
+      localStorage.setItem('production_backup_' + Date.now(), JSON.stringify(backupData));
+
+      // Limpar dados via API
+      const response = await fetch('/api/clear-production-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'all' })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Falha ao limpar dados de produção');
+      }
+
+      // Limpar dados locais
+      setSupabaseData({
+        orders: [],
+        expenses: [],
+        dishes: [],
+        categories: []
+      });
+
+      // Forçar reload dos dados
+      setForceUpdate(prev => prev + 1);
+
+      addNotification('success', '✅ Produção resetada com sucesso! Backup salvo automaticamente.');
+      
+      // Mostrar resumo do backup
+      console.log('📦 Backup salvo:', backupData.summary);
+      
+    } catch (error: any) {
+      console.error('❌ Error resetting production:', error);
+      alert(`❌ Falha ao resetar produção: ${error.message}`);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -519,6 +598,22 @@ export default function OwnerMobilePage() {
             <div>Expenses: {expenses?.length || 0}</div>
             <div>Dishes: {dishes?.length || 0}</div>
             <div>Categories: {categories?.length || 0}</div>
+          </div>
+        </div>
+
+        {/* 🗑️ Reset Produção */}
+        <div className="pt-2">
+          <button
+            onClick={handleResetProduction}
+            disabled={isResetting}
+            className="bg-red-600/10 text-red-600 hover:bg-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed w-full px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-bold uppercase text-[10px] tracking-widest border border-red-600/20"
+          >
+            <Trash2 size={16} className={isResetting ? 'animate-spin' : ''} />
+            {isResetting ? 'Resetando...' : 'Reset Produção'}
+          </button>
+          <div className="text-xs text-red-400 text-center mt-1 opacity-70">
+            <AlertTriangle size={12} className="inline mr-1" />
+            Limpa todos os pedidos e despesas
           </div>
         </div>
 

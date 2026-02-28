@@ -425,10 +425,10 @@ const InventoryContent = () => {
       }
 
       // Atualizar store local com dados do Supabase
-      const { categories, dishes } = result.data;
+      const { categories: cloudCategories, dishes: cloudDishes } = result.data;
       
       // Sincronizar categorias
-      for (const category of result.data.categories) {
+      for (const category of cloudCategories) {
         const existingCategory = categories.find((c: MenuCategory) => c.id === category.id);
         if (!existingCategory) {
           await addCategory(category);
@@ -438,7 +438,7 @@ const InventoryContent = () => {
       }
 
       // Sincronizar produtos
-      for (const dish of result.data.dishes) {
+      for (const dish of cloudDishes) {
         const existingDish = products.find((p: Product) => p.id === dish.id);
         if (!existingDish) {
           await addProduct(dish);
@@ -447,7 +447,7 @@ const InventoryContent = () => {
         }
       }
 
-      addNotification('success', `Sincronização concluída! ${result.data.categories.length} categorias e ${result.data.dishes.length} produtos sincronizados.`);
+      addNotification('success', `Sincronização concluída! ${cloudCategories.length} categorias e ${cloudDishes.length} produtos sincronizados.`);
     } catch (error: any) {
       console.error('❌ Error syncing from cloud:', error);
       addNotification('error', `Falha na sincronização: ${error.message}`);
@@ -476,21 +476,26 @@ const InventoryContent = () => {
       }
 
       // Substituir completamente os dados locais
-      const { categories, dishes } = result.data;
+      const { categories: cloudCategories, dishes: cloudDishes } = result.data;
       
-      // Limpar dados locais
+      // Limpar dados locais completamente
       setProducts([]);
+      // NOTA: Precisamos limpar categorias também, mas não temos função direta
+      // Vamos remover todas as categorias uma por uma
+      for (const category of categories) {
+        await removeCategory(category.id);
+      }
       
       // Restaurar do Supabase
-      for (const category of result.data.categories) {
+      for (const category of cloudCategories) {
         await addCategory(category);
       }
 
-      for (const dish of result.data.dishes) {
+      for (const dish of cloudDishes) {
         await addProduct(dish);
       }
 
-      addNotification('success', `Restauração concluída! ${result.data.categories.length} categorias e ${result.data.dishes.length} produtos restaurados do Supabase.`);
+      addNotification('success', `Restauração concluída! ${cloudCategories.length} categorias e ${cloudDishes.length} produtos restaurados do Supabase.`);
     } catch (error: any) {
       console.error('❌ Error restoring from cloud:', error);
       addNotification('error', `Falha na restauração: ${error.message}`);
