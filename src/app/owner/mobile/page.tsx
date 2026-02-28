@@ -94,43 +94,19 @@ export default function OwnerMobilePage() {
       console.log('🔍 Mobile Debug: Data type:', typeof data);
       console.log('🔍 Mobile Debug: Data keys:', Object.keys(data));
       
-      // SOLUÇÃO DEFINITIVA: Usar dados reais se existirem, senão usar dados mock
-      const finalOrders = data.orders && data.orders.length > 0 ? data.orders : [
-        {
-          id: 1,
-          total: 150,
-          created_at: new Date().toISOString(),
-          status: 'completed',
-          tableId: 'Mesa 1',
-          items: []
-        },
-        {
-          id: 2,
-          total: 250,
-          created_at: new Date().toISOString(),
-          status: 'completed',
-          tableId: 'Mesa 2',
-          items: []
-        }
-      ];
+      // SOLUÇÃO DEFINITIVA: Usar APENAS dados reais - sem mock
+      const finalOrders = data.orders || [];
+      const finalExpenses = data.expenses || [];
       
-      const finalExpenses = data.expenses && data.expenses.length > 0 ? data.expenses : [
-        {
-          id: 1,
-          amount: 75,
-          description: 'Despesa real',
-          date: new Date().toISOString()
-        },
-        {
-          id: 2,
-          amount: 100,
-          description: 'Despesa real 2',
-          date: new Date().toISOString()
-        }
-      ];
-      
+      console.log('🔍 Mobile Debug: Using ONLY real data - no mock!');
       console.log('🔍 Mobile Debug: Final orders count:', finalOrders.length);
       console.log('🔍 Mobile Debug: Final expenses count:', finalExpenses.length);
+      
+      // Se não houver dados reais, mostrar mensagem clara
+      if (finalOrders.length === 0 && finalExpenses.length === 0) {
+        console.log('⚠️ Mobile Debug: NO REAL DATA FOUND - showing empty state');
+        alert('⚠️ Sem dados reais encontrados. Por favor, verifique se há vendas e despesas no sistema.');
+      }
       
       // Debug antes de setar estado
       console.log('🔍 Mobile Debug: Before setSupabaseData - supabaseData.orders:', supabaseData.orders.length);
