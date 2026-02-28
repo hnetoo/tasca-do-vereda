@@ -476,6 +476,15 @@ export default function OwnerMobilePage() {
             <div className="text-blue-200 text-xs">em atendimento</div>
           </div>
 
+          <div className="bg-gradient-to-br from-amber-600 to-amber-800 p-4 rounded-2xl border border-amber-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-amber-200 text-xs font-medium">Total Bruto</span>
+              <TrendingUp size={16} className="text-amber-400" />
+            </div>
+            <div className="text-xl font-bold mb-1">{fmt(realtimeStats.totalRevenue)}</div>
+            <div className="text-amber-200 text-xs">todas as vendas</div>
+          </div>
+
           <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-4 rounded-2xl border border-purple-500/30">
             <div className="flex items-center justify-between mb-2">
               <span className="text-purple-200 text-xs font-medium">Receita Total</span>
@@ -492,6 +501,15 @@ export default function OwnerMobilePage() {
             </div>
             <div className="text-xl font-bold mb-1">{fmt(totals.expense)}</div>
             <div className="text-red-200 text-xs">{period.toLowerCase()}</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 p-4 rounded-2xl border border-emerald-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-emerald-200 text-xs font-medium">Lucro Total</span>
+              <ArrowUpRight size={16} className="text-emerald-400" />
+            </div>
+            <div className="text-xl font-bold mb-1">{fmt(totals.net)}</div>
+            <div className="text-emerald-200 text-xs">vendas - despesas</div>
           </div>
         </div>
 
