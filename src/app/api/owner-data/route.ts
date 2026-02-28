@@ -29,6 +29,13 @@ export async function GET() {
     
     console.log('🔍 REAL API: Orders loaded:', { count: ordersData?.length || 0, error: ordersError?.message });
     
+    // DEBUG SIMPLES: Mostrar apenas contagem e total
+    if (ordersData && ordersData.length > 0) {
+      const totalOrders = ordersData.reduce((sum, order) => sum + (order.total || 0), 0);
+      console.log('🔍 DEBUG: Orders count:', ordersData.length);
+      console.log('🔍 DEBUG: Total amount:', totalOrders);
+    }
+    
     // Carregar expenses com SERVICE_ROLE_KEY (bypass RLS)
     console.log('🔍 REAL API: Loading expenses...');
     const { data: expensesData, error: expensesError } = await supabase
