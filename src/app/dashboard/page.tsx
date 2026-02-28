@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid, BarChart, Bar } from 'recharts';
-import { DollarSign, ShoppingBag, Users, TrendingUp, Sparkles, Loader2, Activity, ChefHat, QrCode, ArrowRight, Utensils, Clock, Download, AlertTriangle, Upload } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, TrendingUp, Sparkles, Loader2, Activity, ChefHat, QrCode, ArrowRight, Utensils, Clock, Download, AlertTriangle } from 'lucide-react';
 import { analyzeBusinessPerformance } from '@/services/geminiService';
 import { Order, AIAnalysisResult, PedidoPayload, DailyAnalyticsPayload, PaymentMethod, Expense, Revenue, Customer } from '@/types';
 import { useRouter } from 'next/navigation';
@@ -43,90 +43,6 @@ const Dashboard = () => {
   } = useStore();
 
   const [realtimeActivity, setRealtimeActivity] = useState(false);
-  const [emergencyUploading, setEmergencyUploading] = useState(false);
-  const [emergencyResult, setEmergencyResult] = useState<string>('');
-
-  // Função de emergência para upload forçado
-  const emergencyUploadToSupabase = async () => {
-    setEmergencyUploading(true);
-    setEmergencyResult('');
-    
-    try {
-      console.log('🚨 EMERGENCY: Starting forced upload from localStorage...');
-      
-      // 1. Pegar dados do localStorage
-      const storageData = localStorage.getItem('tasca-vereda-storage-v2');
-      if (!storageData) {
-        throw new Error('Nenhum dado encontrado no localStorage');
-      }
-      
-      const parsed = JSON.parse(storageData);
-      const localOrders = parsed.orders || [];
-      
-      console.log('📦 EMERGENCY: Found orders in localStorage:', localOrders.length);
-      
-      if (localOrders.length === 0) {
-        throw new Error('Não há pedidos no localStorage para upload');
-      }
-      
-      // 2. Criar cliente Supabase com SERVICE_ROLE_KEY
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      
-      if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Variáveis de ambiente do Supabase não configuradas');
-      }
-      
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      
-      // 3. Upload forçado com insert()
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const order of localOrders) {
-        try {
-          const supabaseOrder = {
-            id: order.id,
-            table_id: order.tableId || 'unknown',
-            status: order.status || 'completed',
-            total: order.total || 0,
-            customer_name: order.customerName || '',
-            items: JSON.stringify(order.items || []),
-            created_at: order.createdAt || new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          
-          const { error } = await supabase
-            .from('orders')
-            .insert(supabaseOrder);
-          
-          if (error) {
-            console.error(`❌ EMERGENCY: Failed to insert order ${order.id}:`, error);
-            errorCount++;
-          } else {
-            console.log(`✅ EMERGENCY: Successfully inserted order ${order.id}`);
-            successCount++;
-          }
-        } catch (err: any) {
-          console.error(`❌ EMERGENCY: Error processing order ${order.id}:`, err);
-          errorCount++;
-        }
-      }
-      
-      const totalAmount = localOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
-      const result = `✅ UPLOAD CONCLUÍDO!\n\n📊 Resultado:\n• Sucesso: ${successCount} pedidos\n• Erros: ${errorCount} pedidos\n• Total: ${localOrders.length} pedidos\n\n💰 Valor total: ${formatKz(totalAmount)}\n\n🔄 Verifique o Table Editor do Supabase!`;
-      
-      setEmergencyResult(result);
-      console.log('🎉 EMERGENCY: Upload completed:', result);
-      
-    } catch (error: any) {
-      const errorMsg = `❌ ERRO NO UPLOAD: ${error.message}`;
-      setEmergencyResult(errorMsg);
-      console.error('❌ EMERGENCY: Upload failed:', error);
-    } finally {
-      setEmergencyUploading(false);
-    }
-  };
 
   useRealtimeSync('pedidos', (payload) => {
     onRealtimeChange({ tableName: 'pedidos', eventType: payload.eventType, new: payload.new, old: payload.old });
@@ -353,17 +269,6 @@ const Dashboard = () => {
           <SyncStatusIndicator />
 
           <button
-            onClick={emergencyUploadToSupabase}
-            disabled={emergencyUploading}
-            className="relative group overflow-hidden px-6 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all duration-300 shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.4)] flex-1 md:flex-none justify-center"
-          >
-            <div className="flex items-center gap-2 relative z-10 font-black uppercase tracking-wide text-xs">
-              {emergencyUploading ? <Loader2 className="animate-spin" size={16}/> : <Upload size={16} />}
-              <span>{emergencyUploading ? 'UPLOAD EMERGÊNCIA...' : 'UPLOAD EMERGÊNCIA'}</span>
-            </div>
-          </button>
-
-          <button
             onClick={handleAIAnalysis}
             disabled={loadingAi}
             className="relative group overflow-hidden px-6 py-2.5 rounded-xl bg-primary text-slate-950 hover:bg-white transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] flex-1 md:flex-none justify-center"
@@ -391,15 +296,6 @@ const Dashboard = () => {
               {aiAnalysis.trend === 'up' ? 'Em Alta' : aiAnalysis.trend === 'down' ? 'Em Baixa' : 'Estável'}
             </span>
           </p>
-        </div>
-      )}
-
-      {emergencyResult && (
-        <div className="bg-red-900/20 backdrop-blur-xl border border-red-500/30 p-6 rounded-xl mb-6">
-          <h3 className="text-lg font-bold text-red-400 mb-2 flex items-center gap-2">
-            <AlertTriangle size={20} className="text-red-400"/> Resultado do Upload de Emergência
-          </h3>
-          <pre className="text-red-300 text-sm whitespace-pre-wrap">{emergencyResult}</pre>
         </div>
       )}
 
