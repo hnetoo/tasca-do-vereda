@@ -198,6 +198,12 @@ export default function SettingsFinancePage() {
       profit: prev.profit + historicalRevenue.amount
     }));
 
+    // Salvar no settings global para Owner/Desktop e Mobile
+    updateSettings({ 
+      ...settings, 
+      legacyTotalRevenue: historicalRevenue.amount 
+    });
+
     // Criar transação histórica
     const historicalTransaction: Transaction = {
       id: 'historical-' + Date.now(),
