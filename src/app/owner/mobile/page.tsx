@@ -54,12 +54,6 @@ export default function OwnerMobilePage() {
     }
   }, [orders, expenses, loadingSupabase]);
 
-  // Forçar reload manual
-  const forceReload = () => {
-    alert('Botão clicado! Forçando reload...');
-    console.log('🔄 Forcing manual reload...');
-    loadApiData();
-  };
 
   const loadApiData = async () => {
     setLoadingSupabase(true);
@@ -121,11 +115,6 @@ export default function OwnerMobilePage() {
       console.log('🔍 Mobile Debug: Final orders count:', finalOrders.length);
       console.log('🔍 Mobile Debug: Final expenses count:', finalExpenses.length);
       
-      // Se não houver dados reais, mostrar mensagem clara
-      if (finalOrders.length === 0 && finalExpenses.length === 0) {
-        console.log('⚠️ Mobile Debug: NO REAL DATA FOUND');
-        alert('⚠️ Sem dados reais encontrados.\n\nVerifique se há vendas e despesas no sistema Supabase.');
-      }
       
       // Debug antes de setar estado
       console.log('🔍 Mobile Debug: Before setSupabaseData - orders:', supabaseData.orders.length);
@@ -402,24 +391,6 @@ export default function OwnerMobilePage() {
       {/* Debug Visual para Mobile */}
       <div id="mobile-auth-debug"></div>
       
-      {/* Debug Visual para Dados */}
-      <div className="fixed top-20 left-4 bg-yellow-600 text-black p-2 text-xs z-50 max-w-xs">
-        📊 DADOS DEBUG:<br/>
-        Local Orders: {orders?.length || 0}<br/>
-        Local Expenses: {expenses?.length || 0}<br/>
-        API Orders: {supabaseData.orders.length}<br/>
-        API Expenses: {supabaseData.expenses.length}<br/>
-        Final Orders: {currentData.orders.length}<br/>
-        Final Expenses: {currentData.expenses.length}<br/>
-        Loading: {loadingSupabase ? 'YES' : 'NO'}<br/>
-        Has Local: {(orders?.length || 0) > 0 || (expenses?.length || 0) > 0 ? 'YES' : 'NO'}<br/>
-        <button 
-          onClick={forceReload}
-          className="mt-2 bg-red-600 text-white px-2 py-1 rounded text-xs w-full"
-        >
-          🔄 FORÇAR RELOAD
-        </button>
-      </div>
       {/* Header Mobile */}
       <div className="bg-slate-900 border-b border-slate-800 p-4">
         <div className="flex items-center justify-between mb-4">
@@ -432,12 +403,6 @@ export default function OwnerMobilePage() {
               <p className="text-xs text-slate-400">Dashboard em tempo real</p>
             </div>
           </div>
-          <button 
-            onClick={forceReload}
-            className="bg-red-600 text-white px-3 py-2 rounded-lg text-xs"
-          >
-            🔄 Reload
-          </button>
           <button
             onClick={() => {
               localStorage.removeItem('owner_mobile_authenticated');
