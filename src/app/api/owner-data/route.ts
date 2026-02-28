@@ -6,45 +6,37 @@ export async function GET() {
     console.log('🔄 API: Loading owner data...');
     console.log('🔍 API: Request received at:', new Date().toISOString());
     
-    // TESTE: Retornar dados de teste primeiro para confirmar que funciona
-    console.log('🧪 API: Returning test data to confirm mobile works...');
+    // Debug environment variables
+    console.log('🔍 API: Environment check');
+    console.log('🔍 API: SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT SET');
+    console.log('🔍 API: SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET');
     
-    const testData = {
-      orders: [
-        { id: 1, total: 150, created_at: new Date().toISOString(), status: 'completed', tableId: 'Mesa 1' },
-        { id: 2, total: 250, created_at: new Date().toISOString(), status: 'completed', tableId: 'Mesa 2' }
-      ],
-      expenses: [
-        { id: 1, amount: 75, description: 'Despesa real', date: new Date().toISOString() },
-        { id: 2, amount: 100, description: 'Despesa real 2', date: new Date().toISOString() }
-      ],
-      dishes: [],
-      categories: [],
-      errors: null
-    };
+    // Tentar conexão Supabase com debug extremo
+    console.log('🔍 API: Creating Supabase client...');
     
-    console.log('✅ API: Test data returned for mobile');
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing Supabase environment variables');
+    }
     
-    return NextResponse.json(testData, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
-    
-    // Código Supabase comentado para teste
-    /*
-    // Usar SERVICE_ROLE_KEY para bypass RLS (test)
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     
-    console.log('🔍 API: Supabase client created with SERVICE_ROLE_KEY');
+    console.log('🔍 API: Supabase client created successfully');
+    
+    // Testar conexão simples primeiro
+    console.log('🔍 API: Testing connection...');
+    const { data: testData, error: testError } = await supabase
+      .from('orders')
+      .select('count')
+      .limit(1);
+    
+    console.log('🔍 API: Connection test result:', { testData, testError: testError?.message });
+    
+    if (testError) {
+      throw new Error(`Supabase connection failed: ${testError.message}`);
+    }
     
     // Carregar orders
     console.log('🔍 API: Loading orders...');
@@ -64,42 +56,20 @@ export async function GET() {
     
     console.log('🔍 API: Expenses loaded:', { count: expensesData?.length || 0, error: expensesError?.message });
     
-    // Carregar dishes
-    console.log('🔍 API: Loading dishes...');
-    const { data: dishesData, error: dishesError } = await supabase
-      .from('dishes')
-      .select('*')
-      .eq('available', true);
-    
-    console.log('🔍 API: Dishes loaded:', { count: dishesData?.length || 0, error: dishesError?.message });
-    
-    // Carregar categories
-    console.log('🔍 API: Loading categories...');
-    const { data: categoriesData, error: categoriesError } = await supabase
-      .from('menu_categories')
-      .select('*')
-      .order('name');
-    
-    console.log('🔍 API: Categories loaded:', { count: categoriesData?.length || 0, error: categoriesError?.message });
-    
     const result = {
       orders: ordersData || [],
       expenses: expensesData || [],
-      dishes: dishesData || [],
-      categories: categoriesData || [],
+      dishes: [],
+      categories: [],
       errors: {
         orders: ordersError?.message,
-        expenses: expensesError?.message,
-        dishes: dishesError?.message,
-        categories: categoriesError?.message
+        expenses: expensesError?.message
       }
     };
     
-    console.log('✅ API: Data loaded', {
+    console.log('✅ API: Real data loaded', {
       orders: result.orders.length,
-      expenses: result.expenses.length,
-      dishes: result.dishes.length,
-      categories: result.categories.length
+      expenses: result.expenses.length
     });
     
     return NextResponse.json(result, {
@@ -112,12 +82,22 @@ export async function GET() {
         'Access-Control-Allow-Headers': 'Content-Type'
       }
     });
-    */
     
   } catch (error: any) {
     console.error('❌ API Error:', error);
+    console.error('❌ API Error details:', error.message);
+    console.error('❌ API Error stack:', error.stack);
+    
+    // Retornar erro claro para debugging
     return NextResponse.json(
-      { error: error.message },
+      { 
+        error: error.message,
+        details: 'Supabase connection failed on mobile',
+        orders: [],
+        expenses: [],
+        dishes: [],
+        categories: []
+      },
       { status: 500 }
     );
   }
