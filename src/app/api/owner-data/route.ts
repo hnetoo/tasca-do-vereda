@@ -6,6 +6,38 @@ export async function GET() {
     console.log('🔄 API: Loading owner data...');
     console.log('🔍 API: Request received at:', new Date().toISOString());
     
+    // TESTE: Retornar dados de teste primeiro para confirmar que funciona
+    console.log('🧪 API: Returning test data to confirm mobile works...');
+    
+    const testData = {
+      orders: [
+        { id: 1, total: 150, created_at: new Date().toISOString(), status: 'completed', tableId: 'Mesa 1' },
+        { id: 2, total: 250, created_at: new Date().toISOString(), status: 'completed', tableId: 'Mesa 2' }
+      ],
+      expenses: [
+        { id: 1, amount: 75, description: 'Despesa real', date: new Date().toISOString() },
+        { id: 2, amount: 100, description: 'Despesa real 2', date: new Date().toISOString() }
+      ],
+      dishes: [],
+      categories: [],
+      errors: null
+    };
+    
+    console.log('✅ API: Test data returned for mobile');
+    
+    return NextResponse.json(testData, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
+    });
+    
+    // Código Supabase comentado para teste
+    /*
     // Usar SERVICE_ROLE_KEY para bypass RLS (test)
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -80,6 +112,7 @@ export async function GET() {
         'Access-Control-Allow-Headers': 'Content-Type'
       }
     });
+    */
     
   } catch (error: any) {
     console.error('❌ API Error:', error);
