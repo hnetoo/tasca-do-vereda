@@ -63,7 +63,7 @@ export default function SettingsUsersPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingUser) {
-      setUsers(users.map(user => 
+      setUsers(users.map((user: any) => 
         user.id === editingUser.id 
           ? { ...user, ...formData }
           : user
@@ -100,13 +100,13 @@ export default function SettingsUsersPage() {
 
   const handleDelete = (id: string) => {
     if (confirm('Tem certeza que deseja remover este utilizador?')) {
-      setUsers(users.filter(user => user.id !== id));
+      setUsers(users.filter((user: any) => user.id !== id));
       addNotification('success', 'Utilizador removido com sucesso!');
     }
   };
 
   const handleToggleStatus = (id: string) => {
-    setUsers(users.map(user => 
+    setUsers(users.map((user: any) => 
       user.id === id 
         ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
         : user
@@ -150,8 +150,8 @@ export default function SettingsUsersPage() {
             <div className="text-sm text-slate-400">
               Total: {users.length} utilizadores
             </div>
-            <div className="text-sm text-emerald-400">
-              Ativos: {users.filter(u => u.status === 'active').length}
+            <div className="text-emerald-400">
+              Ativos: {users.filter((u: any) => u.status === 'active').length}
             </div>
           </div>
           <button
@@ -165,7 +165,7 @@ export default function SettingsUsersPage() {
 
         {/* Users Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {users.map((user) => (
+          {users.map((user: any) => (
             <div key={user.id} className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 hover:border-slate-700 transition-all">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
