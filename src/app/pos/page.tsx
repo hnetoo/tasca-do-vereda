@@ -73,6 +73,16 @@ const POS = () => {
 
 
 
+  // Função unificada para determinar status visual da mesa
+  const getTableVisualStatus = (table: Table) => {
+    // Se está em estado de atualização, mostrar isso primeiro
+    if (table.status === 'UPDATING') return 'UPDATING';
+    
+    // Verificar se há pedidos abertos
+    const hasOpenOrders = activeOrders.some((o: Order) => o.tableId === table.id && o.status === 'ABERTO');
+    return hasOpenOrders ? 'OCCUPIED' : 'AVAILABLE';
+  };
+
   const zoneConfig = {
     INTERIOR: { icon: Home, label: 'Interior', bg: 'bg-slate-900/40' },
     EXTERIOR: { icon: Sun, label: 'Exterior', bg: 'bg-blue-900/10' },
@@ -1274,18 +1284,21 @@ const POS = () => {
                   </div>
                   
                   <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
-                      {sortedTables.map(table => (
-                      <button key={table.id} onClick={() => { setActiveTable(table.id); setShowTableBar(false); }} 
-                          className={`w-full rounded-xl border transition-all flex items-center gap-3
-                          ${activeTableId === table.id ? 'border-primary bg-primary/10' : 'border-white/5 bg-white/5'}
-                          ${showTableBar ? 'p-3 px-4' : 'p-3 justify-center'}
-                          `}
-                          title={table.name || undefined}
-                      >
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${table.status === 'AVAILABLE' ? 'bg-green-500' : table.status === 'UPDATING' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
-                          {showTableBar && <span className="font-bold text-white text-[10px] uppercase truncate">{table.name}</span>}
-                      </button>
-                      ))}
+                      {sortedTables.map(table => {
+                        const visualStatus = getTableVisualStatus(table);
+                        return (
+                          <button key={table.id} onClick={() => { setActiveTable(table.id); setShowTableBar(false); }} 
+                              className={`w-full rounded-xl border transition-all flex items-center gap-3
+                              ${activeTableId === table.id ? 'border-primary bg-primary/10' : 'border-white/5 bg-white/5'}
+                              ${showTableBar ? 'p-3 px-4' : 'p-3 justify-center'}
+                              `}
+                              title={table.name || undefined}
+                          >
+                              <div className={`w-2 h-2 rounded-full shrink-0 ${visualStatus === 'AVAILABLE' ? 'bg-green-500' : visualStatus === 'UPDATING' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
+                              {showTableBar && <span className="font-bold text-white text-[10px] uppercase truncate">{table.name}</span>}
+                          </button>
+                        );
+                      })}
                   </div>
               </div>
           </div>
@@ -1361,7 +1374,8 @@ const POS = () => {
                                 
                                 if (!table) return <div key={`${x}-${y}`} />;
 
-                                const isActive = activeOrders.some((o: Order) => o.tableId === table.id && o.status === 'ABERTO');
+                                const visualStatus = getTableVisualStatus(table);
+                                const isActive = visualStatus === 'OCCUPIED';
                                 const tableTotal = activeOrders
                                    .filter((o: Order) => o.tableId === table.id && o.status === 'ABERTO')
                                    .reduce((acc: number, o: Order) => acc + (o.total || 0), 0);
@@ -1377,7 +1391,7 @@ const POS = () => {
                                     className={`relative rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-2 p-2
                                       ${isActive 
                                         ? 'bg-red-500/20 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]' 
-                                        : table.status === 'UPDATING'
+                                        : visualStatus === 'UPDATING'
                                         ? 'bg-yellow-500/20 border-yellow-500 text-white animate-pulse'
                                         : 'bg-white/10 border-white/10 text-slate-300 hover:border-primary/50 hover:bg-primary/20 hover:text-white'}
                                     `}
@@ -1386,7 +1400,7 @@ const POS = () => {
                                      {isActive && (
                                        <span className="text-[10px] font-mono font-bold text-red-300 bg-red-950/50 px-1.5 py-0.5 rounded">{formatKz(tableTotal)}</span>
                                      )}
-                                     <div className={`w-2 h-2 rounded-full absolute top-2 right-2 ${isActive ? 'bg-red-500 animate-pulse' : table.status === 'UPDATING' ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+                                     <div className={`w-2 h-2 rounded-full absolute top-2 right-2 ${isActive ? 'bg-red-500 animate-pulse' : visualStatus === 'UPDATING' ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
                                   </button>
                                 );
                               })
@@ -1988,30 +2002,26 @@ const POS = () => {
             <div className="mb-6">
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Mesa de Destino</label>
               <div className="grid grid-cols-4 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                {tables
-                  .filter((t: Table) => t.id !== activeTableId)
-                  .sort((a: Table, b: Table) => {
-                    const numA = parseInt(a.name?.replace(/\D/g, '') || '0');
-                    const numB = parseInt(b.name?.replace(/\D/g, '') || '0');
-                    return numA - numB;
-                  })
-                  .map((table: Table) => (
-                    <button
+                {sortedTables.filter(t => t.id !== activeTableId).map(table => {
+                    const visualStatus = getTableVisualStatus(table);
+                    return (
+                    <button 
                       key={table.id}
                       onClick={() => setTransferTargetId(table.id)}
                       className={`p-3 rounded-xl border-2 transition-all text-center flex flex-col items-center justify-center gap-1
                         ${transferTargetId === table.id 
                           ? 'bg-primary/20 border-primary text-primary' 
-                          : table.status === 'OCCUPIED' 
+                          : visualStatus === 'OCCUPIED' 
                             ? 'bg-red-500/10 border-red-500/20 text-red-500/50 cursor-not-allowed'
                             : 'bg-slate-800/40 border-white/5 text-slate-300 hover:border-white/20'
                         }`}
-                      disabled={table.status === 'OCCUPIED'}
+                      disabled={visualStatus === 'OCCUPIED'}
                     >
                       <span className="text-xs font-black">{table.name}</span>
-                      <div className={`w-2 h-2 rounded-full ${table.status === 'OCCUPIED' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                      <div className={`w-2 h-2 rounded-full ${visualStatus === 'OCCUPIED' ? 'bg-red-500' : 'bg-green-500'}`}></div>
                     </button>
-                  ))}
+                    );
+                  })}
               </div>
             </div>
 
