@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 
 // Middleware de segurança - PROTEGE ROTAS PRIVADAS
 export async function middleware(request: NextRequest) {
@@ -16,44 +15,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // Para rotas privadas, verificar autenticação
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: any) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
-    }
-  )
+  // Para rotas privadas, verificar autenticação mock
+  const authCookie = request.cookies.get('tasca_auth_token')
   
-  // Verificar sessão do usuário
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  // Se não tiver sessão, redirecionar para login
-  if (!session) {
+  // Se não tiver cookie de autenticação, redirecionar para login
+  if (!authCookie) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect_to', request.nextUrl.pathname)
     return NextResponse.redirect(loginUrl)
   }
   
-  // Se tiver sessão, permitir acesso
+  // Se tiver cookie, permitir acesso
   return NextResponse.next()
 }
 
