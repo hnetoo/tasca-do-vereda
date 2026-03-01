@@ -5,85 +5,9 @@ import { useStore } from '@/store/useStore';
 import { Users, Plus, Trash2, Edit, Shield, Mail, Phone, Calendar, Key, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsUsersPage() {
-  const { addNotification } = useStore();
+  const { addNotification, employees, setEmployees, addEmployee, updateEmployee, removeEmployee } = useStore();
   
-  // Forçar client-side rendering com estado de montagem
-  const [isClient, setIsClient] = useState(false);
-  
-  // Carregar dados do Zustand store ao montar
-  const [users, setUsers] = useState(() => {
-    // Dados padrão iniciais
-    return [
-      {
-        id: '1',
-        name: 'Administrador',
-        email: 'admin@restaurante.com',
-        role: 'admin',
-        status: 'active',
-        lastLogin: '2024-01-15T10:30:00',
-        permissions: ['all'],
-        createdAt: '2023-01-01'
-      },
-      {
-        id: '2',
-        name: 'João Silva',
-        email: 'joao@restaurante.com',
-        role: 'manager',
-        status: 'active',
-        lastLogin: '2024-01-15T09:15:00',
-        permissions: ['orders', 'menu', 'reports'],
-        createdAt: '2023-03-15'
-      }
-    ];
-  });
-
-  // Efeito para carregar dados do localStorage no client
-  useEffect(() => {
-    setIsClient(true);
-    
-    console.log('🔍 DEBUG: Client-side mounted, loading users from Zustand store...');
-    const savedData = localStorage.getItem('tasca-vereda-storage-v2');
-    console.log('🔍 DEBUG: savedData =', savedData ? 'exists' : 'null');
-    
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        console.log('🔍 DEBUG: Zustand data parsed:', parsed);
-        
-        // Verificar se há dados de users no store
-        if (parsed.state && parsed.state.users) {
-          console.log('🔍 DEBUG: Users encontrados no Zustand:', parsed.state.users);
-          setUsers(parsed.state.users);
-        } else {
-          console.log('🔍 DEBUG: No users found in Zustand, using defaults');
-        }
-      } catch (error) {
-        console.error('🔍 DEBUG: Erro ao parsear Zustand data:', error);
-      }
-    } else {
-      console.log('🔍 DEBUG: No Zustand data found, using defaults');
-    }
-  }, []);
-
-  // Salvar dados no Zustand store quando users mudar
-  useEffect(() => {
-    if (isClient && typeof window !== 'undefined') {
-      console.log('🔍 DEBUG: Salvando users no Zustand store:', users);
-      // Atualizar o Zustand store
-      const currentData = localStorage.getItem('tasca-vereda-storage-v2');
-      if (currentData) {
-        try {
-          const parsed = JSON.parse(currentData);
-          parsed.state.users = users;
-          localStorage.setItem('tasca-vereda-storage-v2', JSON.stringify(parsed));
-          console.log('🔍 DEBUG: Users salvos no Zustand com sucesso');
-        } catch (error) {
-          console.error('🔍 DEBUG: Erro ao salvar users no Zustand:', error);
-        }
-      }
-    }
-  }, [users, isClient]);
-
+  // Estados do formulário
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -95,24 +19,70 @@ export default function SettingsUsersPage() {
     status: 'active',
     permissions: []
   });
+  
+  // Converter employees para formato de users para compatibilidade
+  const users = employees.map(emp => ({
+    id: emp.id,
+    name: emp.name,
+    email: emp.email || `${emp.name.toLowerCase().replace(' ', '.')}@restaurante.com`,
+    role: emp.role.toLowerCase(),
+    status: emp.isActive ? 'active' : 'inactive',
+    lastLogin: 'Nunca',
+    permissions: emp.role === 'ADMIN' ? ['all'] : ['orders', 'menu'],
+    createdAt: emp.admissionDate || new Date().toISOString().split('T')[0]
+  }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingUser) {
-      setUsers(users.map((user: any) => 
-        user.id === editingUser.id 
-          ? { ...user, ...formData }
-          : user
-      ));
+      // Atualizar employee no Zustand
+      const updatedEmployee = {
+        id: editingUser.id,
+        name: formData.name,
+        role: formData.role.toUpperCase(),
+        pin: null,
+        phone: '',
+        email: formData.email,
+        nif: null,
+        address: null,
+        salary: 150000,
+        isActive: formData.status === 'active',
+        admissionDate: new Date().toISOString().split('T')[0],
+        socialSecurityNumber: null,
+        bankAccount: null,
+        bi: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        color: '#06b6d4',
+        workDaysPerMonth: 22
+      };
+      
+      updateEmployee(updatedEmployee);
       addNotification('success', 'Utilizador atualizado com sucesso!');
     } else {
-      const newUser = {
-        ...formData,
+      // Adicionar novo employee no Zustand
+      const newEmployee = {
         id: Date.now().toString(),
-        createdAt: new Date().toISOString().split('T')[0],
-        lastLogin: 'Nunca'
+        name: formData.name,
+        role: formData.role.toUpperCase(),
+        pin: null,
+        phone: '',
+        email: formData.email,
+        nif: null,
+        address: null,
+        salary: 150000,
+        isActive: formData.status === 'active',
+        admissionDate: new Date().toISOString().split('T')[0],
+        socialSecurityNumber: null,
+        bankAccount: null,
+        bi: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        color: '#06b6d4',
+        workDaysPerMonth: 22
       };
-      setUsers([...users, newUser]);
+      
+      addEmployee(newEmployee);
       addNotification('success', 'Utilizador adicionado com sucesso!');
     }
     
@@ -136,18 +106,21 @@ export default function SettingsUsersPage() {
 
   const handleDelete = (id: string) => {
     if (confirm('Tem certeza que deseja remover este utilizador?')) {
-      setUsers(users.filter((user: any) => user.id !== id));
+      removeEmployee(id);
       addNotification('success', 'Utilizador removido com sucesso!');
     }
   };
 
   const handleToggleStatus = (id: string) => {
-    setUsers(users.map((user: any) => 
-      user.id === id 
-        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
-        : user
-    ));
-    addNotification('success', 'Status atualizado com sucesso!');
+    const employee = employees.find(emp => emp.id === id);
+    if (employee) {
+      updateEmployee({
+        ...employee,
+        isActive: !employee.isActive,
+        updatedAt: new Date()
+      });
+      addNotification('success', 'Status atualizado com sucesso!');
+    }
   };
 
   const getRoleIcon = (role: string) => {
