@@ -1,41 +1,37 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
 
 export async function GET(request: Request) {
   console.log('🔄 REAL API: Loading owner data...');
   console.log('🔍 REAL API: Request received at:', new Date().toISOString());
   
   try {
-    // VALIDAR AUTENTICAÇÃO PRIMEIRO
-    console.log('🔐 REAL API: Checking authentication...');
+    // VALIDAR AUTENTICAÇÃO MOCK
+    console.log('🔐 REAL API: Checking mock authentication...');
     
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            // Para API, precisamos extrair cookies do header
-            const cookieHeader = request.headers.get('cookie');
-            if (!cookieHeader) return undefined;
-            
-            const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-              const [key, value] = cookie.trim().split('=');
-              acc[key] = value;
-              return acc;
-            }, {} as Record<string, string>);
-            
-            return cookies[name];
-          },
-        },
+    const cookieHeader = request.headers.get('cookie');
+    let isAuthenticated = false;
+    
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      }, {} as Record<string, string>);
+      
+      const authCookie = cookies['tasca_auth_token'];
+      if (authCookie) {
+        try {
+          const decoded = JSON.parse(decodeURIComponent(authCookie));
+          isAuthenticated = decoded && decoded.role;
+          console.log('✅ REAL API: User authenticated with role:', decoded.role);
+        } catch (error) {
+          console.error('❌ REAL API: Invalid auth cookie format');
+        }
       }
-    );
+    }
     
-    // Verificar sessão do usuário
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
+    if (!isAuthenticated) {
       console.error('❌ REAL API: Unauthorized access attempt');
       return NextResponse.json(
         { 
@@ -49,8 +45,6 @@ export async function GET(request: Request) {
         { status: 401 }
       );
     }
-    
-    console.log('✅ REAL API: User authenticated:', session.user.email);
     
     // VALIDAÇÃO DETALHADA DAS VARIÁVEIS DE AMBIENTE
     console.log('🔍 REAL API: Checking environment variables...');
@@ -143,7 +137,7 @@ export async function GET(request: Request) {
       },
       realData: true,
       message: 'DADOS REAIS DO SUPABASE',
-      user: session.user.email
+      authenticated: true
     };
     
     console.log('✅ REAL API: REAL data loaded', {
