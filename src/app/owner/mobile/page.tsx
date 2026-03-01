@@ -39,7 +39,8 @@ export default function OwnerMobilePage() {
     categories,
     addNotification,
     settings,
-    employees
+    employees,
+    payroll
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -588,7 +589,7 @@ export default function OwnerMobilePage() {
               <span className="text-red-200 text-xs font-medium">Folha Salarial</span>
               <Wallet size={16} className="text-red-400" />
             </div>
-            <div className="text-xl font-bold mb-1">{fmt(employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0)}</div>
+            <div className="text-xl font-bold mb-1">{fmt(payroll?.reduce((sum: number, record: any) => sum + (record.netSalary || 0), 0) || 0)}</div>
             <div className="text-red-200 text-xs">total líquido</div>
           </div>
 
