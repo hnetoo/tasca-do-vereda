@@ -7,19 +7,23 @@ import { Users, Plus, Trash2, Edit, Shield, Mail, Phone, Calendar, Key, Eye, Eye
 export default function SettingsUsersPage() {
   const { addNotification } = useStore();
   
-  // Carregar dados do localStorage ao montar
+  // Carregar dados do Zustand store ao montar
   const [users, setUsers] = useState(() => {
     if (typeof window !== 'undefined') {
-      console.log('🔍 DEBUG: Carregando users do localStorage...');
-      const savedUsers = localStorage.getItem('tasca_users');
-      console.log('🔍 DEBUG: savedUsers =', savedUsers);
-      if (savedUsers) {
+      console.log('🔍 DEBUG: Carregando users do Zustand store...');
+      const savedData = localStorage.getItem('tasca-vereda-storage-v2');
+      console.log('🔍 DEBUG: savedData =', savedData ? 'exists' : 'null');
+      if (savedData) {
         try {
-          const parsed = JSON.parse(savedUsers);
-          console.log('🔍 DEBUG: Users carregados:', parsed);
-          return parsed;
+          const parsed = JSON.parse(savedData);
+          console.log('🔍 DEBUG: Zustand data parsed:', parsed);
+          // Verificar se há dados de users no store
+          if (parsed.state && parsed.state.users) {
+            console.log('🔍 DEBUG: Users encontrados no Zustand:', parsed.state.users);
+            return parsed.state.users;
+          }
         } catch (error) {
-          console.error('🔍 DEBUG: Erro ao parsear users:', error);
+          console.error('🔍 DEBUG: Erro ao parsear Zustand data:', error);
         }
       }
     }
@@ -50,12 +54,22 @@ export default function SettingsUsersPage() {
     ];
   });
 
-  // Salvar dados no localStorage quando users mudar
+  // Salvar dados no Zustand store quando users mudar
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      console.log('🔍 DEBUG: Salvando users no localStorage:', users);
-      localStorage.setItem('tasca_users', JSON.stringify(users));
-      console.log('🔍 DEBUG: Users salvos com sucesso');
+      console.log('🔍 DEBUG: Salvando users no Zustand store:', users);
+      // Atualizar o Zustand store
+      const currentData = localStorage.getItem('tasca-vereda-storage-v2');
+      if (currentData) {
+        try {
+          const parsed = JSON.parse(currentData);
+          parsed.state.users = users;
+          localStorage.setItem('tasca-vereda-storage-v2', JSON.stringify(parsed));
+          console.log('🔍 DEBUG: Users salvos no Zustand com sucesso');
+        } catch (error) {
+          console.error('🔍 DEBUG: Erro ao salvar users no Zustand:', error);
+        }
+      }
     }
   }, [users]);
 
