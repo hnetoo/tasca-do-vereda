@@ -15,31 +15,6 @@ export default function OwnerMobileLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Forçar limpeza de cache ao entrar
-  useEffect(() => {
-    console.log('🧹 Forçando limpeza de cache...');
-    
-    // Limpar service workers
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-          registration.unregister();
-          console.log('🗑️ Service worker removido');
-        }
-      });
-    }
-    
-    // Limpar caches
-    if ('caches' in window) {
-      caches.keys().then(function(names) {
-        names.forEach(function(name) {
-          caches.delete(name);
-          console.log('🗑️ Cache removido:', name);
-        });
-      });
-    }
-  }, []);
-
   // Credenciais hardcoded para owner e admin
   const OWNER_CREDENTIALS = {
     username: 'owner',
