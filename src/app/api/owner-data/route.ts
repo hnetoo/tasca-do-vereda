@@ -1,11 +1,57 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 
-export async function GET() {
+export async function GET(request: Request) {
   console.log('🔄 REAL API: Loading owner data...');
   console.log('🔍 REAL API: Request received at:', new Date().toISOString());
   
   try {
+    // VALIDAR AUTENTICAÇÃO PRIMEIRO
+    console.log('🔐 REAL API: Checking authentication...');
+    
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            // Para API, precisamos extrair cookies do header
+            const cookieHeader = request.headers.get('cookie');
+            if (!cookieHeader) return undefined;
+            
+            const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+              const [key, value] = cookie.trim().split('=');
+              acc[key] = value;
+              return acc;
+            }, {} as Record<string, string>);
+            
+            return cookies[name];
+          },
+        },
+      }
+    );
+    
+    // Verificar sessão do usuário
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('❌ REAL API: Unauthorized access attempt');
+      return NextResponse.json(
+        { 
+          error: 'UNAUTHORIZED',
+          message: 'Authentication required',
+          orders: [],
+          expenses: [],
+          dishes: [],
+          categories: []
+        },
+        { status: 401 }
+      );
+    }
+    
+    console.log('✅ REAL API: User authenticated:', session.user.email);
+    
     // VALIDAÇÃO DETALHADA DAS VARIÁVEIS DE AMBIENTE
     console.log('🔍 REAL API: Checking environment variables...');
     
@@ -58,14 +104,14 @@ export async function GET() {
     // Criar cliente Supabase SERVER-SIDE com SERVICE_ROLE_KEY
     console.log('🔍 REAL API: Creating SERVER-SIDE Supabase client...');
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
     console.log('🔍 REAL API: SERVER-SIDE Supabase client created');
     
     // Carregar orders com SERVICE_ROLE_KEY - QUERY SIMPLES
     console.log('🔍 REAL API: Loading orders (SIMPLE QUERY)...');
     
-    const { data: ordersData, error: ordersError } = await supabase
+    const { data: ordersData, error: ordersError } = await supabaseAdmin
       .from('orders')
       .select('*');
     
@@ -77,7 +123,7 @@ export async function GET() {
     // Carregar expenses com SERVICE_ROLE_KEY - QUERY SIMPLES
     console.log('🔍 REAL API: Loading expenses (SIMPLE QUERY)...');
     
-    const { data: expensesData, error: expensesError } = await supabase
+    const { data: expensesData, error: expensesError } = await supabaseAdmin
       .from('expenses')
       .select('*');
     
@@ -96,7 +142,8 @@ export async function GET() {
         expenses: expensesError?.message
       },
       realData: true,
-      message: 'DADOS REAIS DO SUPABASE'
+      message: 'DADOS REAIS DO SUPABASE',
+      user: session.user.email
     };
     
     console.log('✅ REAL API: REAL data loaded', {
