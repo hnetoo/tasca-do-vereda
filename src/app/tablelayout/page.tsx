@@ -193,7 +193,8 @@ const TableLayout = () => {
       'OCCUPIED': 'PAYMENT',
       'PAYMENT': 'AVAILABLE',
       'DIRTY': 'AVAILABLE',
-      'MAINTENANCE': 'AVAILABLE'
+      'MAINTENANCE': 'AVAILABLE',
+      'UPDATING': 'AVAILABLE'
     };
     updateTableStatus(table.id, nextStatus[table.status as TableStatus]);
   };

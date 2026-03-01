@@ -919,7 +919,7 @@ export const createFinanceSlice: StateCreator<
      // Auto-liberate table
      const tableId = order.table_id || (order as any).tableId;
      if (tableId) {
-        get().updateTableStatus(String(tableId), 'AVAILABLE');
+        get().updateTableStatus(tableId, 'AVAILABLE');
      }
 
      get().addAuditLog({

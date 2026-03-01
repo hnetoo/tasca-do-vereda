@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID, OrderItem, Order } from '../../types';
+import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID, OrderItem, Order, TableStatus } from '../../types';
 import { 
   saveTableAction, 
   deleteTableAction, 
@@ -14,7 +14,8 @@ import {
   getTablesAction,
   saveOrderAction,
   saveOrderItemAction,
-  deleteOrderItemAction
+  deleteOrderItemAction,
+  updateTableStatusAction
 } from '@/app/actions/operational';
 import { saveTableActionClient as saveTableClient, deleteTableActionClient as deleteTableClient } from '@/utils/clientOperationalActions';
 import { logger } from '../../services/logger';
@@ -37,7 +38,7 @@ export interface OperationalSlice {
   addTable: (table: Table) => void;
   updateTable: (table: Table) => void;
   removeTable: (id: string) => void;
-  updateTableStatus: (id: string, status: string) => void;
+  updateTableStatus: (id: string, status: TableStatus) => Promise<void>;
   
   addCustomer: (customer: Customer) => void;
   updateCustomer: (customer: Customer) => void;
@@ -119,11 +120,16 @@ export const createOperationalSlice: StateCreator<
     }
   },
 
-  setActiveTable: (id: string | null) => set({ activeTableId: id }),
+  setActiveTable: (id: string | null) => {
+    if (id) {
+      get().updateTableStatus(id, 'OCCUPIED');
+    }
+    set({ activeTableId: id });
+  },
   
   addTable: (table: Table) => {
     set({ saveStatus: 'SAVING' });
-    set((state: OperationalSlice) => ({ tables: [...state.tables, table] }));
+    set((state) => ({ tables: [...state.tables, table] }));
     saveTableClient(table).then(res => {
       if (!res.success) {
         set({ saveStatus: 'ERROR' });
@@ -140,7 +146,7 @@ export const createOperationalSlice: StateCreator<
   
   updateTable: (table: Table) => {
     set({ saveStatus: 'SAVING' });
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       tables: state.tables.map((t: Table) => t.id === table.id ? table : t)
     }));
     saveTableClient(table).then(res => {
@@ -159,7 +165,7 @@ export const createOperationalSlice: StateCreator<
   
   removeTable: (id: string) => {
     set({ saveStatus: 'SAVING' });
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       tables: state.tables.filter((t: Table) => t.id !== id)
     }));
     deleteTableClient(id).then(res => {
@@ -176,24 +182,57 @@ export const createOperationalSlice: StateCreator<
     });
   },
 
-  updateTableStatus: (id: string, status: string) => {
-    const table = get().tables.find((t: Table) => t.id === id);
-    if (table) {
-      const oldStatus = table.status;
-      const updatedTable = { ...table, status };
-      get().updateTable(updatedTable);
-      
-      get().addAuditLog({
-        action: 'TABLE_STATUS_CHANGE',
-        details: `Mesa ${table.label || table.id} alterada de ${oldStatus} para ${status}`,
-        metadata: { tableId: id, oldStatus, newStatus: status },
-        userId: (get() as any).currentUser?.id
-      });
+  updateTableStatus: async (tableId: string, newStatus: TableStatus) => {
+    const table = get().tables.find((t: Table) => t.id === tableId);
+    if (!table) {
+      logger.warn('updateTableStatus: Mesa não encontrada', { tableId }, 'OPERATIONAL');
+      return;
+    }
+
+    const originalStatus = table.status;
+
+    // 1. Atualização Otimista
+    set((state) => ({
+      tables: state.tables.map((t) =>
+        t.id === tableId ? { ...t, status: 'UPDATING' } : t
+      ),
+    }));
+
+    try {
+      // 2. Chamar a Ação do Servidor
+      const { success, error } = await updateTableStatusAction(tableId, newStatus);
+
+      if (success) {
+        // 3. Sucesso: Atualizar para o estado final
+        set((state) => ({
+          tables: state.tables.map((t) =>
+            t.id === tableId ? { ...t, status: newStatus } : t
+          ),
+        }));
+        get().addAuditLog({
+          action: 'TABLE_STATUS_CHANGE',
+          details: `Mesa ${table.name || tableId} alterada de ${originalStatus} para ${newStatus}`,
+          metadata: { tableId, originalStatus, newStatus },
+        });
+      } else {
+        // 4. Erro: Reverter e notificar
+        throw new Error(error || 'Erro desconhecido ao atualizar o estado da mesa.');
+      }
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      logger.error('Falha ao atualizar o estado da mesa', { tableId, newStatus, error: errorMessage }, 'OPERATIONAL');
+      get().addNotification?.('error', `Não foi possível atualizar a mesa ${table.name}.`);
+      // Reverter para o estado original
+      set((state) => ({
+        tables: state.tables.map((t) =>
+          t.id === tableId ? { ...t, status: originalStatus } : t
+        ),
+      }));
     }
   },
   
   addCustomer: (customer: Customer) => {
-    set((state: OperationalSlice) => ({ customers: [...state.customers, customer] }));
+    set((state) => ({ customers: [...state.customers, customer] }));
     saveCustomerAction(customer).then(res => {
       if (!res.success) logger.error('Failed to persist new customer to SQL', { id: customer.id, error: res.error }, 'DATABASE');
     }).catch(e => 
@@ -202,7 +241,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   updateCustomer: (customer: Customer) => {
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       customers: state.customers.map((c: Customer) => c.id === customer.id ? customer : c)
     }));
     saveCustomerAction(customer).then(res => {
@@ -213,7 +252,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   removeCustomer: (id: UUID) => {
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       customers: state.customers.filter((c: Customer) => c.id !== id)
     }));
     deleteCustomerAction(id).then(res => {
@@ -223,18 +262,18 @@ export const createOperationalSlice: StateCreator<
     );
   },
   
-  addReservation: (res: Reservation) => set((state: OperationalSlice) => ({ reservations: [...state.reservations, res] })),
+  addReservation: (res: Reservation) => set((state) => ({ reservations: [...state.reservations, res] })),
   
-  updateReservation: (res: Reservation) => set((state: OperationalSlice) => ({
+  updateReservation: (res: Reservation) => set((state) => ({
     reservations: state.reservations.map((r: Reservation) => r.id === res.id ? res : r)
   })),
   
-  removeReservation: (id: UUID) => set((state: OperationalSlice) => ({
+  removeReservation: (id: UUID) => set((state) => ({
     reservations: state.reservations.filter((r: Reservation) => r.id !== id)
   })),
   
   addStockItem: (item: StockItem) => {
-    set((state: OperationalSlice) => ({ stock: [...state.stock, item] }));
+    set((state) => ({ stock: [...state.stock, item] }));
     saveStockItemAction(item).then(res => {
       if (!res.success) logger.error('Failed to persist new stock item to SQL', { id: item.id, error: res.error }, 'DATABASE');
     }).catch(e => 
@@ -243,7 +282,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   updateStockItem: (item: StockItem) => {
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       stock: state.stock.map((s: StockItem) => s.id === item.id ? item : s)
     }));
     saveStockItemAction(item).then(res => {
@@ -254,7 +293,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   removeStockItem: (id: UUID) => {
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       stock: state.stock.filter((s: StockItem) => s.id !== id)
     }));
     deleteStockItemAction(id).then(res => {
@@ -435,8 +474,8 @@ export const createOperationalSlice: StateCreator<
   },
   
   closeTableWithoutOrders: (tableId: string) => {
-    set((state: OperationalSlice) => ({
-      tables: state.tables.map((t: Table) => t.id === tableId ? { ...t, status: 'AVAILABLE' } : t),
+    get().updateTableStatus(tableId, 'AVAILABLE');
+    set((state) => ({
       activeTableId: state.activeTableId === tableId ? null : state.activeTableId
     }));
   },
@@ -444,7 +483,7 @@ export const createOperationalSlice: StateCreator<
   transferTable: (fromTableId: string, toTableId: string) => {
     const state = get();
     // Update tables
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       tables: state.tables.map((t: Table) => {
         if (t.id === fromTableId) return { ...t, status: 'AVAILABLE' };
         if (t.id === toTableId) return { ...t, status: 'OCCUPADO' };
@@ -472,7 +511,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   updateStockQuantity: (id: UUID, quantity: number) => {
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       stock: state.stock.map((item: StockItem) => 
         item.id === id ? { ...item, quantity, lastUpdated: new Date() } : item
       )
@@ -489,7 +528,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   addDelivery: (delivery: Delivery) => {
-    set((state: OperationalSlice) => ({ deliveries: [...state.deliveries, delivery] }));
+    set((state) => ({ deliveries: [...state.deliveries, delivery] }));
     get().addAuditLog({
       action: 'DELIVERY_ADD',
       details: `Entrega adicionada para o pedido: ${delivery.orderId}`,
@@ -498,7 +537,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   updateDelivery: (delivery: Delivery) => {
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       deliveries: state.deliveries.map((d: Delivery) => d.id === delivery.id ? delivery : d)
     }));
     get().addAuditLog({
@@ -509,7 +548,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   removeDelivery: (id: UUID) => {
-    set((state: OperationalSlice) => ({
+    set((state) => ({
       deliveries: state.deliveries.filter((d: Delivery) => d.id !== id)
     }));
     get().addAuditLog({
@@ -523,7 +562,7 @@ export const createOperationalSlice: StateCreator<
   setShifts: (shifts: CashShift[]) => set({ shifts }),
   addAuditLog: (log: any) => {
     logger.info('AUDIT LOG', log, 'AUDIT');
-    set((state: OperationalSlice) => ({ 
+    set((state) => ({ 
       auditLogs: [
         { 
           ...log, 

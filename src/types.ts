@@ -259,7 +259,7 @@ export type Table = Database['public']['Tables']['restaurant_tables']['Row'] & {
 };
 export type TableZone = 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
 export type TableShape = 'RECTANGLE' | 'SQUARE' | 'CIRCLE';
-export type TableStatus = 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'PAYMENT' | 'DIRTY' | 'MAINTENANCE';
+export type TableStatus = 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'PAYMENT' | 'DIRTY' | 'MAINTENANCE' | 'UPDATING';
 
 export type AuditLog = Database['public']['Tables']['audit_logs']['Row'] & {
   metadata?: any;
@@ -727,7 +727,7 @@ export interface OperationalSlice {
   addTable: (table: Table) => void;
   updateTable: (table: Table) => void;
   removeTable: (id: string) => void;
-  updateTableStatus: (id: string, status: string) => void;
+  updateTableStatus: (id: string, status: TableStatus) => Promise<void>;
   
   addCustomer: (customer: Customer) => void;
   updateCustomer: (customer: Customer) => void;
