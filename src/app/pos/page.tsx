@@ -1803,7 +1803,7 @@ const POS = () => {
               <div className="flex flex-col gap-4">
                 <div className="bg-black/20 p-6 rounded-2xl border border-white/10">
                   <h3 className="text-sm font-bold text-slate-300 mb-4">Selecionar Método</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
                       const remaining = (displayTotal || 0) - currentPayments.reduce((sum, p) => sum + p.amount, 0);
                       const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
@@ -1818,7 +1818,7 @@ const POS = () => {
                             }
                           }}
                           disabled={isDisabled}
-                          className={`p-5 rounded-xl border-2 text-center font-bold uppercase tracking-wider transition-all duration-200
+                          className={`w-full p-4 rounded-xl border-2 text-center font-bold uppercase tracking-wider transition-all duration-200
                             ${isDisabled 
                               ? 'bg-slate-800/50 border-slate-700 text-slate-600 cursor-not-allowed' 
                               : 'bg-blue-600/20 border-blue-500/50 text-blue-300 hover:bg-blue-500 hover:text-white hover:scale-105'
