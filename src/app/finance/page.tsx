@@ -21,6 +21,7 @@ export default function FinancePage() {
     settings,
     expenses,
     employees,
+    setEmployees,
     addExpense,
     addNotification
   } = useStore();
@@ -396,12 +397,216 @@ export default function FinancePage() {
       {activeTab === 'payroll' && (
         <div className="space-y-6">
           <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
-            <h3 className="text-lg font-bold text-white mb-4">Folha Salarial</h3>
-            <div className="text-center py-8">
-              <Wallet className="mx-auto h-12 w-12 text-slate-600 mb-4" />
-              <h4 className="text-lg font-medium text-white mb-2">Gestão de Folha Salarial</h4>
-              <p className="text-slate-400 mb-4">Funcionalidade em desenvolvimento</p>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-white">Folha Salarial</h3>
+              <button
+                onClick={() => {
+                  const newEmployee = {
+                    id: Date.now().toString(),
+                    name: '',
+                    position: '',
+                    baseSalary: 0,
+                    bonuses: 0,
+                    deductions: 0,
+                    netSalary: 0,
+                    status: 'active'
+                  };
+                  setEmployees([...(employees || []), newEmployee]);
+                  addNotification('success', 'Funcionário adicionado!');
+                }}
+                className="bg-primary text-black px-4 py-2 rounded-lg font-bold hover:bg-white transition-colors"
+              >
+                <Plus size={16} className="inline mr-2" />
+                Adicionar Funcionário
+              </button>
             </div>
+            
+            {employees && employees.length > 0 ? (
+              <div className="space-y-4">
+                {employees.map((employee) => (
+                  <div key={employee.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                      <div>
+                        <label className="text-xs text-slate-400 block mb-1">Nome</label>
+                        <input
+                          type="text"
+                          value={employee.name || ''}
+                          onChange={(e) => {
+                            const updated = employees.map(emp => 
+                              emp.id === employee.id 
+                                ? { ...emp, name: e.target.value }
+                                : emp
+                            );
+                            setEmployees(updated);
+                          }}
+                          className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
+                          placeholder="Nome do funcionário"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400 block mb-1">Cargo</label>
+                        <input
+                          type="text"
+                          value={employee.position || ''}
+                          onChange={(e) => {
+                            const updated = employees.map(emp => 
+                              emp.id === employee.id 
+                                ? { ...emp, position: e.target.value }
+                                : emp
+                            );
+                            setEmployees(updated);
+                          }}
+                          className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
+                          placeholder="Cargo"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400 block mb-1">Salário Base</label>
+                        <input
+                          type="number"
+                          value={employee.baseSalary || 0}
+                          onChange={(e) => {
+                            const baseSalary = parseInt(e.target.value) || 0;
+                            const updated = employees.map(emp => 
+                              emp.id === employee.id 
+                                ? { 
+                                    ...emp, 
+                                    baseSalary,
+                                    netSalary: baseSalary + (employee.bonuses || 0) - (employee.deductions || 0)
+                                  }
+                                : emp
+                            );
+                            setEmployees(updated);
+                          }}
+                          className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400 block mb-1">Bónus</label>
+                        <input
+                          type="number"
+                          value={employee.bonuses || 0}
+                          onChange={(e) => {
+                            const bonuses = parseInt(e.target.value) || 0;
+                            const updated = employees.map(emp => 
+                              emp.id === employee.id 
+                                ? { 
+                                    ...emp, 
+                                    bonuses,
+                                    netSalary: (employee.baseSalary || 0) + bonuses - (employee.deductions || 0)
+                                  }
+                                : emp
+                            );
+                            setEmployees(updated);
+                          }}
+                          className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400 block mb-1">Deduções</label>
+                        <input
+                          type="number"
+                          value={employee.deductions || 0}
+                          onChange={(e) => {
+                            const deductions = parseInt(e.target.value) || 0;
+                            const updated = employees.map(emp => 
+                              emp.id === employee.id 
+                                ? { 
+                                    ...emp, 
+                                    deductions,
+                                    netSalary: (employee.baseSalary || 0) + (employee.bonuses || 0) - deductions
+                                  }
+                                : emp
+                            );
+                            setEmployees(updated);
+                          }}
+                          className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-400 block mb-1">Salário Líquido</label>
+                        <div className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white font-bold">
+                          {formatKz(employee.netSalary || 0)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end mt-4">
+                      <button
+                        onClick={() => {
+                          const updated = employees.filter(emp => emp.id !== employee.id);
+                          setEmployees(updated);
+                          addNotification('success', 'Funcionário removido!');
+                        }}
+                        className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
+                      >
+                        <Trash2 size={14} className="inline mr-1" />
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Resumo da Folha Salarial */}
+                <div className="bg-slate-700 p-4 rounded-lg mt-6">
+                  <h4 className="text-white font-bold mb-4">Resumo da Folha Salarial</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-400">
+                        {employees.length}
+                      </div>
+                      <div className="text-xs text-slate-400">Funcionários</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-400">
+                        {formatKz(employees.reduce((sum, emp) => sum + (emp.baseSalary || 0), 0))}
+                      </div>
+                      <div className="text-xs text-slate-400">Total Base</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-400">
+                        {formatKz(employees.reduce((sum, emp) => sum + (emp.bonuses || 0), 0))}
+                      </div>
+                      <div className="text-xs text-slate-400">Total Bónus</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-emerald-400">
+                        {formatKz(employees.reduce((sum, emp) => sum + (emp.netSalary || 0), 0))}
+                      </div>
+                      <div className="text-xs text-slate-400">Total Líquido</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Wallet className="mx-auto h-12 w-12 text-slate-600 mb-4" />
+                <h4 className="text-lg font-medium text-white mb-2">Nenhum Funcionário</h4>
+                <p className="text-slate-400 mb-4">Adicione funcionários para começar a gerir a folha salarial</p>
+                <button
+                  onClick={() => {
+                    const newEmployee = {
+                      id: Date.now().toString(),
+                      name: '',
+                      position: '',
+                      baseSalary: 0,
+                      bonuses: 0,
+                      deductions: 0,
+                      netSalary: 0,
+                      status: 'active'
+                    };
+                    setEmployees([newEmployee]);
+                    addNotification('success', 'Primeiro funcionário adicionado!');
+                  }}
+                  className="bg-primary text-black px-6 py-2 rounded-lg font-bold hover:bg-white transition-colors"
+                >
+                  <Plus size={16} className="inline mr-2" />
+                  Adicionar Primeiro Funcionário
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -229,8 +229,15 @@ const Reports = () => {
                      <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
                        <BarChart3 size={32} />
                      </div>
-                     <p className="text-sm font-medium">Sem dados para o período selecionado</p>
-                     <p className="text-xs text-slate-600 mt-2">Tente alterar o período ou aguardar novos pedidos</p>
+                     <p className="text-sm font-medium mb-2">Sem dados para o período selecionado</p>
+                     <p className="text-xs text-slate-600 mb-4">Tente alterar o período ou verifique se há pedidos fechados</p>
+                     <div className="text-center">
+                       <p className="text-xs text-slate-500 mb-2">Status atual:</p>
+                       <p className="text-xs font-mono bg-slate-800 px-2 py-1 rounded">
+                         Pedidos totais: {orders.length} | 
+                         Fechados: {closedOrders.length}
+                       </p>
+                     </div>
                    </div>
                  ) : (
                    <div className="flex flex-col h-full">
@@ -403,7 +410,21 @@ const Reports = () => {
                   </tr>
                </thead>
                <tbody className="divide-y divide-white/5">
-                  {bestSellersData.map((item, idx) => {
+                  {bestSellersData.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-8 py-12 text-center">
+                        <div className="flex flex-col items-center text-slate-500">
+                          <ShoppingBag size={32} className="mb-3" />
+                          <p className="text-sm font-medium mb-2">Nenhuma venda registrada</p>
+                          <p className="text-xs">Os produtos mais vendidos aparecerão aqui quando houver pedidos fechados</p>
+                          <div className="mt-3 text-xs bg-slate-800 px-3 py-1 rounded">
+                            Pedidos fechados: {closedOrders.length} / {orders.length}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    bestSellersData.map((item, idx) => {
                      const dish = menu.find(d => d.name === item.name);
                      return (
                         <tr key={idx} className="hover:bg-white/5 transition-colors group">
@@ -439,7 +460,8 @@ const Reports = () => {
                            </td>
                         </tr>
                      );
-                  })}
+                  })
+               )}
                </tbody>
             </table>
          </div>
