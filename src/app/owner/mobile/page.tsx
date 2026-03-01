@@ -64,6 +64,14 @@ export default function OwnerMobilePage() {
     }
   }, [loadingSupabase]); // Removido orders/expenses para não criar loop
 
+  // MOBILE: Forçar carregamento inicial da API
+  useEffect(() => {
+    console.log('📱 Mobile Initial Load: Starting API data load...');
+    if (!loadingSupabase) {
+      loadApiData();
+    }
+  }, []); // Executa apenas uma vez no mount
+
 
   const loadApiData = async () => {
     setLoadingSupabase(true);
