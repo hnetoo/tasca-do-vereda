@@ -49,7 +49,7 @@ export default function OwnerMobilePage() {
   useEffect(() => {
     const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
     
-    console.log('� Data Check Effect:', {
+    console.log('📱 Data Check Effect:', {
       hasLocalData,
       ordersLength: orders?.length || 0,
       expensesLength: expenses?.length || 0,
@@ -57,12 +57,12 @@ export default function OwnerMobilePage() {
       shouldLoad: !hasLocalData && !loadingSupabase
     });
     
-    // FORÇAR reload da API se não houver dados locais
-    if (!hasLocalData && !loadingSupabase) {
-      console.log('🔄 No local data found, forcing API reload...');
+    // MOBILE: Sempre carregar API para garantir dados atualizados
+    if (!loadingSupabase) {
+      console.log('🔄 Mobile: Forcing API reload for fresh data...');
       loadApiData();
     }
-  }, [orders, expenses, loadingSupabase]);
+  }, [loadingSupabase]); // Removido orders/expenses para não criar loop
 
 
   const loadApiData = async () => {
