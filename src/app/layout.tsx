@@ -5,6 +5,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { ReduxProvider } from "@/providers/ReduxProvider";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
   title: "Tasca do Vereda",
@@ -48,6 +49,7 @@ export default function RootLayout({
             {children}
             <OfflineIndicator />
             <PWAInstallPrompt />
+            <ServiceWorkerRegister />
           </AppShell>
         </ReduxProvider>
       </body>
