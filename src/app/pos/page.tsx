@@ -347,65 +347,80 @@ const POS = () => {
     return false;
   };
 
-  const handleOpenCustomerDisplay = async () => {
+  // Emit payment events to customer display
+  const emitPaymentEvent = async (type: 'PAYMENT_STARTED' | 'PAYMENT_COMPLETED' | 'SHOW_ORDER', data?: any) => {
     try {
-      if (typeof window !== 'undefined' && '__TAURI__' in window) {
-        const label = 'customer-display';
-        let existingWin = null;
-        try {
-          existingWin = await WebviewWindow.getByLabel(label);
-        } catch (e) {
-          console.warn('Could not get existing window:', e);
-        }
-
-        if (existingWin) {
-          await existingWin.setFocus();
-          await emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
-          return;
-        }
-
-        // Logic to find the second monitor
-        const monitors = await availableMonitors();
-        let x = 0;
-        let y = 0;
-        const width = 1280;
-        const height = 720;
-        let fullscreen = false;
-
-        // If more than one monitor, try to use the secondary one
-        if (monitors.length > 1) {
-            const primary = await primaryMonitor();
-            // Find a monitor that is not the primary one
-            const secondary = monitors.find(m => m.name !== primary?.name) || monitors[1];
-            
-            if (secondary) {
-                x = secondary.position.x;
-                y = secondary.position.y;
-                // Ideally use the monitor size, but WebviewWindow options don't enforce it strictly if fullscreen
-                // width = secondary.size.width; 
-                // height = secondary.size.height;
-                fullscreen = true; // Auto fullscreen on secondary monitor
-            }
-        }
-
-        const url = `/customer-display?tableId=${activeTableId}`;
-        new WebviewWindow(label, {
-          url,
-          title: 'Tasca Vereda - Cliente',
-          x,
-          y,
-          width,
-          height,
-          resizable: true,
-          fullscreen,
-          alwaysOnTop: false
-        });
-        setTimeout(() => {
-          emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
-        }, 500);
-      } else {
-        throw new Error('Not in Tauri environment');
+      const win = await WebviewWindow.getByLabel('customer-display');
+      if (win) {
+        await win.emit('customer-display-event', { type, data });
+        logger.info('DISPLAY: evento de pagamento emitido', { type, data }, 'DISPLAY');
       }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      logger.warn('DISPLAY: falha ao emitir evento de pagamento', { type, error: msg }, 'DISPLAY');
+    }
+  };
+
+  const handleOpenDrawer = () => {
+    addNotification('success', 'Sinal enviado: Gaveta Aberta.');
+  };
+
+  const handleOpenCustomerDisplay = async () => {
+    if (!activeTableId) return;
+    
+    try {
+      const label = 'customer-display';
+      let existingWin = null;
+      
+      try {
+        existingWin = await WebviewWindow.getByLabel(label);
+      } catch (e) {
+        console.warn('Could not get existing window:', e);
+      }
+
+      if (existingWin) {
+        await existingWin.setFocus();
+        await emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
+        return;
+      }
+
+      // Logic to find the second monitor
+      const monitors = await availableMonitors();
+      let x = 0;
+      let y = 0;
+      const width = 1280;
+      const height = 720;
+      let fullscreen = false;
+
+      // If more than one monitor, try to use the secondary one
+      if (monitors.length > 1) {
+        const primary = await primaryMonitor();
+        // Find a monitor that is not the primary one
+        const secondary = monitors.find(m => m.name !== primary?.name) || monitors[1];
+        
+        if (secondary) {
+          x = secondary.position.x;
+          y = secondary.position.y;
+          fullscreen = true; // Auto fullscreen on secondary monitor
+        }
+      }
+
+      const url = `/customer-display?tableId=${activeTableId}`;
+      new WebviewWindow(label, {
+        url,
+        title: 'Tasca Vereda - Cliente',
+        x,
+        y,
+        width,
+        height,
+        resizable: true,
+        fullscreen,
+        alwaysOnTop: false
+      });
+      
+      setTimeout(() => {
+        emitRouteUpdateWithBackoff(label, `/customer-display?tableId=${activeTableId}`);
+      }, 500);
     } catch (error) {
       console.error('Failed to open customer display with Tauri API, falling back to window.open', error);
       const url = `${window.location.origin}/customer-display?tableId=${activeTableId}`;
@@ -416,10 +431,6 @@ const POS = () => {
         addNotification('error', 'Por favor permita pop-ups para abrir a tela do cliente');
       }
     }
-  };
-
-  const handleOpenDrawer = () => {
-    addNotification('success', 'Sinal enviado: Gaveta Aberta.');
   };
 
   const handleCloseTableWithoutOrders = () => {
@@ -1455,6 +1466,8 @@ const POS = () => {
                               e.stopPropagation();
                               setActiveOrder(order.id || null);
                               setIsPaymentModalOpen(true);
+                              // Emit payment event to customer display
+                              emitPaymentEvent('PAYMENT_STARTED', { orderId: order.id });
                             }}
                             className={`p-1 rounded-full hover:bg-green-500 hover:text-white transition-colors ${activeOrderId === order.id ? 'text-green-600' : 'text-slate-500'}`}
                             title="Pagar Subconta"
@@ -1539,7 +1552,11 @@ const POS = () => {
                        <Banknote size={20} />
                     </button>
                     <button 
-                      onClick={() => setIsPaymentModalOpen(true)} 
+                      onClick={() => {
+                        setIsPaymentModalOpen(true);
+                        // Emit payment event to customer display
+                        emitPaymentEvent('PAYMENT_STARTED', { orderId: currentOrder?.id });
+                      }} 
                       disabled={!currentOrder || currentOrder.items?.length === 0}
                       className="col-span-3 py-4 rounded-2xl bg-primary text-black font-black uppercase text-xs tracking-widest shadow-glow hover:brightness-110 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
                     >
@@ -1683,6 +1700,8 @@ const POS = () => {
                    setIsPaymentModalOpen(false);
                    setCurrentPayments([]);
                    setCustomerNif('');
+                   // Emit payment completed event to customer display
+                   emitPaymentEvent('PAYMENT_COMPLETED');
                  }} className="text-slate-500 hover:text-white"><X /></button>
               </div>
               
