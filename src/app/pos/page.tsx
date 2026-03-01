@@ -1633,6 +1633,20 @@ const POS = () => {
               </div>
               
               <div className="flex-1 overflow-y-auto custom-scrollbar">
+                 {/* DEBUG LOG */}
+                 <div className="mb-4 p-2 bg-black/50 rounded text-xs text-slate-400">
+                    <div>DEBUG: currentShiftId = {currentShiftId || 'null'}</div>
+                    <div>DEBUG: activeOrders.length = {activeOrders.length}</div>
+                    <div>DEBUG: FECHADO/PAGO orders = {activeOrders.filter((o: Order) => (o.status === 'FECHADO' || o.status === 'PAGO')).length}</div>
+                    <div>DEBUG: Matching orders = {activeOrders.filter((o: Order) => (o.status === 'FECHADO' || o.status === 'PAGO') && (!currentShiftId || o.shiftId === currentShiftId)).length}</div>
+                    <div>DEBUG: All orders with shiftId:</div>
+                    {activeOrders.map((o: Order) => (
+                       <div key={o.id} className="ml-2">
+                          Order {o.id}: status={o.status}, shiftId={o.shiftId}, total={o.total}
+                       </div>
+                    ))}
+                 </div>
+                 
                  <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 bg-slate-900/90 backdrop-blur-sm z-10">
                        <tr className="border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-500">
