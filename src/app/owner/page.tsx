@@ -37,7 +37,8 @@ export default function OwnerPage() {
     expenses,
     dishes,
     categories,
-    settings
+    settings,
+    employees
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -463,7 +464,7 @@ export default function OwnerPage() {
       </div>
 
       {/* KPIs em Tempo Real */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-6 mb-8">
         <div className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-2xl border border-green-500/30">
           <div className="flex items-center justify-between mb-4">
             <span className="text-green-200 text-sm font-medium">Vendas Hoje</span>
@@ -517,6 +518,24 @@ export default function OwnerPage() {
           <div className="text-3xl font-bold mb-1">{fmt(realtimeStats.averageTicket || 0)}</div>
           <div className="text-purple-200 text-sm">Por pedido</div>
         </div>
+
+        <div className="bg-gradient-to-br from-red-600 to-red-800 p-6 rounded-2xl border border-red-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-red-200 text-sm font-medium">Folha Salarial</span>
+            <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">{fmt(employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0)}</div>
+          <div className="text-red-200 text-sm">total líquido mensal</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-2xl border border-indigo-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-indigo-200 text-sm font-medium">Impostos</span>
+            <div className="w-3 h-3 bg-indigo-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">{fmt((employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0) * 0.17)}</div>
+          <div className="text-indigo-200 text-sm">~17% estimado</div>
+        </div>
       </div>
 
       {/* Período Selector */}
@@ -541,7 +560,7 @@ export default function OwnerPage() {
       </div>
 
       {/* Resumo Financeiro */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 mb-8">
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
           <h3 className="text-xl font-bold mb-4 text-green-400">Receitas</h3>
           <div className="text-3xl font-bold text-green-400">{fmt(totals.revenue)}</div>
@@ -552,6 +571,18 @@ export default function OwnerPage() {
           <h3 className="text-xl font-bold mb-4 text-red-400">Despesas</h3>
           <div className="text-3xl font-bold text-red-400">{fmt(totals.expense)}</div>
           <div className="text-gray-400 text-sm mt-2">{filteredTransactions.filter(t => t.type === 'EXPENSE').length} transações</div>
+        </div>
+
+        <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
+          <h3 className="text-xl font-bold mb-4 text-red-500">Folha Salarial</h3>
+          <div className="text-3xl font-bold text-red-500">{fmt(employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0)}</div>
+          <div className="text-gray-400 text-sm mt-2">{employees?.length || 0} funcionários</div>
+        </div>
+
+        <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
+          <h3 className="text-xl font-bold mb-4 text-indigo-400">Impostos</h3>
+          <div className="text-3xl font-bold text-indigo-500">{fmt((employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0) * 0.17)}</div>
+          <div className="text-gray-400 text-sm mt-2">~17% estimado</div>
         </div>
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
