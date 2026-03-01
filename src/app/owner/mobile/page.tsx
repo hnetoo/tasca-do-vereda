@@ -277,7 +277,13 @@ export default function OwnerMobilePage() {
     };
     
     console.log('📊 Owner Mobile Data Debug:', debugInfo);
-  }, [orders, expenses, dishes, categories]);
+    console.log('📊 Mobile Final Data:', {
+      ordersCount: currentData.orders.length,
+      expensesCount: currentData.expenses.length,
+      ordersSource: (orders?.length || 0) > 0 ? 'STORE' : 'API',
+      expensesSource: (expenses?.length || 0) > 0 ? 'STORE' : 'API'
+    });
+  }, [orders, expenses, dishes, categories, supabaseData]);
 
   // Verificar autenticação mobile
   useEffect(() => {
