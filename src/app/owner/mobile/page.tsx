@@ -40,7 +40,9 @@ export default function OwnerMobilePage() {
     addNotification,
     settings,
     employees,
-    payroll
+    payroll,
+    setOrders,
+    setExpenses
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -216,6 +218,10 @@ export default function OwnerMobilePage() {
         dishes: [],
         categories: []
       });
+      
+      // Limpar store local também
+      setOrders([]);
+      setExpenses([]);
 
       // Forçar reload dos dados
       setForceUpdate(prev => prev + 1);
