@@ -19,6 +19,21 @@ const CustomerDisplayContent = () => {
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Fullscreen functions
+  const requestFullscreen = useCallback(() => {
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(console.error);
+      setIsFullscreen(true);
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(() => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(console.error);
+      setIsFullscreen(false);
+    }
+  }, []);
+
   // Derived state for promos (assuming menu items can be promos, or just showing all items)
   // Filtering for items with images as "promos" to display
   const promoItems = menu.filter((item: Dish) => item.imageUrl && item.isActive);
@@ -57,22 +72,7 @@ const CustomerDisplayContent = () => {
     return () => {
       unlisten.then(fn => fn()).catch(console.error);
     };
-  }, []);
-
-  // Fullscreen functions
-  const requestFullscreen = useCallback(() => {
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(console.error);
-      setIsFullscreen(true);
-    }
-  }, []);
-
-  const exitFullscreen = useCallback(() => {
-    if (document.exitFullscreen) {
-      document.exitFullscreen().catch(console.error);
-      setIsFullscreen(false);
-    }
-  }, []);
+  }, [exitFullscreen, requestFullscreen]);
 
   const renderLogo = (className: string, size: number) => (
     <div className={`${className} bg-gradient-to-br from-primary to-blue-600 rounded-3xl flex items-center justify-center shadow-glow border border-white/10 shrink-0`}>
