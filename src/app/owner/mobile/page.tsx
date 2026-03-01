@@ -540,7 +540,7 @@ export default function OwnerMobilePage() {
 
           <div className="bg-gradient-to-br from-amber-600 to-amber-800 p-4 rounded-2xl border border-amber-500/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-amber-200 text-xs font-medium">Total Bruto</span>
+              <span className="text-amber-200 text-xs font-medium">Vendas Atuais</span>
               <TrendingUp size={16} className="text-amber-400" />
             </div>
             <div className="text-xl font-bold mb-1">{fmt(realtimeStats.totalRevenue)}</div>
@@ -549,7 +549,7 @@ export default function OwnerMobilePage() {
 
           <div className="bg-gradient-to-br from-yellow-600 to-yellow-800 p-4 rounded-2xl border border-yellow-500/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-yellow-200 text-xs font-medium">Total Histórico Bruto</span>
+              <span className="text-yellow-200 text-xs font-medium">Total Acumulado</span>
               <TrendingUp size={16} className="text-yellow-400" />
             </div>
             <div className="text-xl font-bold mb-1">{fmt((settings?.legacyTotalRevenue || 0) + realtimeStats.totalRevenue)}</div>
@@ -602,22 +602,38 @@ export default function OwnerMobilePage() {
           </div>
         </div>
 
-        {/* Net Result */}
-        <div className={`p-4 rounded-2xl border ${
-          totals.net >= 0 
-            ? 'bg-gradient-to-br from-green-600 to-green-800 border-green-500/30' 
-            : 'bg-gradient-to-br from-red-600 to-red-800 border-red-500/30'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium mb-1 opacity-80">Resultado Líquido</div>
-              <div className="text-2xl font-bold">{fmt(totals.net)}</div>
-            </div>
-            {totals.net >= 0 ? (
-              <ArrowUpRight size={24} className="text-green-300" />
-            ) : (
-              <ArrowDownRight size={24} className="text-red-300" />
-            )}
+        {/* Top Produtos do Período */}
+        <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-bold text-white">Top Produtos</h4>
+            <span className="text-xs text-slate-400">{period.toLowerCase()}</span>
+          </div>
+          <div className="space-y-2">
+            {(() => {
+              const productCounts: Record<string, number> = {};
+              filteredTransactions
+                .filter(t => t.type === 'REVENUE')
+                .forEach(tx => {
+                  // Extrair produtos do pedido (simplificado)
+                  const order = orders.find(o => o.id === tx.id?.replace('order-', ''));
+                  if (order?.items) {
+                    order.items.forEach((item: any) => {
+                      const productName = item.dish?.name || item.name || 'Desconhecido';
+                      productCounts[productName] = (productCounts[productName] || 0) + (item.quantity || 1);
+                    });
+                  }
+                });
+              
+              return Object.entries(productCounts)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 3)
+                .map(([name, count], idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-slate-800 rounded-lg">
+                    <span className="text-xs text-white truncate flex-1">{name}</span>
+                    <span className="text-xs font-bold text-primary">{count}x</span>
+                  </div>
+                ));
+            })()}
           </div>
         </div>
 
