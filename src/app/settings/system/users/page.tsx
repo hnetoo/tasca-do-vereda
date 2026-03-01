@@ -1,33 +1,52 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { Users, Plus, Trash2, Edit, Shield, Mail, Phone, Calendar, Key, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsUsersPage() {
   const { addNotification } = useStore();
-  const [users, setUsers] = useState([
-    {
-      id: '1',
-      name: 'Administrador',
-      email: 'admin@restaurante.com',
-      role: 'admin',
-      status: 'active',
-      lastLogin: '2024-01-15T10:30:00',
-      permissions: ['all'],
-      createdAt: '2023-01-01'
-    },
-    {
-      id: '2',
-      name: 'João Silva',
-      email: 'joao@restaurante.com',
-      role: 'manager',
-      status: 'active',
-      lastLogin: '2024-01-15T09:15:00',
-      permissions: ['orders', 'menu', 'reports'],
-      createdAt: '2023-03-15'
+  
+  // Carregar dados do localStorage ao montar
+  const [users, setUsers] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedUsers = localStorage.getItem('tasca_users');
+      if (savedUsers) {
+        return JSON.parse(savedUsers);
+      }
     }
-  ]);
+    
+    // Dados padrão se não houver nada salvo
+    return [
+      {
+        id: '1',
+        name: 'Administrador',
+        email: 'admin@restaurante.com',
+        role: 'admin',
+        status: 'active',
+        lastLogin: '2024-01-15T10:30:00',
+        permissions: ['all'],
+        createdAt: '2023-01-01'
+      },
+      {
+        id: '2',
+        name: 'João Silva',
+        email: 'joao@restaurante.com',
+        role: 'manager',
+        status: 'active',
+        lastLogin: '2024-01-15T09:15:00',
+        permissions: ['orders', 'menu', 'reports'],
+        createdAt: '2023-03-15'
+      }
+    ];
+  });
+
+  // Salvar dados no localStorage quando users mudar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasca_users', JSON.stringify(users));
+    }
+  }, [users]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);

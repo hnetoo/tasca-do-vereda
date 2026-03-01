@@ -1,37 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { Shield, Plus, Trash2, Edit, Key, Users, Check, X } from 'lucide-react';
 
 export default function SettingsRolesPage() {
   const { addNotification } = useStore();
-  const [roles, setRoles] = useState([
-    {
-      id: '1',
-      name: 'Administrador',
-      description: 'Acesso completo ao sistema',
-      permissions: ['all'],
-      userCount: 1,
-      color: 'red'
-    },
-    {
-      id: '2',
-      name: 'Gerente',
-      description: 'Gerenciamento de pedidos, relatórios e configurações',
-      permissions: ['orders', 'menu', 'reports', 'settings'],
-      userCount: 2,
-      color: 'yellow'
-    },
-    {
-      id: '3',
-      name: 'Garçom',
-      description: 'Acesso a pedidos e menu',
-      permissions: ['orders', 'menu'],
-      userCount: 5,
-      color: 'blue'
+  
+  // Carregar dados do localStorage ao montar
+  const [roles, setRoles] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedRoles = localStorage.getItem('tasca_roles');
+      if (savedRoles) {
+        return JSON.parse(savedRoles);
+      }
     }
-  ]);
+    
+    // Dados padrão se não houver nada salvo
+    return [
+      {
+        id: '1',
+        name: 'Administrador',
+        description: 'Acesso completo ao sistema',
+        permissions: ['all'],
+        userCount: 1,
+        color: 'red'
+      },
+      {
+        id: '2',
+        name: 'Gerente',
+        description: 'Gerenciamento de pedidos, relatórios e configurações',
+        permissions: ['orders', 'menu', 'reports', 'settings'],
+        userCount: 2,
+        color: 'yellow'
+      },
+      {
+        id: '3',
+        name: 'Garçom',
+        description: 'Acesso a pedidos e menu',
+        permissions: ['orders', 'menu'],
+        userCount: 5,
+        color: 'blue'
+      }
+    ];
+  });
+
+  // Salvar dados no localStorage quando roles mudar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasca_roles', JSON.stringify(roles));
+    }
+  }, [roles]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
