@@ -1646,7 +1646,7 @@ const POS = () => {
                     </thead>
                     <tbody className="divide-y divide-white/5">
                        {activeOrders
-                          .filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId)
+                          .filter((o: Order) => (o.status === 'FECHADO' || o.status === 'PAGO') && (!currentShiftId || o.shiftId === currentShiftId))
                           .sort((a: Order, b: Order) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
                           .map((order: Order) => {
                              const table = tables.find((t: Table) => t.id === order.tableId);
@@ -1694,7 +1694,7 @@ const POS = () => {
                                 </tr>
                              );
                           })}
-                          {activeOrders.filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId).length === 0 && (
+                          {activeOrders.filter((o: Order) => (o.status === 'FECHADO' || o.status === 'PAGO') && (!currentShiftId || o.shiftId === currentShiftId)).length === 0 && (
                              <tr>
                                 <td colSpan={6} className="p-10 text-center text-slate-500 opacity-50">
                                    <History size={48} className="mx-auto mb-4 opacity-50" />
