@@ -9,7 +9,6 @@ let isCreating = false;
 export function createClient() {
   // Return existing client if already created
   if (supabaseBrowserClient) {
-    console.log('🔄 [SUPABASE] Returning existing client');
     return supabaseBrowserClient;
   }
   
