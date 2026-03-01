@@ -49,8 +49,8 @@ export async function POST(request: Request) {
       // Clear only existing tables
       for (const tableName of existingTables) {
         try {
-          // Usar is null em vez de neq para UUID
-          const deleteResult = await supabase.from(tableName).delete().is('id', null);
+          // Usar gte com UUID mínimo para apagar todos os registros
+          const deleteResult = await supabase.from(tableName).delete().gte('id', '00000000-0000-0000-0000-000000000000');
           
           if (deleteResult.error) {
             throw new Error(`Failed to clear ${tableName}: ${deleteResult.error.message}`);
@@ -105,12 +105,12 @@ export async function POST(request: Request) {
         
         let result;
         if (type === 'orders') {
-          // Usar is null em vez de neq para UUID
-          const deleteResult = await supabase.from('orders').delete().is('id', null);
+          // Usar gte com UUID mínimo para apagar todos os registros
+          const deleteResult = await supabase.from('orders').delete().gte('id', '00000000-0000-0000-0000-000000000000');
           result = deleteResult;
         } else if (type === 'expenses') {
-          // Usar is null em vez de neq para UUID
-          const deleteResult = await supabase.from('expenses').delete().is('id', null);
+          // Usar gte com UUID mínimo para apagar todos os registros
+          const deleteResult = await supabase.from('expenses').delete().gte('id', '00000000-0000-0000-0000-000000000000');
           result = deleteResult;
         }
 
