@@ -10,12 +10,21 @@ export default function SettingsUsersPage() {
   // Carregar dados do localStorage ao montar
   const [users, setUsers] = useState(() => {
     if (typeof window !== 'undefined') {
+      console.log('🔍 DEBUG: Carregando users do localStorage...');
       const savedUsers = localStorage.getItem('tasca_users');
+      console.log('🔍 DEBUG: savedUsers =', savedUsers);
       if (savedUsers) {
-        return JSON.parse(savedUsers);
+        try {
+          const parsed = JSON.parse(savedUsers);
+          console.log('🔍 DEBUG: Users carregados:', parsed);
+          return parsed;
+        } catch (error) {
+          console.error('🔍 DEBUG: Erro ao parsear users:', error);
+        }
       }
     }
     
+    console.log('🔍 DEBUG: Usando dados padrão para users');
     // Dados padrão se não houver nada salvo
     return [
       {
@@ -44,7 +53,9 @@ export default function SettingsUsersPage() {
   // Salvar dados no localStorage quando users mudar
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      console.log('🔍 DEBUG: Salvando users no localStorage:', users);
       localStorage.setItem('tasca_users', JSON.stringify(users));
+      console.log('🔍 DEBUG: Users salvos com sucesso');
     }
   }, [users]);
 
