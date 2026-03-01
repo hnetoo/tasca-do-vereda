@@ -34,6 +34,7 @@ const POS = () => {
     dishes: menu, categories, activeOrders, activeOrderId, setActiveOrder, 
     createNewOrder, addToOrder, removeFromOrder, 
     checkoutTable, closeTableWithoutOrders, transferTable, removeOrder,
+    updateTableStatus,
     settings, addNotification,
     currentShiftId, openShift, toggleMobileMenu, isSidebarCollapsed, toggleSidebar,
     addTable, auditLogs
@@ -931,7 +932,7 @@ const POS = () => {
     setCurrentPayments(currentPayments.filter((p: OrderPayment) => p.id !== id));
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (activeOrderId && currentPayments.length > 0 && currentOrder) {
       const totalPaid = currentPayments.reduce((sum, p) => sum + p.amount, 0);
       if (Math.abs(totalPaid - (displayTotal || 0)) > 0.01) {
@@ -941,6 +942,21 @@ const POS = () => {
 
       const normalizedNif = customerNif.trim();
       checkoutTable(activeOrderId, currentPayments, undefined, normalizedNif || undefined, user?.id);
+      
+      // Garantir que mesa fique disponível e limpar estado ativo
+      if (activeTableId && currentOrder) {
+        const tableId = currentOrder.table_id || (currentOrder as any).tableId;
+        if (tableId) {
+          await updateTableStatus(String(tableId), 'AVAILABLE');
+        }
+        // Limpar mesa ativa se não tiver mais pedidos abertos
+        const remainingOrders = activeOrders.filter(o => 
+          o.tableId === activeTableId && o.status === 'ABERTO'
+        );
+        if (remainingOrders.length === 0) {
+          setActiveTable(null);
+        }
+      }
       
       const finalOrder: Order = { 
         ...currentOrder, 
@@ -1724,11 +1740,11 @@ const POS = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-black/20 p-6 rounded-2xl border border-white/10 text-center">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total</p>
-                    <p className="text-3xl font-mono font-bold text-blue-400">{formatKz(displayTotal)}</p>
+                    <p className="text-2xl font-mono font-bold text-blue-400">{formatKz(displayTotal)}</p>
                   </div>
                   <div className="bg-black/20 p-6 rounded-2xl border border-white/10 text-center">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Falta Pagar</p>
-                    <p className={`text-3xl font-mono font-bold ${Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                    <p className={`text-2xl font-mono font-bold ${Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-400' : 'text-green-400'}`}>
                       {formatKz(Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)))}
                     </p>
                   </div>
