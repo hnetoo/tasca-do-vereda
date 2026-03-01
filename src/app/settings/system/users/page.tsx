@@ -5,13 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Users, Plus, Trash2, Edit, Shield, Mail, Phone, Calendar, Key, Eye, EyeOff } from 'lucide-react';
 
 export default function SettingsUsersPage() {
-  const { addNotification, employees, setEmployees, addEmployee, updateEmployee, removeEmployee } = useStore();
-  
-  // Forçar client-side rendering para logs
-  useEffect(() => {
-    console.log('🔍 DEBUG: Client-side mounted!');
-    console.log('🔍 DEBUG: Employees no store:', employees);
-  }, [employees]);
+  const { addNotification } = useStore();
   
   // Estados do formulário
   const [showModal, setShowModal] = useState(false);
@@ -26,75 +20,81 @@ export default function SettingsUsersPage() {
     permissions: []
   });
   
-  // Converter employees para formato de users para compatibilidade
-  const users = employees.map(emp => {
-    return {
-      id: emp.id,
-      name: emp.name,
-      email: emp.email || `${emp.name.toLowerCase().replace(' ', '.')}@restaurante.com`,
-      role: emp.role.toLowerCase(),
-      status: emp.isActive ? 'active' : 'inactive',
-      lastLogin: 'Nunca',
-      permissions: emp.role === 'ADMIN' ? ['all'] : ['orders', 'menu'],
-      createdAt: emp.admissionDate || new Date().toISOString().split('T')[0]
-    };
+  // Estado local para usuários - SEM DATABASE!
+  const [users, setUsers] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tasca_users_local');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Erro ao carregar users:', e);
+        }
+      }
+    }
+    
+    // Dados padrão
+    return [
+      {
+        id: '1',
+        name: 'Administrador',
+        email: 'admin@restaurante.com',
+        role: 'admin',
+        status: 'active',
+        lastLogin: '2024-01-15T10:30:00',
+        permissions: ['all'],
+        createdAt: '2023-01-01'
+      },
+      {
+        id: '2',
+        name: 'João Silva',
+        email: 'joao@restaurante.com',
+        role: 'manager',
+        status: 'active',
+        lastLogin: '2024-01-15T09:15:00',
+        permissions: ['orders', 'menu', 'reports'],
+        createdAt: '2023-03-15'
+      }
+    ];
   });
+  
+  // Salvar no localStorage quando mudar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasca_users_local', JSON.stringify(users));
+      console.log('🔍 DEBUG: Users salvos no localStorage:', users.length);
+    }
+  }, [users]);
+  
+  // Forçar client-side rendering para logs
+  useEffect(() => {
+    console.log('🔍 DEBUG: Client-side mounted!');
+    console.log('🔍 DEBUG: Users carregados:', users);
+  }, [users]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🔍 DEBUG: handleSubmit chamado', { editingUser, formData });
     
     if (editingUser) {
-      // Atualizar employee no Zustand
-      const updatedEmployee = {
-        id: editingUser.id,
-        name: formData.name,
-        role: formData.role.toUpperCase(),
-        pin: null,
-        phone: '',
-        email: formData.email,
-        nif: null,
-        address: null,
-        salary: 150000,
-        isActive: formData.status === 'active',
-        admissionDate: new Date().toISOString().split('T')[0],
-        socialSecurityNumber: null,
-        bankAccount: null,
-        bi: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        color: '#06b6d4',
-        workDaysPerMonth: 22
-      };
-      
-      console.log('🔍 DEBUG: Atualizando employee:', updatedEmployee);
-      updateEmployee(updatedEmployee);
+      // Atualizar usuário local
+      setUsers(users.map((user: any) => 
+        user.id === editingUser.id 
+          ? { ...user, ...formData }
+          : user
+      ));
       addNotification('success', 'Utilizador atualizado com sucesso!');
     } else {
-      // Adicionar novo employee no Zustand
-      const newEmployee = {
+      // Adicionar novo usuário local
+      const newUser = {
+        ...formData,
         id: Date.now().toString(),
-        name: formData.name,
-        role: formData.role.toUpperCase(),
-        pin: null,
-        phone: '',
-        email: formData.email,
-        nif: null,
-        address: null,
-        salary: 150000,
-        isActive: formData.status === 'active',
-        admissionDate: new Date().toISOString().split('T')[0],
-        socialSecurityNumber: null,
-        bankAccount: null,
-        bi: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        color: '#06b6d4',
-        workDaysPerMonth: 22
+        createdAt: new Date().toISOString().split('T')[0],
+        lastLogin: 'Nunca'
       };
       
-      console.log('🔍 DEBUG: Adicionando novo employee:', newEmployee);
-      addEmployee(newEmployee);
+      console.log('🔍 DEBUG: Adicionando novo usuário:', newUser);
+      setUsers([...users, newUser]);
       addNotification('success', 'Utilizador adicionado com sucesso!');
     }
     
@@ -118,21 +118,18 @@ export default function SettingsUsersPage() {
 
   const handleDelete = (id: string) => {
     if (confirm('Tem certeza que deseja remover este utilizador?')) {
-      removeEmployee(id);
+      setUsers(users.filter((user: any) => user.id !== id));
       addNotification('success', 'Utilizador removido com sucesso!');
     }
   };
 
   const handleToggleStatus = (id: string) => {
-    const employee = employees.find(emp => emp.id === id);
-    if (employee) {
-      updateEmployee({
-        ...employee,
-        isActive: !employee.isActive,
-        updatedAt: new Date()
-      });
-      addNotification('success', 'Status atualizado com sucesso!');
-    }
+    setUsers(users.map((user: any) => 
+      user.id === id 
+        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
+        : user
+    ));
+    addNotification('success', 'Status atualizado com sucesso!');
   };
 
   const getRoleIcon = (role: string) => {
