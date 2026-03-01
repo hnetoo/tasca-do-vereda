@@ -21,59 +21,125 @@ export async function POST(request: Request) {
     let results = [];
     
     if (type === 'all') {
-      // Clear both orders and expenses
-      const ordersResult = await supabase.from('orders').delete().neq('id', '');
-      const expensesResult = await supabase.from('expenses').delete().neq('id', '');
+      // Verificar se tabelas existem antes de limpar
+      const tablesToCheck = ['orders', 'expenses'];
+      const existingTables = [];
       
-      results = [
-        { type: 'orders', result: ordersResult },
-        { type: 'expenses', result: expensesResult }
-      ];
-      
-      // Check for errors
-      for (const { type, result } of results) {
-        if (result.error) {
-          throw new Error(`Failed to clear ${type}: ${result.error.message}`);
+      for (const tableName of tablesToCheck) {
+        try {
+          const { error } = await supabase.from(tableName).select('id').limit(1);
+          if (!error || error.code !== 'PGRST116') { // PGRST116 = relation does not exist
+            existingTables.push(tableName);
+          } else {
+            console.log(`⚠️ Table ${tableName} does not exist, skipping...`);
+          }
+        } catch (e) {
+          console.log(`⚠️ Error checking table ${tableName}, skipping...`);
         }
       }
       
-      console.log('✅ Cleared all production data from Supabase');
+      if (existingTables.length === 0) {
+        return NextResponse.json({ 
+          success: true, 
+          message: 'No production tables found to clear',
+          cleared: { orders: 0, expenses: 0 }
+        });
+      }
+      
+      // Clear only existing tables
+      for (const tableName of existingTables) {
+        try {
+          // Usar is null em vez de neq para UUID
+          const deleteResult = await supabase.from(tableName).delete().is('id', null);
+          
+          if (deleteResult.error) {
+            throw new Error(`Failed to clear ${tableName}: ${deleteResult.error.message}`);
+          }
+          
+          results.push({
+            type: tableName,
+            result: deleteResult
+          });
+          
+          console.log(`✅ Cleared ${tableName} from Supabase`);
+          
+        } catch (error: any) {
+          console.error(`❌ Error clearing ${tableName}:`, error);
+          results.push({
+            type: tableName,
+            error: error.message
+          });
+        }
+      }
+      
+      // Check for errors in results
+      const hasErrors = results.some(r => r.error);
+      if (hasErrors) {
+        const errorMessages = results.filter(r => r.error).map(r => r.error);
+        return NextResponse.json({ 
+          error: 'Some tables failed to clear: ' + errorMessages.join(', ')
+        }, { status: 500 });
+      }
       
       return NextResponse.json({ 
         success: true, 
-        message: 'All production data cleared successfully',
+        message: 'Production data cleared successfully',
         cleared: {
-          orders: (results[0].result.data as any[] | null)?.length || 0,
-          expenses: (results[1].result.data as any[] | null)?.length || 0
+          orders: (results.find(r => r.type === 'orders')?.result?.data as any[] | null)?.length || 0,
+          expenses: (results.find(r => r.type === 'expenses')?.result?.data as any[] | null)?.length || 0
         }
       });
       
     } else {
-      // Clear specific type (original logic)
-      let result;
-      if (type === 'orders') {
-        const deleteResult = await supabase.from('orders').delete().neq('id', '');
-        result = deleteResult;
-      } else if (type === 'expenses') {
-        const deleteResult = await supabase.from('expenses').delete().neq('id', '');
-        result = deleteResult;
+      // Clear specific type with table existence check
+      try {
+        const { error: checkError } = await supabase.from(type).select('id').limit(1);
+        
+        if (checkError && checkError.code === 'PGRST116') {
+          return NextResponse.json({ 
+            success: true, 
+            message: `Table ${type} does not exist, nothing to clear`,
+            count: 0
+          });
+        }
+        
+        let result;
+        if (type === 'orders') {
+          // Usar is null em vez de neq para UUID
+          const deleteResult = await supabase.from('orders').delete().is('id', null);
+          result = deleteResult;
+        } else if (type === 'expenses') {
+          // Usar is null em vez de neq para UUID
+          const deleteResult = await supabase.from('expenses').delete().is('id', null);
+          result = deleteResult;
+        }
+
+        if (!result) {
+          throw new Error('Failed to execute delete operation');
+        }
+
+        if (result.error) {
+          throw result.error;
+        }
+
+        console.log(`✅ Cleared ${type} from Supabase`);
+
+        return NextResponse.json({ 
+          success: true, 
+          message: `${type} cleared successfully`,
+          count: (result.data as any[] | null)?.length || 0
+        });
+        
+      } catch (error: any) {
+        if (error.message?.includes('does not exist')) {
+          return NextResponse.json({ 
+            success: true, 
+            message: `Table ${type} does not exist, nothing to clear`,
+            count: 0
+          });
+        }
+        throw error;
       }
-
-      if (!result) {
-        throw new Error('Failed to execute delete operation');
-      }
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      console.log(`✅ Cleared ${type} from Supabase`);
-
-      return NextResponse.json({ 
-        success: true, 
-        message: `${type} cleared successfully`,
-        count: (result.data as any[] | null)?.length || 0
-      });
     }
 
   } catch (error: any) {
