@@ -533,8 +533,8 @@ export default function OwnerPage() {
             <span className="text-indigo-200 text-sm font-medium">Impostos</span>
             <div className="w-3 h-3 bg-indigo-400 rounded-full animate-pulse"></div>
           </div>
-          <div className="text-3xl font-bold mb-1">{fmt((employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0) * 0.17)}</div>
-          <div className="text-indigo-200 text-sm">~17% estimado</div>
+          <div className="text-3xl font-bold mb-1">{fmt(totals.revenue * 0.065)}</div>
+          <div className="text-indigo-200 text-sm">6.5% sobre faturação</div>
         </div>
       </div>
 
@@ -581,8 +581,8 @@ export default function OwnerPage() {
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
           <h3 className="text-xl font-bold mb-4 text-indigo-400">Impostos</h3>
-          <div className="text-3xl font-bold text-indigo-500">{fmt((employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0) * 0.17)}</div>
-          <div className="text-gray-400 text-sm mt-2">~17% estimado</div>
+          <div className="text-3xl font-bold text-indigo-500">{fmt(totals.revenue * 0.065)}</div>
+          <div className="text-gray-400 text-sm mt-2">6.5% sobre faturação</div>
         </div>
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">

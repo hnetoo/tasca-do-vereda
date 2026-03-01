@@ -597,8 +597,8 @@ export default function OwnerMobilePage() {
               <span className="text-indigo-200 text-xs font-medium">Impostos</span>
               <TrendingUp size={16} className="text-indigo-400" />
             </div>
-            <div className="text-xl font-bold mb-1">{fmt((employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0) * 0.17)}</div>
-            <div className="text-indigo-200 text-xs">~17% estimado</div>
+            <div className="text-xl font-bold mb-1">{fmt(totals.revenue * 0.065)}</div>
+            <div className="text-indigo-200 text-xs">6.5% sobre faturação</div>
           </div>
         </div>
 
