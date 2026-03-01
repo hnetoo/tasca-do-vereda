@@ -1754,11 +1754,11 @@ const POS = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-black/20 p-6 rounded-2xl border border-white/10 text-center">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total</p>
-                    <p className="text-2xl font-mono font-bold text-blue-400">{formatKz(displayTotal)}</p>
+                    <p className="text-lg font-mono font-bold text-blue-400">{formatKz(displayTotal)}</p>
                   </div>
                   <div className="bg-black/20 p-6 rounded-2xl border border-white/10 text-center">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Falta Pagar</p>
-                    <p className={`text-2xl font-mono font-bold ${Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                    <p className={`text-lg font-mono font-bold ${Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-400' : 'text-green-400'}`}>
                       {formatKz(Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)))}
                     </p>
                   </div>
