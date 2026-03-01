@@ -7,6 +7,12 @@ import { Users, Plus, Trash2, Edit, Shield, Mail, Phone, Calendar, Key, Eye, Eye
 export default function SettingsUsersPage() {
   const { addNotification, employees, setEmployees, addEmployee, updateEmployee, removeEmployee } = useStore();
   
+  // Forçar client-side rendering para logs
+  useEffect(() => {
+    console.log('🔍 DEBUG: Client-side mounted!');
+    console.log('🔍 DEBUG: Employees no store:', employees);
+  }, [employees]);
+  
   // Estados do formulário
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -21,19 +27,23 @@ export default function SettingsUsersPage() {
   });
   
   // Converter employees para formato de users para compatibilidade
-  const users = employees.map(emp => ({
-    id: emp.id,
-    name: emp.name,
-    email: emp.email || `${emp.name.toLowerCase().replace(' ', '.')}@restaurante.com`,
-    role: emp.role.toLowerCase(),
-    status: emp.isActive ? 'active' : 'inactive',
-    lastLogin: 'Nunca',
-    permissions: emp.role === 'ADMIN' ? ['all'] : ['orders', 'menu'],
-    createdAt: emp.admissionDate || new Date().toISOString().split('T')[0]
-  }));
+  const users = employees.map(emp => {
+    return {
+      id: emp.id,
+      name: emp.name,
+      email: emp.email || `${emp.name.toLowerCase().replace(' ', '.')}@restaurante.com`,
+      role: emp.role.toLowerCase(),
+      status: emp.isActive ? 'active' : 'inactive',
+      lastLogin: 'Nunca',
+      permissions: emp.role === 'ADMIN' ? ['all'] : ['orders', 'menu'],
+      createdAt: emp.admissionDate || new Date().toISOString().split('T')[0]
+    };
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔍 DEBUG: handleSubmit chamado', { editingUser, formData });
+    
     if (editingUser) {
       // Atualizar employee no Zustand
       const updatedEmployee = {
@@ -57,6 +67,7 @@ export default function SettingsUsersPage() {
         workDaysPerMonth: 22
       };
       
+      console.log('🔍 DEBUG: Atualizando employee:', updatedEmployee);
       updateEmployee(updatedEmployee);
       addNotification('success', 'Utilizador atualizado com sucesso!');
     } else {
@@ -82,6 +93,7 @@ export default function SettingsUsersPage() {
         workDaysPerMonth: 22
       };
       
+      console.log('🔍 DEBUG: Adicionando novo employee:', newEmployee);
       addEmployee(newEmployee);
       addNotification('success', 'Utilizador adicionado com sucesso!');
     }
