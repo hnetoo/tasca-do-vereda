@@ -239,12 +239,12 @@ export default function OwnerMobilePage() {
     }
   };
 
-  // Usar dados do store local ou API
+  // Usar dados da API diretamente - sem lógica complexa
   const currentData = {
-    orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
-    expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
-    dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
-    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories
+    orders: supabaseData.orders || [],
+    expenses: supabaseData.expenses || [],
+    dishes: supabaseData.dishes || [],
+    categories: supabaseData.categories || []
   };
 
   // Debug para verificar qual fonte de dados está sendo usada
