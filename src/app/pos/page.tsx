@@ -68,6 +68,10 @@ const POS = () => {
   const [activeZone, setActiveZone] = useState<TableZone>('INTERIOR');
   const [showMap, setShowMap] = useState(false);
 
+
+
+
+
   const zoneConfig = {
     INTERIOR: { icon: Home, label: 'Interior', bg: 'bg-slate-900/40' },
     EXTERIOR: { icon: Sun, label: 'Exterior', bg: 'bg-blue-900/10' },
@@ -1262,7 +1266,7 @@ const POS = () => {
                           `}
                           title={table.name || undefined}
                       >
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${table.status === 'AVAILABLE' ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${table.status === 'AVAILABLE' ? 'bg-green-500' : table.status === 'UPDATING' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500 animate-pulse'}`}></div>
                           {showTableBar && <span className="font-bold text-white text-[10px] uppercase truncate">{table.name}</span>}
                       </button>
                       ))}
@@ -1357,6 +1361,8 @@ const POS = () => {
                                     className={`relative rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-2 p-2
                                       ${isActive 
                                         ? 'bg-red-500/20 border-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]' 
+                                        : table.status === 'UPDATING'
+                                        ? 'bg-yellow-500/20 border-yellow-500 text-white animate-pulse'
                                         : 'bg-white/10 border-white/10 text-slate-300 hover:border-primary/50 hover:bg-primary/20 hover:text-white'}
                                     `}
                                   >
@@ -1364,7 +1370,7 @@ const POS = () => {
                                      {isActive && (
                                        <span className="text-[10px] font-mono font-bold text-red-300 bg-red-950/50 px-1.5 py-0.5 rounded">{formatKz(tableTotal)}</span>
                                      )}
-                                     <div className={`w-2 h-2 rounded-full absolute top-2 right-2 ${isActive ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+                                     <div className={`w-2 h-2 rounded-full absolute top-2 right-2 ${isActive ? 'bg-red-500 animate-pulse' : table.status === 'UPDATING' ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
                                   </button>
                                 );
                               })
@@ -1692,96 +1698,120 @@ const POS = () => {
       )}
 
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
-           <div className="glass-panel rounded-[3rem] w-full max-w-lg p-10 border border-white/10 shadow-2xl relative text-center">
-              <div className="flex justify-between items-center mb-10">
-                 <h3 className="text-xl font-black text-white">Concluir Transação</h3>
-                 <button onClick={() => {
-                   setIsPaymentModalOpen(false);
-                   setCurrentPayments([]);
-                   setCustomerNif('');
-                   // Emit payment completed event to customer display
-                   emitPaymentEvent('PAYMENT_COMPLETED');
-                 }} className="text-slate-500 hover:text-white"><X /></button>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-[100] flex items-center justify-center p-4 animate-in fade-in">
+          <div className="w-full max-w-2xl bg-slate-900/70 border border-blue-500/30 rounded-3xl shadow-2xl shadow-blue-500/10">
+            <div className="p-8 border-b border-white/10 flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Pagamento</h2>
+                <p className="text-sm text-blue-300">Conclua a transação para a mesa {activeTable?.name}</p>
               </div>
-              
-              <div className="grid grid-cols-2 gap-6 mb-8">
-                <div className="p-8 bg-primary/5 border border-primary/20 rounded-[2rem] flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total a Pagar</p>
-                   <p className="font-mono font-bold text-primary text-glow whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,4vw,2rem)]">{formatKz(displayTotal)}</p>
-                </div>
-                <div className="p-8 bg-white/5 border border-white/10 rounded-[2rem] flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Faltante</p>
-                   <p className={`font-mono font-bold whitespace-nowrap overflow-hidden text-ellipsis text-[clamp(1.25rem,4vw,2rem)] ${Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                     {formatKz(Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)))}
-                   </p>
-                </div>
-              </div>
+              <button 
+                onClick={() => {
+                  setIsPaymentModalOpen(false);
+                  setCurrentPayments([]);
+                  setCustomerNif('');
+                  emitPaymentEvent('PAYMENT_COMPLETED');
+                }} 
+                className="w-12 h-12 rounded-full bg-white/5 text-slate-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+              >
+                <X size={24} />
+              </button>
+            </div>
 
-              <div className="mb-8">
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">NIF do Cliente (Opcional)</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Ex: 500000000"
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-mono font-bold text-center"
-                  value={customerNif}
-                  onChange={(e) => setCustomerNif(e.target.value)}
-                />
-              </div>
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Coluna Esquerda: Detalhes e NIF */}
+              <div className="flex flex-col gap-8">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-black/20 p-6 rounded-2xl border border-white/10 text-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total</p>
+                    <p className="text-3xl font-mono font-bold text-blue-400">{formatKz(displayTotal)}</p>
+                  </div>
+                  <div className="bg-black/20 p-6 rounded-2xl border border-white/10 text-center">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Falta Pagar</p>
+                    <p className={`text-3xl font-mono font-bold ${Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)) > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      {formatKz(Math.max(0, displayTotal - currentPayments.reduce((sum, p) => sum + p.amount, 0)))}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Lista de Pagamentos Adicionados */}
-              {currentPayments.length > 0 && (
-                <div className="mb-8 space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
-                  {currentPayments.map((p: OrderPayment) => (
-                    <div key={p.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-black">
-                          {p.method[0]}
+                <div>
+                  <label className="block text-sm font-bold text-slate-300 mb-3">NIF do Cliente (Opcional)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="999999999"
+                    className="w-full p-4 bg-slate-800 border-2 border-slate-700 rounded-xl text-white text-lg font-mono font-bold text-center focus:border-blue-500 focus:ring-blue-500/50 outline-none transition"
+                    value={customerNif}
+                    onChange={(e) => setCustomerNif(e.target.value)}
+                  />
+                </div>
+                
+                {/* Pagamentos Adicionados */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-bold text-slate-300">Pagamentos Adicionados</h3>
+                  {currentPayments.length > 0 ? (
+                    <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
+                      {currentPayments.map((p: OrderPayment) => (
+                        <div key={p.id} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                          <span className="text-sm font-semibold text-white">{p.method.replace('_', ' ')}</span>
+                          <div className="flex items-center gap-4">
+                            <span className="font-mono text-white">{formatKz(p.amount)}</span>
+                            <button onClick={() => removePayment(p.id)} className="text-red-500 hover:text-red-400"><X size={16} /></button>
+                          </div>
                         </div>
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">{p.method.replace('_', ' ')}</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="font-mono font-bold text-white">{formatKz(p.amount)}</span>
-                        <button onClick={() => removePayment(p.id)} className="text-red-500 hover:text-red-400 p-1">
-                          <X size={16} />
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="text-center py-4 bg-black/20 rounded-lg border border-dashed border-white/10">
+                      <p className="text-sm text-slate-500">Nenhum pagamento adicionado.</p>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4 mb-10">
-                 {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
-                   const remaining = (displayTotal || 0) - currentPayments.reduce((sum, p) => sum + p.amount, 0);
-                   const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
-                   const isDisabled = remaining <= 0.01 && !canSubstitute;
-
-                   return (
-                     <button key={method} 
-                      onClick={() => {
-                        if (remaining > 0.01 || canSubstitute) {
-                          addPayment(method, remaining > 0 ? remaining : (displayTotal || 0));
-                        }
-                      }}
-                      disabled={isDisabled}
-                      className={`py-5 rounded-2xl border-2 font-black text-[10px] tracking-widest uppercase transition-all flex flex-col items-center justify-center gap-2
-                        ${isDisabled ? 'opacity-30 grayscale cursor-not-allowed' : 'bg-white/5 border-white/5 text-slate-500 hover:text-white hover:border-primary/50'}`}
-                     >
-                       {method.replace('_', ' ')}
-                     </button>
-                   );
-                 })}
               </div>
+
+              {/* Coluna Direita: Métodos de Pagamento */}
+              <div className="flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-slate-300 mb-2">Selecionar Método</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
+                    const remaining = (displayTotal || 0) - currentPayments.reduce((sum, p) => sum + p.amount, 0);
+                    const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
+                    const isDisabled = remaining <= 0.01 && !canSubstitute;
+
+                    return (
+                      <button 
+                        key={method} 
+                        onClick={() => {
+                          if (remaining > 0.01 || canSubstitute) {
+                            addPayment(method, remaining > 0 ? remaining : (displayTotal || 0));
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className={`p-5 rounded-xl border-2 text-center font-bold uppercase tracking-wider transition-all duration-200
+                          ${isDisabled 
+                            ? 'bg-slate-800/50 border-slate-700 text-slate-600 cursor-not-allowed' 
+                            : 'bg-blue-600/20 border-blue-500/50 text-blue-300 hover:bg-blue-500 hover:text-white hover:scale-105'
+                          }`}
+                      >
+                        {method.replace('_', ' ')}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 border-t border-white/10">
               <button 
                 disabled={Math.abs(currentPayments.reduce((sum, p) => sum + p.amount, 0) - (displayTotal || 0)) > 0.01} 
                 onClick={handlePayment} 
-                className="w-full py-6 bg-primary text-black rounded-3xl font-black uppercase tracking-widest shadow-glow disabled:opacity-10 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3"
+                className="w-full py-5 bg-green-600 text-white rounded-2xl text-lg font-black uppercase tracking-widest shadow-lg shadow-green-600/20
+                          disabled:bg-slate-700 disabled:text-slate-500 disabled:shadow-none hover:bg-green-500 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-3"
               >
-                FINALIZAR VENDA <ChevronRight size={24} />
+                <Check size={28} /> Finalizar Venda
               </button>
-           </div>
+            </div>
+          </div>
         </div>
       )}
 

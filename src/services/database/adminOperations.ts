@@ -1,11 +1,26 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { MenuCategory, Dish, Employee, Table, Customer, Reservation, StockItem, CashShift, Delivery, Order, Fornecedor, SystemSettings, OrderItem, UUID } from '@/types';
+import { MenuCategory, Dish, Employee, Table, Customer, Reservation, StockItem, CashShift, Delivery, Order, Fornecedor, SystemSettings, OrderItem, UUID, TableStatus } from '@/types';
 import { logger } from '@/services/logger';
 import { isValidUUID } from '@/utils/uuid';
 import { v4 as uuidv4 } from 'uuid';
 import { MOCK_USERS } from '@/constants/index';
 
 export const adminOperations = {
+  updateTableStatus: async (tableId: string, status: TableStatus): Promise<{ success: boolean; error?: string }> => {
+    if (!supabaseAdmin) return { success: false, error: 'A chave de serviço do Supabase não está configurada.' };
+    try {
+      const { error } = await supabaseAdmin
+        .from('restaurant_tables')
+        .update({ status: status, updated_at: new Date().toISOString() })
+        .eq('id', tableId);
+
+      if (error) throw error;
+      return { success: true };
+    } catch (error: any) {
+      logger.error('Erro ao atualizar o estado da mesa (admin)', { tableId, status, error: error.message }, 'DATABASE_ADMIN');
+      return { success: false, error: error.message };
+    }
+  },
   getEmployees: async (): Promise<{ success: boolean; data: Employee[]; error?: string }> => {
     if (!supabaseAdmin) return { success: false, data: [], error: 'Supabase Service Role Key not configured.' };
     

@@ -1,8 +1,23 @@
 'use server';
 
 import { adminOperations } from '@/services/database/adminOperations';
-import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID, Order, OrderItem } from '@/types';
+import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID, Order, OrderItem, TableStatus } from '@/types';
 import { logger } from '@/services/logger';
+
+export async function updateTableStatusAction(tableId: string, status: TableStatus): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await adminOperations.updateTableStatus(tableId, status);
+    if (!result.success) {
+      logger.error('Falha ao atualizar o estado da mesa via server action', { tableId, status, error: result.error }, 'SERVER_ACTION');
+      return { success: false, error: result.error as string };
+    }
+    return { success: true };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido';
+    logger.error('Exceção ao atualizar o estado da mesa via server action', { tableId, status, error: errorMessage }, 'SERVER_ACTION');
+    return { success: false, error: errorMessage };
+  }
+}
 
 export async function saveOrderAction(order: Order): Promise<{ success: boolean; error?: string | Error }> {
   try {
