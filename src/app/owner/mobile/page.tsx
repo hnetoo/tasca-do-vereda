@@ -21,6 +21,7 @@ export default function OwnerMobilePage() {
   const router = useRouter();
   const [authChecking, setAuthChecking] = useState(true);
   const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
+  const [version, setVersion] = useState(Date.now()); // Forçar refresh
   const [supabaseData, setSupabaseData] = useState<any>({
     orders: [],
     expenses: [],
@@ -81,7 +82,7 @@ export default function OwnerMobilePage() {
       // FORÇAR APENAS API ORIGINAL COM DADOS REAIS
       const timestamp = new Date().getTime();
       const random = Math.random().toString(36).substring(7);
-      const url = `/api/owner-data?t=${timestamp}&v=${random}&force=true`;
+      const url = `/api/owner-data?t=${timestamp}&v=${random}&force=true&version=${version}`;
       
       console.log('🔍 Mobile Debug: Fetching REAL API URL:', url);
       
