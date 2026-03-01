@@ -241,10 +241,10 @@ export default function OwnerMobilePage() {
 
   // Usar dados do store local ou API
   const currentData = {
-    orders: orders, // Sempre usar store, mesmo que vazio
-    expenses: expenses, // Sempre usar store, mesmo que vazio
-    dishes: dishes,
-    categories: categories
+    orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
+    expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
+    dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
+    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories
   };
 
   // Debug para verificar qual fonte de dados está sendo usada
