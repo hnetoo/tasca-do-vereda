@@ -41,94 +41,129 @@ interface PayrollRecord {
 
 export default function EmployeesPage() {
   const { addNotification } = useStore();
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      id: '1',
-      name: 'João Silva',
-      email: 'joao@restaurante.com',
-      phone: '+244 923 456 789',
-      address: 'Luanda, Rua Principal 123',
-      position: 'Chef de Cozinha',
-      department: 'Cozinha',
-      salary: 250000,
-      hireDate: '2023-01-15',
-      status: 'active',
-      bankAccount: '0055.0000.1234.5678',
-      nif: '123456789',
-      role: 'chef'
-    },
-    {
-      id: '2',
-      name: 'Maria Santos',
-      email: 'maria@restaurante.com',
-      phone: '+244 912 345 678',
-      address: 'Luanda, Avenida Comercial 456',
-      position: 'Garçom',
-      department: 'Salão',
-      salary: 180000,
-      hireDate: '2023-03-20',
-      status: 'active',
-      bankAccount: '0055.0000.8765.4321',
-      nif: '987654321',
-      role: 'waiter'
-    },
-    {
-      id: '3',
-      name: 'Pedro Costa',
-      email: 'pedro@restaurante.com',
-      phone: '+244 934 567 890',
-      address: 'Luanda, Rua do Comércio 789',
-      position: 'Caixa',
-      department: 'Administração',
-      salary: 200000,
-      hireDate: '2023-02-10',
-      status: 'on_leave',
-      bankAccount: '0055.0000.2468.1357',
-      nif: '456789123',
-      role: 'cashier'
+  
+  // Estado local com persistência localStorage
+  const [employees, setEmployees] = useState<Employee[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tasca_employees_local');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Erro ao carregar employees:', e);
+        }
+      }
     }
-  ]);
+    
+    // Dados padrão
+    return [
+      {
+        id: '1',
+        name: 'João Silva',
+        email: 'joao@restaurante.com',
+        phone: '+244 923 456 789',
+        address: 'Luanda, Rua Principal 123',
+        position: 'Chef de Cozinha',
+        department: 'Cozinha',
+        salary: 250000,
+        hireDate: '2023-01-15',
+        status: 'active',
+        bankAccount: '0055.0000.1234.5678',
+        nif: '123456789',
+        role: 'chef'
+      },
+      {
+        id: '2',
+        name: 'Maria Santos',
+        email: 'maria@restaurante.com',
+        phone: '+244 912 345 678',
+        address: 'Luanda, Avenida Comercial 456',
+        position: 'Garçom',
+        department: 'Salão',
+        salary: 180000,
+        hireDate: '2023-03-20',
+        status: 'active',
+        bankAccount: '0055.0000.8765.4321',
+        nif: '987654321',
+        role: 'waiter'
+      },
+      {
+        id: '3',
+        name: 'Pedro Costa',
+        email: 'pedro@restaurante.com',
+        phone: '+244 934 567 890',
+        address: 'Luanda, Rua do Comércio 789',
+        position: 'Caixa',
+        department: 'Administração',
+        salary: 200000,
+        hireDate: '2023-02-10',
+        status: 'on_leave',
+        bankAccount: '0055.0000.2468.1357',
+        nif: '456789123',
+        role: 'cashier'
+      }
+    ];
+  });
+  
+  // Salvar employees no localStorage quando mudar
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasca_employees_local', JSON.stringify(employees));
+      console.log('🔍 DEBUG: Employees salvos no localStorage:', employees.length);
+    }
+  }, [employees]);
 
-  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([
-    {
-      id: '1',
-      employeeId: '1',
-      month: 'Janeiro',
-      year: 2024,
-      baseSalary: 250000,
-      overtime: 50000,
-      bonuses: 30000,
-      deductions: 45000,
-      netSalary: 285000,
-      status: 'paid',
-      paymentDate: '2024-01-31'
-    },
-    {
-      id: '2',
-      employeeId: '2',
-      month: 'Janeiro',
-      year: 2024,
-      baseSalary: 180000,
-      overtime: 20000,
-      bonuses: 15000,
-      deductions: 32000,
-      netSalary: 183000,
-      status: 'paid',
-      paymentDate: '2024-01-31'
-    },
-    {
-      id: '3',
-      employeeId: '3',
-      month: 'Janeiro',
-      year: 2024,
-      baseSalary: 200000,
-      overtime: 0,
-      bonuses: 0,
-      deductions: 36000,
-      netSalary: 164000,
-      status: 'pending'
+  // Estado local com persistência localStorage
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tasca_payroll_local');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Erro ao carregar payroll:', e);
+        }
+      }
     }
-  ]);
+    
+    // Dados padrão
+    return [
+      {
+        id: '1',
+        employeeId: '1',
+        month: 'Janeiro',
+        year: 2024,
+        baseSalary: 250000,
+        overtime: 50000,
+        bonuses: 30000,
+        deductions: 15000,
+        netSalary: 315000,
+        status: 'processed',
+        paymentDate: '2024-01-31'
+      },
+      {
+        id: '2',
+        employeeId: '2',
+        month: 'Janeiro',
+        year: 2024,
+        baseSalary: 180000,
+        overtime: 20000,
+        bonuses: 15000,
+        deductions: 10000,
+        netSalary: 205000,
+        status: 'paid',
+        paymentDate: '2024-01-30'
+      }
+    ];
+  });
+  
+  // Salvar payroll no localStorage quando mudar
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasca_payroll_local', JSON.stringify(payrollRecords));
+      console.log('🔍 DEBUG: Payroll salvos no localStorage:', payrollRecords.length);
+    }
+  }, [payrollRecords]);
 
   const [activeTab, setActiveTab] = useState<'employees' | 'payroll'>('employees');
   const [searchTerm, setSearchTerm] = useState('');
