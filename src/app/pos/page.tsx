@@ -1088,7 +1088,7 @@ const POS = () => {
         {isOpeningShift ? (
           <div className="glass-panel p-10 rounded-[2.5rem] border border-white/10 w-full max-w-md animate-in zoom-in">
             <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Fundo de Maneio</label>
-            <input type="number" autoFocus className="w-full p-6 bg-black/40 border border-slate-700 rounded-2xl text-3xl font-mono font-bold text-white mb-8 outline-none focus:border-primary" value={openingAmount} onChange={e => setOpeningAmount(e.target.value)} />
+            <input type="number" autoFocus className="w-full p-6 bg-black/40 border border-slate-700 rounded-2xl text-2xl font-mono font-bold text-white mb-8 outline-none focus:border-primary" value={openingAmount} onChange={e => setOpeningAmount(e.target.value)} />
             <div className="flex gap-4">
               <button onClick={() => setIsOpeningShift(false)} className="flex-1 py-5 text-slate-500 font-black uppercase text-xs tracking-widest">Cancelar</button>
               <button onClick={handleOpenShift} className="flex-1 py-5 bg-primary text-black rounded-2xl font-black uppercase text-xs tracking-widest shadow-glow">Abrir Turno</button>
@@ -1531,7 +1531,7 @@ const POS = () => {
                 <div className="flex justify-between items-end mb-6">
                     <div>
                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Total Parcial</span>
-                      <h3 className="text-2xl font-mono font-bold text-primary leading-none mt-1">{formatKz(displayTotal)}</h3>
+                      <h3 className="text-xl font-mono font-bold text-primary leading-none mt-1">{formatKz(displayTotal)}</h3>
                     </div>
                 </div>
                 <div className="grid grid-cols-4 gap-3 mb-3">
@@ -1573,7 +1573,7 @@ const POS = () => {
            <div className="glass-panel rounded-[2rem] w-full max-w-4xl h-[80vh] flex flex-col p-8 border border-white/10 shadow-2xl">
               <div className="flex justify-between items-center mb-6 shrink-0">
                  <div>
-                    <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Histórico de Pedidos</h3>
+                    <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Histórico de Pedidos</h3>
                     <p className="text-slate-400 text-xs mt-1">Turno Atual</p>
                  </div>
                  <button onClick={() => setIsHistoryModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 transition-all"><X /></button>
@@ -1660,7 +1660,7 @@ const POS = () => {
         <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
            <div className="glass-panel rounded-[3rem] w-full max-w-md p-10 border border-white/10 shadow-2xl">
               <div className="flex justify-between items-center mb-8">
-                 <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Nova Subconta</h3>
+                 <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Nova Subconta</h3>
                  <button onClick={() => setIsSubAccountModalOpen(false)} className="text-slate-500 hover:text-white"><X /></button>
               </div>
               <div className="space-y-6">
@@ -1678,7 +1678,7 @@ const POS = () => {
         <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-6 backdrop-blur-md animate-in fade-in">
            <div className="glass-panel rounded-[3rem] w-full max-w-lg p-10 border border-white/10 shadow-2xl relative text-center">
               <div className="flex justify-between items-center mb-10">
-                 <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Concluir Transação</h3>
+                 <h3 className="text-xl font-black text-white">Concluir Transação</h3>
                  <button onClick={() => {
                    setIsPaymentModalOpen(false);
                    setCurrentPayments([]);
@@ -1861,7 +1861,7 @@ const POS = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="glass-panel rounded-3xl border border-white/10 w-full max-w-md p-8 animate-in fade-in zoom-in duration-300">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-black text-white">Fechar Mesa</h3>
+              <h3 className="text-xl font-black text-white">Fechar Mesa</h3>
               <button
                 onClick={() => setIsCloseTableModalOpen(false)}
                 className="p-2 hover:bg-red-600/20 rounded-lg transition-colors"
@@ -1901,7 +1901,7 @@ const POS = () => {
           <div className="glass-panel rounded-3xl border border-white/10 w-full max-w-md p-8 animate-in fade-in zoom-in duration-300">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <h3 className="text-2xl font-black text-white">Transferir Mesa</h3>
+                <h3 className="text-xl font-black text-white">Transferir Mesa</h3>
                 <button 
                   onClick={() => setIsTransferHistoryOpen(true)}
                   className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest border border-blue-500/30 hover:bg-blue-500 hover:text-white transition-all"
@@ -1978,7 +1978,7 @@ const POS = () => {
            <div className="glass-panel rounded-[2rem] w-full max-w-2xl h-[60vh] flex flex-col p-8 border border-white/10 shadow-2xl">
               <div className="flex justify-between items-center mb-6 shrink-0">
                  <div>
-                    <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Histórico de Transferências</h3>
+                    <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Histórico de Transferências</h3>
                     <p className="text-slate-400 text-xs mt-1">Registos de movimentação de mesas</p>
                  </div>
                  <button onClick={() => setIsTransferHistoryOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 transition-all"><X /></button>
