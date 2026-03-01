@@ -59,21 +59,19 @@ const LoginPage: React.FC = () => {
   }, [dispatch, isAuthenticated]);
 
   useEffect(() => {
-    // Redirect only if authenticated
+    // Apenas redirecionar se estiver autenticado
     if (isAuthenticated) {
-      if (redirectTo && redirectTo !== '/login' && !redirectTo.startsWith('/login')) {
+      if (redirectTo && redirectTo !== '/login') {
         router.push(redirectTo);
-        return;
+      } else {
+        router.push('/dashboard');
       }
-      
-      router.push('/dashboard');
     }
   }, [isAuthenticated, router, redirectTo]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedRole) {
-      isLoggingIn.current = true;
+    if (selectedRole && pin) {
       dispatch(loginWithPin({ pin, role: selectedRole }));
     }
   };
