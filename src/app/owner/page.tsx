@@ -464,7 +464,7 @@ export default function OwnerPage() {
       </div>
 
       {/* KPIs em Tempo Real */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
         <div className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-2xl border border-green-500/30">
           <div className="flex items-center justify-between mb-4">
             <span className="text-green-200 text-sm font-medium">Vendas Hoje</span>
@@ -483,18 +483,55 @@ export default function OwnerPage() {
           <div className="text-blue-200 text-sm">Ocupadas agora</div>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-600 to-amber-800 p-6 rounded-2xl border border-amber-500/30">
+        <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-6 rounded-2xl border border-purple-500/30">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-amber-200 text-sm font-medium">Total Bruto</span>
-            <div className="w-3 h-3 bg-amber-400 rounded-full animate-pulse"></div>
+            <span className="text-purple-200 text-sm font-medium">Ticket Médio</span>
+            <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse"></div>
           </div>
-          <div className="text-3xl font-bold mb-1">{fmt(realtimeStats.totalRevenue)}</div>
-          <div className="text-amber-200 text-sm">todas as vendas</div>
+          <div className="text-3xl font-bold mb-1">{fmt(totals.revenue > 0 && filteredTransactions.filter(t => t.type === 'REVENUE').length > 0 ? totals.revenue / filteredTransactions.filter(t => t.type === 'REVENUE').length : 0)}</div>
+          <div className="text-purple-200 text-sm">por pedido ({period.toLowerCase()})</div>
+        </div>
+
+        <div className="bg-gradient-to-br from-cyan-600 to-cyan-800 p-6 rounded-2xl border border-cyan-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-cyan-200 text-sm font-medium">Crescimento</span>
+            <div className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>
+          </div>
+          <div className="text-3xl font-bold mb-1">
+            {(() => {
+              const currentRevenue = totals.revenue;
+              let prevRevenue = 0;
+              
+              if (period === 'HOJE') {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                prevRevenue = orders
+                  .filter(o => o.status === 'FECHADO' && new Date(o.createdAt || o.created_at || new Date()).toDateString() === yesterday.toDateString())
+                  .reduce((sum, o) => sum + (o.total || 0), 0);
+              } else if (period === 'SEMANA') {
+                const lastWeek = new Date();
+                lastWeek.setDate(lastWeek.getDate() - 7);
+                prevRevenue = orders
+                  .filter(o => o.status === 'FECHADO' && new Date(o.createdAt || o.created_at || new Date()) >= lastWeek && new Date(o.createdAt || o.created_at || new Date()) < new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000))
+                  .reduce((sum, o) => sum + (o.total || 0), 0);
+              } else if (period === 'MES') {
+                const lastMonth = new Date();
+                lastMonth.setMonth(lastMonth.getMonth() - 1);
+                prevRevenue = orders
+                  .filter(o => o.status === 'FECHADO' && new Date(o.createdAt || o.created_at || new Date()).getMonth() === lastMonth.getMonth())
+                  .reduce((sum, o) => sum + (o.total || 0), 0);
+              }
+              
+              const growth = prevRevenue > 0 ? ((currentRevenue - prevRevenue) / prevRevenue) * 100 : 0;
+              return growth >= 0 ? `+${growth.toFixed(1)}%` : `${growth.toFixed(1)}%`;
+            })()}
+          </div>
+          <div className="text-cyan-200 text-sm">vs período anterior</div>
         </div>
 
         <div className="bg-gradient-to-br from-yellow-600 to-yellow-800 p-6 rounded-2xl border border-yellow-500/30">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-yellow-200 text-sm font-medium">Total Histórico Bruto</span>
+            <span className="text-yellow-200 text-sm font-medium">Total Acumulado</span>
             <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
           </div>
           <div className="text-3xl font-bold mb-1">{fmt((settings.legacyTotalRevenue || 0) + realtimeStats.totalRevenue)}</div>
@@ -508,33 +545,6 @@ export default function OwnerPage() {
           </div>
           <div className="text-3xl font-bold mb-1">{realtimeStats.pendingOrders}</div>
           <div className="text-orange-200 text-sm">Aguardando</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-6 rounded-2xl border border-purple-500/30">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-purple-200 text-sm font-medium">Ticket Médio</span>
-            <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse"></div>
-          </div>
-          <div className="text-3xl font-bold mb-1">{fmt(realtimeStats.averageTicket || 0)}</div>
-          <div className="text-purple-200 text-sm">Por pedido</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-red-600 to-red-800 p-6 rounded-2xl border border-red-500/30">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-red-200 text-sm font-medium">Folha Salarial</span>
-            <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
-          </div>
-          <div className="text-3xl font-bold mb-1">{fmt(employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0)}</div>
-          <div className="text-red-200 text-sm">total líquido mensal</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-2xl border border-indigo-500/30">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-indigo-200 text-sm font-medium">Impostos</span>
-            <div className="w-3 h-3 bg-indigo-400 rounded-full animate-pulse"></div>
-          </div>
-          <div className="text-3xl font-bold mb-1">{fmt(totals.revenue * 0.065)}</div>
-          <div className="text-indigo-200 text-sm">6.5% sobre faturação</div>
         </div>
       </div>
 
@@ -586,9 +596,9 @@ export default function OwnerPage() {
         </div>
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
-          <h3 className="text-xl font-bold mb-4 text-amber-400">Total Bruto</h3>
+          <h3 className="text-xl font-bold mb-4 text-amber-400">Vendas Totais</h3>
           <div className="text-3xl font-bold text-amber-400">{fmt(realtimeStats.totalRevenue)}</div>
-          <div className="text-gray-400 text-sm mt-2">todas as vendas históricas</div>
+          <div className="text-gray-400 text-sm mt-2">todas as vendas atuais</div>
         </div>
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
