@@ -6,8 +6,8 @@ export async function GET(request: Request) {
   console.log('🔍 REAL API: Request received at:', new Date().toISOString());
   
   try {
-    // VALIDAR AUTENTICAÇÃO MOCK
-    console.log('🔐 REAL API: Checking mock authentication...');
+    // VALIDAR AUTENTICAÇÃO MOCK + OWNER
+    console.log('🔐 REAL API: Checking authentication...');
     
     const cookieHeader = request.headers.get('cookie');
     let isAuthenticated = false;
@@ -19,6 +19,7 @@ export async function GET(request: Request) {
         return acc;
       }, {} as Record<string, string>);
       
+      // Verificar autenticação normal (tasca_auth_token)
       const authCookie = cookies['tasca_auth_token'];
       if (authCookie) {
         try {
@@ -28,6 +29,13 @@ export async function GET(request: Request) {
         } catch (error) {
           console.error('❌ REAL API: Invalid auth cookie format');
         }
+      }
+      
+      // Verificar autenticação owner (owner_authenticated)
+      const ownerCookie = cookies['owner_authenticated'];
+      if (ownerCookie === 'true') {
+        isAuthenticated = true;
+        console.log('✅ REAL API: Owner authenticated via owner_authenticated cookie');
       }
     }
     
