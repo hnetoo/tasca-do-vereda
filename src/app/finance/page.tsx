@@ -616,28 +616,180 @@ export default function FinancePage() {
           <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
             <h3 className="text-lg font-bold text-white mb-4">Relatórios Financeiros</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left">
+              <button 
+                onClick={() => {
+                  // Gerar relatório de vendas
+                  const salesData = orders
+                    .filter(o => o.status === 'FECHADO')
+                    .map(o => ({
+                      id: o.id,
+                      date: o.createdAt || o.created_at,
+                      total: o.total,
+                      items: o.items?.length || 0,
+                      paymentMethod: o.paymentMethod
+                    }));
+                  
+                  // Criar e baixar CSV
+                  const csv = [
+                    ['ID', 'Data', 'Total', 'Itens', 'Método Pagamento'],
+                    ...salesData.map(sale => [
+                      sale.id,
+                      new Date(sale.date || new Date()).toLocaleString('pt-AO'),
+                      sale.total,
+                      sale.items,
+                      sale.paymentMethod
+                    ])
+                  ].map(row => row.join(',')).join('\n');
+                  
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `relatorio-vendas-${new Date().toISOString().split('T')[0]}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  
+                  addNotification('success', 'Relatório de vendas exportado!');
+                }}
+                className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left"
+              >
                 <div className="flex items-center gap-3 mb-2">
                   <BarChart3 className="text-primary" size={20} />
                   <span className="font-medium text-white">Relatório de Vendas</span>
                 </div>
                 <p className="text-sm text-slate-400">Análise detalhada das vendas por período</p>
               </button>
-              <button className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left">
+              
+              <button 
+                onClick={() => {
+                  // Gerar relatório de despesas
+                  const expensesData = expenses?.map(exp => ({
+                    id: exp.id,
+                    date: exp.date,
+                    description: exp.description,
+                    category: exp.category,
+                    amount: exp.amount
+                  })) || [];
+                  
+                  // Criar e baixar CSV
+                  const csv = [
+                    ['ID', 'Data', 'Descrição', 'Categoria', 'Valor'],
+                    ...expensesData.map(exp => [
+                      exp.id,
+                      new Date(exp.date).toLocaleString('pt-AO'),
+                      exp.description,
+                      exp.category,
+                      exp.amount
+                    ])
+                  ].map(row => row.join(',')).join('\n');
+                  
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `relatorio-despesas-${new Date().toISOString().split('T')[0]}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  
+                  addNotification('success', 'Relatório de despesas exportado!');
+                }}
+                className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left"
+              >
                 <div className="flex items-center gap-3 mb-2">
                   <Receipt className="text-primary" size={20} />
                   <span className="font-medium text-white">Relatório de Despesas</span>
                 </div>
                 <p className="text-sm text-slate-400">Controle detalhado de todas as despesas</p>
               </button>
-              <button className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left">
+              
+              <button 
+                onClick={() => {
+                  // Gerar relatório de metas
+                  const currentRevenue = orders
+                    .filter(o => o.status === 'FECHADO')
+                    .reduce((sum, o) => sum + (o.total || 0), 0);
+                  
+                  const monthlyTarget = 1000000; // Meta mensal exemplo
+                  const progress = (currentRevenue / monthlyTarget) * 100;
+                  
+                  const reportData = {
+                    periodo: new Date().toLocaleString('pt-AO', { month: 'long', year: 'numeric' }),
+                    meta: monthlyTarget,
+                    atual: currentRevenue,
+                    progresso: progress.toFixed(1),
+                    status: progress >= 100 ? 'META ALCANÇADA' : 'EM ANDAMENTO'
+                  };
+                  
+                  // Criar e baixar JSON
+                  const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `relatorio-metas-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  
+                  addNotification('success', 'Relatório de metas exportado!');
+                }}
+                className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left"
+              >
                 <div className="flex items-center gap-3 mb-2">
                   <Target className="text-primary" size={20} />
                   <span className="font-medium text-white">Relatório de Metas</span>
                 </div>
                 <p className="text-sm text-slate-400">Acompanhamento de metas e objetivos</p>
               </button>
-              <button className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left">
+              
+              <button 
+                onClick={() => {
+                  // Gerar relatório completo
+                  const completeData = {
+                    data: new Date().toISOString(),
+                    resumo: {
+                      totalPedidos: orders?.filter(o => o.status === 'FECHADO').length || 0,
+                      totalVendas: orders?.filter(o => o.status === 'FECHADO').reduce((sum, o) => sum + (o.total || 0), 0) || 0,
+                      totalDespesas: expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0,
+                      totalFuncionarios: employees?.length || 0,
+                      folhaSalarial: employees?.reduce((sum, emp) => sum + (emp.netSalary || 0), 0) || 0,
+                      impostos: (orders?.filter(o => o.status === 'FECHADO').reduce((sum, o) => sum + (o.total || 0), 0) || 0) * 0.065
+                    },
+                    detalhes: {
+                      vendas: orders?.filter(o => o.status === 'FECHADO').map(o => ({
+                        id: o.id,
+                        data: o.createdAt || o.created_at,
+                        total: o.total,
+                        status: o.status
+                      })),
+                      despesas: expenses?.map(exp => ({
+                        id: exp.id,
+                        data: exp.date,
+                        descricao: exp.description,
+                        categoria: exp.category,
+                        valor: exp.amount
+                      })),
+                      funcionarios: employees?.map(emp => ({
+                        id: emp.id,
+                        nome: emp.name,
+                        cargo: emp.position,
+                        salario: emp.baseSalary,
+                        liquido: emp.netSalary
+                      }))
+                    }
+                  };
+                  
+                  // Criar e baixar JSON
+                  const blob = new Blob([JSON.stringify(completeData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `relatorio-completo-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  
+                  addNotification('success', 'Relatório completo exportado!');
+                }}
+                className="p-4 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors text-left"
+              >
                 <div className="flex items-center gap-3 mb-2">
                   <Activity className="text-primary" size={20} />
                   <span className="font-medium text-white">Relatório Completo</span>
