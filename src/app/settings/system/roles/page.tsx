@@ -75,7 +75,7 @@ export default function SettingsRolesPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingRole) {
-      setRoles(roles.map(role => 
+      setRoles(roles.map((role: any) => 
         role.id === editingRole.id 
           ? { ...role, ...formData }
           : role
@@ -109,7 +109,7 @@ export default function SettingsRolesPage() {
 
   const handleDelete = (id: string) => {
     if (confirm('Tem certeza que deseja remover este cargo?')) {
-      setRoles(roles.filter(role => role.id !== id));
+      setRoles(roles.filter((role: any) => role.id !== id));
       addNotification('success', 'Cargo removido com sucesso!');
     }
   };
@@ -170,7 +170,7 @@ export default function SettingsRolesPage() {
 
         {/* Roles Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {roles.map((role) => (
+          {roles.map((role: any) => (
             <div key={role.id} className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 hover:border-slate-700 transition-all">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
