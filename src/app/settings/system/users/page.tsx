@@ -7,29 +7,12 @@ import { Users, Plus, Trash2, Edit, Shield, Mail, Phone, Calendar, Key, Eye, Eye
 export default function SettingsUsersPage() {
   const { addNotification } = useStore();
   
+  // Forçar client-side rendering com estado de montagem
+  const [isClient, setIsClient] = useState(false);
+  
   // Carregar dados do Zustand store ao montar
   const [users, setUsers] = useState(() => {
-    if (typeof window !== 'undefined') {
-      console.log('🔍 DEBUG: Carregando users do Zustand store...');
-      const savedData = localStorage.getItem('tasca-vereda-storage-v2');
-      console.log('🔍 DEBUG: savedData =', savedData ? 'exists' : 'null');
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData);
-          console.log('🔍 DEBUG: Zustand data parsed:', parsed);
-          // Verificar se há dados de users no store
-          if (parsed.state && parsed.state.users) {
-            console.log('🔍 DEBUG: Users encontrados no Zustand:', parsed.state.users);
-            return parsed.state.users;
-          }
-        } catch (error) {
-          console.error('🔍 DEBUG: Erro ao parsear Zustand data:', error);
-        }
-      }
-    }
-    
-    console.log('🔍 DEBUG: Usando dados padrão para users');
-    // Dados padrão se não houver nada salvo
+    // Dados padrão iniciais
     return [
       {
         id: '1',
@@ -54,9 +37,37 @@ export default function SettingsUsersPage() {
     ];
   });
 
+  // Efeito para carregar dados do localStorage no client
+  useEffect(() => {
+    setIsClient(true);
+    
+    console.log('🔍 DEBUG: Client-side mounted, loading users from Zustand store...');
+    const savedData = localStorage.getItem('tasca-vereda-storage-v2');
+    console.log('🔍 DEBUG: savedData =', savedData ? 'exists' : 'null');
+    
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        console.log('🔍 DEBUG: Zustand data parsed:', parsed);
+        
+        // Verificar se há dados de users no store
+        if (parsed.state && parsed.state.users) {
+          console.log('🔍 DEBUG: Users encontrados no Zustand:', parsed.state.users);
+          setUsers(parsed.state.users);
+        } else {
+          console.log('🔍 DEBUG: No users found in Zustand, using defaults');
+        }
+      } catch (error) {
+        console.error('🔍 DEBUG: Erro ao parsear Zustand data:', error);
+      }
+    } else {
+      console.log('🔍 DEBUG: No Zustand data found, using defaults');
+    }
+  }, []);
+
   // Salvar dados no Zustand store quando users mudar
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isClient && typeof window !== 'undefined') {
       console.log('🔍 DEBUG: Salvando users no Zustand store:', users);
       // Atualizar o Zustand store
       const currentData = localStorage.getItem('tasca-vereda-storage-v2');
@@ -71,7 +82,7 @@ export default function SettingsUsersPage() {
         }
       }
     }
-  }, [users]);
+  }, [users, isClient]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
