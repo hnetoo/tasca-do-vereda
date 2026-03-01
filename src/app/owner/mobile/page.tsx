@@ -13,7 +13,8 @@ import {
   LogOut,
   TrendingUp,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Wallet
 } from 'lucide-react';
 
 export default function OwnerMobilePage() {
@@ -37,7 +38,8 @@ export default function OwnerMobilePage() {
     dishes,
     categories,
     addNotification,
-    settings
+    settings,
+    employees
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -579,6 +581,24 @@ export default function OwnerMobilePage() {
             </div>
             <div className="text-xl font-bold mb-1">{fmt(totals.net)}</div>
             <div className="text-emerald-200 text-xs">vendas - despesas</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border border-red-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-red-200 text-xs font-medium">Folha Salarial</span>
+              <Wallet size={16} className="text-red-400" />
+            </div>
+            <div className="text-xl font-bold mb-1">{fmt(employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0)}</div>
+            <div className="text-red-200 text-xs">total líquido</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-4 rounded-2xl border border-indigo-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-indigo-200 text-xs font-medium">Impostos</span>
+              <TrendingUp size={16} className="text-indigo-400" />
+            </div>
+            <div className="text-xl font-bold mb-1">{fmt((employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0) * 0.17)}</div>
+            <div className="text-indigo-200 text-xs">~17% estimado</div>
           </div>
         </div>
 
