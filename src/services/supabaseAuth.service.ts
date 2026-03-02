@@ -35,7 +35,7 @@ export const supabaseAuthService = {
           .from('users')
           .select('*')
           .eq('pin', pin)
-          .eq('role', role)
+          .eq('role', String(role).toLowerCase())
           .eq('status', 'active')
           .single();
         
@@ -55,7 +55,7 @@ export const supabaseAuthService = {
           const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
           
           if (supabaseUrl && supabaseKey) {
-            const response = await fetch(`${supabaseUrl}/rest/v1/users?select=*&pin=eq.${pin}&role=eq.${role}&status=eq.active`, {
+            const response = await fetch(`${supabaseUrl}/rest/v1/users?select=*&pin=eq.${pin}&role=eq.${String(role).toLowerCase()}&status=eq.active`, {
               method: 'GET',
               headers: {
                 'Accept': 'application/json',
