@@ -51,13 +51,15 @@ export async function GET(request: NextRequest) {
     for (const tableName of tables) {
       try {
         const { error: tableError } = await supabase.from(tableName).select('id').limit(1);
-        tableStatus[tableName] = tableError ? {
+        const displayName = tableName === 'menu_categories' ? 'categories' : tableName;
+        tableStatus[displayName] = tableError ? {
           exists: false,
           error: tableError.message,
           code: tableError.code
         } : { exists: true };
       } catch (e: any) {
-        tableStatus[tableName] = { exists: false, error: e.message };
+        const displayName = tableName === 'menu_categories' ? 'categories' : tableName;
+        tableStatus[displayName] = { exists: false, error: e.message };
       }
     }
     
