@@ -88,20 +88,38 @@ export default function PayrollPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validações adicionais
+    if (!formData.employee_id) {
+      addNotification('error', 'Por favor, selecione um funcionário');
+      return;
+    }
+
+    if (!formData.base_salary || parseFloat(formData.base_salary) <= 0) {
+      addNotification('error', 'Por favor, informe um salário base válido');
+      return;
+    }
+
+    if (!formData.month) {
+      addNotification('error', 'Por favor, selecione o mês');
+      return;
+    }
+
     try {
       const payload = {
         employee_id: formData.employee_id,
         month: formData.month,
         base_salary: parseFloat(formData.base_salary),
-        overtime_hours: parseFloat(formData.overtime_hours),
-        overtime_pay: parseFloat(formData.overtime_pay),
-        bonuses: parseFloat(formData.bonuses),
-        deductions: parseFloat(formData.deductions),
+        overtime_hours: parseFloat(formData.overtime_hours || '0'),
+        overtime_pay: parseFloat(formData.overtime_pay || '0'),
+        bonuses: parseFloat(formData.bonuses || '0'),
+        deductions: parseFloat(formData.deductions || '0'),
         net_salary: parseFloat(formData.net_salary),
         payment_date: formData.payment_date,
         payment_method: formData.payment_method,
         notes: formData.notes
       };
+
+      console.log(' Enviando payload:', payload);
 
       const response = await fetch('/api/payroll', {
         method: 'POST',
@@ -110,6 +128,7 @@ export default function PayrollPage() {
       });
 
       const result = await response.json();
+      console.log(' Resposta da API:', result);
 
       if (!response.ok) {
         throw new Error(result.error || 'Falha ao salvar registro');
@@ -135,11 +154,11 @@ export default function PayrollPage() {
       setEditingRecord(null);
       
       // Reload records
-      loadPayrollRecords();
+      await loadPayrollRecords();
       
     } catch (error: any) {
-      console.error('Erro ao salvar registro:', error);
-      addNotification('error', `Falha ao salvar: ${error.message}`);
+      console.error(' Erro ao salvar registro:', error);
+      addNotification('error', `Falha ao salvar registro: ${error.message}`);
     }
   };
 
