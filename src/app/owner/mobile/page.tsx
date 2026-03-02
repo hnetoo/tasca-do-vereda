@@ -277,71 +277,28 @@ export default function OwnerMobilePage() {
     });
   }, [orders, expenses, supabaseData.orders, supabaseData.expenses]);
 
-  // Debug para verificar dados reais
+  // Debug para cards de despesas e folha salarial
   useEffect(() => {
-    const debugInfo = {
-      // Store local
-      localOrders: orders?.length || 0,
-      localExpenses: expenses?.length || 0,
-      localDishes: dishes?.length || 0,
-      localCategories: categories?.length || 0,
-      
-      // API data
-      apiOrders: supabaseData.orders?.length || 0,
-      apiExpenses: supabaseData.expenses?.length || 0,
-      apiDishes: supabaseData.dishes?.length || 0,
-      apiCategories: supabaseData.categories?.length || 0,
-      
-      // Final data being used
-      finalOrders: currentData.orders?.length || 0,
-      finalExpenses: currentData.expenses?.length || 0,
-      
-      // Card calculations
-      cardCalculations: cardCalculations,
-      
-      // Environment
-      isMobile: true,
-      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR',
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log('📊 ===== OWNER MOBILE DEBUG =====');
-    console.log('📊 Store Local:', {
-      orders: debugInfo.localOrders,
-      expenses: debugInfo.localExpenses,
-      dishes: debugInfo.localDishes,
-      categories: debugInfo.localCategories
+    console.log('💰 ===== CARDS DEBUG =====');
+    console.log('💰 Card Calculations:', cardCalculations);
+    console.log('💰 Expenses Card:', {
+      value: cardCalculations.expenses.value,
+      label: cardCalculations.expenses.label,
+      description: cardCalculations.expenses.description
     });
-    
-    console.log('📊 API Data:', {
-      orders: debugInfo.apiOrders,
-      expenses: debugInfo.apiExpenses,
-      dishes: debugInfo.apiDishes,
-      categories: debugInfo.apiCategories
+    console.log('💰 Payroll Card:', {
+      value: cardCalculations.payroll.value,
+      label: cardCalculations.payroll.label,
+      description: cardCalculations.payroll.description
     });
-    
-    console.log('📊 Final Data Used:', {
-      orders: debugInfo.finalOrders,
-      expenses: debugInfo.finalExpenses
+    console.log('💰 Current Data:', {
+      expensesCount: currentData.expenses?.length || 0,
+      payrollCount: currentData.payroll?.length || 0,
+      expensesData: currentData.expenses,
+      payrollData: currentData.payroll
     });
-    
-    console.log('📊 Card Calculations:', cardCalculations);
-    console.log('📊 ======================================');
-    
-    // Mostrar debug visual na página
-    const debugElement = document.getElementById('mobile-debug');
-    if (debugElement) {
-      debugElement.innerHTML = `
-        <div style="position: fixed; top: 10px; left: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-size: 12px; max-width: 300px;">
-          <h4>📱 MOBILE DEBUG</h4>
-          <div>Local: O(${debugInfo.localOrders}) E(${debugInfo.localExpenses})</div>
-          <div>API: O(${debugInfo.apiOrders}) E(${debugInfo.apiExpenses})</div>
-          <div>Final: O(${debugInfo.finalOrders}) E(${debugInfo.finalExpenses})</div>
-          <div>Time: ${new Date().toLocaleTimeString()}</div>
-        </div>
-      `;
-    }
-  }, [orders, expenses, dishes, categories, supabaseData, cardCalculations]);
+    console.log('💰 =======================');
+  }, [cardCalculations, currentData]);
 
   // Verificar autenticação mobile
   useEffect(() => {
