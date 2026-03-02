@@ -217,18 +217,20 @@ export default function OwnerMobilePage() {
         body: JSON.stringify({ type: 'all' })
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || 'Falha ao limpar dados de produção');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Falha ao limpar dados de produção');
       }
+
+      const result = await response.json();
+      console.log('✅ API Response:', result);
 
       // Limpar dados locais
       setSupabaseData({
         orders: [],
         expenses: [],
-        dishes: [],
-        categories: []
+        dishes: supabaseData.dishes || [],
+        categories: supabaseData.categories || []
       });
       
       // Limpar store local também
@@ -238,14 +240,26 @@ export default function OwnerMobilePage() {
       // Forçar reload dos dados
       setForceUpdate(prev => prev + 1);
 
-      addNotification('success', '✅ Produção resetada com sucesso! Backup salvo automaticamente.');
+      // Notificação de sucesso
+      if (addNotification) {
+        addNotification('success', '✅ Produção resetada com sucesso! Backup salvo automaticamente.');
+      } else {
+        alert('✅ Produção resetada com sucesso! Backup salvo automaticamente.');
+      }
       
       // Mostrar resumo do backup
       console.log('📦 Backup salvo:', backupData.summary);
       
     } catch (error: any) {
       console.error('❌ Error resetting production:', error);
-      alert(`❌ Falha ao resetar produção: ${error.message}`);
+      
+      // Notificação de erro
+      const errorMessage = `❌ Falha ao resetar produção: ${error.message}`;
+      if (addNotification) {
+        addNotification('error', errorMessage);
+      } else {
+        alert(errorMessage);
+      }
     } finally {
       setIsResetting(false);
     }
