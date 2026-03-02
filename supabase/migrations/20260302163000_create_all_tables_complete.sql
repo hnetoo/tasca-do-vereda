@@ -297,14 +297,32 @@ CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 
 -- Pedidos
 CREATE INDEX IF NOT EXISTS idx_orders_table_id ON orders(table_id);
-CREATE INDEX IF NOT EXISTS idx_orders_waiter_id ON orders(waiter_id);
+DO $$
+DECLARE 
+  table_record RECORD;
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'waiter_id'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_orders_waiter_id ON orders(waiter_id);';
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(order_number);
 
 -- Itens dos pedidos
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
-CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'order_items' AND column_name = 'product_id'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);';
+  END IF;
+END $$;
 
 -- Pratos
 CREATE INDEX IF NOT EXISTS idx_dishes_category_id ON dishes(category_id);
@@ -328,8 +346,24 @@ CREATE INDEX IF NOT EXISTS idx_payroll_records_employee_id ON payroll_records(em
 CREATE INDEX IF NOT EXISTS idx_payroll_records_month ON payroll_records(month);
 
 -- Estoque
-CREATE INDEX IF NOT EXISTS idx_stock_items_is_active ON stock_items(is_active);
-CREATE INDEX IF NOT EXISTS idx_stock_items_category ON stock_items(category);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'stock_items' AND column_name = 'is_active'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_stock_items_is_active ON stock_items(is_active);';
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'stock_items' AND column_name = 'category'
+  ) THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_stock_items_category ON stock_items(category);';
+  END IF;
+END $$;
 
 -- =====================================================
 -- TRIGGERS PARA updated_at AUTOMÁTICO
@@ -345,12 +379,13 @@ $$ language 'plpgsql';
 
 -- Adicionar trigger a todas as tabelas que têm updated_at
 DO $$
+DECLARE 
+  rec TEXT;
 BEGIN
     -- Lista de tabelas que precisam do trigger
-    TRUNCATE TABLE trigger_tables;
     CREATE TEMP TABLE trigger_tables (table_name TEXT);
     
-    INSERT INTO trigger_tables VALUES 
+    INSERT INTO trigger_tables(table_name) VALUES 
         ('users'), ('settings'), ('menu_categories'), ('dishes'), 
         ('restaurant_tables'), ('orders'), ('order_items'), 
         ('revenues'), ('expenses'), ('employees'), ('payroll_records'),
@@ -358,18 +393,17 @@ BEGIN
         ('cash_shifts'), ('daily_analytics'), ('backups');
     
     -- Criar triggers
-    FOR table_record IN SELECT table_name FROM trigger_tables LOOP
+    FOR rec IN SELECT table_name FROM trigger_tables LOOP
         EXECUTE format('
             DROP TRIGGER IF EXISTS update_%I_updated_at ON %I;
             CREATE TRIGGER update_%I_updated_at 
                 BEFORE UPDATE ON %I 
                 FOR EACH ROW 
                 EXECUTE FUNCTION update_updated_at_column();
-        ', table_record.table_name, table_record.table_name, 
-           table_record.table_name, table_record.table_name);
+        ', rec, rec, rec, rec);
     END LOOP;
     
-    DROP TABLE trigger_tables;
+    DROP TABLE IF EXISTS trigger_tables;
 END $$;
 
 -- =====================================================
@@ -395,54 +429,52 @@ CREATE POLICY "Users can update their own profile" ON users
 
 -- Usuários padrão
 INSERT INTO users (name, email, pin, role, status, permissions) VALUES
-('Administrador', 'admin@tasca.com', '1234', 'ADMIN', 'active', '{"all": true}'),
-('Owner', 'owner@tasca.com', '1234', 'OWNER', 'active', '{"owner": true}'),
-('Caixa', 'caixa@tasca.com', '1234', 'CAIXA', 'active', '{"pos": true, "orders": true}'),
-('Garçom', 'garcom@tasca.com', '1234', 'GARCOM', 'active', '{"orders": true, "tables": true}'),
-('Cozinha', 'cozinha@tasca.com', '1234', 'COZINHA', 'active', '{"kitchen": true, "orders": true}')
+('Administrador', 'admin@tasca.com', '1234', 'admin', 'active', '{"all": true}'),
+('Owner', 'owner@tasca.com', '1234', 'owner', 'active', '{"owner": true}'),
+('Caixa', 'caixa@tasca.com', '1234', 'caixa', 'active', '{"pos": true, "orders": true}'),
+('Garçom', 'garcom@tasca.com', '1234', 'garcom', 'active', '{"orders": true, "tables": true}'),
+('Cozinha', 'cozinha@tasca.com', '1234', 'cozinha', 'active', '{"kitchen": true, "orders": true}')
 ON CONFLICT (email) DO NOTHING;
 
 -- Categorias do menu
-INSERT INTO menu_categories (name, description, color, sort_order) VALUES
-('Entradas', 'Petiscos e aperitivos', '#f59e0b', 1),
-('Pratos Principais', 'Refeições principais', '#10b981', 2),
-('Sobremesas', 'Doces e sobremesas', '#ec4899', 3),
-('Bebidas', 'Refrigerantes e sucos', '#3b82f6', 4),
-('Café', 'Cafés e chás', '#6b7280', 5)
-ON CONFLICT DO NOTHING;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM menu_categories WHERE name = 'Entradas') THEN
+    INSERT INTO menu_categories (name, sort_order, is_active, updated_at) VALUES ('Entradas', 1, true, NOW());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM menu_categories WHERE name = 'Pratos Principais') THEN
+    INSERT INTO menu_categories (name, sort_order, is_active, updated_at) VALUES ('Pratos Principais', 2, true, NOW());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM menu_categories WHERE name = 'Sobremesas') THEN
+    INSERT INTO menu_categories (name, sort_order, is_active, updated_at) VALUES ('Sobremesas', 3, true, NOW());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM menu_categories WHERE name = 'Bebidas') THEN
+    INSERT INTO menu_categories (name, sort_order, is_active, updated_at) VALUES ('Bebidas', 4, true, NOW());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM menu_categories WHERE name = 'Café') THEN
+    INSERT INTO menu_categories (name, sort_order, is_active, updated_at) VALUES ('Café', 5, true, NOW());
+  END IF;
+END $$;
 
--- Mesas padrão
-INSERT INTO restaurant_tables (number, name, capacity, position_x, position_y) VALUES
-('1', 'Mesa 1', 4, 100, 100),
-('2', 'Mesa 2', 4, 200, 100),
-('3', 'Mesa 3', 2, 300, 100),
-('4', 'Mesa 4', 6, 100, 200),
-('5', 'Mesa 5', 4, 200, 200),
-('6', 'Mesa 6', 2, 300, 200),
-('7', 'Mesa 7', 4, 100, 300),
-('8', 'Mesa 8', 8, 200, 300)
-ON CONFLICT (number) DO NOTHING;
+-- Mesas padrão (removido para evitar conflitos com schema atual)
 
--- Configurações padrão
-INSERT INTO settings (key, value, description) VALUES
-('restaurant_name', '"Tasca do Vereda"', 'Nome do restaurante'),
-('restaurant_address', '"Luanda, Angola"', 'Endereço do restaurante'),
-('restaurant_phone', '"+244 900 000 000"', 'Telefone do restaurante'),
-('currency', '"AOA"', 'Moeda padrão'),
-('tax_rate', '6.5', 'Percentagem de imposto')
-ON CONFLICT (key) DO NOTHING;
+-- Configurações padrão (removido para evitar conflitos com schema atual)
 
 -- =====================================================
 -- VERIFICAÇÃO FINAL
 -- =====================================================
 
 DO $$
+DECLARE 
+    tbl_count INTEGER;
+    user_count INTEGER;
+    category_count INTEGER;
+    table_count_records INTEGER;
 BEGIN
     RAISE NOTICE '=== VERIFICAÇÃO FINAL DAS TABELAS ===';
     
     -- Contar tabelas criadas
-    DECLARE table_count INTEGER;
-    SELECT COUNT(*) INTO table_count 
+    SELECT COUNT(*) INTO tbl_count 
     FROM information_schema.tables 
     WHERE table_schema = 'public' 
     AND table_name IN (
@@ -452,13 +484,9 @@ BEGIN
         'cash_shifts', 'daily_analytics', 'backups'
     );
     
-    RAISE NOTICE 'Tabelas criadas: %', table_count;
+    RAISE NOTICE 'Tabelas criadas: %', tbl_count;
     
     -- Contar registros iniciais
-    DECLARE user_count INTEGER;
-    DECLARE category_count INTEGER;
-    DECLARE table_count_records INTEGER;
-    
     SELECT COUNT(*) INTO user_count FROM users;
     SELECT COUNT(*) INTO category_count FROM menu_categories;
     SELECT COUNT(*) INTO table_count_records FROM restaurant_tables;

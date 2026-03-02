@@ -3,6 +3,9 @@
 
 -- Verificar se tabela users existe e tem dados
 DO $$
+DECLARE
+    user_count INTEGER;
+    user_record RECORD;
 BEGIN
     -- Verificar se tabela existe
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
@@ -28,14 +31,13 @@ BEGIN
     
     -- Inserir usuários padrão
     INSERT INTO users (name, email, pin, role, status, permissions) VALUES
-    ('Administrador', 'admin@tasca.com', '1234', 'ADMIN', 'active', '{"all": true}'),
-    ('Owner', 'owner@tasca.com', '1234', 'OWNER', 'active', '{"owner": true}'),
-    ('Caixa', 'caixa@tasca.com', '1234', 'CAIXA', 'active', '{"pos": true, "orders": true}'),
-    ('Garçom', 'garcom@tasca.com', '1234', 'GARCOM', 'active', '{"orders": true, "tables": true}'),
-    ('Cozinha', 'cozinha@tasca.com', '1234', 'COZINHA', 'active', '{"kitchen": true, "orders": true}');
+    ('Administrador', 'admin@tasca.com', '1234', 'admin', 'active', '{"all": true}'),
+    ('Owner', 'owner@tasca.com', '1234', 'owner', 'active', '{"owner": true}'),
+    ('Caixa', 'caixa@tasca.com', '1234', 'caixa', 'active', '{"pos": true, "orders": true}'),
+    ('Garçom', 'garcom@tasca.com', '1234', 'garcom', 'active', '{"orders": true, "tables": true}'),
+    ('Cozinha', 'cozinha@tasca.com', '1234', 'cozinha', 'active', '{"kitchen": true, "orders": true}');
     
     -- Verificar resultado
-    DECLARE user_count INTEGER;
     SELECT COUNT(*) INTO user_count FROM users;
     
     RAISE NOTICE 'Usuários criados: %', user_count;

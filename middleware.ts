@@ -3,15 +3,19 @@ import { type NextRequest, NextResponse } from 'next/server'
 // Middleware de segurança - PROTEGE ROTAS PRIVADAS
 export async function middleware(request: NextRequest) {
   // Rotas públicas que não precisam de autenticação
-  const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner/login', '/owner/mobile', '/owner/mobile/login']
+  const publicRoutes = ['/login', '/publicmenu', '/customer-display', '/qrscanner', '/mobiledashboard', '/menu', '/owner/login', '/owner/mobile', '/owner/mobile/login', '/owner', '/owner/mobile']
+  
+  // Rotas owner têm login próprio - sempre permitir
+  const isOwnerRoute = request.nextUrl.pathname.startsWith('/owner/')
   
   // Verificar se é rota pública
-  const isPublicRoute = publicRoutes.some(route => 
-    request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(`${route}/`)
-  )
+  const isPublicRoute = publicRoutes.some(route => {
+    const path = request.nextUrl.pathname;
+    return path === route || path.startsWith(`${route}/`)
+  })
   
-  // Se for rota pública, permitir acesso
-  if (isPublicRoute) {
+  // Se for rota pública ou owner, permitir acesso
+  if (isPublicRoute || isOwnerRoute) {
     return NextResponse.next()
   }
   

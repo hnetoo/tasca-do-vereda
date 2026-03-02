@@ -77,7 +77,7 @@ WHERE table_name = 'menu_categories'
 ORDER BY ordinal_position;
 
 SELECT '=== DADOS - MENU_CATEGORIES ===' as section;
-SELECT id, name, description, color, sort_order, is_active
+SELECT id, name, sort_order, is_active
 FROM menu_categories 
 ORDER BY sort_order;
 
@@ -107,7 +107,7 @@ WHERE table_name = 'restaurant_tables'
 ORDER BY ordinal_position;
 
 SELECT '=== DADOS - RESTAURANT_TABLES ===' as section;
-SELECT id, number, name, capacity, status
+SELECT id, number, name, status
 FROM restaurant_tables 
 ORDER BY number;
 
@@ -189,7 +189,7 @@ WHERE table_name = 'payroll_records'
 ORDER BY ordinal_position;
 
 SELECT '=== DADOS - PAYROLL_RECORDS ===' as section;
-SELECT id, employee_id, month, gross_salary, net_salary, status
+SELECT id, employee_id, month, net_salary, status
 FROM payroll_records 
 ORDER BY month DESC
 LIMIT 10;
@@ -206,7 +206,7 @@ WHERE table_name = 'settings'
 ORDER BY ordinal_position;
 
 SELECT '=== DADOS - SETTINGS ===' as section;
-SELECT key, value, description
+SELECT key, value
 FROM settings 
 ORDER BY key;
 

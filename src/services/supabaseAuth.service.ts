@@ -224,6 +224,7 @@ export const supabaseAuthService = {
     permissions?: any;
   }): Promise<User> {
     try {
+      await supabaseService.initialize();
       const client = supabaseService.getClient();
       if (!client) throw new Error('Serviço indisponível');
 
@@ -233,7 +234,7 @@ export const supabaseAuthService = {
           name: userData.name,
           email: userData.email,
           pin: userData.pin,
-          role: userData.role,
+          role: String(userData.role).toLowerCase(),
           status: 'active',
           permissions: userData.permissions || {},
         })
