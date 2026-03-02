@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     
     if (type === 'all') {
       // Verificar se tabelas existem antes de limpar
-      const tablesToCheck = ['orders', 'expenses'];
+      const tablesToCheck = ['orders', 'expenses', 'order_items', 'menu_items'];
       const existingTables = [];
       
       console.log('🔍 CLEAR PRODUCTION API: Checking tables existence...');
@@ -43,6 +43,18 @@ export async function POST(request: Request) {
         }
       }
       
+      // Verificar se order_items existe antes de limpar orders
+      const hasOrderItems = existingTables.includes('order_items');
+      const hasMenuItems = existingTables.includes('menu_items');
+      
+      if (!hasOrderItems && !hasMenuItems) {
+        console.log('⚠️ CLEAR PRODUCTION API: Neither order_items nor menu_items exist, cannot clear orders safely');
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Cannot clear orders: related tables order_items/menu_items do not exist'
+        }, { status: 500 });
+      }
+      
       if (existingTables.length === 0) {
         return NextResponse.json({ 
           success: true, 
@@ -53,6 +65,12 @@ export async function POST(request: Request) {
       
       // Clear only existing tables
       for (const tableName of existingTables) {
+        // Pular order_items e menu_items - apenas limpar orders e expenses
+        if (tableName === 'order_items' || tableName === 'menu_items') {
+          console.log(`⚠️ CLEAR PRODUCTION API: Skipping ${tableName} - will clear orders instead`);
+          continue;
+        }
+        
         try {
           console.log(`🗑️ CLEAR PRODUCTION API: Clearing table ${tableName}...`);
           
