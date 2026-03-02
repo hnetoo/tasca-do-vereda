@@ -48,16 +48,19 @@ export default function OwnerMobilePage() {
     setExpenses
   } = useStore();
 
-  // Fallback: Carregar dados da API se store local estiver vazio
+  // Mobile: SEMPRE carregar da API para garantir dados atualizados
   useEffect(() => {
-    const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
-    
-    if (!hasLocalData && !loadingSupabase) {
-      console.log('🔄 Loading data from API (fallback for owner mobile)');
+    console.log('📱 Mobile: Forcing API load for fresh data...');
+    loadApiData();
+  }, []); // Executa apenas uma vez no mount
+
+  // Também recarregar quando forceUpdate mudar (mas apenas se for > 1)
+  useEffect(() => {
+    if (forceUpdate > 1) {
+      console.log('� Mobile: Force update triggered, reloading API...');
       loadApiData();
     }
-  }, [orders, expenses, loadingSupabase]);
-
+  }, [forceUpdate]);
 
   const loadApiData = async () => {
     setLoadingSupabase(true);
@@ -101,9 +104,6 @@ export default function OwnerMobilePage() {
         dishes: data.dishes || [],
         categories: data.categories || []
       });
-      
-      // Forçar re-renderização
-      setForceUpdate(prev => prev + 1);
       
       // Debug depois de setar estado
       setTimeout(() => {
