@@ -594,31 +594,31 @@ export default function OwnerMobilePage() {
             <div className="text-purple-200 text-xs">{period.toLowerCase()}</div>
           </div>
 
-          <div className={`bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border ${cardCalculations.expenses.borderColor}`}>
+          <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border border-red-500/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-red-200 text-xs font-medium">{cardCalculations.expenses.label}</span>
-              <TrendingDown size={16} className={cardCalculations.expenses.color} />
+              <span className="text-red-200 text-xs font-medium">Despesas</span>
+              <TrendingDown size={16} className="text-red-400" />
             </div>
             <div className="text-xl font-bold mb-1">{cardCalculations.expenses.value}</div>
-            <div className="text-red-200 text-xs">{cardCalculations.expenses.description}</div>
+            <div className="text-red-200 text-xs">{period.toLowerCase()}</div>
           </div>
 
-          <div className={`bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border ${cardCalculations.payroll.borderColor}`}>
+          <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border border-red-500/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-red-200 text-xs font-medium">{cardCalculations.payroll.label}</span>
-              <Wallet size={16} className={cardCalculations.payroll.color} />
+              <span className="text-red-200 text-xs font-medium">Folha Salarial</span>
+              <Wallet size={16} className="text-red-400" />
             </div>
             <div className="text-xl font-bold mb-1">{cardCalculations.payroll.value}</div>
-            <div className="text-red-200 text-xs">{cardCalculations.payroll.description}</div>
+            <div className="text-red-200 text-xs">total líquido</div>
           </div>
 
-          <div className={`bg-gradient-to-br from-indigo-600 to-indigo-800 p-4 rounded-2xl border ${cardCalculations.tax.borderColor}`}>
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-4 rounded-2xl border border-indigo-500/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-indigo-200 text-xs font-medium">{cardCalculations.tax.label}</span>
-              <TrendingUp size={16} className={cardCalculations.tax.color} />
+              <span className="text-indigo-200 text-xs font-medium">Impostos</span>
+              <TrendingUp size={16} className="text-indigo-400" />
             </div>
             <div className="text-xl font-bold mb-1">{cardCalculations.tax.value}</div>
-            <div className="text-indigo-200 text-xs">{cardCalculations.tax.description}</div>
+            <div className="text-indigo-200 text-xs">6.5% sobre faturação</div>
           </div>
         </div>
 
