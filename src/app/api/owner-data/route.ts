@@ -65,7 +65,9 @@ export async function GET(request: Request) {
       hasUrl: !!supabaseUrl,
       hasKey: !!supabaseServiceKey,
       urlLength: supabaseUrl?.length || 0,
-      keyLength: supabaseServiceKey?.length || 0
+      keyLength: supabaseServiceKey?.length || 0,
+      url: supabaseUrl,
+      keyPrefix: supabaseServiceKey?.substring(0, 20) + '...'
     });
     
     if (!supabaseUrl) {
