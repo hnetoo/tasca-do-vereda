@@ -23,7 +23,7 @@ type Tx = {
 export default function OwnerPage() {
   const router = useRouter();
   const [authChecking, setAuthChecking] = useState(true);
-  const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
+  const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES' | 'ANO'>('HOJE');
   const [supabaseData, setSupabaseData] = useState<any>({
     orders: [],
     expenses: [],
@@ -420,6 +420,10 @@ export default function OwnerPage() {
         filterStart = new Date(now.getFullYear(), now.getMonth(), 1);
         filterEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         break;
+      case 'ANO':
+        filterStart = new Date(now.getFullYear(), 0, 1); // 1 de Janeiro
+        filterEnd = new Date(now.getFullYear(), 11, 31); // 31 de Dezembro
+        break;
       default:
         filterStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         filterEnd = now;
@@ -589,7 +593,7 @@ export default function OwnerPage() {
       <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10 mb-8">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex gap-2">
-            {(['HOJE', 'SEMANA', 'MES'] as const).map(p => (
+            {(['HOJE', 'SEMANA', 'MES', 'ANO'] as const).map(p => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
