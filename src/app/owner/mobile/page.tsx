@@ -514,6 +514,18 @@ export default function OwnerMobilePage() {
               localStorage.removeItem('owner_mobile_user');
               localStorage.removeItem('owner_mobile_login_time');
               router.push('/owner/mobile/login');
+            }}
+            className="p-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white transition-all"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
+
+        {/* Period Selector */}
+        <div className="flex gap-2">
+          {(['HOJE', 'SEMANA', 'MES', 'ANO'] as const).map(p => (
+            <button
+              key={p}
               onClick={() => setPeriod(p)}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
                 period === p 
