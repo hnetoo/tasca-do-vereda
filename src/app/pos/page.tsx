@@ -177,12 +177,6 @@ const POS = () => {
     }
   }, [currentShiftId]);
 
-  useEffect(() => {
-    if (isHistoryModalOpen) {
-      normalizeClosedOrdersShift().then(() => fetchClosedOrdersForShift());
-    }
-  }, [isHistoryModalOpen, currentShiftId, fetchClosedOrdersForShift, normalizeClosedOrdersShift]);
-
   const normalizeClosedOrdersShift = useCallback(async () => {
     try {
       if (!currentShiftId) return;
@@ -203,6 +197,12 @@ const POS = () => {
       }));
     } catch {}
   }, [currentShiftId]);
+
+  useEffect(() => {
+    if (isHistoryModalOpen) {
+      normalizeClosedOrdersShift().then(() => fetchClosedOrdersForShift());
+    }
+  }, [isHistoryModalOpen, currentShiftId, fetchClosedOrdersForShift, normalizeClosedOrdersShift]);
 
   // Handle Product Click (Auto-select Balcão if no table active)
   const handleProductClick = (product: Dish) => {
