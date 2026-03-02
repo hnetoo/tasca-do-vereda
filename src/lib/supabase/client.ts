@@ -77,6 +77,13 @@ export function createClient() {
           params: {
             eventsPerSecond: 10
           }
+        },
+        global: {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'apikey': key
+          }
         }
       });
 
@@ -108,7 +115,12 @@ export function createClient() {
         channel: () => ({
           on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }),
           subscribe: () => ({ unsubscribe: () => {} })
-        })
+        }),
+        _headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'apikey': key
+        }
       };
       return dummy as unknown as ReturnType<typeof createBrowserClient<Database>>;
     }
