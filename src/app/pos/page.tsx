@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectUser } from '@/store/slices/authSlice';
@@ -24,6 +24,7 @@ import { formatDateInLuanda } from '@/utils/date';
 import { useTables } from '@/hooks/useTables';
 import { getSQLiteClient, ensureSqliteSchema } from '@/lib/sqlite';
 import { supabaseService } from '@/services/supabaseService';
+import { databaseOperations } from '@/services/database/operations';
 
 
 const POS = () => {
@@ -134,6 +135,74 @@ const POS = () => {
       setActiveOrder(null);
     }
   }, [activeTableId, activeOrders, activeOrderId, setActiveOrder]);
+
+  const fetchClosedOrdersForShift = useCallback(async () => {
+    try {
+      const client = supabaseService.getClient();
+      if (!client) {
+        logger.warn('Supabase client não disponível para carregar histórico.', undefined, 'POS');
+        return;
+      }
+      let query = client
+        .from('orders')
+        .select('*')
+        .in('status', ['FECHADO', 'PAGO', 'CLOSED', 'PAID'])
+        .order('created_at', { ascending: false });
+      if (currentShiftId) {
+        query = query.eq('shift_id', currentShiftId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        logger.error('Falha ao carregar histórico de pedidos', { error: error.message }, 'POS');
+        return;
+      }
+      const mapped: Order[] = (data || []).map((o: any) => ({
+        ...o,
+        tableId: o.table_id,
+        createdAt: o.created_at,
+        updatedAt: o.updated_at,
+        shiftId: o.shift_id,
+        paymentMethod: o.payment_method,
+        invoiceNumber: o.invoice_number,
+      }));
+      const state = useStore.getState();
+      const existing = state.activeOrders || [];
+      const mergedById: Record<string, Order> = {};
+      [...existing, ...mapped].forEach((ord: any) => {
+        if (ord?.id) mergedById[String(ord.id)] = ord as Order;
+      });
+      state.setOrders(Object.values(mergedById));
+    } catch (e: any) {
+      logger.error('Exceção ao carregar histórico', { error: e?.message || String(e) }, 'POS');
+    }
+  }, [currentShiftId]);
+
+  useEffect(() => {
+    if (isHistoryModalOpen) {
+      normalizeClosedOrdersShift().then(() => fetchClosedOrdersForShift());
+    }
+  }, [isHistoryModalOpen, currentShiftId, fetchClosedOrdersForShift, normalizeClosedOrdersShift]);
+
+  const normalizeClosedOrdersShift = useCallback(async () => {
+    try {
+      if (!currentShiftId) return;
+      const client = supabaseService.getClient();
+      if (!client) return;
+      const state = useStore.getState();
+      const toFix = (state.activeOrders || []).filter((o: any) => {
+        const status = String(o.status || '').toUpperCase();
+        const isClosed = status === 'FECHADO' || status === 'PAGO' || status === 'CLOSED' || status === 'PAID';
+        const missing = !o.shiftId && !o.shift_id;
+        return isClosed && missing;
+      });
+      if (toFix.length === 0) return;
+      await Promise.all(toFix.map(async (ord: any) => {
+        const patched: Order = { ...ord, shiftId: currentShiftId, shift_id: currentShiftId, updated_at: new Date().toISOString() };
+        state.updateOrder(patched);
+        await databaseOperations.saveOrder(patched, client);
+      }));
+    } catch {}
+  }, [currentShiftId]);
 
   // Handle Product Click (Auto-select Balcão if no table active)
   const handleProductClick = (product: Dish) => {
@@ -294,53 +363,6 @@ const POS = () => {
   };
 
   const exportConfig = getExportConfig();
-
-  const fetchClosedOrdersForShift = async () => {
-    try {
-      const client = supabaseService.getClient();
-      if (!client) {
-        logger.warn('Supabase client não disponível para carregar histórico.', undefined, 'POS');
-        return;
-      }
-      let query = client
-        .from('orders')
-        .select('*')
-        .in('status', ['FECHADO', 'PAGO', 'CLOSED', 'PAID'])
-        .order('created_at', { ascending: false });
-      if (currentShiftId) {
-        query = query.eq('shift_id', currentShiftId);
-      }
-      const { data, error } = await query;
-      if (error) {
-        logger.error('Falha ao carregar histórico de pedidos', { error: error.message }, 'POS');
-        return;
-      }
-      const mapped: Order[] = (data || []).map((o: any) => ({
-        ...o,
-        tableId: o.table_id,
-        createdAt: o.created_at,
-        updatedAt: o.updated_at,
-        shiftId: o.shift_id,
-        paymentMethod: o.payment_method,
-        invoiceNumber: o.invoice_number,
-      }));
-      const state = useStore.getState();
-      const existing = state.activeOrders || [];
-      const mergedById: Record<string, Order> = {};
-      [...existing, ...mapped].forEach((ord: any) => {
-        if (ord?.id) mergedById[String(ord.id)] = ord as Order;
-      });
-      state.setOrders(Object.values(mergedById));
-    } catch (e: any) {
-      logger.error('Exceção ao carregar histórico', { error: e?.message || String(e) }, 'POS');
-    }
-  };
-
-  useEffect(() => {
-    if (isHistoryModalOpen) {
-      fetchClosedOrdersForShift();
-    }
-  }, [isHistoryModalOpen, currentShiftId]);
 
   const handleOpenShift = () => {
     const amount = Number(openingAmount);

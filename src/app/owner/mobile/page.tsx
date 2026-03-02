@@ -25,7 +25,6 @@ export default function OwnerMobilePage() {
   const [supabaseData, setSupabaseData] = useState<any>({
     orders: [],
     expenses: [],
-    payroll: [],
     dishes: [],
     categories: []
   });
@@ -253,7 +252,6 @@ export default function OwnerMobilePage() {
   const currentData = {
     orders: supabaseData.orders || [],
     expenses: supabaseData.expenses || [],
-    payroll: supabaseData.payroll || [],
     dishes: supabaseData.dishes || [],
     categories: supabaseData.categories || []
   };
@@ -607,15 +605,6 @@ export default function OwnerMobilePage() {
             <div className="text-emerald-200 text-xs">vendas - despesas</div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border border-red-500/30">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-red-200 text-xs font-medium">Folha Salarial</span>
-              <Wallet size={16} className="text-red-400" />
-            </div>
-            <div className="text-xl font-bold mb-1">{fmt(currentData.payroll?.reduce((sum: number, record: any) => sum + (record.netSalary || 0), 0) || 0)}</div>
-            <div className="text-red-200 text-xs">total líquido</div>
-          </div>
-
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-4 rounded-2xl border border-indigo-500/30">
             <div className="flex items-center justify-between mb-2">
               <span className="text-indigo-200 text-xs font-medium">Impostos</span>
@@ -666,37 +655,15 @@ export default function OwnerMobilePage() {
           <div className="text-xs text-slate-400 font-mono">
             <div>Orders: {orders?.length || 0}</div>
             <div>Expenses: {expenses?.length || 0}</div>
-            <div>Dishes: {dishes?.length || 0}</div>
-            <div>Categories: {categories?.length || 0}</div>
+            <div>Payroll: {payroll?.length || 0}</div>
+            <button 
+              onClick={() => router.push('/owner')}
+              className="text-slate-400 hover:text-slate-300 text-sm transition-colors mt-2"
+            >
+              ← Versão Desktop
+            </button>
           </div>
         </div>
-
-        {/* 🗑️ Reset Produção */}
-        <div className="pt-2">
-          <button
-            onClick={handleResetProduction}
-            disabled={isResetting}
-            className="bg-red-600/10 text-red-600 hover:bg-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed w-full px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-bold uppercase text-[10px] tracking-widest border border-red-600/20"
-          >
-            <Trash2 size={16} className={isResetting ? 'animate-spin' : ''} />
-            {isResetting ? 'Resetando...' : 'Reset Produção'}
-          </button>
-          <div className="text-xs text-red-400 text-center mt-1 opacity-70">
-            <AlertTriangle size={12} className="inline mr-1" />
-            Limpa todos os pedidos e despesas
-          </div>
-        </div>
-
-        {/* Back to Desktop */}
-        <div className="text-center pt-4">
-          <button
-            onClick={() => router.push('/owner')}
-            className="text-slate-400 hover:text-slate-300 text-sm transition-colors"
-          >
-            ← Versão Desktop
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
