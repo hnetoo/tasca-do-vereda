@@ -665,6 +665,38 @@ export default function OwnerMobilePage() {
             </button>
           </div>
         </div>
+
+        {/* Reset Production Data Button */}
+        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+          <h4 className="text-sm font-bold text-white mb-3">Reset de Produção</h4>
+          <p className="text-xs text-slate-400 mb-4">
+            Limpa todos os dados do período atual para começar nova produção
+          </p>
+          <button
+            onClick={handleResetProduction}
+            disabled={isResetting}
+            className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all ${
+              isResetting 
+                ? 'bg-slate-700 text-slate-500 cursor-not-allowed' 
+                : 'bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-600/30'
+            }`}
+          >
+            {isResetting ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                Resetando...
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                <Trash2 size={16} />
+                Resetar Dados de Produção
+              </div>
+            )}
+          </button>
+          <p className="text-xs text-slate-500 mt-2 text-center">
+            ⚠️ Esta ação é irreversível
+          </p>
+        </div>
       </div>
     </div>
   );
