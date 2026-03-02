@@ -8,7 +8,7 @@ import { generateUUID } from '@/utils/uuid';
 export default function SettingsTablesPage() {
   const { settings, tables, addTable, updateTable, removeTable, addNotification } = useStore();
   const [editingTable, setEditingTable] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: '', capacity: 4, status: 'available' });
+  const [formData, setFormData] = useState({ name: '', capacity: 4, seats: 4, status: 'AVAILABLE' });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +21,7 @@ export default function SettingsTablesPage() {
         id: generateUUID(),
         name: formData.name,
         capacity: formData.capacity,
+        seats: formData.seats || formData.capacity,
         status: formData.status,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -40,22 +41,26 @@ export default function SettingsTablesPage() {
         max_capacity: null,
         qr_code_url: null,
         reservation_enabled: false,
-        number: null,
+        number: parseInt(formData.name.replace(/\D/g, '')) || 1,
         rotation: null,
-        seats: null,
         user_id: null,
         activeOrderIds: []
       } as any;
       addTable(newTable);
       addNotification('success', 'Mesa adicionada com sucesso!');
     }
-    setFormData({ name: '', capacity: 4, status: 'available' });
+    setFormData({ name: '', capacity: 4, seats: 4, status: 'AVAILABLE' });
     setEditingTable(null);
   };
 
   const handleEdit = (table: any) => {
     setEditingTable(table);
-    setFormData({ name: table.name, capacity: table.capacity, status: table.status });
+    setFormData({ 
+      name: table.name, 
+      capacity: table.capacity || table.seats || 4, 
+      seats: table.seats || table.capacity || 4, 
+      status: table.status 
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -67,7 +72,7 @@ export default function SettingsTablesPage() {
 
   const handleCancel = () => {
     setEditingTable(null);
-    setFormData({ name: '', capacity: 4, status: 'available' });
+    setFormData({ name: '', capacity: 4, seats: 4, status: 'AVAILABLE' });
   };
 
   return (

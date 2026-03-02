@@ -292,20 +292,20 @@ export const adminOperations = {
           const { error } = await supabaseAdmin.from('restaurant_tables').upsert({
               id: table.id,
               name: table.name,
-              number: table.number,
-              seats: table.seats,
-              x: table.x,
-              y: table.y,
+              number: table.number || parseInt(table.name || '0') || 1, // Gerar number a partir do name
+              seats: table.seats || 4, // Default 4 seats
+              x: table.x || 0,
+              y: table.y || 0,
               width: table.width,
               height: table.height,
               shape: table.shape,
               rotation: table.rotation,
               color: table.color,
-              status: table.status,
+              status: table.status || 'AVAILABLE',
               zone: table.zone,
               is_active: table.is_active ?? true,
               group_id: table.group_id,
-              label: table.label,
+              label: table.label || table.name,
               user_id: table.user_id,
               created_at: table.created_at,
               updated_at: new Date().toISOString()
