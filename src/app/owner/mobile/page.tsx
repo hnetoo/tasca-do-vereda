@@ -303,12 +303,6 @@ export default function OwnerMobilePage() {
 
   // Verificar autenticação mobile
   useEffect(() => {
-    // Timeout para evitar loop infinito
-    const timeout = setTimeout(() => {
-      console.log('� Auth timeout - forcing redirect to mobile login');
-      router.push('/owner/mobile/login');
-    }, 3000); // 3 segundos timeout
-    
     const isAuth = localStorage.getItem('owner_mobile_authenticated') === 'true';
     
     console.log('🔐 Owner Mobile auth check:', { 
@@ -317,16 +311,12 @@ export default function OwnerMobilePage() {
     });
     
     if (isAuth) {
-      clearTimeout(timeout);
       console.log('✅ Auth OK, staying on mobile page');
       setAuthChecking(false);
     } else {
-      clearTimeout(timeout);
       console.log('🚫 Not authenticated, redirecting to mobile login...');
       router.push('/owner/mobile/login');
     }
-    
-    return () => clearTimeout(timeout);
   }, [router]);
 
   // Função para calcular total da order com fallback
