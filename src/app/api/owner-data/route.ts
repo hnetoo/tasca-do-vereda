@@ -137,6 +137,30 @@ export async function GET(request: Request) {
       error: expensesError?.message
     });
 
+    // Carregar dishes com SERVICE_ROLE_KEY - QUERY SIMPLES
+    console.log('🔍 REAL API: Loading dishes (SIMPLE QUERY)...');
+    
+    const { data: dishesData, error: dishesError } = await supabaseAdmin
+      .from('dishes')
+      .select('*');
+    
+    console.log('🔍 REAL API: Dishes result:', { 
+      count: dishesData?.length || 0, 
+      error: dishesError?.message
+    });
+
+    // Carregar categories com SERVICE_ROLE_KEY - QUERY SIMPLES
+    console.log('🔍 REAL API: Loading categories (SIMPLE QUERY)...');
+    
+    const { data: categoriesData, error: categoriesError } = await supabaseAdmin
+      .from('categories')
+      .select('*');
+    
+    console.log('🔍 REAL API: Categories result:', { 
+      count: categoriesData?.length || 0, 
+      error: categoriesError?.message
+    });
+
     // Carregar payroll com SERVICE_ROLE_KEY - QUERY SIMPLES
     console.log('🔍 REAL API: Loading payroll_records (SIMPLE QUERY)...');
     
@@ -176,11 +200,13 @@ export async function GET(request: Request) {
       orders: ordersData || [],
       expenses: expensesData || [],
       payroll: payrollData || [],
-      dishes: [],
-      categories: [],
+      dishes: dishesData || [],
+      categories: categoriesData || [],
       errors: {
         orders: ordersError ? String(ordersError) : null,
         expenses: expensesError ? String(expensesError) : null,
+        dishes: dishesError ? String(dishesError) : null,
+        categories: categoriesError ? String(categoriesError) : null,
         payroll: payrollError ? String(payrollError) : null
       },
       realData: true,
@@ -191,6 +217,8 @@ export async function GET(request: Request) {
     console.log('✅ REAL API: REAL data loaded', {
       orders: result.orders.length,
       expenses: result.expenses.length,
+      dishes: result.dishes.length,
+      categories: result.categories.length,
       payroll: result.payroll.length
     });
     
