@@ -6,6 +6,10 @@ export const supabaseAuthService = {
     try {
       console.log(' [AUTH] Starting login with PIN', { pin: pin ? '***' : 'EMPTY', role });
       
+      // Garantir que o SupabaseService está inicializado
+      console.log(' [AUTH] Initializing SupabaseService...');
+      await supabaseService.initialize();
+      
       const client = supabaseService.getClient();
       console.log(' [AUTH] Supabase client status:', { 
         hasClient: !!client, 
@@ -13,7 +17,7 @@ export const supabaseAuthService = {
       });
       
       if (!client) {
-        console.error(' [AUTH] No Supabase client available');
+        console.error(' [AUTH] No Supabase client available after initialization');
         throw {
           type: AuthErrorType.CredenciaisInvalidas,
           message: 'Serviço indisponível. Tente novamente.',
