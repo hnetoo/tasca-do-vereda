@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     console.log('✅ CHECKING TABLES: Found tables:', tableNames);
     
     // Verificar registros em cada tabela de interesse
-    const tablesToCheck = ['orders', 'expenses', 'payroll'];
+    const tablesToCheck = ['orders', 'expenses', 'payroll_records'];
     const tableData: any = {};
     
     for (const tableName of tablesToCheck) {
@@ -46,11 +46,11 @@ export async function GET(request: Request) {
           const { data: records, error: recordsError } = await supabaseAdmin
             .from(tableName)
             .select('count')
-            .head();
+            .limit(1);
           
           tableData[tableName] = {
             exists: true,
-            count: records?.count || 0,
+            count: records?.[0]?.count || 0,
             error: recordsError ? String(recordsError) : null
           };
         } catch (err) {

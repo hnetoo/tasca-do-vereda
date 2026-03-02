@@ -334,7 +334,9 @@ export const createOperationalSlice: StateCreator<
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isPaid: false,
-      subAccountName: name
+      subAccountName: name,
+      shiftId: get().currentShiftId || null,
+      shift_id: get().currentShiftId || null
     } as unknown as Order;
     
     if ('addOrder' in get()) {

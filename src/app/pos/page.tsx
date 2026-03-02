@@ -23,6 +23,7 @@ import { normalizeDishImage } from '@/utils/imageUtils';
 import { formatDateInLuanda } from '@/utils/date';
 import { useTables } from '@/hooks/useTables';
 import { getSQLiteClient, ensureSqliteSchema } from '@/lib/sqlite';
+import { supabaseService } from '@/services/supabaseService';
 
 
 const POS = () => {
@@ -266,13 +267,18 @@ const POS = () => {
   });
 
   const getExportConfig = () => {
-    const shiftOrders = activeOrders.filter((o: Order) => o.status === 'FECHADO' && o.shiftId === currentShiftId);
+    const shiftOrders = activeOrders.filter((o: Order) => {
+      const status = String(o.status || '').toUpperCase();
+      const isClosed = status === 'FECHADO' || status === 'CLOSED';
+      const matchesShift = o.shiftId === currentShiftId || (o as any).shift_id === currentShiftId;
+      return isClosed && matchesShift;
+    });
           return {
             data: shiftOrders.map((o: Order) => ({
               id: o.invoiceNumber || o.id,
-              time: o.createdAt ? formatDateInLuanda(o.createdAt, { hour: '2-digit', minute: '2-digit' }) : '',
+              time: (o as any).createdAt || (o as any).created_at ? formatDateInLuanda((o as any).createdAt || (o as any).created_at, { hour: '2-digit', minute: '2-digit' }) : '',
               total: formatKz(o.total || 0),
-              payment: o.paymentMethod || 'N/A',
+              payment: (o as any).paymentMethod || (o as any).payment_method || 'N/A',
               items: o.items?.length || 0
             })),
       columns: [
@@ -288,6 +294,53 @@ const POS = () => {
   };
 
   const exportConfig = getExportConfig();
+
+  const fetchClosedOrdersForShift = async () => {
+    try {
+      const client = supabaseService.getClient();
+      if (!client) {
+        logger.warn('Supabase client não disponível para carregar histórico.', undefined, 'POS');
+        return;
+      }
+      let query = client
+        .from('orders')
+        .select('*')
+        .in('status', ['FECHADO', 'PAGO', 'CLOSED', 'PAID'])
+        .order('created_at', { ascending: false });
+      if (currentShiftId) {
+        query = query.eq('shift_id', currentShiftId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        logger.error('Falha ao carregar histórico de pedidos', { error: error.message }, 'POS');
+        return;
+      }
+      const mapped: Order[] = (data || []).map((o: any) => ({
+        ...o,
+        tableId: o.table_id,
+        createdAt: o.created_at,
+        updatedAt: o.updated_at,
+        shiftId: o.shift_id,
+        paymentMethod: o.payment_method,
+        invoiceNumber: o.invoice_number,
+      }));
+      const state = useStore.getState();
+      const existing = state.activeOrders || [];
+      const mergedById: Record<string, Order> = {};
+      [...existing, ...mapped].forEach((ord: any) => {
+        if (ord?.id) mergedById[String(ord.id)] = ord as Order;
+      });
+      state.setOrders(Object.values(mergedById));
+    } catch (e: any) {
+      logger.error('Exceção ao carregar histórico', { error: e?.message || String(e) }, 'POS');
+    }
+  };
+
+  useEffect(() => {
+    if (isHistoryModalOpen) {
+      fetchClosedOrdersForShift();
+    }
+  }, [isHistoryModalOpen, currentShiftId]);
 
   const handleOpenShift = () => {
     const amount = Number(openingAmount);
@@ -1660,14 +1713,22 @@ const POS = () => {
                     </thead>
                     <tbody className="divide-y divide-white/5">
                        {activeOrders
-                          .filter((o: Order) => (o.status === 'FECHADO' || o.status === 'PAGO') && (!currentShiftId || o.shiftId === currentShiftId || !o.shiftId))
-                          .sort((a: Order, b: Order) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                          .filter((o: Order) => {
+                            const status = String(o.status || '').toUpperCase();
+                            return (status === 'FECHADO' || status === 'PAGO' || status === 'CLOSED' || status === 'PAID')
+                              && (!currentShiftId || o.shiftId === currentShiftId || (o as any).shift_id === currentShiftId || !o.shiftId);
+                          })
+                          .sort((a: Order, b: Order) => {
+                            const bTime = new Date((b as any).createdAt || (b as any).created_at || 0).getTime();
+                            const aTime = new Date((a as any).createdAt || (a as any).created_at || 0).getTime();
+                            return bTime - aTime;
+                          })
                           .map((order: Order) => {
                              const table = tables.find((t: Table) => t.id === order.tableId);
                              return (
                                 <tr key={order.id} className="hover:bg-white/5 transition-colors group">
                                    <td className="p-4 font-mono text-sm text-white">{order.invoiceNumber || 'N/A'}</td>
-                                   <td className="p-4 text-sm text-slate-300">{new Date(order.createdAt || 0).toLocaleTimeString('pt-AO', {hour: '2-digit', minute:'2-digit'})}</td>
+                                   <td className="p-4 text-sm text-slate-300">{new Date((order as any).createdAt || (order as any).created_at || 0).toLocaleTimeString('pt-AO', {hour: '2-digit', minute:'2-digit'})}</td>
                                    <td className="p-4 text-sm text-slate-300">
                                       <div className="font-bold text-white">{table?.name || 'Balcão'}</div>
                                       <div className="text-[10px] opacity-50">{order.subAccountName}</div>
@@ -1675,7 +1736,7 @@ const POS = () => {
                                    <td className="p-4 text-sm font-mono font-bold text-primary text-right">{formatKz(order.total || 0)}</td>
                                    <td className="p-4 text-center">
                                       <span className="px-2 py-1 rounded-md bg-white/5 text-[10px] font-bold uppercase text-slate-400 border border-white/5">
-                                         {order.paymentMethod}
+                                         {(order as any).paymentMethod || (order as any).payment_method || 'N/A'}
                                       </span>
                                    </td>
                                    <td className="p-4 text-center">
@@ -1708,7 +1769,11 @@ const POS = () => {
                                 </tr>
                              );
                           })}
-                          {activeOrders.filter((o: Order) => (o.status === 'FECHADO' || o.status === 'PAGO') && (!currentShiftId || o.shiftId === currentShiftId || !o.shiftId)).length === 0 && (
+                          {activeOrders.filter((o: Order) => {
+                            const status = String(o.status || '').toUpperCase();
+                            return (status === 'FECHADO' || status === 'PAGO' || status === 'CLOSED' || status === 'PAID')
+                              && (!currentShiftId || o.shiftId === currentShiftId || (o as any).shift_id === currentShiftId || !o.shiftId);
+                          }).length === 0 && (
                              <tr>
                                 <td colSpan={6} className="p-10 text-center text-slate-500 opacity-50">
                                    <History size={48} className="mx-auto mb-4 opacity-50" />
