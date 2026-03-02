@@ -4,37 +4,82 @@ import { supabaseService } from './supabaseService';
 export const supabaseAuthService = {
   async loginWithPin(pin: string, role: UserRole): Promise<AuthResponse> {
     try {
-      console.log(' [AUTH] Starting login with PIN', { pin: pin ? '***' : 'EMPTY', role });
+      console.log('🔐 [AUTH] Starting login with PIN', { pin: pin ? '***' : 'EMPTY', role });
       
       // Garantir que o SupabaseService está inicializado
-      console.log(' [AUTH] Initializing SupabaseService...');
+      console.log('🔧 [AUTH] Initializing SupabaseService...');
       await supabaseService.initialize();
       
       const client = supabaseService.getClient();
-      console.log(' [AUTH] Supabase client status:', { 
+      console.log('🔍 [AUTH] Supabase client status:', { 
         hasClient: !!client, 
         isConnected: supabaseService.isConnected() 
       });
       
       if (!client) {
-        console.error(' [AUTH] No Supabase client available after initialization');
+        console.error('❌ [AUTH] No Supabase client available after initialization');
         throw {
           type: AuthErrorType.CredenciaisInvalidas,
           message: 'Serviço indisponível. Tente novamente.',
         } as AuthError;
       }
 
-      console.log(' [AUTH] Querying users table for PIN authentication');
-      // Buscar usuário na tabela users do Supabase
-      const { data: userData, error: userError } = await client
-        .from('users')
-        .select('*')
-        .eq('pin', pin)
-        .eq('role', role)
-        .eq('status', 'active')
-        .single();
+      console.log('🔍 [AUTH] Querying users table for PIN authentication');
+      
+      // TENTATIVA 1: Query Supabase normal
+      let userData = null;
+      let userError = null;
+      
+      try {
+        const result = await client
+          .from('users')
+          .select('*')
+          .eq('pin', pin)
+          .eq('role', role)
+          .eq('status', 'active')
+          .single();
+        
+        userData = result.data;
+        userError = result.error;
+      } catch (error: any) {
+        console.log('⚠️ [AUTH] Supabase query failed, trying fallback:', error.message);
+        userError = error;
+      }
 
-      console.log(' [AUTH] User query result:', { 
+      // TENTATIVA 2: Fallback direto via REST API se Supabase falhar
+      if (!userData && (userError?.message?.includes('406') || userError?.message?.includes('Not Acceptable'))) {
+        console.log('🔄 [AUTH] Trying direct REST API fallback...');
+        
+        try {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          
+          if (supabaseUrl && supabaseKey) {
+            const response = await fetch(`${supabaseUrl}/rest/v1/users?select=*&pin=eq.${pin}&role=eq.${role}&status=eq.active`, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`
+              }
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              userData = data.length > 0 ? data[0] : null;
+              userError = null;
+              console.log('✅ [AUTH] Direct API fallback successful');
+            } else {
+              console.log('❌ [AUTH] Direct API fallback failed:', response.status, response.statusText);
+            }
+          }
+        } catch (fallbackError: any) {
+          console.log('❌ [AUTH] Fallback error:', fallbackError.message);
+        }
+      }
+
+      console.log('📊 [AUTH] User query result:', { 
         hasData: !!userData, 
         hasError: !!userError,
         errorMessage: userError?.message,
@@ -42,21 +87,21 @@ export const supabaseAuthService = {
       });
 
       if (userError || !userData) {
-        console.error(' [AUTH] User not found or inactive:', { userError, userData });
+        console.error('❌ [AUTH] User not found or inactive:', { userError, userData });
         throw {
           type: AuthErrorType.CredenciaisInvalidas,
           message: 'PIN ou perfil inválido. Por favor, tente novamente.',
         } as AuthError;
       }
 
-      console.log(' [AUTH] User found, updating last login');
+      console.log('📝 [AUTH] User found, updating last login');
       // Atualizar último login
       await client
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('id', userData.id);
 
-      console.log(' [AUTH] Creating user object for response');
+      console.log('👤 [AUTH] Creating user object for response');
       // Criar objeto User compatível com a interface
       const user: User = {
         id: userData.id,
@@ -67,7 +112,7 @@ export const supabaseAuthService = {
         metadata: userData.permissions || {},
       };
 
-      console.log(' [AUTH] Setting authentication cookie');
+      console.log('🍪 [AUTH] Setting authentication cookie');
       // Set cookie para middleware
       const cookieValue = encodeURIComponent(JSON.stringify({ 
         role: user.role, 
@@ -78,11 +123,11 @@ export const supabaseAuthService = {
         document.cookie = `tasca_auth_token=${cookieValue}; path=/; max-age=86400; SameSite=Lax`;
       }
 
-      console.log(' [AUTH] Login successful', { userId: user.id, role: user.role });
+      console.log('✅ [AUTH] Login successful', { userId: user.id, role: user.role });
       return { user, role: user.role, authenticatedAt: Date.now() };
       
     } catch (error: any) {
-      console.error(' [AUTH] Login failed:', error);
+      console.error('❌ [AUTH] Login failed:', error);
       
       if (error.type) {
         throw error;
