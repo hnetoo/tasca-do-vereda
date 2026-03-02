@@ -138,15 +138,38 @@ export async function GET(request: Request) {
     });
 
     // Carregar payroll com SERVICE_ROLE_KEY - QUERY SIMPLES
-    console.log('🔍 REAL API: Loading payroll (SIMPLE QUERY)...');
+    console.log('🔍 REAL API: Loading payroll_records (SIMPLE QUERY)...');
     
-    const { data: payrollData, error: payrollError } = await supabaseAdmin
-      .from('payroll')
-      .select('*');
+    // Primeiro verificar se tabela existe
+    const { data: tableExists, error: tableCheckError } = await supabaseAdmin
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public')
+      .eq('table_name', 'payroll_records');
     
-    console.log('🔍 REAL API: Payroll result:', { 
+    console.log('🔍 REAL API: Payroll_records table exists:', { 
+      exists: tableExists && tableExists.length > 0, 
+      error: tableCheckError?.message
+    });
+    
+    let payrollData = [];
+    let payrollError = null;
+    
+    if (tableExists && tableExists.length > 0) {
+      const { data: data, error } = await supabaseAdmin
+        .from('payroll_records')
+        .select('*');
+      
+      payrollData = data || [];
+      payrollError = error;
+    } else {
+      console.log('🔍 REAL API: Payroll_records table does not exist, skipping...');
+      payrollError = 'Table payroll_records does not exist';
+    }
+    
+    console.log('🔍 REAL API: Payroll_records result:', { 
       count: payrollData?.length || 0, 
-      error: payrollError?.message
+      error: payrollError ? String(payrollError) : null
     });
     
     const result = {
@@ -156,9 +179,9 @@ export async function GET(request: Request) {
       dishes: [],
       categories: [],
       errors: {
-        orders: ordersError?.message,
-        expenses: expensesError?.message,
-        payroll: payrollError?.message
+        orders: ordersError ? String(ordersError) : null,
+        expenses: expensesError ? String(expensesError) : null,
+        payroll: payrollError ? String(payrollError) : null
       },
       realData: true,
       message: 'DADOS REAIS DO SUPABASE',
