@@ -143,6 +143,7 @@ export default function OwnerMobilePage() {
       setSupabaseData({
         orders: finalOrders,
         expenses: finalExpenses,
+        payroll: data.payroll || [],
         dishes: data.dishes || [],
         categories: data.categories || []
       });
@@ -603,7 +604,13 @@ export default function OwnerMobilePage() {
               <span className="text-red-200 text-xs font-medium">Folha Salarial</span>
               <Wallet size={16} className="text-red-400" />
             </div>
-            <div className="text-xl font-bold mb-1">{fmt(currentData.payroll?.reduce((sum: number, record: any) => sum + (record.netSalary || 0), 0) || 0)}</div>
+            <div className="text-xl font-bold mb-1">
+              {fmt(
+                (Array.isArray(currentData.payroll) && currentData.payroll.length > 0)
+                  ? currentData.payroll.reduce((sum: number, r: any) => sum + (r.netSalary || r.net_salary || r.amount || 0), 0)
+                  : 0
+              )}
+            </div>
             <div className="text-red-200 text-xs">total líquido</div>
           </div>
 
