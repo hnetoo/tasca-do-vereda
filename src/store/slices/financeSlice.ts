@@ -812,7 +812,9 @@ export const createFinanceSlice: StateCreator<
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         payment_method: undefined,
-        payments: []
+        payments: [],
+        shift_id: get().currentShiftId || null,
+        shiftId: get().currentShiftId || null
       } as unknown as Order;
       set((state) => ({ activeOrders: [...state.activeOrders, order!] }));
     }
@@ -891,7 +893,9 @@ export const createFinanceSlice: StateCreator<
          payment_method: payments.length === 1 ? payments[0].method : undefined,
          sub_account_name: subAccountName || undefined,
          customer_nif: customerNif || null,
-         updated_at: new Date().toISOString()
+         updated_at: new Date().toISOString(),
+         shift_id: order.shift_id || get().currentShiftId || null,
+         shiftId: (order as any).shiftId || get().currentShiftId || null
      };
 
      // Move to history? For now just update status in activeOrders (or move to orders list if separate)
