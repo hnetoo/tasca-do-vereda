@@ -6,6 +6,7 @@ import { ReduxProvider } from "@/providers/ReduxProvider";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Tasca do Vereda",
@@ -52,6 +53,7 @@ export default function RootLayout({
             <ServiceWorkerRegister />
           </AppShell>
         </ReduxProvider>
+        <Analytics />
       </body>
     </html>
   );
