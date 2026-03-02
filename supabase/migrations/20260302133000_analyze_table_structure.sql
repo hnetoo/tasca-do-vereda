@@ -1,0 +1,17 @@
+-- Analisar estrutura atual das tabelas principais
+-- Verificar conformidade com a API
+
+SELECT 
+    table_name,
+    column_name,
+    data_type,
+    is_nullable,
+    column_default
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+    AND table_name IN (
+        'orders', 'dishes', 'menu_categories', 'customers', 
+        'employees', 'expenses', 'revenues', 'cash_shifts',
+        'restaurant_tables', 'transactions', 'order_items'
+    )
+ORDER BY table_name, ordinal_position;

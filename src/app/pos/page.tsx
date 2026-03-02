@@ -206,8 +206,6 @@ const POS = () => {
 
   // Handle Product Click (Auto-select Balcão if no table active)
   const handleProductClick = (product: Dish) => {
-    console.log('🛒 Product clicked:', product.name);
-    
     let targetTableId = activeTableId;
     
     // Auto-select Balcão logic
@@ -230,13 +228,11 @@ const POS = () => {
         } as Table;
         addTable(newTable);
         balcao = newTable;
-        console.log('🪑 Created Balcão table:', balcao.id);
       }
       
       if (balcao) {
         setActiveTable(balcao.id);
         targetTableId = balcao.id;
-        console.log('🪑 Set active table:', balcao.id);
       }
     }
 
@@ -245,28 +241,23 @@ const POS = () => {
        let targetOrderId = activeOrderId;
        const tableOrders = activeOrders.filter((o: Order) => o.tableId === targetTableId && o.status === 'ABERTO');
        
-       console.log('📋 Table orders:', tableOrders.length, 'Active order ID:', activeOrderId);
-       
        if (tableOrders.length > 0) {
           // If we have an active order but it's not for this table (shouldn't happen due to effect, but safety check)
           // or if activeOrderId is null
           if (!targetOrderId || !tableOrders.find((o: Order) => o.id === targetOrderId)) {
              targetOrderId = tableOrders[0].id || null;
              setActiveOrder(targetOrderId || null);
-             console.log('📋 Set existing order:', targetOrderId);
           }
        } else {
           // Create new order
           const tableName = tables.find((t: Table) => t.id === targetTableId)?.name || 'Mesa';
           targetOrderId = createNewOrder(targetTableId!, tableName);
           setActiveOrder(targetOrderId || null);
-          console.log('📋 Created new order:', targetOrderId);
        }
        
        // Now add to order
        // Pass specificOrderId to avoid race conditions
        if (targetOrderId) {
-         console.log('➕ Adding to order:', product.name, 'Order ID:', targetOrderId);
          addToOrder(targetTableId!, product, 1, '', targetOrderId!, user?.id);
          // Visual feedback
          setLastAddedProduct(product.id);
@@ -323,17 +314,6 @@ const POS = () => {
   }, 0) || 0;
   
   const displayTotal = totalWithTax > 0 ? totalWithTax : calculatedTotal;
-  
-  // Debug logs
-  console.log('💰 POS Total Debug:', {
-    currentOrderId: currentOrder?.id,
-    totalWithTax,
-    calculatedTotal,
-    displayTotal,
-    itemsCount: currentOrder?.items?.length,
-    menuItems: menu.length,
-    sampleItems: currentOrder?.items?.slice(0, 2)
-  });
 
   const getExportConfig = () => {
     const shiftOrders = activeOrders.filter((o: Order) => {
@@ -1224,7 +1204,6 @@ const POS = () => {
         <div className="fixed top-4 left-4 z-50 animate-in slide-in-from-left">
           <button 
             onClick={() => {
-              console.log('🔧 Botão Sair Fullscreen clicado');
               toggleSidebar();
             }} 
             className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-red-600/30 transition-all group hover:scale-110"
