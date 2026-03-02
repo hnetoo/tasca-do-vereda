@@ -336,7 +336,12 @@ export default function OwnerMobilePage() {
 
   // Estatísticas em tempo real
   const realtimeStats = useMemo(() => {
+    console.log('📊 ===== REALTIME STATS DEBUG =====');
+    console.log('📊 Current Orders:', currentData.orders);
+    console.log('📊 Orders Count:', currentData.orders?.length || 0);
+    
     if (!currentData.orders || currentData.orders.length === 0) {
+      console.log('📊 No orders found, returning zeros');
       return {
         todaySales: 0,
         todayOrders: 0,
@@ -350,11 +355,28 @@ export default function OwnerMobilePage() {
     
     const todayOrders = currentData.orders.filter((order: any) => {
       const orderDate = new Date(order.created_at || new Date());
-      return orderDate >= today;
+      const isToday = orderDate >= today;
+      console.log('📊 Order Date Check:', {
+        orderId: order.id,
+        orderDate: orderDate.toISOString(),
+        today: today.toISOString(),
+        isToday: isToday,
+        orderTotal: order.total
+      });
+      return isToday;
     });
 
+    console.log('📊 Today Orders:', todayOrders.length);
+    console.log('📊 Today Orders Data:', todayOrders);
+
     const todaySales = todayOrders.reduce((sum: number, order: any) => {
-      return sum + calculateOrderTotal(order);
+      const orderTotal = calculateOrderTotal(order);
+      console.log('📊 Order Total Calculation:', {
+        orderId: order.id,
+        orderTotal: orderTotal,
+        runningSum: sum + orderTotal
+      });
+      return sum + orderTotal;
     }, 0);
 
     const totalRevenue = currentData.orders.reduce((sum: number, order: any) => {
@@ -366,12 +388,17 @@ export default function OwnerMobilePage() {
       order.status !== 'closed' && order.status !== 'paid'
     ).length;
 
-    return {
+    const result = {
       todaySales,
       todayOrders: todayOrders.length,
       activeTables,
       totalRevenue
     };
+
+    console.log('📊 Final Realtime Stats:', result);
+    console.log('📊 ===============================');
+    
+    return result;
   }, [currentData.orders]);
 
   // Combinar transações (orders + expenses)
