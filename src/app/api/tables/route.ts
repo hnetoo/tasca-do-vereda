@@ -55,8 +55,17 @@ export async function POST(request: NextRequest) {
     
     if (error) {
       console.error('❌ TABLES API: Error saving table:', error);
+      
+      // Tratar erro específico de tabela não encontrada
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'Tabela restaurant_tables não encontrada. Execute as migrações do Supabase.' },
+          { status: 500 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: error.message },
+        { error: error.message || 'Erro ao salvar mesa' },
         { status: 500 }
       );
     }
