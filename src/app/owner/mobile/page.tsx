@@ -596,13 +596,13 @@ export default function OwnerMobilePage() {
             <div className="text-red-200 text-xs">{period.toLowerCase()}</div>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 p-4 rounded-2xl border border-emerald-500/30">
+          <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border border-red-500/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-emerald-200 text-xs font-medium">Lucro Total</span>
-              <ArrowUpRight size={16} className="text-emerald-400" />
+              <span className="text-red-200 text-xs font-medium">Folha Salarial</span>
+              <Wallet size={16} className="text-red-400" />
             </div>
-            <div className="text-xl font-bold mb-1">{fmt(totals.net)}</div>
-            <div className="text-emerald-200 text-xs">vendas - despesas</div>
+            <div className="text-xl font-bold mb-1">{fmt(payroll?.reduce((sum: number, record: any) => sum + (record.netSalary || 0), 0) || 0)}</div>
+            <div className="text-red-200 text-xs">total líquido</div>
           </div>
 
           <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-4 rounded-2xl border border-indigo-500/30">
@@ -664,6 +664,7 @@ export default function OwnerMobilePage() {
             </button>
           </div>
         </div>
+      </div>
     </div>
   );
 }
