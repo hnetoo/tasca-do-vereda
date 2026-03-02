@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const tables = [
       'expenses',
       'payroll_records', 
-      'categories',
+      'menu_categories',
       'dishes',
       'customers',
       'reservations',
