@@ -5,6 +5,8 @@ export async function POST(request: Request) {
   try {
     const { type } = await request.json();
     
+    console.log('🔄 CLEAR PRODUCTION API: Starting clear operation', { type });
+    
     if (!type || (type !== 'orders' && type !== 'expenses' && type !== 'all')) {
       return NextResponse.json({ error: 'Invalid type. Must be "orders", "expenses", or "all"' }, { status: 400 });
     }
@@ -25,16 +27,19 @@ export async function POST(request: Request) {
       const tablesToCheck = ['orders', 'expenses'];
       const existingTables = [];
       
+      console.log('🔍 CLEAR PRODUCTION API: Checking tables existence...');
+      
       for (const tableName of tablesToCheck) {
         try {
           const { error } = await supabase.from(tableName).select('id').limit(1);
           if (!error || error.code !== 'PGRST116') { // PGRST116 = relation does not exist
             existingTables.push(tableName);
+            console.log(`✅ CLEAR PRODUCTION API: Table ${tableName} exists`);
           } else {
-            console.log(`⚠️ Table ${tableName} does not exist, skipping...`);
+            console.log(`⚠️ CLEAR PRODUCTION API: Table ${tableName} does not exist, skipping...`);
           }
         } catch (e) {
-          console.log(`⚠️ Error checking table ${tableName}, skipping...`);
+          console.log(`⚠️ CLEAR PRODUCTION API: Error checking table ${tableName}, skipping...`, e);
         }
       }
       
@@ -49,6 +54,8 @@ export async function POST(request: Request) {
       // Clear only existing tables
       for (const tableName of existingTables) {
         try {
+          console.log(`🗑️ CLEAR PRODUCTION API: Clearing table ${tableName}...`);
+          
           // Usar gte com UUID mínimo para apagar todos os registros
           const deleteResult = await supabase.from(tableName).delete().gte('id', '00000000-0000-0000-0000-000000000000');
           
@@ -56,15 +63,17 @@ export async function POST(request: Request) {
             throw new Error(`Failed to clear ${tableName}: ${deleteResult.error.message}`);
           }
           
+          const deletedCount = (deleteResult.data as unknown as any[])?.length || 0;
           results.push({
             type: tableName,
-            result: deleteResult
+            result: deleteResult,
+            count: deletedCount
           });
           
-          console.log(`✅ Cleared ${tableName} from Supabase`);
+          console.log(`✅ CLEAR PRODUCTION API: Cleared ${deletedCount} records from ${tableName}`);
           
         } catch (error: any) {
-          console.error(`❌ Error clearing ${tableName}:`, error);
+          console.error(`❌ CLEAR PRODUCTION API: Error clearing ${tableName}:`, error);
           results.push({
             type: tableName,
             error: error.message

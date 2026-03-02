@@ -52,28 +52,11 @@ export default function OwnerMobilePage() {
   useEffect(() => {
     const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
     
-    console.log('📱 Data Check Effect:', {
-      hasLocalData,
-      ordersLength: orders?.length || 0,
-      expensesLength: expenses?.length || 0,
-      loadingSupabase,
-      shouldLoad: !hasLocalData && !loadingSupabase
-    });
-    
-    // MOBILE: Sempre carregar API para garantir dados atualizados
-    if (!loadingSupabase) {
-      console.log('🔄 Mobile: Forcing API reload for fresh data...');
+    if (!hasLocalData && !loadingSupabase) {
+      console.log('🔄 Loading data from API (fallback for owner mobile)');
       loadApiData();
     }
-  }, [loadingSupabase]); // Removido orders/expenses para não criar loop
-
-  // MOBILE: Forçar carregamento inicial da API
-  useEffect(() => {
-    console.log('📱 Mobile Initial Load: Starting API data load...');
-    if (!loadingSupabase) {
-      loadApiData();
-    }
-  }, []); // Executa apenas uma vez no mount
+  }, [orders, expenses, loadingSupabase]);
 
 
   const loadApiData = async () => {
@@ -81,38 +64,8 @@ export default function OwnerMobilePage() {
     try {
       console.log('🔄 Starting API call to /api/owner-data');
       
-      // FORÇAR APENAS API ORIGINAL COM DADOS REAIS
-      const timestamp = new Date().getTime();
-      const random = Math.random().toString(36).substring(7);
-      const url = `/api/owner-data?t=${timestamp}&v=${random}&force=true&version=${version}`;
-      
-      console.log('🔍 Mobile Debug: Fetching REAL API URL:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'X-Force-Refresh': 'true'
-        }
-      });
-      
-      console.log('🔍 Mobile Debug: Response status:', response.status);
-      console.log('🔍 Mobile Debug: Response headers:', Object.fromEntries(response.headers.entries()));
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
+      const response = await fetch('/api/owner-data');
       const data = await response.json();
-      
-      console.log('🔍 Mobile Debug: RAW API Response:', data);
-      console.log('🔍 Mobile Debug: Response has error?', !!data.error);
-      console.log('🔍 Mobile Debug: Response has orders?', !!data.orders);
-      console.log('🔍 Mobile Debug: Orders count:', data.orders?.length || 0);
-      console.log('🔍 Mobile Debug: Expenses count:', data.expenses?.length || 0);
-      console.log('🔍 Mobile Debug: Is emergency data?', !!data.emergency);
       
       // Se houver erro na API, mostrar mensagem clara
       if (data.error) {
@@ -237,8 +190,13 @@ export default function OwnerMobilePage() {
       setOrders([]);
       setExpenses([]);
 
-      // Forçar reload dos dados
+      // Forçar reload completo dos dados
       setForceUpdate(prev => prev + 1);
+      
+      // Forçar reload da página para garantir atualização
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
 
       // Notificação de sucesso
       if (addNotification) {
