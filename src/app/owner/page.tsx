@@ -26,6 +26,7 @@ export default function OwnerPage() {
   const [supabaseData, setSupabaseData] = useState<any>({
     orders: [],
     expenses: [],
+    payroll: [],
     dishes: [],
     categories: []
   });
@@ -60,6 +61,7 @@ export default function OwnerPage() {
       setSupabaseData({
         orders: data.orders || [],
         expenses: data.expenses || [],
+        payroll: data.payroll || [],
         dishes: data.dishes || [],
         categories: data.categories || []
       });
@@ -341,10 +343,40 @@ export default function OwnerPage() {
           }
         });
       }
+      // Fallback: usar dados da API quando não há pedidos locais
+      if ((!orders || orders.length === 0) && supabaseData.orders && supabaseData.orders.length > 0) {
+        supabaseData.orders.forEach((order: any) => {
+          if (order && order.id) {
+            txs.push({
+              id: `order-${order.id}`,
+              date: order.created_at || new Date().toISOString(),
+              description: `Pedido #${order.order_number || 'N/A'}`,
+              category: 'Vendas',
+              type: 'REVENUE',
+              amount: order.total || 0
+            });
+          }
+        });
+      }
 
       // Adicionar transações financeiras (local)
       if (expenses && expenses.length > 0) {
         expenses.forEach(expense => {
+          if (expense && expense.id) {
+            txs.push({
+              id: `expense-${expense.id}`,
+              date: expense.date || new Date().toISOString(),
+              description: expense.description || 'Despesa',
+              category: expense.category || 'Outros',
+              type: 'EXPENSE',
+              amount: expense.amount || 0
+            });
+          }
+        });
+      }
+      // Fallback: usar despesas da API quando não há locais
+      if ((!expenses || expenses.length === 0) && supabaseData.expenses && supabaseData.expenses.length > 0) {
+        supabaseData.expenses.forEach((expense: any) => {
           if (expense && expense.id) {
             txs.push({
               id: `expense-${expense.id}`,
@@ -362,7 +394,7 @@ export default function OwnerPage() {
     }
 
     return txs;
-  }, [orders, expenses]);
+  }, [orders, expenses, supabaseData.orders, supabaseData.expenses]);
 
   // Filtrar transações por período
   const filteredTransactions = useMemo(() => {
@@ -585,7 +617,13 @@ export default function OwnerPage() {
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
           <h3 className="text-xl font-bold mb-4 text-red-500">Folha Salarial</h3>
-          <div className="text-3xl font-bold text-red-500">{fmt(employees?.reduce((sum: number, emp: any) => sum + (emp.netSalary || 0), 0) || 0)}</div>
+          <div className="text-3xl font-bold text-red-500">
+            {fmt(
+              (Array.isArray(employees) && employees.length > 0)
+                ? employees.reduce((sum: number, emp: any) => sum + (emp.netSalary || emp.net_salary || 0), 0)
+                : (supabaseData?.payroll || []).reduce((sum: number, r: any) => sum + (r.netSalary || r.net_salary || r.amount || 0), 0)
+            )}
+          </div>
           <div className="text-gray-400 text-sm mt-2">{employees?.length || 0} funcionários</div>
         </div>
 

@@ -53,6 +53,11 @@ export default function OwnerMobileLoginPage() {
       localStorage.setItem('owner_mobile_user', credentials.username);
       localStorage.setItem('owner_mobile_login_time', new Date().toISOString());
       
+      // Definir cookie compatível com a API real (mesmo comportamento do desktop)
+      const expires = new Date();
+      expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000));
+      document.cookie = `owner_authenticated=true; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+      
       console.log('🔐 Owner Mobile auth set:', { localStorage: 'owner_mobile_authenticated=true' });
       
       // Redirecionar para página owner mobile
