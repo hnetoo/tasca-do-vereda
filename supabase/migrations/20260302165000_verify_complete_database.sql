@@ -206,9 +206,8 @@ WHERE table_name = 'settings'
 ORDER BY ordinal_position;
 
 SELECT '=== DADOS - SETTINGS ===' as section;
-SELECT key, value
-FROM settings 
-ORDER BY key;
+SELECT *
+FROM settings;
 
 -- =====================================================
 -- VERIFICAÇÃO DE ÍNDICES

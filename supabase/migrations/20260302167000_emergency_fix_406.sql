@@ -48,15 +48,16 @@ END $$;
 
 -- Inserir usuário administrador se não existir
 DO $$
+DECLARE
+    admin_count INTEGER;
 BEGIN
-    DECLARE admin_count INTEGER;
-    SELECT COUNT(*) INTO admin_count FROM users WHERE role = 'ADMIN' AND status = 'active';
+    SELECT COUNT(*) INTO admin_count FROM users WHERE role = 'admin' AND status = 'active';
     
     IF admin_count = 0 THEN
         RAISE NOTICE '👤 Inserindo usuário administrador padrão...';
         
         INSERT INTO users (name, email, pin, role, status, permissions) VALUES
-        ('Administrador', 'admin@tasca.com', '1234', 'ADMIN', 'active', '{"all": true}')
+        ('Administrador', 'admin@tasca.com', '1234', 'admin', 'active', '{"all": true}')
         ON CONFLICT (email) DO NOTHING;
         
         RAISE NOTICE '✅ Usuário admin@tasca.com criado (PIN: 1234)';
@@ -84,11 +85,11 @@ SELECT COUNT(*) as total_users FROM users;
 
 -- Testar query específica do login
 DO $$
+DECLARE
+    test_user RECORD;
+    query_text TEXT;
 BEGIN
-    DECLARE test_user RECORD;
-    DECLARE query_text TEXT;
-    
-    query_text := 'SELECT * FROM users WHERE pin = ''1234'' AND role = ''ADMIN'' AND status = ''active''';
+    query_text := 'SELECT * FROM users WHERE pin = ''1234'' AND role = ''admin'' AND status = ''active''';
     
     RAISE NOTICE '🔍 Testando query: %', query_text;
     
@@ -108,22 +109,22 @@ BEGIN
 END $$;
 
 -- Criar trigger para updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at 
+    BEFORE UPDATE ON users 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
 DO $$
 BEGIN
-    CREATE OR REPLACE FUNCTION update_updated_at_column()
-    RETURNS TRIGGER AS $$
-    BEGIN
-        NEW.updated_at = NOW();
-        RETURN NEW;
-    END;
-    $$ language 'plpgsql';
-    
-    DROP TRIGGER IF EXISTS update_users_updated_at ON users;
-    CREATE TRIGGER update_users_updated_at 
-        BEFORE UPDATE ON users 
-        FOR EACH ROW 
-        EXECUTE FUNCTION update_updated_at_column();
-    
     RAISE NOTICE '✅ Trigger updated_at criado';
 EXCEPTION
     WHEN OTHERS THEN

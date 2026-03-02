@@ -3,6 +3,13 @@
 
 -- Testar se a tabela users existe e tem dados
 DO $$
+DECLARE
+    user_count INTEGER;
+    column_record RECORD;
+    user_record RECORD;
+    test_user RECORD;
+    pin_user RECORD;
+    admin_user RECORD;
 BEGIN
     RAISE NOTICE '=== TESTE DIRETO DA TABELA USERS ===';
     
@@ -11,7 +18,6 @@ BEGIN
         RAISE NOTICE '✅ Tabela users existe';
         
         -- Contar registros
-        DECLARE user_count INTEGER;
         SELECT COUNT(*) INTO user_count FROM users;
         RAISE NOTICE '📊 Total de usuários: %', user_count;
         
@@ -47,7 +53,6 @@ BEGIN
         
         -- Testar query específica do login
         RAISE NOTICE '🔐 Testando query específica (PIN=1234, role=ADMIN, status=active):';
-        DECLARE test_user RECORD;
         BEGIN
             SELECT * INTO test_user FROM users 
             WHERE pin = '1234' AND role = 'ADMIN' AND status = 'active';
@@ -61,7 +66,6 @@ BEGIN
                 RAISE NOTICE '🔍 Tentando outras combinações:';
                 
                 -- Verificar se existe usuário com PIN 1234
-                DECLARE pin_user RECORD;
                 SELECT * INTO pin_user FROM users WHERE pin = '1234' LIMIT 1;
                 IF pin_user IS NOT NULL THEN
                     RAISE NOTICE '  ✅ Usuário com PIN 1234: % (role: %, status: %)', 
@@ -71,7 +75,6 @@ BEGIN
                 END IF;
                 
                 -- Verificar se existe usuário ADMIN
-                DECLARE admin_user RECORD;
                 SELECT * INTO admin_user FROM users WHERE role = 'ADMIN' LIMIT 1;
                 IF admin_user IS NOT NULL THEN
                     RAISE NOTICE '  ✅ Usuário ADMIN: % (PIN: %, status: %)', 
