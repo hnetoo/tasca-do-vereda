@@ -593,8 +593,8 @@ export default function OwnerMobilePage() {
               <span className="text-green-200 text-xs font-medium">Vendas Hoje</span>
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             </div>
-            <div className="text-xl font-bold mb-1">{fmt(realtimeStats.todaySales)}</div>
-            <div className="text-green-200 text-xs">{realtimeStats.todayOrders} pedidos</div>
+            <div className="text-xl font-bold mb-1">{fmt(realtimeStats.todaySales)} 📊</div>
+            <div className="text-green-200 text-xs">{realtimeStats.todayOrders} pedidos (Total: {currentData.orders?.length || 0})</div>
           </div>
 
           <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-4 rounded-2xl border border-blue-500/30">
@@ -638,8 +638,8 @@ export default function OwnerMobilePage() {
               <span className="text-red-200 text-xs font-medium">Despesas</span>
               <TrendingDown size={16} className="text-red-400" />
             </div>
-            <div className="text-xl font-bold mb-1">{cardCalculations.expenses.value}</div>
-            <div className="text-red-200 text-xs">{period.toLowerCase()}</div>
+            <div className="text-xl font-bold mb-1">{cardCalculations.expenses.value} 📊</div>
+            <div className="text-red-200 text-xs">{period.toLowerCase()} (Total: {currentData.expenses?.length || 0})</div>
           </div>
 
           <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border border-red-500/30">
