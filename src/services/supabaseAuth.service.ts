@@ -4,14 +4,23 @@ import { supabaseService } from './supabaseService';
 export const supabaseAuthService = {
   async loginWithPin(pin: string, role: UserRole): Promise<AuthResponse> {
     try {
+      console.log(' [AUTH] Starting login with PIN', { pin: pin ? '***' : 'EMPTY', role });
+      
       const client = supabaseService.getClient();
+      console.log(' [AUTH] Supabase client status:', { 
+        hasClient: !!client, 
+        isConnected: supabaseService.isConnected() 
+      });
+      
       if (!client) {
+        console.error(' [AUTH] No Supabase client available');
         throw {
           type: AuthErrorType.CredenciaisInvalidas,
           message: 'Serviço indisponível. Tente novamente.',
         } as AuthError;
       }
 
+      console.log(' [AUTH] Querying users table for PIN authentication');
       // Buscar usuário na tabela users do Supabase
       const { data: userData, error: userError } = await client
         .from('users')
@@ -21,19 +30,29 @@ export const supabaseAuthService = {
         .eq('status', 'active')
         .single();
 
+      console.log(' [AUTH] User query result:', { 
+        hasData: !!userData, 
+        hasError: !!userError,
+        errorMessage: userError?.message,
+        errorCode: userError?.code
+      });
+
       if (userError || !userData) {
+        console.error(' [AUTH] User not found or inactive:', { userError, userData });
         throw {
           type: AuthErrorType.CredenciaisInvalidas,
           message: 'PIN ou perfil inválido. Por favor, tente novamente.',
         } as AuthError;
       }
 
+      console.log(' [AUTH] User found, updating last login');
       // Atualizar último login
       await client
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('id', userData.id);
 
+      console.log(' [AUTH] Creating user object for response');
       // Criar objeto User compatível com a interface
       const user: User = {
         id: userData.id,
@@ -44,18 +63,31 @@ export const supabaseAuthService = {
         metadata: userData.permissions || {},
       };
 
+      console.log(' [AUTH] Setting authentication cookie');
       // Set cookie para middleware
       const cookieValue = encodeURIComponent(JSON.stringify({ 
         role: user.role, 
         id: user.id 
       }));
-      document.cookie = `tasca_auth_token=${cookieValue}; path=/; max-age=86400; SameSite=Lax`;
       
+      if (typeof window !== 'undefined') {
+        document.cookie = `tasca_auth_token=${cookieValue}; path=/; max-age=86400; SameSite=Lax`;
+      }
+
+      console.log(' [AUTH] Login successful', { userId: user.id, role: user.role });
       return { user, role: user.role, authenticatedAt: Date.now() };
       
-    } catch (error) {
-      console.error('Erro no login:', error);
-      throw error;
+    } catch (error: any) {
+      console.error(' [AUTH] Login failed:', error);
+      
+      if (error.type) {
+        throw error;
+      }
+      
+      throw {
+        type: AuthErrorType.UnknownError,
+        message: error.message || 'Erro desconhecido ao fazer login',
+      } as AuthError;
     }
   },
 
