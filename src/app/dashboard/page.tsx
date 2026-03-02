@@ -25,15 +25,13 @@ interface PaymentDailyDataRow {
   profitByMethod: Record<PaymentMethod, number>;
 }
 
-const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE'];
+const paymentMethods: PaymentMethod[] = ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'SPLIT'];
 const paymentLabels: Record<PaymentMethod, string> = {
   NUMERARIO: 'Numerário',
   TPA: 'Cartão',
   TRANSFERENCIA: 'Transferência',
   QR_CODE: 'QR Code',
-  CONTA_CORRENTE: 'Conta Corrente',
   SPLIT: 'Split',
-  OTHER: 'Outros',
 };
 
 const Dashboard = () => {
@@ -162,9 +160,7 @@ const Dashboard = () => {
         TPA: 0,
         TRANSFERENCIA: 0,
         QR_CODE: 0,
-        CONTA_CORRENTE: 0,
         SPLIT: 0,
-        OTHER: 0,
       };
 
       closed.forEach((order: Order) => {
@@ -520,7 +516,6 @@ const Dashboard = () => {
                   method === 'TPA' ? '#3b82f6' :      // blue-500
                   method === 'TRANSFERENCIA' ? '#10b981' : // emerald-500
                   method === 'QR_CODE' ? '#ef4444' :    // red-500
-                  method === 'CONTA_CORRENTE' ? '#a855f7' : // purple-500
                   method === 'SPLIT' ? '#ec4899' :     // pink-500
                   '#64748b' // slate-500
                 } />

@@ -25,9 +25,7 @@ const paymentLabels: Record<PaymentMethod, string> = {
   TPA: 'Cartão',
   TRANSFERENCIA: 'Transferência',
   QR_CODE: 'QR Code',
-  CONTA_CORRENTE: 'Conta Corrente',
   SPLIT: 'Dividido',
-  OTHER: 'Outro',
 };
 
 const extractPayments = (order: Order) => {

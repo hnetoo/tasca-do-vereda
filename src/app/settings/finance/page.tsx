@@ -923,7 +923,6 @@ export default function SettingsFinancePage() {
                   <option value="vendas">Vendas</option>
                   <option value="eventos">Eventos</option>
                   <option value="serviços">Serviços</option>
-                  <option value="outros">Outros</option>
                 </select>
               </div>
               
@@ -938,7 +937,6 @@ export default function SettingsFinancePage() {
                   <option value="dinheiro">Dinheiro</option>
                   <option value="multipagamento">Multicaixa</option>
                   <option value="transferência">Transferência</option>
-                  <option value="outros">Outros</option>
                 </select>
               </div>
             </div>

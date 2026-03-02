@@ -710,8 +710,7 @@ const POS = () => {
     const paymentMethodName = order.paymentMethod === 'NUMERARIO' ? 'Numerário' : 
                               order.paymentMethod === 'TPA' ? 'Multicaixa' : 
                               order.paymentMethod === 'TRANSFERENCIA' ? 'Transferência' : 
-                              order.paymentMethod === 'QR_CODE' ? 'QR Code' :
-                              order.paymentMethod === 'CONTA_CORRENTE' ? 'Conta Corrente' : 'Outro';
+                              order.paymentMethod === 'QR_CODE' ? 'QR Code' : 'Múltiplo';
 
     return `
 <!DOCTYPE html>
@@ -860,19 +859,18 @@ const POS = () => {
       'TPA': 0,
       'TRANSFERENCIA': 0,
       'QR_CODE': 0,
-      'CONTA_CORRENTE': 0,
-      'OUTROS': 0
+      'SPLIT': 0
     };
     
     let totalSales = 0;
     let totalTax = 0;
     
     shiftOrders.forEach((order: Order) => {
-      const method = order.paymentMethod || 'OUTROS';
+      const method = order.paymentMethod || 'SPLIT';
       if (totals[method] !== undefined) {
         totals[method] += order.total || 0;
       } else {
-        totals['OUTROS'] += order.total || 0;
+        totals['SPLIT'] += order.total || 0;
       }
       totalSales += order.total || 0;
       totalTax += order.taxTotal || 0;
@@ -916,8 +914,7 @@ const POS = () => {
     <div class="row"><span>Multicaixa:</span><span>${formatNumber(totals['TPA'])} Kz</span></div>
     <div class="row"><span>Transferência:</span><span>${formatNumber(totals['TRANSFERENCIA'])} Kz</span></div>
     <div class="row"><span>QR Code:</span><span>${formatNumber(totals['QR_CODE'])} Kz</span></div>
-    <div class="row"><span>Conta Corrente:</span><span>${formatNumber(totals['CONTA_CORRENTE'])} Kz</span></div>
-    <div class="row"><span>Outros:</span><span>${formatNumber(totals['OUTROS'])} Kz</span></div>
+    <div class="row"><span>Múltiplo:</span><span>${formatNumber(totals['SPLIT'])} Kz</span></div>
     
     <div class="dashed-line"></div>
     
