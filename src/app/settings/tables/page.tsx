@@ -10,8 +10,9 @@ export default function SettingsTablesPage() {
   const [editingTable, setEditingTable] = useState<any>(null);
   const [formData, setFormData] = useState({ name: '', capacity: 4, seats: 4, status: 'AVAILABLE' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (editingTable) {
       const updatedTable = { 
         ...editingTable, 
@@ -23,8 +24,28 @@ export default function SettingsTablesPage() {
         y: editingTable.y || 0,
         rotation: editingTable.rotation || 0
       };
-      updateTable(updatedTable);
-      addNotification('success', 'Mesa atualizada com sucesso!');
+      
+      // Atualizar via API
+      try {
+        const response = await fetch('/api/tables', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedTable)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Falha ao atualizar mesa');
+        }
+
+        // Atualizar localmente também
+        updateTable(updatedTable);
+        addNotification('success', 'Mesa atualizada com sucesso!');
+      } catch (error: any) {
+        console.error('Erro ao atualizar mesa:', error);
+        addNotification('error', `Falha ao atualizar mesa: ${error.message}`);
+      }
     } else {
       const newTable = {
         id: generateUUID(),
@@ -55,8 +76,28 @@ export default function SettingsTablesPage() {
         user_id: null,
         activeOrderIds: []
       } as any;
-      addTable(newTable);
-      addNotification('success', 'Mesa adicionada com sucesso!');
+      
+      // Salvar via API
+      try {
+        const response = await fetch('/api/tables', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTable)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Falha ao criar mesa');
+        }
+
+        // Adicionar localmente também
+        addTable({ ...newTable, id: result.data.id });
+        addNotification('success', 'Mesa adicionada com sucesso!');
+      } catch (error: any) {
+        console.error('Erro ao criar mesa:', error);
+        addNotification('error', `Falha ao criar mesa: ${error.message}`);
+      }
     }
     setFormData({ name: '', capacity: 4, seats: 4, status: 'AVAILABLE' });
     setEditingTable(null);
@@ -72,10 +113,27 @@ export default function SettingsTablesPage() {
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja remover esta mesa?')) {
-      removeTable(id);
-      addNotification('success', 'Mesa removida com sucesso!');
+      try {
+        // Deletar via API
+        const response = await fetch(`/api/tables?id=${id}`, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Falha ao remover mesa');
+        }
+
+        // Remover localmente também
+        removeTable(id);
+        addNotification('success', 'Mesa removida com sucesso!');
+      } catch (error: any) {
+        console.error('Erro ao remover mesa:', error);
+        addNotification('error', `Falha ao remover mesa: ${error.message}`);
+      }
     }
   };
 

@@ -159,7 +159,7 @@ const TableLayout = () => {
     setDragOverPos(null);
   };
 
-  const handleDrop = (e: React.DragEvent, x: number, y: number) => {
+  const handleDrop = async (e: React.DragEvent, x: number, y: number) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOverPos(null);
@@ -175,11 +175,32 @@ const TableLayout = () => {
       return;
     }
 
+    // Atualizar posição da mesa
     const updatedTable = { ...table, x, y };
-    updateTable(updatedTable);
-    setSelectedTableId(draggedTableId);
+    
+    // Salvar via API
+    try {
+      const response = await fetch('/api/tables', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedTable)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Falha ao atualizar posição da mesa');
+      }
+
+      // Atualizar localmente também
+      updateTable(updatedTable);
+      addNotification('success', 'Mesa movida com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao mover mesa:', error);
+      addNotification('error', `Falha ao mover mesa: ${error.message}`);
+    }
+    
     setDraggedTableId(null);
-    addNotification('success', `${table.name} movida para nova posição. Guardar layout para confirmar.`);
   };
 
   const toggleStatus = (table: Table) => {
