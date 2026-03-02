@@ -579,6 +579,17 @@ export default function OwnerMobilePage() {
         <div id="reset-debug-content">Aguardando reset...</div>
       </div>
       
+      {/* Debug Visual para Cards */}
+      <div id="mobile-cards-debug" className="fixed top-48 left-2 bg-blue-500 text-white p-2 z-50 text-xs max-w-xs">
+        <h4 className="font-bold">💰 CARDS DEBUG</h4>
+        <div id="cards-debug-content">
+          <div>Vendas: {fmt(realtimeStats.todaySales)}</div>
+          <div>Pedidos: {realtimeStats.todayOrders}</div>
+          <div>Despesas: {cardCalculations.expenses.value}</div>
+          <div>Folha: {cardCalculations.payroll.value}</div>
+        </div>
+      </div>
+      
       {/* Debug Visual para Mobile */}
       <div id="mobile-auth-debug"></div>
       
