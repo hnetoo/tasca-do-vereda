@@ -21,7 +21,7 @@ import { useSafeCardCalculations } from '@/utils/cardCalculations';
 export default function OwnerMobilePage() {
   const router = useRouter();
   const [authChecking, setAuthChecking] = useState(true);
-  const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES'>('HOJE');
+  const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES' | 'ANO'>('HOJE');
   const [version, setVersion] = useState(Date.now()); // Forçar refresh
   const [supabaseData, setSupabaseData] = useState<any>({
     orders: [],
@@ -447,6 +447,10 @@ export default function OwnerMobilePage() {
         filterStart = new Date(now.getFullYear(), now.getMonth(), 1);
         filterEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         break;
+      case 'ANO':
+        filterStart = new Date(now.getFullYear(), 0, 1); // 1 de Janeiro
+        filterEnd = new Date(now.getFullYear(), 11, 31); // 31 de Dezembro
+        break;
       default:
         filterStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         filterEnd = now;
@@ -529,7 +533,7 @@ export default function OwnerMobilePage() {
 
         {/* Period Selector */}
         <div className="flex gap-2">
-          {(['HOJE', 'SEMANA', 'MES'] as const).map(p => (
+          {(['HOJE', 'SEMANA', 'MES', 'ANO'] as const).map(p => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
