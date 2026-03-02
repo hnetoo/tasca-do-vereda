@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
+import { useSafeCardCalculations } from '@/utils/cardCalculations';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(
@@ -153,8 +154,12 @@ export default function OwnerPage() {
     orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
     expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
     dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
-    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories
+    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories,
+    payroll: supabaseData.payroll || []
   };
+
+  // Usar hook seguro para cálculos dos cards
+  const cardCalculations = useSafeCardCalculations(currentData, period);
 
   // Debug para verificar se dados estão carregados
   useEffect(() => {
@@ -611,25 +616,19 @@ export default function OwnerPage() {
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
           <h3 className="text-xl font-bold mb-4 text-red-400">Despesas</h3>
-          <div className="text-3xl font-bold text-red-400">{fmt(totals.expense)}</div>
+          <div className="text-3xl font-bold text-red-400">{cardCalculations.expenses.value}</div>
           <div className="text-gray-400 text-sm mt-2">{filteredTransactions.filter(t => t.type === 'EXPENSE').length} transações</div>
         </div>
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
           <h3 className="text-xl font-bold mb-4 text-red-500">Folha Salarial</h3>
-          <div className="text-3xl font-bold text-red-500">
-            {fmt(
-              (Array.isArray(employees) && employees.length > 0)
-                ? employees.reduce((sum: number, emp: any) => sum + (emp.netSalary || emp.net_salary || 0), 0)
-                : (supabaseData?.payroll || []).reduce((sum: number, r: any) => sum + (r.netSalary || r.net_salary || r.amount || 0), 0)
-            )}
-          </div>
+          <div className="text-3xl font-bold text-red-500">{cardCalculations.payroll.value}</div>
           <div className="text-gray-400 text-sm mt-2">{employees?.length || 0} funcionários</div>
         </div>
 
         <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/10">
           <h3 className="text-xl font-bold mb-4 text-indigo-400">Impostos</h3>
-          <div className="text-3xl font-bold text-indigo-500">{fmt(totals.revenue * 0.065)}</div>
+          <div className="text-3xl font-bold text-indigo-500">{cardCalculations.tax.value}</div>
           <div className="text-gray-400 text-sm mt-2">6.5% sobre faturação</div>
         </div>
 
