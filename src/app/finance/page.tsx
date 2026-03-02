@@ -294,21 +294,49 @@ export default function FinancePage() {
           <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
             <h3 className="text-lg font-bold text-white mb-4">Adicionar Despesa</h3>
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const form = e.target as HTMLFormElement;
                 const desc = (form.elements.namedItem('desc') as HTMLInputElement).value;
                 const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value);
                 if (!desc || !Number.isFinite(amount)) return;
-                addExpense({ 
-                  id: `exp-${Date.now()}`, 
-                  description: desc, 
-                  amount, 
-                  date: new Date(), 
-                  category: 'VARIAVEL' 
-                } as any);
-                form.reset();
-                addNotification('success', 'Despesa adicionada com sucesso!');
+                
+                // Salvar na API do Supabase
+                try {
+                  const response = await fetch('/api/expenses', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      amount: amount,
+                      category: 'VARIAVEL',
+                      date: new Date().toISOString().split('T')[0],
+                      description: desc,
+                      payment_method: 'Dinheiro',
+                      status: 'PAID'
+                    })
+                  });
+
+                  const result = await response.json();
+
+                  if (!response.ok) {
+                    throw new Error(result.error || 'Falha ao salvar despesa');
+                  }
+
+                  // Adicionar localmente também para visualização imediata
+                  addExpense({ 
+                    id: result.data.id || `exp-${Date.now()}`, 
+                    description: desc, 
+                    amount, 
+                    date: new Date(), 
+                    category: 'VARIAVEL' 
+                  } as any);
+                  
+                  form.reset();
+                  addNotification('success', 'Despesa salva com sucesso no Supabase!');
+                } catch (error: any) {
+                  console.error('Erro ao salvar despesa:', error);
+                  addNotification('error', `Falha ao salvar despesa: ${error.message}`);
+                }
               }}
               className="grid grid-cols-1 md:grid-cols-4 gap-4"
             >

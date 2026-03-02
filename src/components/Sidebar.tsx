@@ -44,7 +44,8 @@ import {
   Share2,
   Save,
   History as HistoryIcon,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Wallet
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/store/reduxStore';
@@ -87,6 +88,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
     { path: '/employees', icon: <Users size={24} />, label: 'Gestão de Staff' },
     { path: '/schedules', icon: <CalendarCheck size={24} />, label: 'Escalas' },
+    { path: '/payroll', icon: <Wallet size={24} />, label: 'Folha Salarial' },
     { path: '/inventory', icon: <Warehouse size={24} />, label: 'Inventário' },
     { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
     { path: '/customers', icon: <Users size={24} />, label: 'Clientes' },
