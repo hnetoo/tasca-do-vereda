@@ -178,25 +178,33 @@ export default function OwnerMobilePage() {
       const result = await response.json();
       console.log('✅ API Response:', result);
 
-      // Limpar dados locais
-      setSupabaseData({
-        orders: [],
-        expenses: [],
-        dishes: supabaseData.dishes || [],
-        categories: supabaseData.categories || []
-      });
-      
-      // Limpar store local também
-      setOrders([]);
-      setExpenses([]);
+      // Verificar se a API realmente limpou os dados
+      if (result.success && result.cleared) {
+        console.log('✅ API successfully cleared data:', result.cleared);
+        
+        // Limpar dados locais
+        setSupabaseData({
+          orders: [],
+          expenses: [],
+          dishes: supabaseData.dishes || [],
+          categories: supabaseData.categories || []
+        });
+        
+        // Limpar store local também
+        setOrders([]);
+        setExpenses([]);
 
-      // Forçar reload completo dos dados
-      setForceUpdate(prev => prev + 1);
-      
-      // Forçar reload da página para garantir atualização
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        // Forçar reload completo dos dados
+        setForceUpdate(prev => prev + 1);
+        
+        // Forçar reload da página para garantir atualização
+        setTimeout(() => {
+          console.log('🔄 Forcing page reload to ensure data is cleared...');
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error('API failed to clear data properly');
+      }
 
       // Notificação de sucesso
       if (addNotification) {

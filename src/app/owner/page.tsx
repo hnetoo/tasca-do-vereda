@@ -40,7 +40,9 @@ export default function OwnerPage() {
     dishes,
     categories,
     settings,
-    employees
+    employees,
+    setOrders,
+    setExpenses
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -57,21 +59,47 @@ export default function OwnerPage() {
     setLoadingSupabase(true);
     try {
       const response = await fetch('/api/owner-data');
-      const data = await response.json();
+      const result = await response.json();
+      console.log('✅ API Response:', result);
+
+      // Verificar se a API realmente limpou os dados
+      if (result.success && result.cleared) {
+        console.log('✅ API successfully cleared data:', result.cleared);
+        
+        // Limpar dados locais
+        setSupabaseData({
+          orders: [],
+          expenses: [],
+          dishes: supabaseData.dishes || [],
+          categories: supabaseData.categories || []
+        });
+        
+        // Limpar store local também
+        setOrders([]);
+        setExpenses([]);
+
+        // Forçar reload da página para garantir atualização
+        setTimeout(() => {
+          console.log('🔄 Forcing page reload to ensure data is cleared...');
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error('API failed to clear data properly');
+      }
       
       setSupabaseData({
-        orders: data.orders || [],
-        expenses: data.expenses || [],
-        payroll: data.payroll || [],
-        dishes: data.dishes || [],
-        categories: data.categories || []
+        orders: result.orders || [],
+        expenses: result.expenses || [],
+        payroll: result.payroll || [],
+        dishes: result.dishes || [],
+        categories: result.categories || []
       });
       
       console.log('✅ API data loaded for owner desktop:', {
-        orders: data.orders?.length || 0,
-        expenses: data.expenses?.length || 0,
-        dishes: data.dishes?.length || 0,
-        categories: data.categories?.length || 0
+        orders: result.orders?.length || 0,
+        expenses: result.expenses?.length || 0,
+        dishes: result.dishes?.length || 0,
+        categories: result.categories?.length || 0
       });
       
     } catch (error: any) {
