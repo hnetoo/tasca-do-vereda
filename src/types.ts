@@ -145,7 +145,7 @@ export interface CustomRole {
   permissions: Permission[];
 }
 
-export type PaymentMethod = 'NUMERARIO' | 'TPA' | 'TRANSFERENCIA' | 'QR_CODE' | 'CONTA_CORRENTE' | 'SPLIT' | 'OTHER';
+export type PaymentMethod = 'NUMERARIO' | 'TPA' | 'TRANSFERENCIA' | 'QR_CODE' | 'SPLIT';
 
 
 

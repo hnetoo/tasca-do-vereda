@@ -56,7 +56,7 @@ const Analytics = () => {
 
   const COLORS = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444'];
   const paymentMethods: PaymentMethod[] = useMemo(
-    () => ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'CONTA_CORRENTE'],
+    () => ['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'SPLIT'],
     []
   );
   const paymentLabels: Record<PaymentMethod, string> = {
@@ -64,9 +64,7 @@ const Analytics = () => {
     TPA: 'Cartão',
     TRANSFERENCIA: 'Transferência',
     QR_CODE: 'QR Code',
-    CONTA_CORRENTE: 'Conta Corrente',
     SPLIT: 'Split',
-    OTHER: 'Outros',
   };
 
   const extractPayments = useCallback((order: typeof activeOrders[number]) => {
@@ -131,9 +129,7 @@ const Analytics = () => {
         TPA: 0,
         TRANSFERENCIA: 0,
         QR_CODE: 0,
-        CONTA_CORRENTE: 0,
-        SPLIT: 0,
-        OTHER: 0
+        SPLIT: 0
       };
       closedOrders.forEach((order: any) => {
         const orderDate = normalizeDate(getOrderDate(order.timestamp || order.createdAt || order.updatedAt));
