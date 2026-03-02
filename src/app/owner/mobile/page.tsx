@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Wallet
 } from 'lucide-react';
+import { useSafeCardCalculations } from '@/utils/cardCalculations';
 
 export default function OwnerMobilePage() {
   const router = useRouter();
@@ -258,6 +259,9 @@ export default function OwnerMobilePage() {
     dishes: supabaseData.dishes || [],
     categories: supabaseData.categories || []
   };
+
+  // Usar hook seguro para cálculos dos cards
+  const cardCalculations = useSafeCardCalculations(currentData, period);
 
   // Debug para verificar qual fonte de dados está sendo usada
   useEffect(() => {
@@ -590,37 +594,31 @@ export default function OwnerMobilePage() {
             <div className="text-purple-200 text-xs">{period.toLowerCase()}</div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border border-red-500/30">
+          <div className={`bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border ${cardCalculations.expenses.borderColor}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-red-200 text-xs font-medium">Despesas</span>
-              <TrendingDown size={16} className="text-red-400" />
+              <span className="text-red-200 text-xs font-medium">{cardCalculations.expenses.label}</span>
+              <TrendingDown size={16} className={cardCalculations.expenses.color} />
             </div>
-            <div className="text-xl font-bold mb-1">{fmt(totals.expense)}</div>
-            <div className="text-red-200 text-xs">{period.toLowerCase()}</div>
+            <div className="text-xl font-bold mb-1">{cardCalculations.expenses.value}</div>
+            <div className="text-red-200 text-xs">{cardCalculations.expenses.description}</div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border border-red-500/30">
+          <div className={`bg-gradient-to-br from-red-600 to-red-800 p-4 rounded-2xl border ${cardCalculations.payroll.borderColor}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-red-200 text-xs font-medium">Folha Salarial</span>
-              <Wallet size={16} className="text-red-400" />
+              <span className="text-red-200 text-xs font-medium">{cardCalculations.payroll.label}</span>
+              <Wallet size={16} className={cardCalculations.payroll.color} />
             </div>
-            <div className="text-xl font-bold mb-1">
-              {fmt(
-                (Array.isArray(currentData.payroll) && currentData.payroll.length > 0)
-                  ? currentData.payroll.reduce((sum: number, r: any) => sum + (r.netSalary || r.net_salary || r.amount || 0), 0)
-                  : 0
-              )}
-            </div>
-            <div className="text-red-200 text-xs">total líquido</div>
+            <div className="text-xl font-bold mb-1">{cardCalculations.payroll.value}</div>
+            <div className="text-red-200 text-xs">{cardCalculations.payroll.description}</div>
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-4 rounded-2xl border border-indigo-500/30">
+          <div className={`bg-gradient-to-br from-indigo-600 to-indigo-800 p-4 rounded-2xl border ${cardCalculations.tax.borderColor}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-indigo-200 text-xs font-medium">Impostos</span>
-              <TrendingUp size={16} className="text-indigo-400" />
+              <span className="text-indigo-200 text-xs font-medium">{cardCalculations.tax.label}</span>
+              <TrendingUp size={16} className={cardCalculations.tax.color} />
             </div>
-            <div className="text-xl font-bold mb-1">{fmt(totals.revenue * 0.065)}</div>
-            <div className="text-indigo-200 text-xs">6.5% sobre faturação</div>
+            <div className="text-xl font-bold mb-1">{cardCalculations.tax.value}</div>
+            <div className="text-indigo-200 text-xs">{cardCalculations.tax.description}</div>
           </div>
         </div>
 
