@@ -125,25 +125,45 @@ export default function OwnerMobilePage() {
     }
   };
 
-  // Função de Reset de Produção com Proteções
+  // Função de Reset de Produção com Proteções e Debug
   const handleResetProduction = async () => {
+    console.log('🔄 ===== RESET PRODUCTION DEBUG START =====');
+    console.log('🔄 Current Data Before Reset:', {
+      localOrders: orders?.length || 0,
+      localExpenses: expenses?.length || 0,
+      apiOrders: supabaseData.orders?.length || 0,
+      apiExpenses: supabaseData.expenses?.length || 0,
+      finalOrders: currentData.orders?.length || 0,
+      finalExpenses: currentData.expenses?.length || 0
+    });
+    
     // Verificação 1: Tem dados para resetar?
     const hasOrders = (orders?.length || 0) > 0 || (supabaseData.orders?.length || 0) > 0;
     const hasExpenses = (expenses?.length || 0) > 0 || (supabaseData.expenses?.length || 0) > 0;
     
+    console.log('🔄 Reset Check:', { hasOrders, hasExpenses });
+    
     if (!hasOrders && !hasExpenses) {
+      console.log('🔄 Reset Cancelled: No data to clear');
       alert('ℹ️ Não há dados de produção para limpar.');
       return;
     }
 
     // Verificação 2: Confirmação inicial
     const confirm1 = confirm('🔄 Resetar Produção\n\nEsta ação irá limpar todos os pedidos e despesas do período atual.\n\nDeseja continuar?');
-    if (!confirm1) return;
+    if (!confirm1) {
+      console.log('🔄 Reset Cancelled: User confirmation 1');
+      return;
+    }
 
     // Verificação 3: Aviso forte
     const confirm2 = confirm('⚠️ ATENÇÃO! ESTA AÇÃO É IRREVERSÍVEL!\n\nTodos os dados de pedidos e despesas serão APAGADOS permanentemente.\n\nÚltima chance: Tem certeza absoluta?');
-    if (!confirm2) return;
+    if (!confirm2) {
+      console.log('🔄 Reset Cancelled: User confirmation 2');
+      return;
+    }
 
+    console.log('🔄 Reset Confirmed: Starting clear process...');
     setIsResetting(true);
     
     try {
@@ -257,29 +277,71 @@ export default function OwnerMobilePage() {
     });
   }, [orders, expenses, supabaseData.orders, supabaseData.expenses]);
 
-  // Debug para verificar se dados estão carregados
+  // Debug para verificar dados reais
   useEffect(() => {
     const debugInfo = {
+      // Store local
       localOrders: orders?.length || 0,
       localExpenses: expenses?.length || 0,
       localDishes: dishes?.length || 0,
       localCategories: categories?.length || 0,
-      apiOrders: supabaseData.orders.length,
-      apiExpenses: supabaseData.expenses.length,
-      finalOrders: currentData.orders.length,
-      finalExpenses: currentData.expenses.length,
+      
+      // API data
+      apiOrders: supabaseData.orders?.length || 0,
+      apiExpenses: supabaseData.expenses?.length || 0,
+      apiDishes: supabaseData.dishes?.length || 0,
+      apiCategories: supabaseData.categories?.length || 0,
+      
+      // Final data being used
+      finalOrders: currentData.orders?.length || 0,
+      finalExpenses: currentData.expenses?.length || 0,
+      
+      // Card calculations
+      cardCalculations: cardCalculations,
+      
+      // Environment
       isMobile: true,
-      loadingSupabase
+      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR',
+      timestamp: new Date().toISOString()
     };
     
-    console.log('📊 Owner Mobile Data Debug:', debugInfo);
-    console.log('📊 Mobile Final Data:', {
-      ordersCount: currentData.orders.length,
-      expensesCount: currentData.expenses.length,
-      ordersSource: (orders?.length || 0) > 0 ? 'STORE' : 'API',
-      expensesSource: (expenses?.length || 0) > 0 ? 'STORE' : 'API'
+    console.log('📊 ===== OWNER MOBILE DEBUG =====');
+    console.log('📊 Store Local:', {
+      orders: debugInfo.localOrders,
+      expenses: debugInfo.localExpenses,
+      dishes: debugInfo.localDishes,
+      categories: debugInfo.localCategories
     });
-  }, [orders, expenses, dishes, categories, supabaseData]);
+    
+    console.log('📊 API Data:', {
+      orders: debugInfo.apiOrders,
+      expenses: debugInfo.apiExpenses,
+      dishes: debugInfo.apiDishes,
+      categories: debugInfo.apiCategories
+    });
+    
+    console.log('📊 Final Data Used:', {
+      orders: debugInfo.finalOrders,
+      expenses: debugInfo.finalExpenses
+    });
+    
+    console.log('📊 Card Calculations:', cardCalculations);
+    console.log('📊 ======================================');
+    
+    // Mostrar debug visual na página
+    const debugElement = document.getElementById('mobile-debug');
+    if (debugElement) {
+      debugElement.innerHTML = `
+        <div style="position: fixed; top: 10px; left: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-size: 12px; max-width: 300px;">
+          <h4>📱 MOBILE DEBUG</h4>
+          <div>Local: O(${debugInfo.localOrders}) E(${debugInfo.localExpenses})</div>
+          <div>API: O(${debugInfo.apiOrders}) E(${debugInfo.apiExpenses})</div>
+          <div>Final: O(${debugInfo.finalOrders}) E(${debugInfo.finalExpenses})</div>
+          <div>Time: ${new Date().toLocaleTimeString()}</div>
+        </div>
+      `;
+    }
+  }, [orders, expenses, dishes, categories, supabaseData, cardCalculations]);
 
   // Verificar autenticação mobile
   useEffect(() => {
@@ -472,7 +534,10 @@ export default function OwnerMobilePage() {
 
   // Renderizar dashboard mobile
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Debug Visual */}
+      <div id="mobile-debug" />
+      
       {/* Debug Visual para Mobile */}
       <div id="mobile-auth-debug"></div>
       

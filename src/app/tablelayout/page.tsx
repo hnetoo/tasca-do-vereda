@@ -122,12 +122,14 @@ const TableLayout = () => {
   const handleDragStart = (e: React.DragEvent, id: string) => {
     if (!isEditMode) return;
     e.stopPropagation();
+    console.log('🎯 DRAG START: Starting drag for table:', id, 'EditMode:', isEditMode);
     try {
       // Tauri compatibility: ensure dataTransfer works
       if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', id);
         e.dataTransfer.setData('application/json', JSON.stringify({ id, type: 'TABLE' }));
+        console.log('🎯 DRAG START: Data transfer set successfully');
       }
     } catch (err) {
       console.error('Drag start error:', err);
@@ -162,18 +164,28 @@ const TableLayout = () => {
   const handleDrop = async (e: React.DragEvent, x: number, y: number) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log('🎯 DROP: Attempting drop at position:', { x, y }, 'EditMode:', isEditMode, 'DraggedTableId:', draggedTableId);
     setDragOverPos(null);
-    if (!isEditMode || draggedTableId === null) return;
+    if (!isEditMode || draggedTableId === null) {
+      console.log('🎯 DROP: Cancelled - not in edit mode or no table dragged');
+      return;
+    }
 
     const table = tables.find(t => t.id === draggedTableId);
-    if (!table) return;
+    if (!table) {
+      console.log('🎯 DROP: Cancelled - table not found:', draggedTableId);
+      return;
+    }
 
     const occupied = filteredTables.find(t => t.x === x && t.y === y && t.id !== draggedTableId);
     if (occupied) {
+      console.log('🎯 DROP: Cancelled - position occupied:', occupied);
       addNotification('error', 'Colisão detectada! O espaço já contém um objeto.');
       setDraggedTableId(null);
       return;
     }
+
+    console.log('🎯 DROP: Moving table', table.name, 'from', { x: table.x, y: table.y }, 'to', { x, y });
 
     // Atualizar posição da mesa
     const updatedTable = { ...table, x, y };
@@ -195,6 +207,7 @@ const TableLayout = () => {
       // Atualizar localmente também
       updateTable(updatedTable);
       addNotification('success', 'Mesa movida com sucesso!');
+      console.log('🎯 DROP: Table moved successfully:', updatedTable);
     } catch (error: any) {
       console.error('Erro ao mover mesa:', error);
       addNotification('error', `Falha ao mover mesa: ${error.message}`);
@@ -279,6 +292,7 @@ const TableLayout = () => {
             {isAdmin && (
               <button 
                 onClick={() => { 
+                  console.log('🎯 BUTTON: Edit mode toggle clicked, current state:', isEditMode);
                   setIsEditMode(!isEditMode); 
                   if(isEditMode) {
                     setSelectedTableId(null);
