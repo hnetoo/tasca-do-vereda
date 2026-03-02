@@ -47,6 +47,7 @@ export async function GET(request: Request) {
           message: 'Authentication required',
           orders: [],
           expenses: [],
+          payroll: [],
           dishes: [],
           categories: []
         },
@@ -77,6 +78,7 @@ export async function GET(request: Request) {
           missing: 'NEXT_PUBLIC_SUPABASE_URL',
           orders: [],
           expenses: [],
+          payroll: [],
           dishes: [],
           categories: []
         },
@@ -94,6 +96,7 @@ export async function GET(request: Request) {
           missing: 'SUPABASE_SERVICE_ROLE_KEY',
           orders: [],
           expenses: [],
+          payroll: [],
           dishes: [],
           categories: []
         },
@@ -133,15 +136,29 @@ export async function GET(request: Request) {
       count: expensesData?.length || 0, 
       error: expensesError?.message
     });
+
+    // Carregar payroll com SERVICE_ROLE_KEY - QUERY SIMPLES
+    console.log('🔍 REAL API: Loading payroll (SIMPLE QUERY)...');
+    
+    const { data: payrollData, error: payrollError } = await supabaseAdmin
+      .from('payroll')
+      .select('*');
+    
+    console.log('🔍 REAL API: Payroll result:', { 
+      count: payrollData?.length || 0, 
+      error: payrollError?.message
+    });
     
     const result = {
       orders: ordersData || [],
       expenses: expensesData || [],
+      payroll: payrollData || [],
       dishes: [],
       categories: [],
       errors: {
         orders: ordersError?.message,
-        expenses: expensesError?.message
+        expenses: expensesError?.message,
+        payroll: payrollError?.message
       },
       realData: true,
       message: 'DADOS REAIS DO SUPABASE',
@@ -150,7 +167,8 @@ export async function GET(request: Request) {
     
     console.log('✅ REAL API: REAL data loaded', {
       orders: result.orders.length,
-      expenses: result.expenses.length
+      expenses: result.expenses.length,
+      payroll: result.payroll.length
     });
     
     return NextResponse.json(result, {
@@ -173,6 +191,7 @@ export async function GET(request: Request) {
         error: error.message,
         orders: [],
         expenses: [],
+        payroll: [],
         dishes: [],
         categories: [],
         realData: false
