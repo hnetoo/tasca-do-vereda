@@ -128,6 +128,15 @@ export default function OwnerMobilePage() {
   // Função de Reset de Produção com Proteções e Debug
   const handleResetProduction = async () => {
     console.log('🔄 ===== RESET PRODUCTION DEBUG START =====');
+    
+    // Mostrar debug visual
+    const resetDebugElement = document.getElementById('mobile-reset-debug');
+    const resetContentElement = document.getElementById('reset-debug-content');
+    if (resetDebugElement && resetContentElement) {
+      resetDebugElement.classList.remove('hidden');
+      resetContentElement.innerHTML = '🔄 Iniciando reset...';
+    }
+    
     console.log('🔄 Current Data Before Reset:', {
       localOrders: orders?.length || 0,
       localExpenses: expenses?.length || 0,
@@ -137,6 +146,11 @@ export default function OwnerMobilePage() {
       finalExpenses: currentData.expenses?.length || 0
     });
     
+    // Atualizar debug visual
+    if (resetContentElement) {
+      resetContentElement.innerHTML = `🔄 Dados: O(${supabaseData.orders?.length || 0}) E(${supabaseData.expenses?.length || 0})`;
+    }
+    
     // Verificação 1: Tem dados para resetar?
     const hasOrders = (orders?.length || 0) > 0 || (supabaseData.orders?.length || 0) > 0;
     const hasExpenses = (expenses?.length || 0) > 0 || (supabaseData.expenses?.length || 0) > 0;
@@ -145,6 +159,9 @@ export default function OwnerMobilePage() {
     
     if (!hasOrders && !hasExpenses) {
       console.log('🔄 Reset Cancelled: No data to clear');
+      if (resetContentElement) {
+        resetContentElement.innerHTML = '❌ Sem dados para limpar';
+      }
       alert('ℹ️ Não há dados de produção para limpar.');
       return;
     }
@@ -153,6 +170,9 @@ export default function OwnerMobilePage() {
     const confirm1 = confirm('🔄 Resetar Produção\n\nEsta ação irá limpar todos os pedidos e despesas do período atual.\n\nDeseja continuar?');
     if (!confirm1) {
       console.log('🔄 Reset Cancelled: User confirmation 1');
+      if (resetContentElement) {
+        resetContentElement.innerHTML = '❌ Cancelado pelo usuário';
+      }
       return;
     }
 
@@ -160,10 +180,16 @@ export default function OwnerMobilePage() {
     const confirm2 = confirm('⚠️ ATENÇÃO! ESTA AÇÃO É IRREVERSÍVEL!\n\nTodos os dados de pedidos e despesas serão APAGADOS permanentemente.\n\nÚltima chance: Tem certeza absoluta?');
     if (!confirm2) {
       console.log('🔄 Reset Cancelled: User confirmation 2');
+      if (resetContentElement) {
+        resetContentElement.innerHTML = '❌ Cancelado pelo usuário';
+      }
       return;
     }
 
     console.log('🔄 Reset Confirmed: Starting clear process...');
+    if (resetContentElement) {
+      resetContentElement.innerHTML = '🔄 Confirmando reset...';
+    }
     setIsResetting(true);
     
     try {
@@ -183,6 +209,11 @@ export default function OwnerMobilePage() {
       // Salvar backup no localStorage
       localStorage.setItem('production_backup_' + Date.now(), JSON.stringify(backupData));
 
+      // Atualizar debug visual
+      if (resetContentElement) {
+        resetContentElement.innerHTML = '🔄 Limpando API...';
+      }
+
       // Limpar dados via API
       const response = await fetch('/api/clear-production-data', {
         method: 'POST',
@@ -198,9 +229,19 @@ export default function OwnerMobilePage() {
       const result = await response.json();
       console.log('✅ API Response:', result);
 
+      // Atualizar debug visual com resultado
+      if (resetContentElement) {
+        resetContentElement.innerHTML = `✅ API: ${JSON.stringify(result.cleared)}`;
+      }
+
       // Verificar se a API realmente limpou os dados
       if (result.success && result.cleared) {
         console.log('✅ API successfully cleared data:', result.cleared);
+        
+        // Atualizar debug visual
+        if (resetContentElement) {
+          resetContentElement.innerHTML = '🔄 Limpando dados locais...';
+        }
         
         // Limpar dados locais
         setSupabaseData({
@@ -216,6 +257,11 @@ export default function OwnerMobilePage() {
 
         // Forçar reload completo dos dados
         setForceUpdate(prev => prev + 1);
+        
+        // Atualizar debug visual
+        if (resetContentElement) {
+          resetContentElement.innerHTML = '✅ Dados limpos! Recarregando...';
+        }
         
         // Forçar reload da página para garantir atualização
         setTimeout(() => {
@@ -238,6 +284,11 @@ export default function OwnerMobilePage() {
       
     } catch (error: any) {
       console.error('❌ Error resetting production:', error);
+      
+      // Atualizar debug visual com erro
+      if (resetContentElement) {
+        resetContentElement.innerHTML = `❌ Erro: ${error.message}`;
+      }
       
       // Notificação de erro
       const errorMessage = `❌ Falha ao resetar produção: ${error.message}`;
@@ -521,6 +572,12 @@ export default function OwnerMobilePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Debug Visual */}
       <div id="mobile-debug" />
+      
+      {/* Debug Visual para Reset */}
+      <div id="mobile-reset-debug" className="fixed top-32 left-2 bg-orange-500 text-black p-2 z-50 text-xs max-w-xs hidden">
+        <h4 className="font-bold">🔄 RESET DEBUG</h4>
+        <div id="reset-debug-content">Aguardando reset...</div>
+      </div>
       
       {/* Debug Visual para Mobile */}
       <div id="mobile-auth-debug"></div>
