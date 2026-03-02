@@ -1902,7 +1902,7 @@ const POS = () => {
                 <div className="bg-black/20 p-6 rounded-2xl border border-white/10">
                   <h3 className="text-sm font-bold text-slate-300 mb-4">Selecionar Método</h3>
                   <div className="space-y-3">
-                    {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
+                    {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'SPLIT'] as PaymentMethod[]).map(method => {
                       const remaining = (displayTotal || 0) - currentPayments.reduce((sum, p) => sum + p.amount, 0);
                       const canSubstitute = currentPayments.length === 1 && Math.abs(remaining) < 0.01;
                       const isDisabled = remaining <= 0.01 && !canSubstitute;
@@ -1999,7 +1999,7 @@ const POS = () => {
                 </div>
 
                 <div className="grid grid-cols-4 gap-2">
-                  {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE'] as PaymentMethod[]).map(method => {
+                  {(['NUMERARIO', 'TPA', 'TRANSFERENCIA', 'QR_CODE', 'SPLIT'] as PaymentMethod[]).map(method => {
                     const order = activeOrders.find((o: Order) => o.id === correctionOrderId);
                     const total = order?.total || 0;
                     const remaining = total - currentPayments.reduce((sum, p) => sum + p.amount, 0);
