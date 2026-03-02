@@ -13,7 +13,16 @@ export default function SettingsTablesPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingTable) {
-      const updatedTable = { ...editingTable, ...formData };
+      const updatedTable = { 
+        ...editingTable, 
+        ...formData,
+        // Garantir que zone e shape não sejam perdidos
+        zone: editingTable.zone || 'INTERIOR',
+        shape: editingTable.shape || 'SQUARE',
+        x: editingTable.x || 0,
+        y: editingTable.y || 0,
+        rotation: editingTable.rotation || 0
+      };
       updateTable(updatedTable);
       addNotification('success', 'Mesa atualizada com sucesso!');
     } else {
@@ -33,16 +42,16 @@ export default function SettingsTablesPage() {
         width: null,
         x_position: null,
         y_position: null,
-        x: null,
-        y: null,
-        zone: null,
-        shape: null,
+        x: 0, // Posição padrão
+        y: 0, // Posição padrão
+        zone: 'INTERIOR', // Zona padrão
+        shape: 'SQUARE', // Forma padrão
         min_capacity: null,
         max_capacity: null,
         qr_code_url: null,
         reservation_enabled: false,
         number: parseInt(formData.name.replace(/\D/g, '')) || 1,
-        rotation: null,
+        rotation: 0,
         user_id: null,
         activeOrderIds: []
       } as any;
