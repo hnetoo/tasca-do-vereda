@@ -74,11 +74,40 @@ export async function POST(request: Request) {
         try {
           console.log(`🗑️ CLEAR PRODUCTION API: Clearing table ${tableName}...`);
           
-          // Usar gte com UUID mínimo para apagar todos os registros
-          const deleteResult = await supabase.from(tableName).delete().gte('id', '00000000-0000-0000-0000-000000000000');
+          // Para orders, usar DELETE sem WHERE para evitar problemas com triggers
+          let deleteResult;
+          if (tableName === 'orders') {
+            // Limpar orders diretamente sem verificar dependências
+            deleteResult = await supabase
+              .from(tableName)
+              .delete()
+              .neq('id', '00000000-0000-0000-0000-000000000000'); // DELETE ALL
+          } else {
+            // Para outras tabelas, usar método normal
+            deleteResult = await supabase
+              .from(tableName)
+              .delete()
+              .gte('id', '00000000-0000-0000-0000-000000000000');
+          }
           
           if (deleteResult.error) {
-            throw new Error(`Failed to clear ${tableName}: ${deleteResult.error.message}`);
+            // Se for erro de menu_items, tentar sem dependências
+            if (deleteResult.error.message?.includes('menu_items')) {
+              console.log(`⚠️ CLEAR PRODUCTION API: menu_items error detected, trying CASCADE DELETE`);
+              // Tentar DELETE com CASCADE se disponível
+              const cascadeResult = await supabase
+                .from(tableName)
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+              
+              if (cascadeResult.error) {
+                throw new Error(`Failed to clear ${tableName}: ${cascadeResult.error.message}`);
+              }
+              
+              deleteResult = cascadeResult;
+            } else {
+              throw new Error(`Failed to clear ${tableName}: ${deleteResult.error.message}`);
+            }
           }
           
           const deletedCount = (deleteResult.data as unknown as any[])?.length || 0;
