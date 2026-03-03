@@ -1,5 +1,8 @@
 'use client';
 
+export const revalidate = 0;
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
@@ -116,36 +119,26 @@ export default function OwnerMobilePage() {
   // Cálculos financeiros
   const calculations = useSafeCardCalculations(currentData, period);
 
-  // Filtrar por período
+  // Filtrar por período - TEMPORARIAMENTE DESATIVADO PARA DEBUG
   const filteredData = useMemo(() => {
-    const now = new Date();
-    const filterDate = (date: string) => {
-      const d = new Date(date);
-      switch (period) {
-        case 'HOJE':
-          return d.toDateString() === now.toDateString();
-        case 'SEMANA':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return d >= weekAgo;
-        case 'MES':
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        case 'ANO':
-          return d.getFullYear() === now.getFullYear();
-        default:
-          return true;
-      }
-    };
-
     return {
-      orders: currentData.orders.filter((o: any) => filterDate(o.created_at || o.date)),
-      expenses: currentData.expenses.filter((e: any) => filterDate(e.created_at || e.date)),
-      payroll: currentData.payroll.filter((p: any) => filterDate(p.created_at || p.date))
+      orders: currentData.orders,
+      expenses: currentData.expenses,
+      payroll: currentData.payroll
     };
-  }, [currentData, period]);
+  }, [currentData]);
 
-  // Cálculos do período
+  // Cálculos do período - COM CÁLCULO MANUAL FORÇADO
   const periodCalculations = useSafeCardCalculations(filteredData, period);
+  
+  // Cálculo manual forçado para garantir valores corretos
+  const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+  const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   const totalPayroll = filteredData.payroll.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+  
+  // Sobrescrever os cálculos com os manuais
+  periodCalculations.revenue.value = fmt(manualRevenue);
+  periodCalculations.expenses.value = fmt(manualExpenses);
 
   // Verificar autenticação
   useEffect(() => {
@@ -222,6 +215,15 @@ export default function OwnerMobilePage() {
             <ArrowUpRight className="w-4 h-4" />
             <span>{filteredData.orders.length} vendas</span>
           </div>
+          {(() => {
+            console.log('DEBUG DASHBOARD VENDAS:', { 
+              totalVendas: filteredData.orders.length, 
+              primeiroValor: filteredData.orders[0]?.total,
+              todosValores: filteredData.orders.map(o => o.total),
+              calculado: periodCalculations.revenue.value
+            });
+            return null;
+          })()}
         </div>
 
         {/* Expenses Card */}
@@ -235,6 +237,15 @@ export default function OwnerMobilePage() {
             <ArrowDownRight className="w-4 h-4" />
             <span>{filteredData.expenses.length} despesas</span>
           </div>
+          {(() => {
+            console.log('DEBUG DASHBOARD DESPESAS:', { 
+              totalDespesas: filteredData.expenses.length, 
+              primeiroValor: filteredData.expenses[0]?.amount,
+              todosValores: filteredData.expenses.map(e => e.amount),
+              calculado: periodCalculations.expenses.value
+            });
+            return null;
+          })()}
         </div>
 
         {/* Payroll Card */}
@@ -248,6 +259,15 @@ export default function OwnerMobilePage() {
             <Users className="w-4 h-4" />
             <span>{filteredData.payroll.length} registros</span>
           </div>
+          {(() => {
+            console.log('DEBUG DASHBOARD FOLHA:', { 
+              totalFolha: filteredData.payroll.length, 
+              primeiroValor: filteredData.payroll[0]?.amount,
+              todosValores: filteredData.payroll.map(p => p.amount),
+              calculado: totalPayroll
+            });
+            return null;
+          })()}
         </div>
 
         {/* Net Profit Card */}
