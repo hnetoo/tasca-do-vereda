@@ -108,6 +108,8 @@ const filteredTables = useMemo(() => {
   console.log('🔍 TABLE LAYOUT: Mesas do banco (dbTables):', dbTables);
   console.log('🔍 TABLE LAYOUT: Total de mesas do banco:', dbTables.length);
   console.log('🔍 TABLE LAYOUT: Filtro ativo:', activeZone);
+  console.log('🔍 TABLE LAYOUT: isAdmin:', isAdmin);
+  console.log('🔍 TABLE LAYOUT: isLoading:', isLoading);
   
   if (!activeZone || !['INTERIOR', 'EXTERIOR', 'BALCAO'].includes(activeZone)) {
     console.log('🔍 TABLE LAYOUT: Sem filtro - retornando todas as mesas:', allTables.length);
@@ -121,7 +123,7 @@ const filteredTables = useMemo(() => {
   
   console.log('🔍 TABLE LAYOUT: Mesas filtradas para', activeZone, ':', filtered.length);
   return filtered;
-}, [dbTables, activeZone]);
+}, [dbTables, activeZone, isAdmin, isLoading]);
 
   const handleTableClick = (table: Table) => {
     if (!isEditMode) {
