@@ -48,28 +48,18 @@ export default function OwnerMobilePage() {
     setExpenses
   } = useStore();
 
-  // Mobile: carregar da API com AUTO-RELOAD A CADA 30 SEGUNDOS
+  // Debug inicial para mostrar dados salvos do reset
   useEffect(() => {
-    console.log('📱 Mobile: Forcing API load for fresh data...');
-    console.log('🔍 DEBUG ANTES DA API:', {
-      supabaseDataOrders: supabaseData.orders?.length || 0,
-      supabaseDataExpenses: supabaseData.expenses?.length || 0,
-      storeOrders: orders?.length || 0,
-      storeExpenses: expenses?.length || 0
-    });
-    
-    // MOSTRAR DEBUG SALVO DO RESET ANTERIOR
     if (typeof window !== 'undefined') {
       const savedDebug = localStorage.getItem('reset_debug_info');
       if (savedDebug) {
         console.log('🔍 ===== SAVED RESET DEBUG =====');
         console.log('🔍 Debug Info:', JSON.parse(savedDebug));
         console.log('🔍 ===========================');
-        
-        // Limpar após mostrar
         localStorage.removeItem('reset_debug_info');
+      }
     }
-  }, [orders, expenses, loadingSupabase]);
+  }, []);
 
   // Fallback: Carregar dados da API se store local estiver vazio - IGUAL AO OWNER DESKTOP!
   useEffect(() => {
