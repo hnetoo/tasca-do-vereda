@@ -6,18 +6,22 @@ import { useStore } from '@/store/useStore';
 import { 
   Smartphone, 
   Users, 
-  DollarSign, 
+  TrendingUp, 
   TrendingDown, 
   ArrowUpRight, 
   ArrowDownRight,
+  Plus,
+  RefreshCw,
   LogOut,
-  TrendingUp,
   Trash2,
   AlertTriangle,
-  Wallet
+  Wallet,
+  DollarSign
 } from 'lucide-react';
-import { useSafeCardCalculations } from '@/utils/cardCalculations';
 import { getOwnerMobileData } from '@/app/actions/ownerMobile';
+import { createSampleData } from '@/app/actions/createSampleData';
+import { resetProductionData } from '@/app/actions/resetProduction';
+import { useSafeCardCalculations } from '@/utils/cardCalculations';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(
@@ -218,6 +222,48 @@ export default function OwnerMobilePage() {
     netProfit: manualRevenue - manualExpenses - totalPayroll
   };
 
+  // Funções para gerenciar dados
+  const handleCreateSampleData = async () => {
+    try {
+      addNotification('🔄 Criando dados de exemplo...', 'info');
+      const result = await createSampleData();
+      
+      if (result.success) {
+        addNotification('✅ Dados de exemplo criados com sucesso!', 'success');
+        // Recarregar dados após criar
+        await loadApiData();
+      } else {
+        addNotification(`❌ Erro: ${result.error}`, 'error');
+      }
+    } catch (error: any) {
+      addNotification(`❌ Erro ao criar dados: ${error.message}`, 'error');
+    }
+  };
+
+  const handleResetData = async () => {
+    if (!confirm('⚠️ Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    try {
+      addNotification('🔄 Limpando dados de produção...', 'info');
+      const result = await resetProductionData();
+      
+      if (result.success) {
+        addNotification('✅ Dados limpos com sucesso!', 'success');
+        // Limpar store local
+        setOrders([]);
+        setExpenses([]);
+        // Recarregar dados
+        await loadApiData();
+      } else {
+        addNotification(`❌ Erro: ${result.error}`, 'error');
+      }
+    } catch (error: any) {
+      addNotification(`❌ Erro ao limpar dados: ${error.message}`, 'error');
+    }
+  };
+
   // Verificar autenticação
   useEffect(() => {
     const checkAuth = () => {
@@ -263,7 +309,7 @@ export default function OwnerMobilePage() {
         </div>
 
         {/* Period Selector */}
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto mb-4">
           {(['HOJE', 'SEMANA', 'MES', 'ANO'] as const).map(p => (
             <button
               key={p}
@@ -274,13 +320,36 @@ export default function OwnerMobilePage() {
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
-              {p === 'HOJE' ? 'Hoje' : p === 'SEMANA' ? 'Semana' : p === 'MES' ? 'Mês' : 'Ano'}
+              {p}
             </button>
           ))}
         </div>
+
+        {/* Control Buttons */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={handleCreateSampleData}
+            className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Criar Dados
+          </button>
+          <button
+            onClick={handleResetData}
+            className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Limpar Tudo
+          </button>
+          <button
+            onClick={loadApiData}
+            className="px-3 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Main Content */}
       <div className="p-4 space-y-4">
         {/* Revenue Card */}
         <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 rounded-2xl">
