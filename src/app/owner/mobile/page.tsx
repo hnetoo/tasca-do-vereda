@@ -303,13 +303,13 @@ export default function OwnerMobilePage() {
   };
 
   // Usar dados da API diretamente - sem lógica complexa
-  const currentData = {
+  const currentData = useMemo(() => ({
     orders: supabaseData.orders || [],
     expenses: supabaseData.expenses || [],
     payroll: supabaseData.payroll || [],
     dishes: supabaseData.dishes || [],
     categories: supabaseData.categories || []
-  };
+  }), [supabaseData]);
 
   // Usar hook seguro para cálculos dos cards
   const cardCalculations = useSafeCardCalculations(currentData, period);
