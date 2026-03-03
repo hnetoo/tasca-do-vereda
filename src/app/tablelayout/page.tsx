@@ -99,18 +99,29 @@ const TableLayout = () => {
     }
   };
 
-  const filteredTables = useMemo(() => {
-    const allTables = [...tables, ...dbTables.filter(db => !tables.find(t => t.id === db.id))];
-    
-    if (!activeZone || !['INTERIOR', 'EXTERIOR', 'BALCAO'].includes(activeZone)) {
-      return allTables;
-    }
-    
-    return allTables.filter(table => {
-      const tableZone = table.ambiente || table.zone;
-      return tableZone === activeZone;
-    });
-  }, [tables, dbTables, activeZone]);
+  // CONFIGURAÇÃO DEFINITIVA - USAR APENAS DADOS DO BANCO
+// Ignorar dados da Store, prioridade máxima ao banco de dados
+const filteredTables = useMemo(() => {
+  // USAR APENAS DADOS DO BANCO - ignorar Store local
+  const allTables = dbTables;
+  
+  console.log('🔍 TABLE LAYOUT: Mesas do banco (dbTables):', dbTables);
+  console.log('🔍 TABLE LAYOUT: Total de mesas do banco:', dbTables.length);
+  console.log('🔍 TABLE LAYOUT: Filtro ativo:', activeZone);
+  
+  if (!activeZone || !['INTERIOR', 'EXTERIOR', 'BALCAO'].includes(activeZone)) {
+    console.log('🔍 TABLE LAYOUT: Sem filtro - retornando todas as mesas:', allTables.length);
+    return allTables;
+  }
+  
+  const filtered = allTables.filter(table => {
+    const tableZone = table.ambiente || table.zone || 'INTERIOR';
+    return tableZone === activeZone;
+  });
+  
+  console.log('🔍 TABLE LAYOUT: Mesas filtradas para', activeZone, ':', filtered.length);
+  return filtered;
+}, [dbTables, activeZone]);
 
   const handleTableClick = (table: Table) => {
     if (!isEditMode) {

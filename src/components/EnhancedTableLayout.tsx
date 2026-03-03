@@ -1,5 +1,8 @@
 'use client';
 
+// CONFIGURAÇÃO DEFINITIVA - NÃO REVERTER PARA MOCKS
+// PRIORIDADE MÁXIMA AO BANCO DE DADOS - USAR APENAS DADOS DO SUPABASE
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   DndContext, 
@@ -168,8 +171,12 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
             : t
         );
         onTablesChange?.(updatedTables);
+        console.log('✅ Posição da mesa atualizada com sucesso:', { tableId: table.id, newX, newY });
       } else {
-        console.error('Failed to update table position:', result.error);
+        console.error('❌ Falha ao atualizar posição da mesa:', result.error);
+        // Mostrar erro no ecrã
+        alert(`❌ Erro ao salvar posição da mesa: ${result.error || 'Erro desconhecido'}`);
+        // NÃO reverter a mesa para o lugar antigo - manter na nova posição
       }
     } catch (error) {
       console.error('Error updating table position:', error);
@@ -179,10 +186,20 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
     }
   };
 
+  // LOG DEPURAÇÃO - MOSTRAR DADOS DO BANCO
+  console.log('🔍 Mesas vindas do banco:', tables);
+  console.log('🔍 Total de mesas:', tables.length);
+  console.log('🔍 Filtro ativo (ambiente):', activeZone);
+
   const filteredTables = tables.filter(table => {
     if (!activeZone) return true;
-    return table.ambiente === activeZone || table.zone === activeZone;
+    // Prioridade à coluna 'ambiente', fallback para 'zone' se não existir
+    const tableZone = table.ambiente || table.zone || 'INTERIOR';
+    return tableZone === activeZone;
   });
+
+  console.log('🔍 Mesas após filtro:', filteredTables.length);
+  console.log('🔍 Mesas filtradas:', filteredTables.map(t => ({ id: t.id, name: t.name, ambiente: t.ambiente || t.zone || 'INTERIOR' })));
 
   return (
     <div className="relative w-full h-full bg-gray-100 rounded-lg overflow-hidden">
