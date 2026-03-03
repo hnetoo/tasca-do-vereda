@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     console.log('🔍 REAL API: Checking environment variables...');
     
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
     
     console.log('🔍 REAL API: Environment check:', {
       hasUrl: !!supabaseUrl,
@@ -90,13 +90,13 @@ export async function GET(request: Request) {
     }
     
     if (!supabaseServiceKey) {
-      const error = '❌ ERRO CRÍTICO: SUPABASE_SERVICE_ROLE_KEY não está configurada na Vercel';
+      const error = '❌ ERRO CRÍTICO: NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY não está configurada na Vercel';
       console.error(error);
       return NextResponse.json(
         { 
           error: error,
-          details: 'Configure SUPABASE_SERVICE_ROLE_KEY no dashboard da Vercel',
-          missing: 'SUPABASE_SERVICE_ROLE_KEY',
+          details: 'Configure NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY no dashboard da Vercel',
+          missing: 'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY',
           orders: [],
           expenses: [],
           payroll: [],
