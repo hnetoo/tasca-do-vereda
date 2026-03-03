@@ -16,7 +16,11 @@ import {
   Trash2,
   AlertTriangle,
   Wallet,
-  DollarSign
+  DollarSign,
+  Receipt,
+  ShoppingCart,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { getOwnerMobileData } from '@/app/actions/ownerMobile';
 import { createSampleData } from '@/app/actions/createSampleData';
@@ -32,6 +36,9 @@ export default function OwnerMobilePage() {
   const router = useRouter();
   const [authChecking, setAuthChecking] = useState(true);
   const [period, setPeriod] = useState<'HOJE' | 'SEMANA' | 'MES' | 'ANO'>('HOJE');
+  const [showHistory, setShowHistory] = useState(false);
+  const [showTodaySales, setShowTodaySales] = useState(true);
+  const [showAccumulatedSales, setShowAccumulatedSales] = useState(true);
   const [supabaseData, setSupabaseData] = useState<any>({
     orders: [],
     expenses: [],
@@ -203,10 +210,44 @@ export default function OwnerMobilePage() {
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   const totalPayroll = filteredData.payroll.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
   
+  // Filtrar vendas de hoje
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Início do dia
+  const todayEnd = new Date(today);
+  todayEnd.setHours(23, 59, 59, 999); // Fim do dia
+  
+  const todayOrders = filteredData.orders.filter((order: any) => {
+    const orderDate = new Date(order.created_at);
+    return orderDate >= today && orderDate <= todayEnd;
+  });
+  
+  const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+  
+  // Vendas acumuladas (total desde o início - NUNCA ZERA)
+  const accumulatedRevenue = manualRevenue; // Já é o total acumulado
+  
+  // Data do primeiro registro para mostrar "desde quando"
+  const firstOrderDate = filteredData.orders.length > 0 
+    ? new Date(Math.min(...filteredData.orders.map((o: any) => new Date(o.created_at).getTime())))
+    : new Date();
+  
+  const daysSinceStart = Math.floor((today.getTime() - firstOrderDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Cálculo de impostos (6,5% sobre o total de vendas)
+  const taxRate = 0.065; // 6.5%
+  const totalTaxes = manualRevenue * taxRate;
+  
   console.log('🔍 CÁLCULOS MANUAIS:', {
     manualRevenue,
     manualExpenses,
     totalPayroll,
+    totalTaxes,
+    taxRate: `${(taxRate * 100)}%`,
+    todayRevenue,
+    todayOrdersCount: todayOrders.length,
+    accumulatedRevenue,
+    daysSinceStart,
+    firstOrderDate: firstOrderDate.toLocaleDateString('pt-AO'),
     ordersCount: filteredData.orders.length,
     expensesCount: filteredData.expenses.length,
     payrollCount: filteredData.payroll.length,
@@ -219,7 +260,10 @@ export default function OwnerMobilePage() {
     revenue: fmt(manualRevenue),
     expenses: fmt(manualExpenses),
     payroll: fmt(totalPayroll),
-    netProfit: manualRevenue - manualExpenses - totalPayroll
+    taxes: fmt(totalTaxes),
+    todayRevenue: fmt(todayRevenue),
+    accumulatedRevenue: fmt(accumulatedRevenue),
+    netProfit: manualRevenue - manualExpenses - totalPayroll - totalTaxes
   };
 
   // Funções para gerenciar dados
@@ -376,6 +420,30 @@ export default function OwnerMobilePage() {
           })()}
         </div>
 
+        {/* Taxes Card (6.5%) */}
+        <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-4 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-amber-100">Impostos (6,5%)</span>
+            <Receipt className="w-5 h-5 text-amber-100" />
+          </div>
+          <div className="text-2xl font-bold">{displayValues.taxes}</div>
+          <div className="flex items-center gap-1 text-sm text-amber-100">
+            <Receipt className="w-4 h-4" />
+            <span>Sobre total de vendas</span>
+          </div>
+          {(() => {
+            console.log('📱 MOBILE CARD IMPOSTOS:', { 
+              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
+              totalImpostos: totalTaxes,
+              taxa: `${(taxRate * 100)}%`,
+              calculado: fmt(totalTaxes),
+              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
+              timestamp: new Date().toISOString()
+            });
+            return null;
+          })()}
+        </div>
+
         {/* Expenses Card */}
         <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 rounded-2xl">
           <div className="flex items-center justify-between mb-2">
@@ -394,6 +462,57 @@ export default function OwnerMobilePage() {
               primeiroValor: filteredData.expenses[0]?.amount,
               todosValores: filteredData.expenses.map((e: any) => e.amount),
               calculado: periodCalculations.expenses.value,
+              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
+              timestamp: new Date().toISOString()
+            });
+            return null;
+          })()}
+        </div>
+
+        {/* Today Sales Card */}
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-4 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-indigo-100">Vendas de Hoje</span>
+            <Calendar className="w-5 h-5 text-indigo-100" />
+          </div>
+          <div className="text-2xl font-bold">{displayValues.todayRevenue}</div>
+          <div className="flex items-center gap-1 text-sm text-indigo-100">
+            <Clock className="w-4 h-4" />
+            <span>{todayOrders.length} pedidos hoje</span>
+          </div>
+          {(() => {
+            console.log('📱 MOBILE CARD VENDAS HOJE:', { 
+              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
+              todayRevenue,
+              todayOrdersCount: todayOrders.length,
+              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
+              timestamp: new Date().toISOString()
+            });
+            return null;
+          })()}
+        </div>
+
+        {/* Accumulated Sales Card */}
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-purple-100">Vendas Acumuladas</span>
+            <TrendingUp className="w-5 h-5 text-purple-100" />
+          </div>
+          <div className="text-2xl font-bold">{displayValues.accumulatedRevenue}</div>
+          <div className="flex items-center gap-1 text-sm text-purple-100">
+            <TrendingUp className="w-4 h-4" />
+            <span>Desde {firstOrderDate.toLocaleDateString('pt-AO')}</span>
+          </div>
+          <div className="text-xs text-purple-80 mt-1">
+            ({daysSinceStart} dias de operação)
+          </div>
+          {(() => {
+            console.log('📱 MOBILE CARD VENDAS ACUMULADAS:', { 
+              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
+              accumulatedRevenue,
+              daysSinceStart,
+              firstOrderDate: firstOrderDate.toLocaleDateString('pt-AO'),
+              totalOrders: filteredData.orders.length,
               userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
               timestamp: new Date().toISOString()
             });
@@ -440,6 +559,68 @@ export default function OwnerMobilePage() {
           <div className="text-sm text-white/60">
             Margem: {manualRevenue > 0 ? ((displayValues.netProfit / manualRevenue) * 100).toFixed(1) : 0}%
           </div>
+          <div className="text-xs text-white/40 mt-1">
+            (Vendas - Despesas - Folha - Impostos)
+          </div>
+        </div>
+
+        {/* Sales History Toggle */}
+        <div className="bg-gray-800 p-4 rounded-2xl">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-gray-300" />
+              <span className="text-gray-300 font-medium">
+                {showHistory ? 'Ocultar' : 'Mostrar'} Histórico de Vendas
+              </span>
+            </div>
+            <span className="text-gray-400">
+              {showHistory ? '▲' : '▼'}
+            </span>
+          </button>
+          
+          {showHistory && (
+            <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
+              {filteredData.orders.length === 0 ? (
+                <div className="text-center text-gray-400 py-4">
+                  Nenhuma venda encontrada
+                </div>
+              ) : (
+                filteredData.orders.map((order: any, index: number) => (
+                  <div key={order.id || index} className="bg-gray-700 p-3 rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="text-white font-medium">
+                          Pedido #{index + 1}
+                        </div>
+                        <div className="text-gray-400 text-sm">
+                          {new Date(order.created_at).toLocaleString('pt-AO', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                        <div className="text-gray-500 text-xs">
+                          Mesa: {order.table_id || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-green-400 font-bold text-lg">
+                          {fmt(order.total || 0)}
+                        </div>
+                        <div className="text-gray-400 text-xs">
+                          +{fmt(order.tax_total || 0)} imposto
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         {/* Refresh Button */}

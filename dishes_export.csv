@@ -1,0 +1,3 @@
+id,name,description,price,category_id,tax_percentage,tax_code,available,is_active,is_available_on_digital_menu,track_stock,stock_quantity,min_stock_quantity,max_stock_quantity,unit,created_at,updated_at
+2c552c60-f649-457e-a678-dc07c183e00f,Grelhada Mista,Grelhada mista de carne e peixe,20000.00,30f3aa8d-7722-4077-90da-bdbc9a7a85f6,0.0650,NOR,t,t,t,f,0.00,5.00,1000.00,un,2026-03-03 21:28:24.835488+00,2026-03-03 21:28:24.835488+00
+7c9ce74d-391b-435a-bf4c-ab676678d010,Fino Lambreta,Fino tradicional da lambreta,600.00,30f3aa8d-7722-4077-90da-bdbc9a7a85f6,0.0650,NOR,t,t,t,f,0.00,5.00,1000.00,un,2026-03-03 21:28:24.835488+00,2026-03-03 21:28:24.835488+00
