@@ -61,9 +61,9 @@ export default function OwnerMobilePage() {
       
       console.log('🔍 SERVER ACTION RESPONSE:', data);
       
-      if (data && typeof data === 'object' && 'error' in data) {
+      if (!data.success) {
         console.error('❌ Server Action returned error:', data.error);
-        addNotification(`❌ Erro: ${(data as any).error}`, 'error');
+        addNotification(`❌ Erro: ${data.error}`, 'error');
         return;
       }
       

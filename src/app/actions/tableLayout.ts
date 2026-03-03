@@ -34,7 +34,6 @@ export async function updateTableAmbiente(tableId: string, ambiente: 'INTERIOR' 
   const supabase = await createClient();
   
   try {
-    // Tentar atualizar com a coluna ambiente
     const { error } = await supabase
       .from('restaurant_tables')
       .update({ 
@@ -42,25 +41,6 @@ export async function updateTableAmbiente(tableId: string, ambiente: 'INTERIOR' 
         updated_at: new Date().toISOString()
       })
       .eq('id', tableId);
-
-    // Se der erro de coluna não existir, tentar sem a coluna ambiente
-    if (error && error.message.includes('column "ambiente" does not exist')) {
-      console.log('⚠️ Coluna ambiente não existe, atualizando mesa sem ambiente');
-      
-      const { error: fallbackError } = await supabase
-        .from('restaurant_tables')
-        .update({ 
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', tableId);
-
-      if (fallbackError) {
-        console.error('Error updating table without ambiente:', fallbackError);
-        return { success: false, error: fallbackError.message };
-      }
-
-      return { success: true };
-    }
 
     if (error) {
       console.error('Error updating table ambiente:', error);
@@ -90,7 +70,6 @@ export async function createTableWithAmbiente(tableData: {
   const supabase = await createClient();
   
   try {
-    // Primeiro, tentar criar com a coluna ambiente
     const { data, error } = await supabase
       .from('restaurant_tables')
       .insert({
@@ -110,37 +89,6 @@ export async function createTableWithAmbiente(tableData: {
       })
       .select()
       .single();
-
-    // Se der erro de coluna não existir, tentar sem a coluna ambiente
-    if (error && error.message.includes('column "ambiente" does not exist')) {
-      console.log('⚠️ Coluna ambiente não existe, criando mesa sem ambiente');
-      
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('restaurant_tables')
-        .insert({
-          id: crypto.randomUUID(),
-          name: tableData.name,
-          number: tableData.number,
-          seats: tableData.seats || 4,
-          shape: tableData.shape || 'RECTANGLE',
-          posicao_x: tableData.posicao_x || 0,
-          posicao_y: tableData.posicao_y || 0,
-          color: tableData.color || '#3B82F6',
-          status: 'AVAILABLE',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (fallbackError) {
-        console.error('Error creating table without ambiente:', fallbackError);
-        return { success: false, error: fallbackError.message };
-      }
-
-      return { success: true, data: fallbackData };
-    }
 
     if (error) {
       console.error('Error creating table:', error);
@@ -167,30 +115,11 @@ export async function getTablesByAmbiente(ambiente: 'INTERIOR' | 'EXTERIOR' | 'B
       .eq('is_active', true)
       .order('number', { ascending: true });
 
-    // Tentar filtrar por ambiente
     if (ambiente !== 'ALL') {
       query = query.eq('ambiente', ambiente);
     }
 
     const { data, error } = await query;
-
-    // Se der erro de coluna não existir, tentar sem filtro de ambiente
-    if (error && error.message.includes('column "ambiente" does not exist')) {
-      console.log('⚠️ Coluna ambiente não existe, buscando todas as mesas sem filtro');
-      
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('restaurant_tables')
-        .select('*')
-        .eq('is_active', true)
-        .order('number', { ascending: true });
-
-      if (fallbackError) {
-        console.error('Error fetching tables without ambiente filter:', fallbackError);
-        return { success: false, error: fallbackError.message };
-      }
-
-      return { success: true, data: fallbackData || [] };
-    }
 
     if (error) {
       console.error('Error fetching tables:', error);
