@@ -61,15 +61,21 @@ export default function OwnerMobilePage() {
     }
   }, []);
 
-  // Fallback: Carregar dados da API se store local estiver vazio - IGUAL AO OWNER DESKTOP!
+  // Mobile: SEMPRE carregar da API para dados em tempo real de qualquer dispositivo
   useEffect(() => {
-    const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
-    
-    if (!hasLocalData && !loadingSupabase) {
-      console.log('🔄 Loading data from API (fallback for owner mobile)');
+    console.log('📱 Mobile: Loading fresh data from API for cross-device consistency');
+    loadApiData();
+  }, []);
+
+  // Auto-refresh a cada 30 segundos para dados em tempo real
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refresh: Buscando novos dados...');
       loadApiData();
-    }
-  }, [orders, expenses, loadingSupabase]);
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Recarregar quando forceUpdate mudar (mas apenas se for > 1)
   useEffect(() => {
@@ -288,14 +294,14 @@ export default function OwnerMobilePage() {
     }
   };
 
-  // Usar dados do store local ou API - IGUAL AO OWNER DESKTOP!
+  // Mobile: SEMPRE usar dados da API para consistência entre dispositivos
   const currentData = useMemo(() => ({
-    orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
-    expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
-    dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
-    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories,
+    orders: supabaseData.orders || [],
+    expenses: supabaseData.expenses || [],
+    dishes: supabaseData.dishes || [],
+    categories: supabaseData.categories || [],
     payroll: supabaseData.payroll || []
-  }), [orders, expenses, dishes, categories, supabaseData]);
+  }), [supabaseData]);
 
   // Usar hook seguro para cálculos dos cards
   const cardCalculations = useSafeCardCalculations(currentData, period);
