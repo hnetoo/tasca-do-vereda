@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     
     // Verificar estrutura das tabelas principais
     const tables = ['orders', 'order_items', 'expenses', 'restaurant_tables', 'menu_categories', 'dishes'];
-    const schema = {};
+    const schema: Record<string, any> = {};
     
     for (const table of tables) {
       try {
