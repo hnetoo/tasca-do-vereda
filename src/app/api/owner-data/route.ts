@@ -33,6 +33,7 @@ export async function GET(request: Request) {
       
       // Verificar autenticação owner (owner_authenticated)
       const ownerCookie = cookies['owner_authenticated'];
+      const response = await fetch('/api/owner-data');
       if (ownerCookie === 'true') {
         isAuthenticated = true;
         console.log('✅ REAL API: Owner authenticated via owner_authenticated cookie');
