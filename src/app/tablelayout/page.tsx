@@ -363,7 +363,16 @@ const TableLayout = () => {
                 )}
              </div>
           ) : (
-          <div className={`flex-1 relative glass-panel rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-700 ${zoneConfig[activeZone].bg}`}>
+          <>
+            {isEditMode && (
+              <div className="absolute top-4 left-1/2 right-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
+                <div className="flex items-center gap-2 text-sm font-bold">
+                  <Move size={16} />
+                  MODO EDIÇÃO ATIVADO - Arraste as mesas para reposicionar
+                </div>
+              </div>
+            )}
+            <div className={`flex-1 relative glass-panel rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-700 ${zoneConfig[activeZone].bg}`}>
             <div className="absolute inset-0 pointer-events-none opacity-[0.05]" 
               style={{ 
                 backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
@@ -406,14 +415,24 @@ const TableLayout = () => {
                       {table && (
                         <div 
                           draggable={isEditMode}
-                          onDragStart={(e) => handleDragStart(e, table.id)}
-                          onDragEnd={() => { setDragOverPos(null); setDraggedTableId(null); }}
-                          onClick={() => toggleStatus(table)}
+                          onDragStart={(e) => {
+                            console.log('🎯 DRAG START on table:', table.name, 'EditMode:', isEditMode);
+                            handleDragStart(e, table.id);
+                          }}
+                          onDragEnd={() => { 
+                            console.log('🎯 DRAG END on table:', table.name);
+                            setDragOverPos(null); 
+                            setDraggedTableId(null); 
+                          }}
+                          onClick={() => {
+                            console.log('🎯 CLICK on table:', table.name, 'EditMode:', isEditMode);
+                            toggleStatus(table);
+                          }}
                           style={{ transform: `rotate(${table.rotation}deg)` }}
                           className={`w-full h-full border-2 flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 group relative
                             ${getStatusColor((table.status || 'AVAILABLE') as TableStatus)}
                             ${isSelected ? 'ring-4 ring-primary ring-offset-4 ring-offset-background z-20 scale-105 shadow-glow' : 'hover:scale-105'}
-                            ${isEditMode ? 'cursor-grab active:cursor-grabbing' : ''}
+                            ${isEditMode ? 'cursor-grab active:cursor-grabbing border-4 border-dashed border-yellow-400/50' : ''}
                             ${table.shape === 'CIRCLE' ? 'rounded-full' : table.shape === 'RECTANGLE' ? 'rounded-lg' : 'rounded-2xl'}
                             ${draggedTableId !== null && draggedTableId !== table.id ? 'pointer-events-none' : ''}
                           `}
