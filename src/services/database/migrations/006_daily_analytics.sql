@@ -21,11 +21,11 @@ RETURNS DECIMAL(12,2) AS $$
 DECLARE
     cost DECIMAL(12,2);
 BEGIN
-    SELECT COALESCE(SUM(mi.preco_custo * oi.quantity), 0)
+    SELECT COALESCE(SUM(d.cost_price * oi.quantity), 0)
     INTO cost
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.id
-    JOIN menu_items mi ON oi.dish_id = mi.id
+    JOIN dishes d ON oi.dish_id = d.id
     WHERE DATE(o.created_at) = target_date
     AND o.status = 'FECHADO'; -- Only count cost for closed orders? Or all? Usually cost is incurred when made.
     -- Assuming cost is incurred when order is made/delivered. But revenue is when closed.

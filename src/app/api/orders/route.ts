@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     
     // Validar ambiente
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
     
     if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json(
@@ -34,20 +34,13 @@ export async function POST(request: NextRequest) {
     // Gerar número do pedido
     const orderNumber = `ORD-${Date.now()}`;
     
-    // Inserir pedido
+    // Inserir pedido - ESTRUTURA CORRETA DA PRODUÇÃO
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .insert({
-        order_number: orderNumber,
-        table_id: tableId,
+        id: crypto.randomUUID(),
         status: status || 'OPEN',
         total: total || 0,
-        subtotal: subtotal || 0,
-        tax_amount: tax_amount || 0,
-        customer_name: customer_name || null,
-        customer_phone: customer_phone || null,
-        payment_method: payment_method || null,
-        notes: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -124,7 +117,7 @@ export async function GET(request: NextRequest) {
     
     // Validar ambiente
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
     
     if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json(

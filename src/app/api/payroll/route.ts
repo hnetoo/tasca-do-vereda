@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     
     // Validar ambiente
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
     
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('❌ PAYROLL API: Missing Supabase configuration');
@@ -56,15 +56,16 @@ export async function POST(request: NextRequest) {
     // Criar cliente Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Verificar se tabela existe
+    // Verificar se tabela existe - CRIAR SE NÃO EXISTIR
     try {
-      const { error: tableCheckError } = await supabase.from('payroll_records').select('id').limit(1);
+      const { error: tableCheckError } = await supabase.from('payroll').select('id').limit(1);
       if (tableCheckError && tableCheckError.code === 'PGRST116') {
-        console.error('❌ PAYROLL API: Table payroll_records does not exist');
-        return NextResponse.json(
-          { error: 'Tabela payroll_records não encontrada. Execute as migrações do Supabase.' },
-          { status: 500 }
-        );
+        // Criar tabela payroll automaticamente
+        console.log('💼 PAYROLL API: Creating payroll table...');
+        const { error: createError } = await supabase.rpc('create_payroll_table');
+        if (createError) {
+          console.error('❌ PAYROLL API: Error creating table:', createError);
+        }
       }
     } catch (error) {
       console.error('❌ PAYROLL API: Error checking table:', error);
@@ -87,10 +88,9 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     };
     
-    console.log('💼 PAYROLL API: Inserting data:', insertData);
-    
+    console.log('💼 PAYROLL API:// Inserir registro da folha salarial - CRIAR TABELA SE NÃO EXISTIR');
     const { data, error } = await supabase
-      .from('payroll_records')
+      .from('payroll')
       .insert(insertData)
       .select()
       .single();
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
     
     // Validar ambiente
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
     
     if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json(
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Construir query
-    let query = supabase.from('payroll_records').select('*');
+    let query = supabase.from('payroll').select('*');
     
     // Aplicar filtros
     if (month) {

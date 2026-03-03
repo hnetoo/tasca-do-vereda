@@ -52,11 +52,11 @@ BEGIN
     -- However, calculate_daily_product_cost uses DATE(o.created_at) which might default to UTC date.
     -- We should probably update that function too or inline the logic.
     -- Let's inline a simple cost calculation here to be safe and consistent.
-    SELECT COALESCE(SUM(mi.preco_custo * oi.quantity), 0)
+    SELECT COALESCE(SUM(d.cost_price * oi.quantity), 0)
     INTO daily_cost
     FROM order_items oi
     JOIN orders o ON oi.order_id = o.id
-    JOIN menu_items mi ON oi.dish_id = mi.id
+    JOIN dishes d ON oi.dish_id = d.id
     WHERE DATE(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Luanda') = target_date
     AND o.status = 'FECHADO';
 
