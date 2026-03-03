@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     
     if (type === 'all') {
       // Verificar se tabelas existem antes de limpar
-      const tablesToCheck = ['orders', 'expenses', 'order_items', 'dishes', 'categories'];
+      const tablesToCheck = ['orders', 'expenses', 'order_items', 'dishes', 'menu_categories'];
       const existingTables = [];
       
       console.log('🔍 CLEAR PRODUCTION API: Checking tables existence...');
