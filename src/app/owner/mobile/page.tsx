@@ -174,9 +174,22 @@ export default function OwnerMobilePage() {
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   const totalPayroll = filteredData.payroll.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
   
-  // Sobrescrever os cálculos com os manuais
-  periodCalculations.revenue.value = fmt(manualRevenue);
-  periodCalculations.expenses.value = fmt(manualExpenses);
+  console.log('🔍 CÁLCULOS MANUAIS:', {
+    manualRevenue,
+    manualExpenses,
+    totalPayroll,
+    ordersCount: filteredData.orders.length,
+    expensesCount: filteredData.expenses.length,
+    payrollCount: filteredData.payroll.length
+  });
+  
+  // USAR VALORES MANUAIS DIRETAMENTE - não tentar sobrescrever o objeto do hook
+  const displayValues = {
+    revenue: fmt(manualRevenue),
+    expenses: fmt(manualExpenses),
+    payroll: fmt(totalPayroll),
+    netProfit: manualRevenue - manualExpenses - totalPayroll
+  };
 
   // Verificar autenticação
   useEffect(() => {
@@ -248,7 +261,7 @@ export default function OwnerMobilePage() {
             <span className="text-green-100">Vendas</span>
             <DollarSign className="w-5 h-5 text-green-100" />
           </div>
-          <div className="text-2xl font-bold">{periodCalculations.revenue.value}</div>
+          <div className="text-2xl font-bold">{displayValues.revenue}</div>
           <div className="flex items-center gap-1 text-sm text-green-100">
             <ArrowUpRight className="w-4 h-4" />
             <span>{filteredData.orders.length} vendas</span>
@@ -273,7 +286,7 @@ export default function OwnerMobilePage() {
             <span className="text-red-100">Despesas</span>
             <TrendingDown className="w-5 h-5 text-red-100" />
           </div>
-          <div className="text-2xl font-bold">{periodCalculations.expenses.value}</div>
+          <div className="text-2xl font-bold">{displayValues.expenses}</div>
           <div className="flex items-center gap-1 text-sm text-red-100">
             <ArrowDownRight className="w-4 h-4" />
             <span>{filteredData.expenses.length} despesas</span>
@@ -298,7 +311,7 @@ export default function OwnerMobilePage() {
             <span className="text-blue-100">Folha Salarial</span>
             <Wallet className="w-5 h-5 text-blue-100" />
           </div>
-          <div className="text-2xl font-bold">{fmt(totalPayroll)}</div>
+          <div className="text-2xl font-bold">{displayValues.payroll}</div>
           <div className="flex items-center gap-1 text-sm text-blue-100">
             <Users className="w-4 h-4" />
             <span>{filteredData.payroll.length} registros</span>
@@ -319,7 +332,7 @@ export default function OwnerMobilePage() {
 
         {/* Net Profit Card */}
         <div className={`bg-gradient-to-r p-4 rounded-2xl ${
-          periodCalculations.totals.revenue - periodCalculations.totals.expenses >= 0 
+          displayValues.netProfit >= 0 
             ? 'from-emerald-600 to-emerald-700' 
             : 'from-orange-600 to-orange-700'
         }`}>
@@ -327,9 +340,9 @@ export default function OwnerMobilePage() {
             <span className="text-white/80">Lucro Líquido</span>
             <TrendingUp className="w-5 h-5 text-white/80" />
           </div>
-          <div className="text-2xl font-bold">{fmt(periodCalculations.totals.revenue - periodCalculations.totals.expenses)}</div>
+          <div className="text-2xl font-bold">{fmt(displayValues.netProfit)}</div>
           <div className="text-sm text-white/60">
-            Margem: {periodCalculations.totals.revenue > 0 ? ((periodCalculations.totals.revenue - periodCalculations.totals.expenses) / periodCalculations.totals.revenue * 100).toFixed(1) : 0}%
+            Margem: {manualRevenue > 0 ? ((displayValues.netProfit / manualRevenue) * 100).toFixed(1) : 0}%
           </div>
         </div>
 
