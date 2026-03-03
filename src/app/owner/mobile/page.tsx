@@ -623,19 +623,32 @@ export default function OwnerMobilePage() {
               <p className="text-xs text-slate-400">Dashboard em tempo real</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              localStorage.removeItem('owner_mobile_authenticated');
-              localStorage.removeItem('owner_mobile_user');
-              localStorage.removeItem('owner_mobile_login_time');
-              router.push('/owner/mobile/login');
-            }}
-            className="p-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white transition-all"
-            title="Sair do sistema"
-            aria-label="Sair do sistema"
-          >
-            <LogOut size={18} />
-          </button>
+          <div className="flex gap-2">
+            {/* BOTÃO DE REFRESH MANUAL */}
+            <button
+              onClick={() => {
+                console.log('🔄 Manual refresh triggered');
+                loadApiData();
+              }}
+              className="p-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white transition-all"
+              title="Atualizar dados"
+            >
+              <TrendingUp size={18} />
+            </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem('owner_mobile_authenticated');
+                localStorage.removeItem('owner_mobile_user');
+                localStorage.removeItem('owner_mobile_login_time');
+                router.push('/owner/mobile/login');
+              }}
+              className="p-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white transition-all"
+              title="Sair do sistema"
+              aria-label="Sair do sistema"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Period Selector */}
