@@ -64,13 +64,13 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
       // When role changes, reset permissions to role default unless manually overridden?
       // For simplicity, let's ask or just reset. Here we reset to new role defaults.
       const newRolePermissions = DEFAULT_ROLES[value] || [];
-      setFormData(prev => ({
+      setFormData((prev: Employee) => ({
         ...prev,
         role: value,
         permissions: newRolePermissions
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev: Employee) => ({
         ...prev,
         [name]: type === 'number' ? Number(value) : value,
       }));
@@ -78,13 +78,13 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
   };
 
   const togglePermission = (permission: Permission) => {
-    setFormData(prev => {
+    setFormData((prev: Employee) => {
       const currentPermissions = prev.permissions || [];
       const hasPermission = currentPermissions.includes(permission);
       
       let newPermissions;
       if (hasPermission) {
-        newPermissions = currentPermissions.filter(p => p !== permission);
+        newPermissions = currentPermissions.filter((p: Permission) => p !== permission);
       } else {
         newPermissions = [...currentPermissions, permission];
       }
@@ -128,7 +128,7 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
             <User size={20} className="text-primary" />
             {employee ? 'Editar Funcionário' : 'Novo Funcionário'}
           </h2>
-          <button onClick={onClose} className="hover:bg-slate-800 p-1 rounded"><X size={20} /></button>
+          <button onClick={onClose} className="hover:bg-slate-800 p-1 rounded" title="Fechar modal" aria-label="Fechar modal"><X size={20} /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-4">
@@ -246,7 +246,7 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
                 id="admissionDate"
                 name="admissionDate"
                 value={formData.admissionDate ? new Date(formData.admissionDate).toISOString().split('T')[0] : ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, admissionDate: new Date(e.target.value) }))}
+                onChange={(e) => setFormData((prev: Employee) => ({ ...prev, admissionDate: new Date(e.target.value) }))}
                 className="flex-1 p-2.5 bg-transparent outline-none"
               />
             </div>

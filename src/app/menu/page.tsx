@@ -2,12 +2,20 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { Database } from '@/types/supabase';
 import DishModal from '@/components/DishModal';
 import { normalizeDishImage } from '@/utils/imageUtils';
+import type { DishRow } from '@/components/DishModal';
 
-type DishRow = Database['public']['Tables']['dishes']['Row'];
-type CategoryRow = Database['public']['Tables']['menu_categories']['Row'];
+interface CategoryRow {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  sort_order: number | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 const fmt = (n: number) => {
   const val = Number.isFinite(n) ? n : 0;
@@ -98,7 +106,7 @@ export default function PublicMenuPage() {
       <header className="sticky top-0 z-30 p-6 border-b border-white/10 bg-slate-950/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-4">
           <div className="flex items-center gap-3 flex-1">
-            <img src="/logo.png" alt="Logo" style={{ width: 200, height: 60, objectFit: 'contain' }} />
+            <img src="/logo.png" alt="Logo" className="w-[200px] h-[60px] object-contain" />
             <div className="min-w-0">
               <div className="text-[18px] md:text-[20px] font-black text-white tracking-wider">Tasca do Vereda</div>
               <div className="text-xs text-slate-400 max-w-md truncate">Faça a sua encomenda e acompanhe os melhores grelhados da casa.</div>

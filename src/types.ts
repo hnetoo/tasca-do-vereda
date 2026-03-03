@@ -8,12 +8,31 @@
 
 
 
-import { Database } from './types/supabase';
-export type { Database };
-
 export type AnyRecord = any;
 
-type DishRow = Database['public']['Tables']['dishes']['Row'];
+// Simplified types without any['public']['Tables']
+interface DishRow {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  category_id: string | null;
+  available: boolean | null;
+  is_active: boolean | null;
+  preparation_time: number | null;
+  track_stock: boolean | null;
+  stock_quantity: number | null;
+  min_stock_quantity: number | null;
+  max_stock_quantity: number | null;
+  unit: string | null;
+  supplier_id: string | null;
+  tax_code: string | null;
+  tax_percentage: number | null;
+  cost_price: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 export type Dish = Omit<Partial<DishRow>, 
   'image_url' | 
@@ -63,7 +82,22 @@ export type Dish = Omit<Partial<DishRow>,
 
 export type Product = Dish;
 
-export type MenuCategory = Omit<Partial<Database['public']['Tables']['menu_categories']['Row']>,
+// Simplified types without any
+interface MenuCategoryRow {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  sort_order: number | null;
+  is_active: boolean | null;
+  parent_id: string | null;
+  is_available_on_digital_menu: boolean | null;
+  icon: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type MenuCategory = Omit<Partial<MenuCategoryRow>,
   'created_at' |
   'deleted_at' |
   'is_active' |
@@ -74,6 +108,7 @@ export type MenuCategory = Omit<Partial<Database['public']['Tables']['menu_categ
 > & {
   id: string; // Ensure ID is always present
   name: string; // Ensure name is always present
+  icon?: string; // Include icon field
   parentId?: string;
   availableOnDigitalMenu?: boolean;
   isAvailableOnDigitalMenu?: boolean;
@@ -84,7 +119,20 @@ export type MenuCategory = Omit<Partial<Database['public']['Tables']['menu_categ
   updatedAt?: Date;
 };
 export type Category = MenuCategory;
-export type OrderItem = Partial<Database['public']['Tables']['order_items']['Row']> & {
+// Simplified types without any
+interface OrderItemRow {
+  id: string;
+  order_id: string | null;
+  dish_id: string | null;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export type OrderItem = Partial<OrderItemRow> & {
   // Runtime / Local DB extensions
   dish_id?: string;
   dishId?: string; // CamelCase alias
@@ -157,7 +205,7 @@ export interface OrderPayment {
   timestamp?: string;
 }
 
-export type Order = Omit<Partial<Database['public']['Tables']['orders']['Row']>, 'created_at' | 'updated_at'> & {
+export type Order = Omit<Partial<any['public']['Tables']['public']['Tables']['orders']['Row']>, 'created_at' | 'updated_at'> & {
   items?: (OrderItem & { dish?: Dish; product?: Dish })[];
   payments?: OrderPayment[];
   payment_method?: PaymentMethod | string | null;
@@ -214,14 +262,14 @@ export type Order = Omit<Partial<Database['public']['Tables']['orders']['Row']>,
 export type Profile = AnyRecord;
 export type Customer = AnyRecord;
 
-export type Transaction = Database['public']['Tables']['transactions']['Row'] & {
+export type Transaction = any['public']['Tables']['public']['Tables']['transactions']['Row'] & {
   created_at?: string | null; // Legacy support
   payment_method?: string | null; // Legacy support
 };
 
 export type Payment = AnyRecord;
 
-export type Expense = Database['public']['Tables']['expenses']['Row'] & {
+export type Expense = any['public']['Tables']['public']['Tables']['expenses']['Row'] & {
   paymentMethod?: PaymentMethod | string;
   payment_method?: PaymentMethod | string; // Legacy support
   supplier_id?: string; // Legacy support
@@ -233,16 +281,16 @@ export type Expense = Database['public']['Tables']['expenses']['Row'] & {
 
 export type FixedExpense = AnyRecord;
 
-export type Supplier = Database['public']['Tables']['suppliers']['Row'];
+export type Supplier = any['public']['Tables']['public']['Tables']['suppliers']['Row'];
 
-export type StockItem = Database['public']['Tables']['stock_items']['Row'] & {
+export type StockItem = any['public']['Tables']['public']['Tables']['stock_items']['Row'] & {
   // Add any other relevant fields if they appear in useStore or inventory page
   createdAt?: Date;
   updatedAt?: Date;
   minThreshold?: number;
 };
 
-export type Table = Database['public']['Tables']['restaurant_tables']['Row'] & {
+export type Table = any['public']['Tables']['public']['Tables']['restaurant_tables']['Row'] & {
   activeOrderIds?: string[]; // Runtime extension
   // Redundant overrides removed to allow nulls from DB
   /*
@@ -261,7 +309,7 @@ export type TableZone = 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
 export type TableShape = 'RECTANGLE' | 'SQUARE' | 'CIRCLE';
 export type TableStatus = 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'PAYMENT' | 'DIRTY' | 'MAINTENANCE' | 'UPDATING';
 
-export type AuditLog = Database['public']['Tables']['audit_logs']['Row'] & {
+export type AuditLog = any['public']['Tables']['public']['Tables']['audit_logs']['Row'] & {
   metadata?: any;
   createdAt?: string | Date;
   userId?: string;
@@ -295,7 +343,7 @@ export interface Reservation {
   updatedAt?: Date;
 }
 
-export type Employee = Partial<Database['public']['Tables']['employees']['Row']> & {
+export type Employee = Partial<any['public']['Tables']['public']['Tables']['employees']['Row']> & {
   id: string;
   name: string;
   role: string;
@@ -354,7 +402,7 @@ export type Permission =
   | 'CORRECT_PAYMENT_PRE_PRINT'
   | 'CORRECT_PAYMENT_POST_PRINT';
 
-export type AttendanceRecord = Partial<Database['public']['Tables']['attendance_records']['Row']> & {
+export type AttendanceRecord = Partial<any['public']['Tables']['public']['Tables']['attendance_records']['Row']> & {
   id?: string;
   employeeId?: string | null;
   date?: string;

@@ -6,38 +6,10 @@ export async function addRealTestData() {
   const supabase = await createClient();
   
   try {
-    // Adicionar receitas reais de hoje
+    // Adicionar despesas reais de hoje
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     
-    const { error: revError } = await supabase
-      .from('revenues')
-      .insert([
-        {
-          id: `rev_real_${Date.now()}_1`,
-          amount: 25000.00,
-          description: 'Venda - Refeições do dia',
-          category: 'RESTAURANTE',
-          date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: `rev_real_${Date.now()}_2`,
-          amount: 12000.00,
-          description: 'Venda - Bebidas e Petiscos',
-          category: 'BAR',
-          date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ]);
-
-    if (revError) {
-      console.error('Erro ao adicionar receitas:', revError);
-      return { success: false, error: revError };
-    }
-
     // Adicionar despesas reais de hoje
     const { error: expError } = await supabase
       .from('expenses')
@@ -104,7 +76,6 @@ export async function addRealTestData() {
       success: true, 
       message: 'Dados reais adicionados com sucesso',
       data: {
-        revenues: 2,
         expenses: 2,
         orders: 2
       }

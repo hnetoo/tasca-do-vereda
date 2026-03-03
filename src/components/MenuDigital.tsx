@@ -5,12 +5,43 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import { Product, MenuCategory, SystemSettings } from '@/types';
-import { Database } from '@/types/supabase';
 import { useRealtimeCategoriesWithProducts } from '@/hooks/useSupabaseRealtime';
 import { useOfflineMenu } from '@/hooks/useOfflineCache';
 
-type MenuCategoryRow = Database['public']['Tables']['menu_categories']['Row'];
-type DishRow = Database['public']['Tables']['dishes']['Row'];
+// Simplified types without Database
+interface MenuCategoryRow {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  sort_order: number | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+interface DishRow {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  category_id: string | null;
+  available: boolean | null;
+  is_active: boolean | null;
+  is_available_on_digital_menu: boolean | null;
+  preparation_time: number | null;
+  track_stock: boolean | null;
+  stock_quantity: number | null;
+  min_stock_quantity: number | null;
+  max_stock_quantity: number | null;
+  unit: string | null;
+  supplier_id: string | null;
+  tax_code: string | null;
+  tax_percentage: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 export default function MenuDigital() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -224,8 +255,8 @@ export default function MenuDigital() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shadow-lg flex items-center justify-center" style={{ width: 200, height: 60 }}>
-                 <Image src={settings?.appLogoUrl || '/logo.png'} alt={settings?.restaurantName || 'Logo'} width={200} height={60} style={{ objectFit: 'contain' }} />
+              <div className="rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shadow-lg flex items-center justify-center w-[200px] h-[60px]">
+                 <Image src={settings?.appLogoUrl || '/logo.png'} alt={settings?.restaurantName || 'Logo'} width={200} height={60} className="object-contain" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-[18px] md:text-[20px] font-bold text-white leading-none mb-1 truncate">{settings?.restaurantName || 'Tasca do Vereda'}</h1>
@@ -363,7 +394,7 @@ export default function MenuDigital() {
                              <span className="text-[10px] font-bold text-slate-300">4.8</span>
                              <span className="text-[10px] text-slate-600">(120)</span>
                           </div>
-                          <button className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 active:scale-90 transition-transform hover:bg-emerald-400">
+                          <button className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 active:scale-90 transition-transform hover:bg-emerald-400" title="Adicionar ao carrinho" aria-label="Adicionar ao carrinho">
                              <Plus size={18} />
                           </button>
                        </div>

@@ -1,7 +1,6 @@
 import { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { createBrowserClient } from '@supabase/ssr';
-import type { Database } from '@/types/supabase';
 import { logger } from './logger';
 import { exponentialBackoff } from '@/utils/retry';
 import { calculateHash } from '@/utils/crypto';
@@ -221,7 +220,7 @@ export class SupabaseService {
     const targetUrl = url || supabaseUrl;
     const targetKey = key || supabaseAnonKey;
     if (url && key) {
-      this.client = createBrowserClient<Database>(url, key, { auth: { persistSession: true } });
+      this.client = createBrowserClient<any>(url, key, { auth: { persistSession: true } });
     } else {
       // Use the robust client from src/lib/supabase (env-based or mock)
       this.client = supabase;

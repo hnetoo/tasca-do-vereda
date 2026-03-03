@@ -3,9 +3,25 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import type { Database } from '@/types/supabase';
 
-type DishRow = Database['public']['Tables']['dishes']['Row'];
+// Export the type so it can be imported
+export interface DishRow {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  image_url: string | null;
+  category_id: string | null;
+  available: boolean | null;
+  is_active: boolean | null;
+  preparation_time: number | null;
+  track_stock: boolean | null;
+  stock_quantity: number | null;
+  tax_code: string | null;
+  tax_percentage: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 interface DishModalProps {
   isOpen: boolean;
@@ -39,6 +55,8 @@ export default function DishModal({ isOpen, onClose, dish }: DishModalProps) {
           <button
             onClick={onClose}
             className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
+            title="Fechar modal"
+            aria-label="Fechar modal"
           >
             <X className="w-5 h-5" />
           </button>

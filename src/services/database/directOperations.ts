@@ -1,5 +1,5 @@
 import sql from '@/lib/postgres';
-import { MenuCategory, Dish, Order, Table, Customer, Reservation, StockItem, CashShift, Delivery, SystemSettings, Fornecedor, Employee, Database } from '@/types';
+import { MenuCategory, Dish, Order, Table, Customer, Reservation, StockItem, CashShift, Delivery, SystemSettings, Fornecedor, Employee } from '@/types';
 import { logger } from '@/services/logger';
 import { v4 as uuidv4 } from 'uuid';
 import { isValidUUID } from '@/utils/uuid';
@@ -29,7 +29,7 @@ export const directOperations = {
   getEmployees: async (): Promise<{ success: boolean; data: Employee[]; error?: string }> => {
     try {
         const employees = await withRetry(async () => {
-            return await sql<Database['public']['Tables']['employees']['Row'][]>`
+            return await sql<any['public']['Tables']['employees']['Row'][]>`
                 SELECT * FROM employees
                 ORDER BY name ASC
             `;
@@ -333,7 +333,7 @@ export const directOperations = {
   getCategories: async (): Promise<{ success: boolean; data: MenuCategory[]; error?: string }> => {
     try {
       const categories = await withRetry(async () => {
-          return await sql<Database['public']['Tables']['menu_categories']['Row'][]>`
+          return await sql<any['public']['Tables']['menu_categories']['Row'][]>`
             SELECT * FROM menu_categories
             ORDER BY sort_order ASC
           `;
@@ -359,7 +359,7 @@ export const directOperations = {
   getDishes: async (): Promise<{ success: boolean; data: Dish[]; error?: string }> => {
     try {
       const dishes = await withRetry(async () => {
-          return await sql<Database['public']['Tables']['dishes']['Row'][]>`
+          return await sql<any['public']['Tables']['dishes']['Row'][]>`
             SELECT * FROM dishes
           `;
       }, 3, 1000, 'fetch dishes');

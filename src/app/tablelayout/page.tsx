@@ -1,6 +1,5 @@
 'use client';
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useStore } from '@/store/useStore';
@@ -10,8 +9,10 @@ import {
   Beer, Square, Circle, RectangleHorizontal, RotateCw, Settings2,
   Clock
 } from 'lucide-react';
-import { Table, TableStatus, TableZone, TableShape } from '@/types';
-import { MOCK_TABLES } from '@/constants';
+import { Table, TableStatus, TableZone } from '@/types';
+import EnhancedTableLayout from '@/components/EnhancedTableLayout';
+import CreateTableModal from '@/components/CreateTableModal';
+import { getTablesByAmbiente } from '@/app/actions/tableLayout';
 
 const TableLayout = () => {
   const { 
@@ -20,11 +21,12 @@ const TableLayout = () => {
   } = useStore();
   const user = useSelector((state: any) => state.auth.user);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [draggedTableId, setDraggedTableId] = useState<string | null>(null);
-  const [dragOverPos, setDragOverPos] = useState<{x: number, y: number} | null>(null);
   const [activeZone, setActiveZone] = useState<TableZone>('INTERIOR');
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [dbTables, setDbTables] = useState<Table[]>([]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -33,448 +35,263 @@ const TableLayout = () => {
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'OWNER';
 
-    useEffect(() => {
-        if (isAdmin && tables.length === 0) {
-            MOCK_TABLES.forEach((t: Table) => addTable(t));
-        }
-    }, [isAdmin, tables, addTable]);
+  // Load tables from database when zone changes
+  useEffect(() => {
+    if (isAdmin) {
+      loadTablesFromDB();
+    }
+  }, [activeZone, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const GRID_SIZE = 10; 
-  const GRID_ROWS = 8; 
+  const loadTablesFromDB = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getTablesByAmbiente(activeZone);
+      if (result.success && result.data) {
+        setDbTables(result.data);
+        // Update store with fetched tables
+        result.data.forEach(table => {
+          const exists = tables.find(t => t.id === table.id);
+          if (!exists) {
+            addTable(table);
+          } else {
+            // Update existing table with fresh data
+            updateTable(table);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading tables:', error);
+      addNotification('Erro ao carregar mesas do banco de dados', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredTables = useMemo(() => {
-    // Se não houver zona ativa ou se a zona não for válida, mostrar TODAS as mesas
+    const allTables = [...tables, ...dbTables.filter(db => !tables.find(t => t.id === db.id))];
+    
     if (!activeZone || !['INTERIOR', 'EXTERIOR', 'BALCAO'].includes(activeZone)) {
-      console.log('🔍 NO VALID ZONE - showing ALL tables:', tables.length);
-      return tables;
+      return allTables;
     }
     
-    const filtered = tables.filter(t => t.zone === activeZone);
-    console.log('🔍 FILTERED TABLES for zone', activeZone, ':', filtered.length, 'tables:', tables.length);
-    return filtered;
-  }, [tables, activeZone]);
-  const selectedTable = useMemo(() => tables.find(t => t.id === selectedTableId), [tables, selectedTableId]);
+    return allTables.filter(table => {
+      const tableZone = table.ambiente || table.zone;
+      return tableZone === activeZone;
+    });
+  }, [tables, dbTables, activeZone]);
 
-  const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { 
-    style: 'currency', 
-    currency: 'AOA', 
-    maximumFractionDigits: 0 
-  }).format(val);
-
-  const getTableStats = (tableId: string) => {
-    const tableOrders = activeOrders.filter(o => o.table_id === tableId && o.status === 'ABERTO');
-    const total = tableOrders.reduce((acc, o) => acc + (o.total || 0), 0);
-    
-    let timeElapsed = '';
-    if (tableOrders.length > 0) {
-      const earliest = new Date(Math.min(...tableOrders.map(o => new Date(o.timestamp || new Date()).getTime())));
-      const diffMs = currentTime.getTime() - earliest.getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      
-      if (diffMins < 60) {
-        timeElapsed = `${diffMins}m`;
-      } else {
-        const hours = Math.floor(diffMins / 60);
-        const mins = diffMins % 60;
-        timeElapsed = `${hours}h ${mins}m`;
-      }
-    }
-
-    return { total, timeElapsed };
-  };
-
-  const handleAddTable = () => {
-    const currentTables = tables || [];
-    const maxId = currentTables.length > 0 ? Math.max(...currentTables.map(t => parseInt(t.id) || 0)) : 0;
-    const nextId = String(maxId + 1);
-    
-    let foundX = 0, foundY = 0;
-    let found = false;
-    for (let y = 0; y < GRID_ROWS; y++) {
-      for (let x = 0; x < GRID_SIZE; x++) {
-        if (!filteredTables.find(t => t.x === x && t.y === y)) {
-          foundX = x;
-          foundY = y;
-          found = true;
-          break;
-        }
-      }
-      if (found) break;
-    }
-
-    const newTable: Table = {
-      id: nextId,
-      name: activeZone === 'BALCAO' ? `Lugar ${nextId}` : activeZone === 'EXTERIOR' ? `Pátio ${nextId}` : `Mesa ${nextId}`,
-      seats: activeZone === 'BALCAO' ? 1 : 4,
-      status: 'AVAILABLE',
-      x: foundX,
-      y: foundY,
-      zone: activeZone,
-      shape: activeZone === 'BALCAO' ? 'RECTANGLE' : 'SQUARE',
-      rotation: activeZone === 'BALCAO' ? 90 : 0,
-      number: parseInt(nextId),
-      is_active: true,
-      color: null,
-      created_at: new Date().toISOString(),
-      group_id: null,
-      height: null,
-      label: null,
-      updated_at: new Date().toISOString(),
-      user_id: null,
-      width: null,
-    };
-
-    addTable(newTable);
-    setSelectedTableId(nextId);
-    addNotification('success', `${activeZone} - Mesa ${nextId} adicionada.`);
-  };
-
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    if (!isEditMode) return;
-    e.stopPropagation();
-    console.log('🎯 DRAG START: Starting drag for table:', id, 'EditMode:', isEditMode);
-    try {
-      // Tauri compatibility: ensure dataTransfer works
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', id);
-        e.dataTransfer.setData('application/json', JSON.stringify({ id, type: 'TABLE' }));
-        console.log('🎯 DRAG START: Data transfer set successfully');
-      }
-    } catch (err) {
-      console.error('Drag start error:', err);
-      // Fallback for Tauri
-      console.log('Drag started for table:', id);
-    }
-    setDraggedTableId(id);
-    setSelectedTableId(id);
-  };
-
-  const handleDragOver = (e: React.DragEvent, x: number, y: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-    if (dragOverPos?.x !== x || dragOverPos?.y !== y) {
-      setDragOverPos({x, y});
-    }
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setDragOverPos(null);
-  };
-
-  const handleDrop = async (e: React.DragEvent, x: number, y: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('🎯 DROP: Attempting drop at position:', { x, y }, 'EditMode:', isEditMode, 'DraggedTableId:', draggedTableId);
-    setDragOverPos(null);
-    if (!isEditMode || draggedTableId === null) {
-      console.log('🎯 DROP: Cancelled - not in edit mode or no table dragged');
-      return;
-    }
-
-    const table = tables.find(t => t.id === draggedTableId);
-    if (!table) {
-      console.log('🎯 DROP: Cancelled - table not found:', draggedTableId);
-      return;
-    }
-
-    const occupied = filteredTables.find(t => t.x === x && t.y === y && t.id !== draggedTableId);
-    if (occupied) {
-      console.log('🎯 DROP: Cancelled - position occupied:', occupied);
-      addNotification('error', 'Colisão detectada! O espaço já contém um objeto.');
-      setDraggedTableId(null);
-      return;
-    }
-
-    console.log('🎯 DROP: Moving table', table.name, 'from', { x: table.x, y: table.y }, 'to', { x, y });
-
-    // Atualizar posição da mesa
-    const updatedTable = { ...table, x, y };
-    
-    // Usar a função updateTable do store (que já salva no banco)
-    updateTable(updatedTable);
-    setDraggedTableId(null);
-    addNotification('success', 'Mesa movida com sucesso!');
-    console.log('🎯 DROP: Table moved successfully via updateTable');
-  };
-
-  const toggleStatus = (table: Table) => {
-    if (isEditMode) {
+  const handleTableClick = (table: Table) => {
+    if (!isEditMode) {
       setSelectedTableId(table.id);
-      return;
+      // Toggle status logic here
+      const statuses: TableStatus[] = ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'PAYMENT', 'DIRTY'];
+      const currentIndex = statuses.indexOf(table.status as TableStatus);
+      const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+      
+      updateTableStatus(table.id, nextStatus);
+      addNotification(`Mesa ${table.name} atualizada para ${nextStatus}`, 'success');
     }
-    const nextStatus: Record<TableStatus, TableStatus> = {
-      'AVAILABLE': 'RESERVED',
-      'RESERVED': 'OCCUPIED',
-      'OCCUPIED': 'PAYMENT',
-      'PAYMENT': 'AVAILABLE',
-      'DIRTY': 'AVAILABLE',
-      'MAINTENANCE': 'AVAILABLE',
-      'UPDATING': 'AVAILABLE'
-    };
-    updateTableStatus(table.id, nextStatus[table.status as TableStatus]);
   };
 
-  const handleUpdateProperty = <T extends keyof Table>(prop: T, value: Table[T]) => {
-    if (selectedTable) {
-      const updatedTable = { ...selectedTable, [prop]: value };
-      updateTable(updatedTable);
-      addNotification('info', `${selectedTable.name} atualizada. Guardar layout para confirmar.`);
+  const handleTablesChange = (updatedTables: Table[]) => {
+    // Update store with new table positions
+    updatedTables.forEach(table => {
+      updateTable(table);
+    });
+  };
+
+  const handleCreateSuccess = () => {
+    addNotification('Mesa criada com sucesso', 'success');
+    loadTablesFromDB(); // Reload tables from DB
+  };
+
+  const getZoneIcon = (zone: TableZone) => {
+    switch (zone) {
+      case 'INTERIOR': return <Home size={16} />;
+      case 'EXTERIOR': return <Sun size={16} />;
+      case 'BALCAO': return <Beer size={16} />;
+      default: return <Home size={16} />;
+    }
+  };
+
+  const getZoneColor = (zone: TableZone) => {
+    switch (zone) {
+      case 'INTERIOR': return 'bg-blue-500';
+      case 'EXTERIOR': return 'bg-orange-500';
+      case 'BALCAO': return 'bg-purple-500';
+      default: return 'bg-gray-500';
     }
   };
 
   const getStatusColor = (status: TableStatus) => {
     switch (status) {
-      case 'AVAILABLE': return 'border-green-500 bg-green-500/10 text-green-500';
-      case 'OCCUPIED': return 'border-red-500 bg-red-600/20 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)]';
-      case 'RESERVED': return 'border-yellow-500 bg-yellow-500/10 text-yellow-500';
-      case 'PAYMENT': return 'border-primary bg-primary/20 text-primary animate-pulse shadow-glow';
-      default: return 'border-slate-700 bg-slate-800 text-slate-400';
+      case 'AVAILABLE': return 'bg-green-500';
+      case 'OCCUPIED': return 'bg-red-500';
+      case 'RESERVED': return 'bg-yellow-500';
+      case 'PAYMENT': return 'bg-blue-500';
+      case 'DIRTY': return 'bg-gray-500';
+      case 'MAINTENANCE': return 'bg-orange-500';
+      default: return 'bg-gray-400';
     }
   };
 
-  const zoneConfig = {
-    INTERIOR: { icon: Home, label: 'Interior', bg: 'bg-slate-900/40' },
-    EXTERIOR: { icon: Sun, label: 'Exterior', bg: 'bg-blue-900/10' },
-    BALCAO: { icon: Beer, label: 'Balcão', bg: 'bg-orange-900/10' },
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('pt-AO', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
   };
 
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('pt-AO', { 
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
+          <h2 className="text-2xl font-bold mb-2">Acesso Restrito</h2>
+          <p className="text-gray-400">Apenas administradores podem acessar o layout de mesas</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full bg-background overflow-hidden relative font-sans">
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="p-8 pb-4 flex justify-between items-end gap-6 shrink-0 relative z-20">
+    <div className="min-h-screen bg-black text-white p-4">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="flex items-center gap-2 text-primary mb-1">
-               <LayoutGrid size={16} />
-               <span className="text-xs font-mono font-bold tracking-widest uppercase">Arquitetura de Salão</span>
-            </div>
-            <h2 className="text-3xl font-bold text-white tracking-tight italic">Gestão de Ambientes</h2>
-            {isEditMode && (
-              <div className="mt-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse inline-flex items-center gap-2">
-                <Settings2 size={12} />
-                MODO DE EDIÇÃO ATIVADO
+            <h1 className="text-3xl font-bold mb-2">Layout de Mesas</h1>
+            <div className="flex items-center gap-4 text-sm text-gray-400">
+              <div className="flex items-center gap-2">
+                <Clock size={16} />
+                <span>{formatTime(currentTime)}</span>
               </div>
-            )}
+              <div>{formatDate(currentTime)}</div>
+            </div>
           </div>
           
-          <div className="flex gap-3 items-center">
-            {isAdmin && (
-              <button 
-                onClick={handleAddTable}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2"
-                title="Adicionar nova mesa"
-              >
-                <Plus size={18} />
-                <span className="hidden sm:inline">Adicionar Mesa</span>
-              </button>
-            )}
-            {saveStatus === 'SAVING' && (
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-400 animate-pulse">
-                <Clock size={14} className="animate-spin" />
-                <span>A guardar...</span>
-              </div>
-            )}
-            {saveStatus === 'SAVED' && (
-              <div className="flex items-center gap-2 text-xs font-medium text-green-500">
-                <CheckCircle2 size={14} />
-                <span>Guardado</span>
-              </div>
-            )}
-            {saveStatus === 'ERROR' && (
-              <div className="flex items-center gap-2 text-xs font-medium text-red-500">
-                <AlertCircle size={14} />
-                <span>Erro ao guardar</span>
-              </div>
-            )}
-
-            {isAdmin && (
-              <button 
-                onClick={() => { 
-                  console.log('🎯 BUTTON: Edit mode toggle clicked, current state:', isEditMode);
-                  setIsEditMode(!isEditMode); 
-                  if(isEditMode) {
-                    setSelectedTableId(null);
-                  }
-                }}
-                className={`px-8 py-4 text-xl font-black rounded-2xl border-4 flex items-center gap-3 transition-all shadow-lg
-                  ${isEditMode 
-                    ? 'bg-red-500 text-white border-red-500 shadow-red-500/50 animate-pulse hover:scale-105' 
-                    : 'bg-green-500 text-white border-green-500 shadow-green-500/50 hover:bg-green-600 hover:scale-105'
-                  }`}
-              >
-                {isEditMode ? <CheckCircle2 size={24} /> : <Move size={24} />}
-                {isEditMode ? 'TERMINAR EDIÇÃO' : 'MOVER MESAS'}
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="flex-1 p-8 pt-4 overflow-hidden flex flex-col">
-          {(!tables || tables.length === 0) ? (
-             <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center opacity-60">
-                <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center animate-pulse">
-                   <LayoutGrid size={48} className="text-slate-500" />
-                </div>
-                <div className="space-y-2">
-                   <h3 className="text-xl font-bold text-white">Nenhuma Mesa Encontrada</h3>
-                   <p className="text-sm text-slate-400 max-w-md">
-                     O banco de dados de mesas está vazio. Você pode começar do zero ou carregar o layout padrão.
-                   </p>
-                </div>
-                {isAdmin && (
-                  <div className="flex gap-3 flex-wrap justify-center">
-                    <button 
-                      onClick={handleAddTable}
-                      className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2"
-                    >
-                       <Plus size={18} /> Criar Primeira Mesa
-                    </button>
-                    <button 
-                      onClick={() => {
-                         if(window.confirm('Carregar layout padrão de mesas? Isso pode sobrescrever dados existentes.')) {
-                            MOCK_TABLES.forEach((t: Table) => addTable(t));
-                            window.location.reload();
-                         }
-                      }}
-                      className="px-8 py-3 bg-primary text-black rounded-xl font-bold hover:bg-primary/90 transition-all shadow-glow flex items-center gap-2"
-                    >
-                       <RotateCw size={18} /> Inicializar Layout Padrão
-                    </button>
-                  </div>
-                )}
-             </div>
-          ) : (
-            <>
-            {isEditMode && (
-              <div className="absolute top-4 left-1/2 right-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
-                <div className="flex items-center gap-2 text-sm font-bold">
-                  <Move size={16} />
-                  MODO EDIÇÃO ATIVADO - Arraste as mesas para reposicionar
-                </div>
-              </div>
-            )}
-            <div className="flex-1 relative glass-panel rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-700">
-            <div className="absolute inset-0 pointer-events-none opacity-[0.05]" 
-              style={{ 
-                backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
-                backgroundSize: '40px 40px'
-              }}>
-            </div>
-
-            <div 
-              className="grid gap-2 relative z-10 p-4" 
-              style={{ 
-                gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
-                gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
-                width: 'min(98%, 1200px)',
-                height: 'min(80vh, 500px)',
-                aspectRatio: `${GRID_SIZE}/${GRID_ROWS}`
-              }}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                isEditMode 
+                  ? 'bg-red-600 text-white hover:bg-red-700' 
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
             >
-              {Array.from({ length: GRID_ROWS }).map((_, y) => (
-                Array.from({ length: GRID_SIZE }).map((_, x) => {
-                  const table = tables.find(t => t.x === x && t.y === y);
-                  const isSelected = table?.id === selectedTableId;
-                  const isOver = dragOverPos?.x === x && dragOverPos?.y === y;
-                  const isOccupiedByOther = table && table.id !== draggedTableId;
-
-                  return (
-                    <div 
-                      key={`${x}-${y}`}
-                      onDragOver={(e) => handleDragOver(e, x, y)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, x, y)}
-                      className={`aspect-square rounded-xl flex items-center justify-center transition-all relative
-                        ${isEditMode && !table ? 'border border-dashed border-white/10 hover:bg-white/5' : ''}
-                        ${isOver && isOccupiedByOther ? 'bg-red-500/20 ring-2 ring-red-500' : ''}
-                        ${isOver && !isOccupiedByOther && draggedTableId !== null ? 'bg-primary/20 ring-2 ring-primary' : ''}
-                      `}
-                    >
-                      {table && (
-                        <div 
-                          draggable={isEditMode}
-                          onDragStart={(e) => handleDragStart(e, table.id)}
-                          onDragEnd={() => { setDragOverPos(null); setDraggedTableId(null); }}
-                          onClick={() => toggleStatus(table)}
-                          style={{ transform: `rotate(${table.rotation}deg)` }}
-                          className={`w-full h-full border-2 flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 group relative
-                            ${getStatusColor((table.status || 'AVAILABLE') as TableStatus)}
-                            ${isSelected ? 'ring-4 ring-primary ring-offset-4 ring-offset-background z-20 scale-105 shadow-glow' : 'hover:scale-105'}
-                            ${isEditMode ? 'cursor-grab active:cursor-grabbing border-4 border-dashed border-yellow-400/50' : ''}
-                            ${table.shape === 'CIRCLE' ? 'rounded-full' : table.shape === 'RECTANGLE' ? 'rounded-lg' : 'rounded-2xl'}
-                          `}
-                        >
-                          {isOver && isOccupiedByOther && (
-                            <div className="absolute inset-0 flex items-center justify-center z-30 bg-red-600/40 rounded-inherit">
-                               <AlertCircle className="text-white" size={24} />
-                            </div>
-                          )}
-                          
-                          <div className={`flex flex-col items-center gap-0.5 w-full px-1 text-center ${table.rotation !== 0 ? 'rotate-[-' + table.rotation + 'deg]' : ''}`}>
-                             <span className="font-black text-[9px] md:text-[10px] tracking-tighter uppercase leading-none mb-1">{table.name}</span>
-                             
-                             <div className="flex items-center justify-center gap-2 mb-2">
-                               <div className="flex items-center gap-1">
-                                 {table.shape === 'CIRCLE' && <Circle size={12} className="text-slate-300" />}
-                                 {table.shape === 'RECTANGLE' && <RectangleHorizontal size={12} className="text-slate-300" />}
-                                 {table.shape === 'SQUARE' && <Square size={12} className="text-slate-300" />}
-                               </div>
-                               <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest bg-black/50 px-2 py-1 rounded-full border border-white/10">
-                                 <Users size={10} /> {table.seats}
-                               </div>
-                             </div>
-                             
-                             {isEditMode && (
-                               <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest bg-yellow-400/80 px-1.5 py-0.5 rounded">
-                                  Editar
-                               </div>
-                             )}
-                          </div>
-
-                          {table.status === 'OCCUPIED' && !isEditMode && (
-                             <div className="absolute -top-1 -right-1 bg-black text-white text-[8px] font-black p-1 rounded-full border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <Users size={8} />
-                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              ))}
-            </div>
+              {isEditMode ? (
+                <>
+                  <MousePointer2 size={16} className="inline mr-2" />
+                  Modo Visualização
+                </>
+              ) : (
+                <>
+                  <Move size={16} className="inline mr-2" />
+                  Modo Edição
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all"
+            >
+              <Plus size={16} className="inline mr-2" />
+              Nova Mesa
+            </button>
           </div>
-          </>
-          )}
-          
-          <div className="mt-6 flex flex-wrap gap-6 justify-center text-slate-500 font-bold uppercase tracking-widest text-[9px]">
-             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500"></div> Livre</div>
-             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-600/40 border border-red-500 shadow-glow"></div> Ocupado</div>
-             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500"></div> Reservado</div>
-          </div>
+        </div>
+
+        {/* Zone Selector */}
+        <div className="flex gap-2">
+          {(['INTERIOR', 'EXTERIOR', 'BALCAO'] as TableZone[]).map(zone => (
+            <button
+              key={zone}
+              onClick={() => setActiveZone(zone)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeZone === zone
+                  ? `${getZoneColor(zone)} text-white`
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              {getZoneIcon(zone)}
+              {zone === 'INTERIOR' ? 'Interior' : zone === 'EXTERIOR' ? 'Exterior' : 'Balcão'}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <span className="ml-3">Carregando mesas...</span>
+        </div>
+      )}
+
+      {/* Table Layout */}
+      <div className="bg-gray-900 rounded-lg p-4 min-h-[600px]">
+        <EnhancedTableLayout
+          tables={filteredTables}
+          activeZone={activeZone}
+          isEditMode={isEditMode}
+          onTableClick={handleTableClick}
+          onTablesChange={handleTablesChange}
+        />
+      </div>
+
+      {/* Status Legend */}
+      <div className="mt-6 flex flex-wrap gap-6 justify-center">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full bg-green-500"></div>
+          <span className="text-sm text-gray-400">Livre</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full bg-red-500"></div>
+          <span className="text-sm text-gray-400">Ocupada</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+          <span className="text-sm text-gray-400">Reservada</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+          <span className="text-sm text-gray-400">Pagamento</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded-full bg-gray-500"></div>
+          <span className="text-sm text-gray-400">Suja</span>
+        </div>
+      </div>
+
+      {/* Edit Mode Indicator */}
       {isEditMode && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-xl shadow-2xl animate-pulse">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-xl shadow-2xl">
           <div className="flex items-center gap-3">
             <Move size={20} />
             <span className="font-bold">MODO EDIÇÃO ATIVADO - Arraste as mesas para reposicionar</span>
           </div>
         </div>
       )}
+
+      {/* Create Table Modal */}
+      <CreateTableModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleCreateSuccess}
+      />
     </div>
   );
-}
+};
 
 export default TableLayout;
-

@@ -645,8 +645,10 @@ const InventoryContent = () => {
         <div className="flex-1 flex flex-col">
           <div className="flex gap-4 mb-6">
             <div className="relative flex-1">
+              <label htmlFor="searchInput" className="sr-only">Buscar produtos</label>
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
+                id="searchInput"
                 type="text" 
                 placeholder="Buscar produtos..." 
                 className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-white outline-none focus:border-primary transition-all text-sm"
@@ -654,16 +656,20 @@ const InventoryContent = () => {
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <select 
-              className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-white outline-none focus:border-primary text-xs font-bold uppercase tracking-wide cursor-pointer"
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-            >
-              <option value="TODOS" className="bg-slate-900 text-slate-300">Todas as Categorias</option>
-              {categories.map((cat: MenuCategory) => (
-                <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <label htmlFor="categoryFilter" className="sr-only">Filtrar por categoria</label>
+              <select 
+                id="categoryFilter"
+                className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-white outline-none focus:border-primary text-xs font-bold uppercase tracking-wide cursor-pointer"
+                value={selectedCategory}
+                onChange={e => setSelectedCategory(e.target.value)}
+              >
+                <option value="TODOS" className="bg-slate-900 text-slate-300">Todas as Categorias</option>
+                {categories.map((cat: MenuCategory) => (
+                  <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
@@ -677,7 +683,7 @@ const InventoryContent = () => {
                         alt={product.name}
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        style={{ objectFit: 'cover' }}
+                        className="w-full h-full object-cover"
                         priority
                         placeholder="blur"
                         blurDataURL="/placeholder-image.jpg"
@@ -702,7 +708,7 @@ const InventoryContent = () => {
                     <div className="flex gap-2">
                       <button onClick={() => handleOpenProductModal(product)} className="flex-1 py-2 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">Editar</button>
                       <button onClick={() => handleDuplicateProduct(product)} className="w-10 py-2 rounded-lg border border-blue-500/10 text-blue-500/50 hover:bg-blue-500 hover:text-white transition-all" title="Duplicar"><Copy size={14} className="mx-auto" /></button>
-                      <button onClick={() => removeProduct(product.id)} className="w-10 py-2 rounded-lg border border-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} className="mx-auto" /></button>
+                      <button onClick={() => removeProduct(product.id)} className="w-10 py-2 rounded-lg border border-red-500/10 text-red-500/50 hover:bg-red-500 hover:text-white transition-all" title="Excluir" aria-label="Excluir produto"><Trash2 size={14} className="mx-auto" /></button>
                     </div>
                   </div>
                 </div>
@@ -987,8 +993,8 @@ const InventoryContent = () => {
                       <input required type="number" min="0" placeholder="0" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary font-mono" value={productForm.price || 0} onChange={e => setProductForm({...productForm, price: Number(e.target.value)})} />
                     </div>
                     <div className="space-y-4">
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
-                    <select required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.categoryId || ''} onChange={e => setProductForm({...productForm, categoryId: e.target.value})}>
+                      <label htmlFor="productCategory" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
+                    <select id="productCategory" required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.categoryId || ''} onChange={e => setProductForm({...productForm, categoryId: e.target.value})}>
                       {categories.slice().sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
                         <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                       ))}
@@ -1066,7 +1072,7 @@ const InventoryContent = () => {
                     <div className="aspect-video rounded-3xl bg-black/40 border-2 border-dashed border-white/10 relative overflow-hidden group hover:border-primary/50 transition-all">
                         {productForm.imageUrl ? (
                           <>
-                            <Image src={productForm.imageUrl} alt="Preview" fill style={{ objectFit: 'cover' }} />
+                            <Image src={productForm.imageUrl} alt="Preview" fill className="w-full h-full object-cover" />
                             <button 
                               type="button"
                               onClick={(e) => { e.preventDefault(); setProductForm({...productForm, imageUrl: ''}); }}

@@ -1,11 +1,36 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import type { Database } from '@/types/supabase';
 
-type RevenueRow = Database['public']['Tables']['revenues']['Row'];
-type ExpenseRow = Database['public']['Tables']['expenses']['Row'];
-type OrderRow = Database['public']['Tables']['orders']['Row'];
+// Simplified types without Database
+interface RevenueRow {
+  id: string;
+  order_id: string | null;
+  amount: number;
+  category: string | null;
+  description: string | null;
+  payment_method: string | null;
+  date: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+interface ExpenseRow {
+  id: string;
+  description: string;
+  amount: number;
+  category: string | null;
+  date: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+interface OrderRow {
+  id: string;
+  status: string;
+  total: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 type FinancialTx = {
   id: string;

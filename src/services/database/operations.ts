@@ -1,6 +1,5 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
 import { supabase as supabaseClientPromise } from './connection';
 
 
@@ -63,10 +62,10 @@ export const invalidateCache = (sql?: string) => {
 
 
 export async function executeQuery<T = any>(sql: string, params?: any[]): Promise<T[]>;
-export async function executeQuery<T = any>(supabase: SupabaseClient<Database>, sql: string, params?: any[]): Promise<T[]>;
-export async function executeQuery<T = any>(supabaseOrSql: SupabaseClient<Database> | string, sqlOrParams?: string | any[], params?: any[]): Promise<T[]> {
+export async function executeQuery<T = any>(supabase: SupabaseClient<any>, sql: string, params?: any[]): Promise<T[]>;
+export async function executeQuery<T = any>(supabaseOrSql: SupabaseClient<any> | string, sqlOrParams?: string | any[], params?: any[]): Promise<T[]> {
     const isStringMode = typeof supabaseOrSql === 'string';
-    const supabase = isStringMode ? await supabaseClientPromise : (supabaseOrSql as SupabaseClient<Database>);
+    const supabase = isStringMode ? await supabaseClientPromise : (supabaseOrSql as SupabaseClient<any>);
     const sql = (isStringMode ? supabaseOrSql : (sqlOrParams as string)) as string;
     const parameters = (isStringMode ? (Array.isArray(sqlOrParams) ? sqlOrParams : []) : (params || [])) as any[];
 
@@ -293,11 +292,11 @@ export async function executeQuery<T = any>(supabaseOrSql: SupabaseClient<Databa
     return result;
 }
 
-const selectQuery = async <T>(supabase: SupabaseClient<Database>, sql: string, params?: any[]): Promise<T[]> => {
+const selectQuery = async <T>(supabase: SupabaseClient<any>, sql: string, params?: any[]): Promise<T[]> => {
     return executeQuery<T>(supabase, sql, params);
 };
 
-export const withTransaction = async <T>(supabase: SupabaseClient<Database>, fn: () => Promise<T>): Promise<T> => {
+export const withTransaction = async <T>(supabase: SupabaseClient<any>, fn: () => Promise<T>): Promise<T> => {
   await executeQuery(supabase, 'BEGIN');
   try {
     const res = await fn();
@@ -310,7 +309,7 @@ export const withTransaction = async <T>(supabase: SupabaseClient<Database>, fn:
 };
 
 export const databaseOperations = {
-  _handleDatabaseOperation: async <T>(operation: (supabase: SupabaseClient<Database>) => Promise<T>, context: string, functionName: string = 'databaseOperations', client?: SupabaseClient<Database>): Promise<{ success: boolean; data?: T; error?: string }> => {
+  _handleDatabaseOperation: async <T>(operation: (supabase: SupabaseClient<any>) => Promise<T>, context: string, functionName: string = 'databaseOperations', client?: SupabaseClient<any>): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
       const dbClient = client || await supabaseClientPromise;
       const data = await operation(dbClient);
@@ -610,7 +609,7 @@ export const databaseOperations = {
     }, 'get categories', 'DATABASE') as Promise<{ success: boolean; data: MenuCategory[]; error?: string }>;
   },
 
-  saveProduct: async (product: Dish, client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveProduct: async (product: Dish, client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         logger.debug(`Saving product ${product.id}`, { product }, 'DATABASE');
         
@@ -651,10 +650,10 @@ export const databaseOperations = {
     }, `save product ${product.id}`, 'DATABASE', client);
   },
 
-  saveDish: async (dish: Dish, client?: SupabaseClient<Database>) => databaseOperations.saveProduct(dish, client),
-  saveProducts: async (products: Dish[], client?: SupabaseClient<Database>) => databaseOperations.saveDishes(products, client),
+  saveDish: async (dish: Dish, client?: SupabaseClient<any>) => databaseOperations.saveProduct(dish, client),
+  saveProducts: async (products: Dish[], client?: SupabaseClient<any>) => databaseOperations.saveDishes(products, client),
   
-  saveCategory: async (category: MenuCategory, client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveCategory: async (category: MenuCategory, client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         logger.debug(`Saving category ${category.id}`, { category }, 'DATABASE');
         
@@ -683,7 +682,7 @@ export const databaseOperations = {
       }, `save category ${category.id}`, 'DATABASE', client);
     },
 
-  deleteDish: async (id: string, client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  deleteDish: async (id: string, client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
       return databaseOperations._handleDatabaseOperation(async (supabase) => {
           logger.debug(`Deleting dish ${id}`, undefined, 'DATABASE');
           const { error } = await supabase
@@ -698,7 +697,7 @@ export const databaseOperations = {
       }, `delete dish ${id}`, 'DATABASE', client);
   },
 
-  deleteCategory: async (id: string, client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  deleteCategory: async (id: string, client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
       return databaseOperations._handleDatabaseOperation(async (supabase) => {
           logger.debug(`Deleting category ${id}`, undefined, 'DATABASE');
           const { error } = await supabase
@@ -713,7 +712,7 @@ export const databaseOperations = {
       }, `delete category ${id}`, 'DATABASE', client);
   },
   
-  saveDishes: async (dishes: Dish[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveDishes: async (dishes: Dish[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
       for (const dish of dishes) {
           const result = await databaseOperations.saveDish(dish, client);
           if (!result.success) return result;
@@ -721,7 +720,7 @@ export const databaseOperations = {
       return { success: true };
   },
 
-  saveCategories: async (categories: MenuCategory[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveCategories: async (categories: MenuCategory[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
       for (const category of categories) {
           const result = await databaseOperations.saveCategory(category, client);
           if (!result.success) return result;
@@ -729,7 +728,7 @@ export const databaseOperations = {
       return { success: true };
   },
 
-  saveMenu: async (dishes: Dish[], categories: MenuCategory[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveMenu: async (dishes: Dish[], categories: MenuCategory[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       // Use transaction to ensure both dishes and categories are saved together
       return await withTransaction(supabase, async () => {
@@ -899,7 +898,7 @@ export const databaseOperations = {
       return { success: true };
   },
 
-  saveOrder: async (order: Order, client?: SupabaseClient<Database>): Promise<boolean> => {
+  saveOrder: async (order: Order, client?: SupabaseClient<any>): Promise<boolean> => {
     const orderId = order.id;
     if (!orderId) {
         logger.error('Cannot save order without ID', { order }, 'DATABASE');
@@ -1256,7 +1255,7 @@ export const databaseOperations = {
     }, 'delete delivery');
   },
 
-  saveSettings: async (settings: SystemSettings, client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveSettings: async (settings: SystemSettings, client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       const dbSettings = {
         id: settings.id,
@@ -1303,7 +1302,7 @@ export const databaseOperations = {
     }, 'save settings', 'DATABASE', client);
   },
 
-  saveSupplier: async (supplier: Fornecedor, client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveSupplier: async (supplier: Fornecedor, client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       const { error } = await supabase.from('suppliers').upsert(supplier);
       if (error) throw error;
@@ -1311,7 +1310,7 @@ export const databaseOperations = {
     }, 'save supplier', 'DATABASE', client);
   },
   
-  saveSuppliers: async (suppliers: Fornecedor[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveSuppliers: async (suppliers: Fornecedor[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
       for (const supplier of suppliers) {
           const result = await databaseOperations.saveSupplier(supplier, client);
           if (!result.success) return result;
@@ -1319,7 +1318,7 @@ export const databaseOperations = {
       return { success: true };
   },
 
-  saveEmployees: async (employees: Employee[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveEmployees: async (employees: Employee[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       const dbEmployees = employees.map(e => ({
         ...e,
@@ -1336,7 +1335,7 @@ export const databaseOperations = {
     }, 'save employees', 'DATABASE', client);
   },
 
-  deleteEmployee: async (id: string, client?: SupabaseClient<Database>): Promise<boolean> => {
+  deleteEmployee: async (id: string, client?: SupabaseClient<any>): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
       const { error } = await supabase.from('employees').delete().eq('id', id);
       if (error) throw error;
@@ -1345,7 +1344,7 @@ export const databaseOperations = {
     return result.success;
   },
 
-  saveAttendance: async (records: AttendanceRecord[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveAttendance: async (records: AttendanceRecord[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       const dbRecords = records.map(r => ({
         ...r,
@@ -1368,7 +1367,7 @@ export const databaseOperations = {
     }, 'save attendance', 'DATABASE', client);
   },
   
-  saveUsers: async (users: User[], client?: SupabaseClient<Database>): Promise<{ success: boolean; error?: string }> => {
+  saveUsers: async (users: User[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         // Users are typically handled by Supabase Auth, but if we have a users table:
         // We'll assume a 'profiles' or 'users' table exists for application data
