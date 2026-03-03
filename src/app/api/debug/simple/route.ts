@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     console.log('🔍 Environment check:', env);
     
     // Tentar conectar ao Supabase
-    let supabaseResult = { connected: false, error: null };
+    let supabaseResult = { connected: false, error: null as string | null };
     
     try {
       const { createClient } = await import('@supabase/supabase-js');
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
         
         supabaseResult = {
           connected: !error,
-          error: error?.message
+          error: error?.message || null
         };
       }
     } catch (e: any) {
