@@ -16,27 +16,27 @@ CREATE TABLE IF NOT EXISTS payroll_records (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Inserir dados de exemplo para orders
-INSERT INTO orders (id, table_id, status, total, subtotal, tax, created_at, updated_at) VALUES
-    ('order-1', 'table-1', 'completed', 50000.00, 45000.00, 5000.00, NOW(), NOW()),
-    ('order-2', 'table-2', 'completed', 78400.00, 70000.00, 8400.00, NOW(), NOW()),
-    ('order-3', 'table-3', 'completed', 35000.00, 31500.00, 3500.00, NOW(), NOW());
+-- Inserir dados de exemplo para orders (se não existirem)
+INSERT INTO orders (id, table_id, status, total, tax_total, created_at, updated_at) VALUES
+    ('order-1', 'table-1', 'CLOSED', 50000.00, 5000.00, NOW(), NOW()),
+    ('order-2', 'table-2', 'CLOSED', 78400.00, 8400.00, NOW(), NOW()),
+    ('order-3', 'table-3', 'CLOSED', 35000.00, 3500.00, NOW(), NOW());
 
 -- Inserir itens dos pedidos
-INSERT INTO order_items (id, order_id, dish_id, quantity, price, total, created_at, updated_at) VALUES
-    ('item-1', 'order-1', '899a87f8-cf99-49c4-b736-6268196b1cb8', 2, 20000.00, 40000.00, NOW(), NOW()),
-    ('item-2', 'order-1', '4c2b1fd6-d704-4764-8119-766c1f210c5c', 2, 600.00, 1200.00, NOW(), NOW()),
-    ('item-3', 'order-2', '899a87f8-cf99-49c4-b736-6268196b1cb8', 3, 20000.00, 60000.00, NOW(), NOW()),
-    ('item-4', 'order-2', '4c2b1fd6-d704-4764-8119-766c1f210c5c', 4, 600.00, 2400.00, NOW(), NOW()),
-    ('item-5', 'order-3', '899a87f8-cf99-49c4-b736-6268196b1cb8', 1, 20000.00, 20000.00, NOW(), NOW()),
-    ('item-6', 'order-3', '4c2b1fd6-d704-4764-8119-766c1f210c5c', 5, 600.00, 3000.00, NOW(), NOW());
+INSERT INTO order_items (id, order_id, dish_id, quantity, unit_price, tax_amount, created_at) VALUES
+    ('item-1', 'order-1', '899a87f8-cf99-49c4-b736-6268196b1cb8', 2, 20000.00, 2600.00, NOW()),
+    ('item-2', 'order-1', '4c2b1fd6-d704-4764-8119-766c1f210c5c', 2, 600.00, 78.00, NOW()),
+    ('item-3', 'order-2', '899a87f8-cf99-49c4-b736-6268196b1cb8', 3, 20000.00, 3900.00, NOW()),
+    ('item-4', 'order-2', '4c2b1fd6-d704-4764-8119-766c1f210c5c', 4, 600.00, 156.00, NOW()),
+    ('item-5', 'order-3', '899a87f8-cf99-49c4-b736-6268196b1cb8', 1, 20000.00, 1300.00, NOW()),
+    ('item-6', 'order-3', '4c2b1fd6-d704-4764-8119-766c1f210c5c', 5, 600.00, 195.00, NOW());
 
 -- Inserir dados de exemplo para expenses
-INSERT INTO expenses (id, description, amount, category, created_at, updated_at) VALUES
-    ('exp-1', 'Compra de ingredientes frescos', 15000.00, 'food', NOW(), NOW()),
-    ('exp-2', 'Água e luz do restaurante', 8000.00, 'utilities', NOW(), NOW()),
-    ('exp-3', 'Material de limpeza', 3500.00, 'supplies', NOW(), NOW()),
-    ('exp-4', 'Internet e telefone', 4500.00, 'utilities', NOW(), NOW());
+INSERT INTO expenses (id, description, amount, category, date, created_at, updated_at) VALUES
+    ('exp-1', 'Compra de ingredientes frescos', 15000.00, 'food', CURRENT_DATE, NOW(), NOW()),
+    ('exp-2', 'Água e luz do restaurante', 8000.00, 'utilities', CURRENT_DATE, NOW(), NOW()),
+    ('exp-3', 'Material de limpeza', 3500.00, 'supplies', CURRENT_DATE, NOW(), NOW()),
+    ('exp-4', 'Internet e telefone', 4500.00, 'utilities', CURRENT_DATE, NOW(), NOW());
 
 -- Inserir dados de exemplo para payroll_records
 INSERT INTO payroll_records (id, employee_id, base_salary, net_salary, month, overtime_hours, overtime_pay, bonuses, deductions, payment_date, payment_method, notes, created_at, updated_at) VALUES
