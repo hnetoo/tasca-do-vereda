@@ -16,6 +16,26 @@ CREATE TABLE IF NOT EXISTS payroll_records (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Criar categoria de menu se não existir
+INSERT INTO menu_categories (id, name, description) 
+SELECT 
+    gen_random_uuid(), 'Pratos Principais', 'Categoria principal para pratos'
+WHERE NOT EXISTS (SELECT 1 FROM menu_categories WHERE name = 'Pratos Principais');
+
+-- Criar pratos necessários se não existirem
+INSERT INTO dishes (id, name, description, price, category_id, tax_percentage, tax_code, available, is_active, is_available_on_digital_menu, track_stock, stock_quantity, min_stock_quantity, max_stock_quantity, unit, created_at, updated_at)
+SELECT 
+    gen_random_uuid(), 'Grelhada Mista', 'Grelhada mista de carne e peixe', 20000.00, 
+    (SELECT id FROM menu_categories WHERE name = 'Pratos Principais' LIMIT 1), 
+    0.065, 'NOR', true, true, true, false, 0, 5, null, 'un', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM dishes WHERE name = 'Grelhada Mista')
+UNION ALL
+SELECT 
+    gen_random_uuid(), 'Fino Lambreta', 'Fino tradicional da lambreta', 600.00, 
+    (SELECT id FROM menu_categories WHERE name = 'Pratos Principais' LIMIT 1), 
+    0.065, 'NOR', true, true, true, false, 0, 5, null, 'un', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM dishes WHERE name = 'Fino Lambreta');
+
 -- Criar mesas necessárias se não existirem
 INSERT INTO restaurant_tables (id, name, number, seats, zone, status) 
 SELECT 
@@ -50,43 +70,43 @@ SELECT
     'CLOSED', 35000.00, 3500.00, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM orders WHERE total = 35000.00);
 
--- Inserir itens dos pedidos (usando IDs de pedidos válidos)
+-- Inserir itens dos pedidos (usando IDs de pratos válidos)
 INSERT INTO order_items (id, order_id, dish_id, quantity, unit_price, tax_amount, created_at)
 SELECT 
     gen_random_uuid(), 
     (SELECT id FROM orders WHERE total = 50000.00 LIMIT 1), 
-    '899a87f8-cf99-49c4-b736-6268196b1cb8', 2, 20000.00, 2600.00, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 50000.00 LIMIT 1) AND dish_id = '899a87f8-cf99-49c4-b736-6268196b1cb8')
+    (SELECT id FROM dishes WHERE name = 'Grelhada Mista' LIMIT 1), 2, 20000.00, 2600.00, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 50000.00 LIMIT 1) AND dish_id = (SELECT id FROM dishes WHERE name = 'Grelhada Mista' LIMIT 1))
 UNION ALL
 SELECT 
     gen_random_uuid(), 
     (SELECT id FROM orders WHERE total = 50000.00 LIMIT 1), 
-    '4c2b1fd6-d704-4764-8119-766c1f210c5c', 2, 600.00, 78.00, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 50000.00 LIMIT 1) AND dish_id = '4c2b1fd6-d704-4764-8119-766c1f210c5c')
+    (SELECT id FROM dishes WHERE name = 'Fino Lambreta' LIMIT 1), 2, 600.00, 78.00, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 50000.00 LIMIT 1) AND dish_id = (SELECT id FROM dishes WHERE name = 'Fino Lambreta' LIMIT 1))
 UNION ALL
 SELECT 
     gen_random_uuid(), 
     (SELECT id FROM orders WHERE total = 78400.00 LIMIT 1), 
-    '899a87f8-cf99-49c4-b736-6268196b1cb8', 3, 20000.00, 3900.00, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 78400.00 LIMIT 1) AND dish_id = '899a87f8-cf99-49c4-b736-6268196b1cb8')
+    (SELECT id FROM dishes WHERE name = 'Grelhada Mista' LIMIT 1), 3, 20000.00, 3900.00, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 78400.00 LIMIT 1) AND dish_id = (SELECT id FROM dishes WHERE name = 'Grelhada Mista' LIMIT 1))
 UNION ALL
 SELECT 
     gen_random_uuid(), 
     (SELECT id FROM orders WHERE total = 78400.00 LIMIT 1), 
-    '4c2b1fd6-d704-4764-8119-766c1f210c5c', 4, 600.00, 156.00, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 78400.00 LIMIT 1) AND dish_id = '4c2b1fd6-d704-4764-8119-766c1f210c5c')
+    (SELECT id FROM dishes WHERE name = 'Fino Lambreta' LIMIT 1), 4, 600.00, 156.00, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 78400.00 LIMIT 1) AND dish_id = (SELECT id FROM dishes WHERE name = 'Fino Lambreta' LIMIT 1))
 UNION ALL
 SELECT 
     gen_random_uuid(), 
     (SELECT id FROM orders WHERE total = 35000.00 LIMIT 1), 
-    '899a87f8-cf99-49c4-b736-6268196b1cb8', 1, 20000.00, 1300.00, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 35000.00 LIMIT 1) AND dish_id = '899a87f8-cf99-49c4-b736-6268196b1cb8')
+    (SELECT id FROM dishes WHERE name = 'Grelhada Mista' LIMIT 1), 1, 20000.00, 1300.00, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 35000.00 LIMIT 1) AND dish_id = (SELECT id FROM dishes WHERE name = 'Grelhada Mista' LIMIT 1))
 UNION ALL
 SELECT 
     gen_random_uuid(), 
     (SELECT id FROM orders WHERE total = 35000.00 LIMIT 1), 
-    '4c2b1fd6-d704-4764-8119-766c1f210c5c', 5, 600.00, 195.00, NOW()
-WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 35000.00 LIMIT 1) AND dish_id = '4c2b1fd6-d704-4764-8119-766c1f210c5c');
+    (SELECT id FROM dishes WHERE name = 'Fino Lambreta' LIMIT 1), 5, 600.00, 195.00, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM order_items WHERE order_id = (SELECT id FROM orders WHERE total = 35000.00 LIMIT 1) AND dish_id = (SELECT id FROM dishes WHERE name = 'Fino Lambreta' LIMIT 1));
 
 -- Inserir dados de exemplo para expenses
 INSERT INTO expenses (id, description, amount, category, date, created_at, updated_at) 
