@@ -58,18 +58,30 @@ export default function OwnerMobilePage() {
   const loadApiData = useCallback(async () => {
     setLoadingSupabase(true);
     try {
+      // MOBILE SPECIFIC LOGS - Funciona em computador e telemóvel
+      console.log('📱 MOBILE DASHBOARD: Iniciando carregamento de dados...');
+      console.log('📱 MOBILE DASHBOARD: User Agent:', navigator.userAgent);
+      console.log('📱 MOBILE DASHBOARD: Platform:', navigator.platform);
+      console.log('📱 MOBILE DASHBOARD: Screen:', {
+        width: window.screen.width,
+        height: window.screen.height,
+        isMobile: window.screen.width <= 768
+      });
+      
       console.log('🔄 Starting Server Action call to getOwnerMobileData');
       
       const data = await getOwnerMobileData();
       
       console.log('🔍 SERVER ACTION RESPONSE:', data);
-      console.log('🔍 STORE DATA COMPARISON:', {
-        storeOrders: orders.length,
-        storeExpenses: expenses.length,
-        storePayroll: payroll.length,
-        supabaseOrders: data.orders?.length || 0,
-        supabaseExpenses: data.expenses?.length || 0,
-        supabasePayroll: data.payroll?.length || 0
+      console.log('� MOBILE DATA COMPARISON:', {
+        '📊 Store Orders': orders.length,
+        '☁️ Supabase Orders': data.orders?.length || 0,
+        '📊 Store Expenses': expenses.length,
+        '☁️ Supabase Expenses': data.expenses?.length || 0,
+        '📊 Store Payroll': payroll.length,
+        '☁️ Supabase Payroll': data.payroll?.length || 0,
+        '📱 Device Type': window.screen.width <= 768 ? 'MOBILE' : 'DESKTOP',
+        '🕐 Timestamp': new Date().toISOString()
       });
       
       if (!data.success) {
@@ -95,15 +107,22 @@ export default function OwnerMobilePage() {
           orders: data.orders?.length === 0,
           expenses: data.expenses?.length === 0,
           payroll: data.payroll?.length === 0
+        },
+        deviceInfo: {
+          type: window.screen.width <= 768 ? 'MOBILE' : 'DESKTOP',
+          screen: `${window.screen.width}x${window.screen.height}`,
+          userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER'
         }
       });
       
       setSupabaseData(finalData);
       
-      console.log('✅ Mobile Server Action data loaded successfully:', {
-        orders: data.orders?.length || 0,
-        expenses: data.expenses?.length || 0,
-        payroll: data.payroll?.length || 0
+      console.log('✅ MOBILE DASHBOARD: Dados carregados com sucesso:', {
+        orders: finalData.orders.length,
+        expenses: finalData.expenses.length,
+        payroll: finalData.payroll.length,
+        device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
+        timestamp: new Date().toISOString()
       });
       
     } catch (error: any) {
@@ -238,11 +257,14 @@ export default function OwnerMobilePage() {
             <span>{filteredData.orders.length} vendas</span>
           </div>
           {(() => {
-            console.log('DEBUG DASHBOARD VENDAS:', { 
+            console.log('📱 MOBILE CARD VENDAS:', { 
+              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
               totalVendas: filteredData.orders.length, 
               primeiroValor: filteredData.orders[0]?.total,
               todosValores: filteredData.orders.map(o => o.total),
-              calculado: periodCalculations.revenue.value
+              calculado: periodCalculations.revenue.value,
+              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
+              timestamp: new Date().toISOString()
             });
             return null;
           })()}
@@ -260,11 +282,14 @@ export default function OwnerMobilePage() {
             <span>{filteredData.expenses.length} despesas</span>
           </div>
           {(() => {
-            console.log('DEBUG DASHBOARD DESPESAS:', { 
+            console.log('📱 MOBILE CARD DESPESAS:', { 
+              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
               totalDespesas: filteredData.expenses.length, 
               primeiroValor: filteredData.expenses[0]?.amount,
               todosValores: filteredData.expenses.map(e => e.amount),
-              calculado: periodCalculations.expenses.value
+              calculado: periodCalculations.expenses.value,
+              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
+              timestamp: new Date().toISOString()
             });
             return null;
           })()}
@@ -282,11 +307,14 @@ export default function OwnerMobilePage() {
             <span>{filteredData.payroll.length} registros</span>
           </div>
           {(() => {
-            console.log('DEBUG DASHBOARD FOLHA:', { 
+            console.log('📱 MOBILE CARD FOLHA:', { 
+              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
               totalFolha: filteredData.payroll.length, 
               primeiroValor: filteredData.payroll[0]?.amount,
               todosValores: filteredData.payroll.map(p => p.amount),
-              calculado: totalPayroll
+              calculado: totalPayroll,
+              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
+              timestamp: new Date().toISOString()
             });
             return null;
           })()}
