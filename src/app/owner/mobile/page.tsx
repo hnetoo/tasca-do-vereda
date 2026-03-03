@@ -141,29 +141,29 @@ export default function OwnerMobilePage() {
     return () => clearInterval(interval);
   }, [loadApiData]);
 
-  // Combinar dados locais com dados do Supabase - STORE PRIMÁRIO
+  // Combinar dados locais com dados do Supabase - IGUAL AO DESKTOP
   const currentData = useMemo(() => {
-    // PRIORIDADE: Store > API
-    const finalOrders = orders.length > 0 ? orders : (supabaseData.orders || []);
-    const finalExpenses = expenses.length > 0 ? expenses : (supabaseData.expenses || []);
-    const finalPayroll = payroll.length > 0 ? payroll : (supabaseData.payroll || []);
+    // LÓGICA EXATAMENTE IGUAL AO DESKTOP /owner/page.tsx
+    const allOrders = [...(orders || []), ...(supabaseData.orders || [])];
+    const allExpenses = [...(expenses || []), ...(supabaseData.expenses || [])];
+    const allPayroll = [...(payroll || []), ...(supabaseData.payroll || [])];
     
-    console.log('🔥 STORE VS API:', { 
+    console.log('🔥 STORE VS API (MOBILE - SAME AS DESKTOP):', { 
       store: orders.length, 
       api: supabaseData.orders?.length || 0,
-      finalOrders: finalOrders.length,
+      finalOrders: allOrders.length,
       storeExpenses: expenses.length,
       apiExpenses: supabaseData.expenses?.length || 0,
-      finalExpenses: finalExpenses.length,
+      finalExpenses: allExpenses.length,
       storePayroll: payroll.length,
       apiPayroll: supabaseData.payroll?.length || 0,
-      finalPayroll: finalPayroll.length
+      finalPayroll: allPayroll.length
     });
     
     return {
-      orders: finalOrders,
-      expenses: finalExpenses,
-      payroll: finalPayroll
+      orders: allOrders,
+      expenses: allExpenses,
+      payroll: allPayroll
     };
   }, [orders, expenses, payroll, supabaseData]);
 
