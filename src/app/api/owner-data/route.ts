@@ -116,16 +116,17 @@ export async function GET(request: Request) {
     
     console.log('🔍 REAL API: SERVER-SIDE Supabase client created');
     
-    // Carregar orders COM ESTRUTURA EXATA DA PRODUÇÃO
-    console.log('🔍 REAL API: Loading orders (PRODUCTION STRUCTURE)...');
+    // Carregar orders SEM FILTROS - BUSCAR TUDO
+    console.log('🔍 REAL API: Loading orders (NO FILTERS - ALL DATA)...');
     
     const { data: ordersData, error: ordersError } = await supabaseAdmin
       .from('orders')
-      .select('id, status, total, created_at, updated_at'); // SÓ CAMPOS QUE EXISTEM NA PRODUÇÃO
+      .select('*'); // BUSCAR TODOS OS CAMPOS E TODOS OS REGISTROS
     
     console.log('🔍 REAL API: Orders result:', { 
       count: ordersData?.length || 0, 
-      error: ordersError?.message
+      error: ordersError?.message,
+      sampleData: ordersData?.slice(0, 3)
     });
     
     // Carregar expenses COM ESTRUTURA EXATA DA PRODUÇÃO

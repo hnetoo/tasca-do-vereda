@@ -63,6 +63,14 @@ export default function OwnerMobilePage() {
       const data = await getOwnerMobileData();
       
       console.log('🔍 SERVER ACTION RESPONSE:', data);
+      console.log('🔍 STORE DATA COMPARISON:', {
+        storeOrders: orders.length,
+        storeExpenses: expenses.length,
+        storePayroll: payroll.length,
+        supabaseOrders: data.orders?.length || 0,
+        supabaseExpenses: data.expenses?.length || 0,
+        supabasePayroll: data.payroll?.length || 0
+      });
       
       if (!data.success) {
         console.error('❌ Server Action returned error:', data.error);
@@ -70,13 +78,27 @@ export default function OwnerMobilePage() {
         return;
       }
       
-      setSupabaseData({
-        orders: data.orders || [],
-        expenses: data.expenses || [],
-        payroll: data.payroll || [],
-        dishes: data.dishes || [],
-        categories: data.categories || []
+      // FALLBACK: Se Supabase retornar vazio, usar dados da Store
+      const finalData = {
+        orders: (data.orders && data.orders.length > 0) ? data.orders : orders,
+        expenses: (data.expenses && data.expenses.length > 0) ? data.expenses : expenses,
+        payroll: (data.payroll && data.payroll.length > 0) ? data.payroll : payroll,
+        dishes: (data.dishes && data.dishes.length > 0) ? data.dishes : dishes,
+        categories: (data.categories && data.categories.length > 0) ? data.categories : categories
+      };
+      
+      console.log('🔍 FINAL DATA AFTER FALLBACK:', {
+        orders: finalData.orders.length,
+        expenses: finalData.expenses.length,
+        payroll: finalData.payroll.length,
+        usedStoreFallback: {
+          orders: data.orders?.length === 0,
+          expenses: data.expenses?.length === 0,
+          payroll: data.payroll?.length === 0
+        }
       });
+      
+      setSupabaseData(finalData);
       
       console.log('✅ Mobile Server Action data loaded successfully:', {
         orders: data.orders?.length || 0,
@@ -90,7 +112,7 @@ export default function OwnerMobilePage() {
     } finally {
       setLoadingSupabase(false);
     }
-  }, [addNotification]);
+  }, [addNotification, orders, expenses, payroll, dishes, categories]);
 
   // Carregar dados no mount
   useEffect(() => {
