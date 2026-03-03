@@ -48,16 +48,46 @@ export default function OwnerMobilePage() {
     setExpenses
   } = useStore();
 
-  // Mobile: SEMPRE carregar da API para garantir dados atualizados
+  // Mobile: carregar da API com AUTO-RELOAD A CADA 30 SEGUNDOS
   useEffect(() => {
     console.log('📱 Mobile: Forcing API load for fresh data...');
+    console.log('🔍 DEBUG ANTES DA API:', {
+      supabaseDataOrders: supabaseData.orders?.length || 0,
+      supabaseDataExpenses: supabaseData.expenses?.length || 0,
+      storeOrders: orders?.length || 0,
+      storeExpenses: expenses?.length || 0
+    });
+    
+    // MOSTRAR DEBUG SALVO DO RESET ANTERIOR
+    if (typeof window !== 'undefined') {
+      const savedDebug = localStorage.getItem('reset_debug_info');
+      if (savedDebug) {
+        console.log('🔍 ===== SAVED RESET DEBUG =====');
+        console.log('🔍 Debug Info:', JSON.parse(savedDebug));
+        console.log('🔍 ===========================');
+        
+        // Limpar após mostrar
+        localStorage.removeItem('reset_debug_info');
+      }
+    }
+    
     loadApiData();
   }, []); // Executa apenas uma vez no mount
 
-  // Também recarregar quando forceUpdate mudar (mas apenas se for > 1)
+  // AUTO-RELOAD A CADA 30 SEGUNDOS PARA PEGAR VENDAS EM TEMPO REAL
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-reload: Buscando novos dados...');
+      loadApiData();
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Recarregar quando forceUpdate mudar (mas apenas se for > 1)
   useEffect(() => {
     if (forceUpdate > 1) {
-      console.log('� Mobile: Force update triggered, reloading API...');
+      console.log('📱 Mobile: Force update triggered, reloading API...');
       loadApiData();
     }
   }, [forceUpdate]);
@@ -69,6 +99,10 @@ export default function OwnerMobilePage() {
       
       const response = await fetch('/api/owner-data');
       const data = await response.json();
+      
+      console.log('🔍 DEBUG API RESPONSE:', data);
+      console.log('🔍 API ORDERS:', data.orders?.length || 0);
+      console.log('🔍 API EXPENSES:', data.expenses?.length || 0);
       
       // Se houver erro na API, mostrar mensagem clara
       if (data.error) {
@@ -92,10 +126,13 @@ export default function OwnerMobilePage() {
       console.log('🔍 Mobile Debug: Final orders count:', finalOrders.length);
       console.log('🔍 Mobile Debug: Final expenses count:', finalExpenses.length);
       
-      
       // Debug antes de setar estado
-      console.log('🔍 Mobile Debug: Before setSupabaseData - orders:', supabaseData.orders.length);
-      console.log('🔍 Mobile Debug: Before setSupabaseData - expenses:', supabaseData.expenses.length);
+      console.log('🔍 DEBUG ANTES DE SETAR ESTADO:', {
+        currentSupabaseOrders: supabaseData.orders?.length || 0,
+        currentSupabaseExpenses: supabaseData.expenses?.length || 0,
+        newOrders: finalOrders.length,
+        newExpenses: finalExpenses.length
+      });
       
       setSupabaseData({
         orders: finalOrders,
@@ -107,8 +144,10 @@ export default function OwnerMobilePage() {
       
       // Debug depois de setar estado
       setTimeout(() => {
-        console.log('🔍 Mobile Debug: After setSupabaseData - orders:', supabaseData.orders.length);
-        console.log('🔍 Mobile Debug: After setSupabaseData - expenses:', supabaseData.expenses.length);
+        console.log('🔍 DEBUG DEPOIS DE SETAR ESTADO:', {
+          supabaseOrders: supabaseData.orders?.length || 0,
+          supabaseExpenses: supabaseData.expenses?.length || 0
+        });
       }, 1000);
       
       console.log('✅ REAL data loaded for mobile:', {
@@ -125,184 +164,130 @@ export default function OwnerMobilePage() {
     }
   };
 
-  // Função de Reset de Produção com Proteções e Debug
+  // Função de Reset COM TRUNCATE DIRETO NO BANCO
   const handleResetProduction = async () => {
-    console.log('🔄 ===== RESET PRODUCTION DEBUG START =====');
+    const confirm1 = confirm('Resetar Produção\n\nLIMPAR TUDO do banco de dados?\n\nDeseja continuar?');
+    if (!confirm1) return;
     
-    // Mostrar debug visual
-    const resetDebugElement = document.getElementById('mobile-reset-debug');
-    const resetContentElement = document.getElementById('reset-debug-content');
-    if (resetDebugElement && resetContentElement) {
-      resetDebugElement.classList.remove('hidden');
-      resetContentElement.innerHTML = '🔄 Iniciando reset...';
-    }
+    const confirm2 = confirm('ATENÇÃO! Isso vai APAGAR TUDO do banco!\n\nTem certeza absoluta?');
+    if (!confirm2) return;
     
-    console.log('🔄 Current Data Before Reset:', {
-      localOrders: orders?.length || 0,
-      localExpenses: expenses?.length || 0,
-      apiOrders: supabaseData.orders?.length || 0,
-      apiExpenses: supabaseData.expenses?.length || 0,
-      finalOrders: currentData.orders?.length || 0,
-      finalExpenses: currentData.expenses?.length || 0
-    });
-    
-    // Atualizar debug visual
-    if (resetContentElement) {
-      resetContentElement.innerHTML = `🔄 Dados: O(${supabaseData.orders?.length || 0}) E(${supabaseData.expenses?.length || 0})`;
-    }
-    
-    // Verificação 1: Tem dados para resetar?
-    const hasOrders = (orders?.length || 0) > 0 || (supabaseData.orders?.length || 0) > 0;
-    const hasExpenses = (expenses?.length || 0) > 0 || (supabaseData.expenses?.length || 0) > 0;
-    
-    console.log('🔄 Reset Check:', { hasOrders, hasExpenses });
-    
-    if (!hasOrders && !hasExpenses) {
-      console.log('🔄 Reset Cancelled: No data to clear');
-      if (resetContentElement) {
-        resetContentElement.innerHTML = '❌ Sem dados para limpar';
-      }
-      alert('ℹ️ Não há dados de produção para limpar.');
-      return;
-    }
-
-    // Verificação 2: Confirmação inicial
-    const confirm1 = confirm('🔄 Resetar Produção\n\nEsta ação irá limpar todos os pedidos e despesas do período atual.\n\nDeseja continuar?');
-    if (!confirm1) {
-      console.log('🔄 Reset Cancelled: User confirmation 1');
-      if (resetContentElement) {
-        resetContentElement.innerHTML = '❌ Cancelado pelo usuário';
-      }
-      return;
-    }
-
-    // Verificação 3: Aviso forte
-    const confirm2 = confirm('⚠️ ATENÇÃO! ESTA AÇÃO É IRREVERSÍVEL!\n\nTodos os dados de pedidos e despesas serão APAGADOS permanentemente.\n\nÚltima chance: Tem certeza absoluta?');
-    if (!confirm2) {
-      console.log('🔄 Reset Cancelled: User confirmation 2');
-      if (resetContentElement) {
-        resetContentElement.innerHTML = '❌ Cancelado pelo usuário';
-      }
-      return;
-    }
-
-    console.log('🔄 Reset Confirmed: Starting clear process...');
-    if (resetContentElement) {
-      resetContentElement.innerHTML = '🔄 Confirmando reset...';
-    }
     setIsResetting(true);
     
     try {
-      // Backup automático dos dados
-      const backupData = {
-        timestamp: new Date().toISOString(),
-        orders: currentData.orders,
-        expenses: currentData.expenses,
-        summary: {
-          totalOrders: currentData.orders.length,
-          totalExpenses: currentData.expenses.length,
-          totalRevenue: currentData.orders.reduce((sum: number, order: any) => sum + (order.total || 0), 0),
-          totalExpensesAmount: currentData.expenses.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0)
-        }
-      };
-
-      // Salvar backup no localStorage
-      localStorage.setItem('production_backup_' + Date.now(), JSON.stringify(backupData));
-
-      // Atualizar debug visual
-      if (resetContentElement) {
-        resetContentElement.innerHTML = '🔄 Limpando API...';
-      }
-
-      // Limpar dados via API
-      const response = await fetch('/api/clear-production-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'all' })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha ao limpar dados de produção');
-      }
-
-      const result = await response.json();
-      console.log('✅ API Response:', result);
-
-      // Atualizar debug visual com resultado
-      if (resetContentElement) {
-        resetContentElement.innerHTML = `✅ API: ${JSON.stringify(result.cleared)}`;
-      }
-
-      // Verificar se a API realmente limpou os dados
-      if (result.success && result.cleared) {
-        console.log('✅ API successfully cleared data:', result.cleared);
-        
-        // Atualizar debug visual
-        if (resetContentElement) {
-          resetContentElement.innerHTML = '🔄 Limpando dados locais...';
-        }
-        
-        // Limpar dados locais
-        setSupabaseData({
-          orders: [],
-          expenses: [],
-          dishes: supabaseData.dishes || [],
-          categories: supabaseData.categories || []
-        });
-        
-        // Limpar store local também
-        setOrders([]);
-        setExpenses([]);
-
-        // Forçar reload completo dos dados
-        setForceUpdate(prev => prev + 1);
-        
-        // Atualizar debug visual
-        if (resetContentElement) {
-          resetContentElement.innerHTML = '✅ Dados limpos! Recarregando...';
-        }
-        
-        // Forçar reload da página para garantir atualização
-        setTimeout(() => {
-          console.log('🔄 Forcing page reload to ensure data is cleared...');
-          window.location.reload();
-        }, 2000);
-      } else {
-        throw new Error('API failed to clear data properly');
-      }
-
-      // Notificação de sucesso
-      if (addNotification) {
-        addNotification('success', '✅ Produção resetada com sucesso! Backup salvo automaticamente.');
-      } else {
-        alert('✅ Produção resetada com sucesso! Backup salvo automaticamente.');
+      console.log('🔥 INICIANDO LIMPEZA COMPLETA DO BANCO DE DADOS...');
+      
+      // 1. LIMPAR DIRETO NO BANCO via RPC com SERVICE ROLE KEY
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Config Supabase ausente');
       }
       
-      // Mostrar resumo do backup
-      console.log('📦 Backup salvo:', backupData.summary);
+      console.log('🔑 Using NEXT_PUBLIC_SUPABASE_SERVICE_ROLE KEY for full permissions');
+      console.log('🔑 URL:', supabaseUrl);
+      console.log('🔑 Key:', supabaseKey.substring(0, 20) + '...');
+      
+      // Criar cliente admin com SERVICE ROLE KEY
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+      
+      // EXECUTAR TRUNCATE DIRETO NO BANCO
+      console.log('🔥 Executando TRUNCATE no banco...');
+      const { data, error } = await supabaseAdmin.rpc('clear_all_production_data');
+      
+      if (error) {
+        console.error('❌ Erro no RPC:', error);
+        throw new Error(`Erro no banco: ${error.message}`);
+      }
+      
+      console.log('✅ Banco limpo:', data);
+      
+      // 2. Limpar estado local
+      setSupabaseData({ orders: [], expenses: [], payroll: [], dishes: [], categories: [] });
+      setOrders([]);
+      setExpenses([]);
+      
+      // FORÇAR ATUALIZAÇÃO DO CURRENTDATA
+      console.log('🔄 Forcing currentData update...');
+      
+      // SALVAR DEBUG NO LOCALSTORAGE PARA VER DEPOIS DO REFRESH
+      if (typeof window !== 'undefined') {
+        const debugInfo = {
+          beforeReset: {
+            supabaseOrders: supabaseData.orders?.length || 0,
+            supabaseExpenses: supabaseData.expenses?.length || 0,
+            storeOrders: orders?.length || 0,
+            storeExpenses: expenses?.length || 0
+          },
+          afterClear: {
+            supabaseOrders: supabaseData.orders?.length || 0,
+            supabaseExpenses: supabaseData.expenses?.length || 0,
+            storeOrders: orders?.length || 0,
+            storeExpenses: expenses?.length || 0
+          },
+          realtimeStats: {
+            currentDataOrders: currentData.orders?.length || 0,
+            calculatedTotalRevenue: currentData.orders?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0
+          },
+          settings: {
+            legacyTotalRevenue: settings?.legacyTotalRevenue || 0
+          }
+        };
+        
+        localStorage.setItem('reset_debug_info', JSON.stringify(debugInfo));
+        console.log('💾 Debug info saved to localStorage');
+      }
+      
+      setTimeout(() => {
+        console.log('🔄 CurrentData after timeout:', supabaseData);
+      }, 100);
+      
+      // 3. LIMPAR SETTINGS TAMBÉM - O PROBLEMA REAL!
+      try {
+        const { useStore } = await import('@/store/useStore');
+        const store = useStore.getState();
+        if (store.updateSettings) {
+          store.updateSettings({
+            legacyTotalRevenue: 0,
+            totalRevenue: 0,
+            totalExpenses: 0,
+            totalOrders: 0
+          });
+          console.log('🧹 Settings limpos também!');
+        }
+      } catch (e) {
+        console.log('Não foi possível limpar settings:', e);
+      }
+      
+      // 4. LIMPAR TUDO DO LOCALSTORAGE
+      if (typeof window !== 'undefined') {
+        console.log('🧹 Limpando localStorage completamente...');
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes('tasca') || key.includes('supabase') || key.includes('owner'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        sessionStorage.clear();
+      }
+      
+      // 5. Forçar reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
       
     } catch (error: any) {
-      console.error('❌ Error resetting production:', error);
-      
-      // Atualizar debug visual com erro
-      if (resetContentElement) {
-        resetContentElement.innerHTML = `❌ Erro: ${error.message}`;
-      }
-      
-      // Notificação de erro
-      const errorMessage = `❌ Falha ao resetar produção: ${error.message}`;
-      if (addNotification) {
-        addNotification('error', errorMessage);
-      } else {
-        alert(errorMessage);
-      }
-    } finally {
+      console.error('❌ Erro no reset:', error);
+      alert(`❌ Erro: ${error.message}`);
       setIsResetting(false);
     }
   };
 
-  // Usar dados da API diretamente - sem lógica complexa
+  // Usar dados da API diretamente - versão simples sem bloqueios
   const currentData = useMemo(() => ({
     orders: supabaseData.orders || [],
     expenses: supabaseData.expenses || [],
@@ -415,6 +400,8 @@ export default function OwnerMobilePage() {
     console.log('📊 ===== REALTIME STATS DEBUG =====');
     console.log('📊 Current Orders:', currentData.orders);
     console.log('📊 Orders Count:', currentData.orders?.length || 0);
+    console.log('📊 SupabaseData Orders:', supabaseData.orders?.length || 0);
+    console.log('📊 Store Orders:', orders?.length || 0);
     
     if (!currentData.orders || currentData.orders.length === 0) {
       console.log('📊 No orders found, returning zeros');
@@ -458,6 +445,12 @@ export default function OwnerMobilePage() {
     const totalRevenue = currentData.orders.reduce((sum: number, order: any) => {
       return sum + calculateOrderTotal(order);
     }, 0);
+
+    console.log('📊 CALCULATED VALUES:', {
+      todaySales,
+      totalRevenue,
+      ordersLength: currentData.orders.length
+    });
 
     // Contar mesas ativas (orders que não estão fechadas)
     const activeTables = currentData.orders.filter((order: any) => 
@@ -638,6 +631,8 @@ export default function OwnerMobilePage() {
               router.push('/owner/mobile/login');
             }}
             className="p-2 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white transition-all"
+            title="Sair do sistema"
+            aria-label="Sair do sistema"
           >
             <LogOut size={18} />
           </button>
@@ -815,6 +810,7 @@ export default function OwnerMobilePage() {
               </div>
             )}
           </button>
+          
           <p className="text-xs text-slate-500 mt-2 text-center">
             ⚠️ Esta ação é irreversível
           </p>

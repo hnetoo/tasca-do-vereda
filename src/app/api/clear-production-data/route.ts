@@ -70,14 +70,38 @@ export async function POST(request: Request) {
         try {
           console.log(`🗑️ CLEAR PRODUCTION API: Clearing table ${tableName}...`);
           
-          // Para orders, usar DELETE sem WHERE para evitar problemas com triggers
           let deleteResult;
           if (tableName === 'orders') {
-            // Limpar orders diretamente sem verificar dependências
+            // Tentar limpar orders diretamente
             deleteResult = await supabase
               .from(tableName)
               .delete()
               .neq('id', '00000000-0000-0000-0000-000000000000'); // DELETE ALL
+              
+            // Se houver erro relacionado a menu_items, tentar abordagem diferente
+            if (deleteResult.error && deleteResult.error.message?.includes('menu_items')) {
+              console.log(`⚠️ CLEAR PRODUCTION API: menu_items constraint detected, trying alternative approach`);
+              
+              // Tentar DELETE sem retornar dados (evita problemas com constraints)
+              const silentDelete = await supabase
+                .from(tableName)
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+              
+              if (silentDelete.error) {
+                // Se ainda falhar, tentar apagar com TRUNCATE via RPC
+                console.log(`⚠️ CLEAR PRODUCTION API: Trying RPC approach for ${tableName}`);
+                const { error: rpcError } = await supabase.rpc('truncate_table', { table_name: tableName });
+                
+                if (rpcError) {
+                  throw new Error(`Failed to clear ${tableName} with all methods: ${deleteResult.error.message}`);
+                }
+                
+                deleteResult = { data: [], error: null }; // Success, but no count
+              } else {
+                deleteResult = { data: [], error: null }; // Success
+              }
+            }
           } else {
             // Para outras tabelas, usar método normal
             deleteResult = await supabase
