@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Dados de Teste - Kwanza</title>
+</head>
+<body>
+    <h1>Criar Dados de Teste (Kwanza AOA)</h1>
+    <button onclick="createTestData()" style="padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Criar Pedido e Despesa de Teste
+    </button>
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px;"></div>
+    
+    <script>
+        async function createTestData() {
+            try {
+                const response = await fetch('/api/debug/create-test-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>Resultado:</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                
+                if (result.success) {
+                    alert('✅ Dados de teste criados com sucesso! Verifique o /owner/mobile (valores em Kwanza AOA)');
+                } else {
+                    alert('❌ Erro: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Erro: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
