@@ -141,23 +141,23 @@ export default function OwnerMobilePage() {
     return () => clearInterval(interval);
   }, [loadApiData]);
 
-  // Combinar dados locais com dados do Supabase - FORÇADO STORE
+  // Combinar dados locais com dados do Supabase - STORE PRIMÁRIO
   const currentData = useMemo(() => {
-    // FORÇAR: Usar Store se Supabase retornar vazio
-    const finalOrders = supabaseData.orders && supabaseData.orders.length > 0 ? supabaseData.orders : orders;
-    const finalExpenses = supabaseData.expenses && supabaseData.expenses.length > 0 ? supabaseData.expenses : expenses;
-    const finalPayroll = supabaseData.payroll && supabaseData.payroll.length > 0 ? supabaseData.payroll : payroll;
+    // PRIORIDADE: Store > API
+    const finalOrders = orders.length > 0 ? orders : (supabaseData.orders || []);
+    const finalExpenses = expenses.length > 0 ? expenses : (supabaseData.expenses || []);
+    const finalPayroll = payroll.length > 0 ? payroll : (supabaseData.payroll || []);
     
-    console.log('🔥 MOBILE FORCED DATA:', {
-      'Store Orders': orders.length,
-      'Supabase Orders': supabaseData.orders?.length || 0,
-      'Final Orders': finalOrders.length,
-      'Store Expenses': expenses.length,
-      'Supabase Expenses': supabaseData.expenses?.length || 0,
-      'Final Expenses': finalExpenses.length,
-      'Store Payroll': payroll.length,
-      'Supabase Payroll': supabaseData.payroll?.length || 0,
-      'Final Payroll': finalPayroll.length
+    console.log('🔥 STORE VS API:', { 
+      store: orders.length, 
+      api: supabaseData.orders?.length || 0,
+      finalOrders: finalOrders.length,
+      storeExpenses: expenses.length,
+      apiExpenses: supabaseData.expenses?.length || 0,
+      finalExpenses: finalExpenses.length,
+      storePayroll: payroll.length,
+      apiPayroll: supabaseData.payroll?.length || 0,
+      finalPayroll: finalPayroll.length
     });
     
     return {

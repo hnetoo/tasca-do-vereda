@@ -102,28 +102,19 @@ const TableLayout = () => {
   // CONFIGURAÇÃO DEFINITIVA - USAR APENAS DADOS DO BANCO
 // Ignorar dados da Store, prioridade máxima ao banco de dados
 const filteredTables = useMemo(() => {
-  // USAR APENAS DADOS DO BANCO - ignorar Store local
+  // USAR APENAS DADOS DO BANCO - SEM FILTRO DE AMBIENTE
   const allTables = dbTables;
   
-  console.log('🔍 TABLE LAYOUT: Mesas do banco (dbTables):', dbTables);
+  console.log('🔍 MESAS NO BANCO:', dbTables);
   console.log('🔍 TABLE LAYOUT: Total de mesas do banco:', dbTables.length);
-  console.log('🔍 TABLE LAYOUT: Filtro ativo:', activeZone);
+  console.log('🔍 TABLE LAYOUT: SEM FILTRO - mostrando todas as mesas');
   console.log('🔍 TABLE LAYOUT: isAdmin:', isAdmin);
   console.log('🔍 TABLE LAYOUT: isLoading:', isLoading);
   
-  if (!activeZone || !['INTERIOR', 'EXTERIOR', 'BALCAO'].includes(activeZone)) {
-    console.log('🔍 TABLE LAYOUT: Sem filtro - retornando todas as mesas:', allTables.length);
-    return allTables;
-  }
-  
-  const filtered = allTables.filter(table => {
-    const tableZone = table.ambiente || table.zone || 'INTERIOR';
-    return tableZone === activeZone;
-  });
-  
-  console.log('🔍 TABLE LAYOUT: Mesas filtradas para', activeZone, ':', filtered.length);
-  return filtered;
-}, [dbTables, activeZone, isAdmin, isLoading]);
+  // REMOVIDO FILTRO DE AMBIENTE - MOSTRAR TUDO
+  console.log('🔍 TABLE LAYOUT: Retornando todas as mesas sem filtro:', allTables.length);
+  return allTables;
+}, [dbTables, isAdmin, isLoading]);
 
   const handleTableClick = (table: Table) => {
     if (!isEditMode) {
