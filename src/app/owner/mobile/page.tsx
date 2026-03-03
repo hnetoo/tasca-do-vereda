@@ -141,16 +141,29 @@ export default function OwnerMobilePage() {
     return () => clearInterval(interval);
   }, [loadApiData]);
 
-  // Combinar dados locais com dados do Supabase
+  // Combinar dados locais com dados do Supabase - FORÇADO STORE
   const currentData = useMemo(() => {
-    const allOrders = [...(orders || []), ...(supabaseData.orders || [])];
-    const allExpenses = [...(expenses || []), ...(supabaseData.expenses || [])];
-    const allPayroll = [...(payroll || []), ...(supabaseData.payroll || [])];
+    // FORÇAR: Usar Store se Supabase retornar vazio
+    const finalOrders = supabaseData.orders && supabaseData.orders.length > 0 ? supabaseData.orders : orders;
+    const finalExpenses = supabaseData.expenses && supabaseData.expenses.length > 0 ? supabaseData.expenses : expenses;
+    const finalPayroll = supabaseData.payroll && supabaseData.payroll.length > 0 ? supabaseData.payroll : payroll;
+    
+    console.log('🔥 MOBILE FORCED DATA:', {
+      'Store Orders': orders.length,
+      'Supabase Orders': supabaseData.orders?.length || 0,
+      'Final Orders': finalOrders.length,
+      'Store Expenses': expenses.length,
+      'Supabase Expenses': supabaseData.expenses?.length || 0,
+      'Final Expenses': finalExpenses.length,
+      'Store Payroll': payroll.length,
+      'Supabase Payroll': supabaseData.payroll?.length || 0,
+      'Final Payroll': finalPayroll.length
+    });
     
     return {
-      orders: allOrders,
-      expenses: allExpenses,
-      payroll: allPayroll
+      orders: finalOrders,
+      expenses: finalExpenses,
+      payroll: finalPayroll
     };
   }, [orders, expenses, payroll, supabaseData]);
 
