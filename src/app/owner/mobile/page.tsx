@@ -284,7 +284,7 @@ export default function OwnerMobilePage() {
               device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
               totalVendas: filteredData.orders.length, 
               primeiroValor: filteredData.orders[0]?.total,
-              todosValores: filteredData.orders.map(o => o.total),
+              todosValores: filteredData.orders.map((o: any) => o.total),
               calculado: periodCalculations.revenue.value,
               userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
               timestamp: new Date().toISOString()
@@ -309,7 +309,7 @@ export default function OwnerMobilePage() {
               device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
               totalDespesas: filteredData.expenses.length, 
               primeiroValor: filteredData.expenses[0]?.amount,
-              todosValores: filteredData.expenses.map(e => e.amount),
+              todosValores: filteredData.expenses.map((e: any) => e.amount),
               calculado: periodCalculations.expenses.value,
               userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
               timestamp: new Date().toISOString()
@@ -334,7 +334,7 @@ export default function OwnerMobilePage() {
               device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
               totalFolha: filteredData.payroll.length, 
               primeiroValor: filteredData.payroll[0]?.amount,
-              todosValores: filteredData.payroll.map(p => p.amount),
+              todosValores: filteredData.payroll.map((p: any) => p.amount),
               calculado: totalPayroll,
               userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
               timestamp: new Date().toISOString()
