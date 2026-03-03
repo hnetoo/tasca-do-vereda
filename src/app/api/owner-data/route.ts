@@ -151,11 +151,11 @@ export async function GET(request: Request) {
       error: dishesError?.message
     });
 
-    // Carregar categories com SERVICE_ROLE_KEY - QUERY SIMPLES
-    console.log('🔍 REAL API: Loading categories (SIMPLE QUERY)...');
+    // Carregar categories com SERVICE_ROLE_KEY - USAR menu_categories
+    console.log('🔍 REAL API: Loading menu_categories (SIMPLE QUERY)...');
     
     const { data: categoriesData, error: categoriesError } = await supabaseAdmin
-      .from('categories')
+      .from('menu_categories')
       .select('*');
     
     console.log('🔍 REAL API: Categories result:', { 
