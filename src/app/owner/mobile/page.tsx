@@ -182,6 +182,18 @@ export default function OwnerMobilePage() {
   // Cálculos do período - COM CÁLCULO MANUAL FORÇADO
   const periodCalculations = useSafeCardCalculations(filteredData, period);
   
+  // DEBUG COMPLETO - Verificar dados antes dos cálculos
+  console.log('🔍 DEBUG MOBILE COMPLETO:', {
+    'currentData.orders': currentData.orders,
+    'currentData.orders.length': currentData.orders.length,
+    'filteredData.orders': filteredData.orders,
+    'filteredData.orders.length': filteredData.orders.length,
+    'orders from store': orders,
+    'orders from store.length': orders.length,
+    'supabaseData.orders': supabaseData.orders,
+    'supabaseData.orders.length': supabaseData.orders?.length || 0
+  });
+  
   // Cálculo manual forçado para garantir valores corretos
   const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
@@ -193,7 +205,9 @@ export default function OwnerMobilePage() {
     totalPayroll,
     ordersCount: filteredData.orders.length,
     expensesCount: filteredData.expenses.length,
-    payrollCount: filteredData.payroll.length
+    payrollCount: filteredData.payroll.length,
+    'primeiro order total': filteredData.orders[0]?.total,
+    'todos os orders totals': filteredData.orders.map((o: any) => o.total)
   });
   
   // USAR VALORES MANUAIS DIRETAMENTE - não tentar sobrescrever o objeto do hook
