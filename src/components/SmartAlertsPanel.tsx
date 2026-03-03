@@ -44,6 +44,8 @@ const SmartAlertsPanel = () => {
             <button 
               onClick={() => removeNotification(alert.id)}
               className="opacity-50 hover:opacity-100"
+              title="Fechar notificação"
+              aria-label="Fechar notificação"
             >
               <X size={14} />
             </button>
