@@ -2,87 +2,128 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: NextRequest) {
-  console.log('🔍 DEBUG: Checking Supabase configuration...');
+  console.log('🔍 DEBUG: Verificando estado completo do sistema...');
   
   try {
-    // Verificar variáveis de ambiente
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     
-    console.log('🔍 DEBUG: Environment variables:', {
-      supabaseUrl: supabaseUrl ? 'DEFINED' : 'MISSING',
-      supabaseServiceKey: supabaseServiceKey ? 'DEFINED' : 'MISSING'
-    });
-    
     if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json({
-        error: 'Missing environment variables',
+      return NextResponse.json({ 
+        error: 'Supabase not configured',
         details: {
-          supabaseUrl: supabaseUrl ? 'OK' : 'MISSING',
-          supabaseServiceKey: supabaseServiceKey ? 'OK' : 'MISSING'
+          supabaseUrl: supabaseUrl ? 'SET' : 'NOT SET',
+          supabaseKey: supabaseServiceKey ? 'SET' : 'NOT SET'
         }
-      }, { status: 500 });
+      });
     }
     
-    // Criar cliente Supabase
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Testar conexão
-    const { data, error } = await supabase.from('expenses').select('id').limit(1);
+    // Verificar TODOS os dados com timestamps
+    const [ordersResult, expensesResult, dishesResult, categoriesResult] = await Promise.all([
+      // Orders com timestamp
+      supabaseAdmin
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10),
+      
+      // Expenses com timestamp
+      supabaseAdmin
+        .from('expenses')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10),
+      
+      // Dishes
+      supabaseAdmin
+        .from('dishes')
+        .select('*')
+        .limit(10),
+      
+      // Categories
+      supabaseAdmin
+        .from('menu_categories')
+        .select('*')
+        .limit(10)
+    ]);
     
-    console.log('🔍 DEBUG: Connection test:', { data, error });
+    // Calcular totais
+    const ordersTotal = ordersResult.data?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+    const expensesTotal = expensesResult.data?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
     
-    // Verificar tabelas que existem
-    const tables = [
-      'expenses',
-      'payroll_records', 
-      'menu_categories',
-      'dishes',
-      'customers',
-      'reservations',
-      'orders',
-      'order_items',
-      'roles',
-      'restaurant_tables'
-    ];
+    // Verificar se há dados recentes (últimas 24 horas)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
     
-    const tableStatus: Record<string, any> = {};
+    const recentOrders = ordersResult.data?.filter(order => 
+      new Date(order.created_at) > yesterday
+    ) || [];
     
-    for (const tableName of tables) {
-      try {
-        const { error: tableError } = await supabase.from(tableName).select('id').limit(1);
-        const displayName = tableName === 'menu_categories' ? 'categories' : tableName;
-        tableStatus[displayName] = tableError ? {
-          exists: false,
-          error: tableError.message,
-          code: tableError.code
-        } : { exists: true };
-      } catch (e: any) {
-        const displayName = tableName === 'menu_categories' ? 'categories' : tableName;
-        tableStatus[displayName] = { exists: false, error: e.message };
-      }
-    }
-    
-    console.log('🔍 DEBUG: Table status:', tableStatus);
+    const recentExpenses = expensesResult.data?.filter(expense => 
+      new Date(expense.created_at) > yesterday
+    ) || [];
     
     return NextResponse.json({
-      success: true,
+      status: 'success',
+      timestamp: new Date().toISOString(),
+      
+      // Resumo
+      summary: {
+        totalOrders: ordersResult.data?.length || 0,
+        totalExpenses: expensesResult.data?.length || 0,
+        totalDishes: dishesResult.data?.length || 0,
+        totalCategories: categoriesResult.data?.length || 0,
+        ordersValue: ordersTotal,
+        expensesValue: expensesTotal,
+        profit: ordersTotal - expensesTotal,
+        recentOrders: recentOrders.length,
+        recentExpenses: recentExpenses.length
+      },
+      
+      // Dados completos
+      data: {
+        orders: {
+          count: ordersResult.data?.length || 0,
+          total: ordersTotal,
+          recent: recentOrders.length,
+          items: ordersResult.data || [],
+          error: ordersResult.error?.message
+        },
+        expenses: {
+          count: expensesResult.data?.length || 0,
+          total: expensesTotal,
+          recent: recentExpenses.length,
+          items: expensesResult.data || [],
+          error: expensesResult.error?.message
+        },
+        dishes: {
+          count: dishesResult.data?.length || 0,
+          items: dishesResult.data || [],
+          error: dishesResult.error?.message
+        },
+        categories: {
+          count: categoriesResult.data?.length || 0,
+          items: categoriesResult.data || [],
+          error: categoriesResult.error?.message
+        }
+      },
+      
+      // Informações de ambiente
       environment: {
-        supabaseUrl: supabaseUrl ? 'OK' : 'MISSING',
-        supabaseServiceKey: supabaseServiceKey ? 'OK' : 'MISSING'
-      },
-      connection: {
-        success: !error,
-        error: error?.message
-      },
-      tables: tableStatus
+        supabaseUrl: supabaseUrl ? 'SET' : 'NOT SET',
+        supabaseKey: supabaseServiceKey ? 'SET' : 'NOT SET',
+        nodeEnv: process.env.NODE_ENV,
+        vercelEnv: process.env.VERCEL_ENV
+      }
     });
     
   } catch (error: any) {
-    console.error('🔍 DEBUG: Unexpected error:', error);
-    return NextResponse.json({
+    console.error('❌ DEBUG Error:', error);
+    return NextResponse.json({ 
       error: error.message,
-      stack: error.stack
-    }, { status: 500 });
+      timestamp: new Date().toISOString()
+    });
   }
 }

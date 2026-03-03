@@ -527,11 +527,18 @@ export const adminOperations = {
       // 1. Save Order com estrutura correta da tabela
       const dbOrder = {
           id: order.id,
+          order_number: order.order_number || `ORD-${Date.now()}`,
+          table_id: order.table_id || order.tableId || null,
           status: order.status || 'pending',
+          subtotal: order.subtotal || 0,
           total: order.total || 0,
-          customer_name: order.customerName || '',
-          items: order.items || [],
-          created_at: order.createdAt || new Date().toISOString(),
+          customer_name: order.customerName || order.customer_name || '',
+          customer_nif: order.customer_nif || null,
+          payment_method: order.payment_method || null,
+          sub_account_name: order.sub_account_name || null,
+          shift_id: order.shift_id || order.shiftId || null,
+          closed_at: order.closed_at || null,
+          created_at: order.createdAt || order.created_at || new Date().toISOString(),
           updated_at: new Date().toISOString()
       };
 
@@ -544,6 +551,39 @@ export const adminOperations = {
       }
 
       console.log('✅ Order saved successfully:', data);
+
+      // 2. SALVAR OS ITENS DO PEDIDO (OrderItems) - ESTE ERA O PROBLEMA!
+      if (order.items && order.items.length > 0) {
+        console.log('🛒 Saving order items:', order.items.length);
+        
+        const orderItems = order.items.map((item, index) => ({
+          id: item.id || uuidv4(),
+          order_id: order.id,
+          dish_id: item.dish_id || item.dishId,
+          quantity: item.quantity,
+          unit_price: item.unit_price || item.price,
+          total_price: (item.unit_price || item.price || 0) * (item.quantity || 1),
+          notes: item.notes || '',
+          status: item.status || 'pending',
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          sort_order: index
+        }));
+
+        console.log('📦 OrderItems to save:', orderItems);
+
+        const { data: itemsData, error: itemsError } = await supabaseAdmin
+          .from('order_items')
+          .upsert(orderItems)
+          .select();
+
+        if (itemsError) {
+          console.log('❌ OrderItems insert error:', itemsError);
+          throw itemsError;
+        }
+
+        console.log('✅ OrderItems saved successfully:', itemsData);
+      }
 
       return { success: true };
     } catch (error: any) {

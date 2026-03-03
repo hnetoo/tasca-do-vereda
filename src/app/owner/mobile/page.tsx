@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { 
@@ -62,30 +62,7 @@ export default function OwnerMobilePage() {
   }, []);
 
   // Mobile: SEMPRE carregar da API para dados em tempo real de qualquer dispositivo
-  useEffect(() => {
-    console.log('📱 Mobile: Loading fresh data from API for cross-device consistency');
-    loadApiData();
-  }, []);
-
-  // Auto-refresh a cada 30 segundos para dados em tempo real
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('🔄 Auto-refresh: Buscando novos dados...');
-      loadApiData();
-    }, 30000); // 30 segundos
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Recarregar quando forceUpdate mudar (mas apenas se for > 1)
-  useEffect(() => {
-    if (forceUpdate > 1) {
-      console.log('📱 Mobile: Force update triggered, reloading API...');
-      loadApiData();
-    }
-  }, [forceUpdate]);
-
-  const loadApiData = async () => {
+  const loadApiData = useCallback(async () => {
     setLoadingSupabase(true);
     try {
       console.log('🔄 Starting API call to /api/owner-data');
@@ -107,45 +84,23 @@ export default function OwnerMobilePage() {
       // Se for dados de teste (emergency), mostrar alerta
       if (data.emergency) {
         console.error('❌ Mobile is receiving TEST DATA instead of REAL data!');
-        alert('❌ ATENÇÃO: O mobile está a receber dados de teste em vez de dados reais!\n\nPor favor, limpe o cache e tente novamente.');
-        return;
+        alert('⚠️ ATENÇÃO: Recebendo dados de teste em vez de dados reais!');
       }
       
-      // Usar APENAS dados reais
-      const finalOrders = data.orders || [];
-      const finalExpenses = data.expenses || [];
-      
-      console.log('🔍 Mobile Debug: Using ONLY REAL data');
-      console.log('🔍 Mobile Debug: Final orders count:', finalOrders.length);
-      console.log('🔍 Mobile Debug: Final expenses count:', finalExpenses.length);
-      
-      // Debug antes de setar estado
-      console.log('🔍 DEBUG ANTES DE SETAR ESTADO:', {
-        currentSupabaseOrders: supabaseData.orders?.length || 0,
-        currentSupabaseExpenses: supabaseData.expenses?.length || 0,
-        newOrders: finalOrders.length,
-        newExpenses: finalExpenses.length
-      });
-      
       setSupabaseData({
-        orders: finalOrders,
-        expenses: finalExpenses,
+        orders: data.orders || [],
+        expenses: data.expenses || [],
         payroll: data.payroll || [],
         dishes: data.dishes || [],
         categories: data.categories || []
       });
       
-      // Debug depois de setar estado
-      setTimeout(() => {
-        console.log('🔍 DEBUG DEPOIS DE SETAR ESTADO:', {
-          supabaseOrders: supabaseData.orders?.length || 0,
-          supabaseExpenses: supabaseData.expenses?.length || 0
-        });
-      }, 1000);
-      
-      console.log('✅ REAL data loaded for mobile:', {
-        orders: finalOrders.length,
-        expenses: finalExpenses.length
+      console.log('✅ Mobile API data loaded successfully:', {
+        orders: data.orders?.length || 0,
+        expenses: data.expenses?.length || 0,
+        dishes: data.dishes?.length || 0,
+        categories: data.categories?.length || 0,
+        payroll: data.payroll?.length || 0
       });
       
     } catch (error: any) {
