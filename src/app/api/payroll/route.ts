@@ -58,10 +58,10 @@ export async function POST(request: NextRequest) {
     
     // Verificar se tabela existe - CRIAR SE NÃO EXISTIR
     try {
-      const { error: tableCheckError } = await supabase.from('payroll').select('id').limit(1);
+      const { error: tableCheckError } = await supabase.from('payroll_records').select('id').limit(1);
       if (tableCheckError && tableCheckError.code === 'PGRST116') {
-        // Criar tabela payroll automaticamente
-        console.log('💼 PAYROLL API: Creating payroll table...');
+        // Criar tabela payroll_records automaticamente
+        console.log('💼 PAYROLL API: Creating payroll_records table...');
         const { error: createError } = await supabase.rpc('create_payroll_table');
         if (createError) {
           console.error('❌ PAYROLL API: Error creating table:', createError);
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     
     console.log('💼 PAYROLL API:// Inserir registro da folha salarial - CRIAR TABELA SE NÃO EXISTIR');
     const { data, error } = await supabase
-      .from('payroll')
+      .from('payroll_records')
       .insert(insertData)
       .select()
       .single();
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // Construir query
-    let query = supabase.from('payroll').select('*');
+    let query = supabase.from('payroll_records').select('*');
     
     // Aplicar filtros
     if (month) {
