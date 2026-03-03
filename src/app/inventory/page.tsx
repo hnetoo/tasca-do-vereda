@@ -297,7 +297,7 @@ const InventoryContent = () => {
     const newProduct = {
       ...product,
       name: `${product.name} (Cópia)`,
-      id: undefined // Deixa o useStore gerar um novo ID
+      id: crypto.randomUUID() // Gerar ID válido
     };
     addProduct(newProduct as Product);
   };

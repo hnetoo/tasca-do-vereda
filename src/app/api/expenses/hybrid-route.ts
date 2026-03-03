@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     console.log('☁️ Attempting Supabase backup...');
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
       
       if (supabaseUrl && supabaseServiceKey) {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     if (useSupabase) {
       try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
         
         if (supabaseUrl && supabaseServiceKey) {
           const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
     console.log('☁️ SQLite empty, trying Supabase fallback...');
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
       
       if (supabaseUrl && supabaseServiceKey) {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
