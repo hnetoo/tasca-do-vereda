@@ -68,21 +68,18 @@ export default function OwnerMobilePage() {
         
         // Limpar após mostrar
         localStorage.removeItem('reset_debug_info');
-      }
     }
-    
-    loadApiData();
-  }, []); // Executa apenas uma vez no mount
+  }, [orders, expenses, loadingSupabase]);
 
-  // AUTO-RELOAD A CADA 30 SEGUNDOS PARA PEGAR VENDAS EM TEMPO REAL
+  // Fallback: Carregar dados da API se store local estiver vazio - IGUAL AO OWNER DESKTOP!
   useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('🔄 Auto-reload: Buscando novos dados...');
+    const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
+    
+    if (!hasLocalData && !loadingSupabase) {
+      console.log('🔄 Loading data from API (fallback for owner mobile)');
       loadApiData();
-    }, 30000); // 30 segundos
-
-    return () => clearInterval(interval);
-  }, []);
+    }
+  }, [orders, expenses, loadingSupabase]);
 
   // Recarregar quando forceUpdate mudar (mas apenas se for > 1)
   useEffect(() => {
@@ -213,7 +210,7 @@ export default function OwnerMobilePage() {
       console.log('🔄 Forcing currentData update...');
       
       // SALVAR DEBUG NO LOCALSTORAGE PARA VER DEPOIS DO REFRESH
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && window.localStorage) {
         const debugInfo = {
           beforeReset: {
             supabaseOrders: supabaseData.orders?.length || 0,
@@ -236,8 +233,12 @@ export default function OwnerMobilePage() {
           }
         };
         
-        localStorage.setItem('reset_debug_info', JSON.stringify(debugInfo));
-        console.log('💾 Debug info saved to localStorage');
+        try {
+          window.localStorage.setItem('reset_debug_info', JSON.stringify(debugInfo));
+          console.log('💾 Debug info saved to localStorage');
+        } catch (e) {
+          console.warn('⚠️ Erro ao salvar debug info:', e);
+        }
       }
       
       setTimeout(() => {
@@ -264,15 +265,25 @@ export default function OwnerMobilePage() {
       // 4. LIMPAR TUDO DO LOCALSTORAGE
       if (typeof window !== 'undefined') {
         console.log('🧹 Limpando localStorage completamente...');
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.includes('tasca') || key.includes('supabase') || key.includes('owner'))) {
-            keysToRemove.push(key);
+        const keysToRemove: string[] = [];
+        
+        // Verificar se localStorage está disponível
+        try {
+          if (window.localStorage) {
+            for (let i = 0; i < window.localStorage.length; i++) {
+              const key = window.localStorage.key(i);
+              if (key && (key.includes('tasca') || key.includes('supabase') || key.includes('owner'))) {
+                keysToRemove.push(key);
+              }
+            }
+            keysToRemove.forEach(key => window.localStorage.removeItem(key));
           }
+          if (window.sessionStorage) {
+            window.sessionStorage.clear();
+          }
+        } catch (e) {
+          console.warn('⚠️ Erro ao limpar localStorage:', e);
         }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        sessionStorage.clear();
       }
       
       // 5. Forçar reload
@@ -287,14 +298,14 @@ export default function OwnerMobilePage() {
     }
   };
 
-  // Usar dados da API diretamente - versão simples sem bloqueios
+  // Usar dados do store local ou API - IGUAL AO OWNER DESKTOP!
   const currentData = useMemo(() => ({
-    orders: supabaseData.orders || [],
-    expenses: supabaseData.expenses || [],
-    payroll: supabaseData.payroll || [],
-    dishes: supabaseData.dishes || [],
-    categories: supabaseData.categories || []
-  }), [supabaseData]);
+    orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
+    expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
+    dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
+    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories,
+    payroll: supabaseData.payroll || []
+  }), [orders, expenses, dishes, categories, supabaseData]);
 
   // Usar hook seguro para cálculos dos cards
   const cardCalculations = useSafeCardCalculations(currentData, period);
