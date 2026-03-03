@@ -10,6 +10,19 @@ const nextConfig = {
     unoptimized: true 
   },
   
+  // ESTABILIZAÇÃO - Configurações para evitar erros de chunks
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+  
   // PWA Configuration
   async headers() {
     return [
@@ -48,13 +61,29 @@ const nextConfig = {
     root: './',
   },
   
-  // Ignorar erros de linting e typescript durante o build
+  // Configuração TypeScript mais permissiva para evitar erros
   typescript: { 
-    ignoreBuildErrors: false 
+    ignoreBuildErrors: false,
+    tsconfigPath: './tsconfig.json'
   },
   
-  // Configuração do Webpack para lidar com módulos node:
+  // Configuração do Webpack para estabilidade
   webpack: (config, { isServer }) => {
+    // Resolver problemas de chunks
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+        },
+      },
+    };
+    
     config.externals.push(({ request }, callback) => {
       if (request?.startsWith('node:')) {
         return callback(null, `commonjs ${request}`);
