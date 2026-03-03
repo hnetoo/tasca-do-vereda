@@ -104,10 +104,10 @@ const Categories = () => {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleOpenCatModal(cat)} className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5">
+                  <button onClick={() => handleOpenCatModal(cat)} title="Editar categoria" className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5">
                     <Edit2 size={18} />
                   </button>
-                  <button onClick={() => removeCategory(cat.id)} className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-500 transition-all border border-red-500/10">
+                  <button onClick={() => removeCategory(cat.id)} title="Apagar categoria" className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-500 transition-all border border-red-500/10">
                     <Trash2 size={18} />
                   </button>
                 </div>
@@ -126,7 +126,7 @@ const Categories = () => {
                 {editingId ? <Edit2 size={20} className="text-primary" /> : <Plus size={20} className="text-primary" />}
                 {editingId ? 'Editar Categoria' : 'Nova Categoria'}
               </h3>
-              <button onClick={() => setIsCatModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={() => setIsCatModalOpen(false)} title="Fechar" className="text-slate-400 hover:text-white transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -153,6 +153,7 @@ const Categories = () => {
                         key={icon.name}
                         type="button"
                         onClick={() => setCatForm({...catForm, icon: icon.name})}
+                        title={`Selecionar ícone ${icon.name}`}
                         className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${catForm.icon === icon.name ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'}`}
                       >
                         <icon.icon size={20} />
