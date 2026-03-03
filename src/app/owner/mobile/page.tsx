@@ -112,7 +112,7 @@ export default function OwnerMobilePage() {
     }
   }, []);
 
-  // Função de Reset COM TRUNCATE DIRETO NO BANCO
+  // Função de Reset via API (sem usar SERVICE KEY no browser)
   const handleResetProduction = async () => {
     const confirm1 = confirm('Resetar Produção\n\nLIMPAR TUDO do banco de dados?\n\nDeseja continuar?');
     if (!confirm1) return;
@@ -125,32 +125,24 @@ export default function OwnerMobilePage() {
     try {
       console.log('🔥 INICIANDO LIMPEZA COMPLETA DO BANCO DE DADOS...');
       
-      // 1. LIMPAR DIRETO NO BANCO via RPC com SERVICE ROLE KEY
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+      // EXECUTAR LIMPEZA VIA API (seguro, sem expor keys no browser)
+      console.log('🔥 Executando limpeza via API...');
+      const response = await fetch('/api/clear-production-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'all' })
+      });
       
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Config Supabase ausente');
+      const result = await response.json();
+      
+      if (!response.ok || result.error) {
+        console.error('❌ Erro na API:', result.error);
+        throw new Error(`Erro na API: ${result.error || 'Falha na limpeza'}`);
       }
       
-      console.log('🔑 Using NEXT_PUBLIC_SUPABASE_SERVICE_ROLE KEY for full permissions');
-      console.log('🔑 URL:', supabaseUrl);
-      console.log('🔑 Key:', supabaseKey.substring(0, 20) + '...');
-      
-      // Criar cliente admin com SERVICE ROLE KEY
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-      
-      // EXECUTAR TRUNCATE DIRETO NO BANCO
-      console.log('🔥 Executando TRUNCATE no banco...');
-      const { data, error } = await supabaseAdmin.rpc('clear_all_production_data');
-      
-      if (error) {
-        console.error('❌ Erro no RPC:', error);
-        throw new Error(`Erro no banco: ${error.message}`);
-      }
-      
-      console.log('✅ Banco limpo:', data);
+      console.log('✅ API limpeza executada:', result);
       
       // 2. Limpar estado local
       setSupabaseData({ orders: [], expenses: [], payroll: [], dishes: [], categories: [] });
