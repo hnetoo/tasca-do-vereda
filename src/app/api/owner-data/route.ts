@@ -116,48 +116,48 @@ export async function GET(request: Request) {
     
     console.log('🔍 REAL API: SERVER-SIDE Supabase client created');
     
-    // Carregar orders com SERVICE_ROLE_KEY - QUERY SIMPLES
-    console.log('🔍 REAL API: Loading orders (SIMPLE QUERY)...');
+    // Carregar orders COM ESTRUTURA EXATA DA PRODUÇÃO
+    console.log('🔍 REAL API: Loading orders (PRODUCTION STRUCTURE)...');
     
     const { data: ordersData, error: ordersError } = await supabaseAdmin
       .from('orders')
-      .select('*');
+      .select('id, status, total, created_at, updated_at'); // SÓ CAMPOS QUE EXISTEM NA PRODUÇÃO
     
     console.log('🔍 REAL API: Orders result:', { 
       count: ordersData?.length || 0, 
       error: ordersError?.message
     });
     
-    // Carregar expenses com SERVICE_ROLE_KEY - QUERY SIMPLES
-    console.log('🔍 REAL API: Loading expenses (SIMPLE QUERY)...');
+    // Carregar expenses COM ESTRUTURA EXATA DA PRODUÇÃO
+    console.log('🔍 REAL API: Loading expenses (PRODUCTION STRUCTURE)...');
     
     const { data: expensesData, error: expensesError } = await supabaseAdmin
       .from('expenses')
-      .select('*');
+      .select('id, description, amount, category, date, created_at'); // SÓ CAMPOS QUE EXISTEM NA PRODUÇÃO
     
     console.log('🔍 REAL API: Expenses result:', { 
       count: expensesData?.length || 0, 
       error: expensesError?.message
     });
 
-    // Carregar dishes com SERVICE_ROLE_KEY - QUERY SIMPLES
-    console.log('🔍 REAL API: Loading dishes (SIMPLE QUERY)...');
+    // Carregar dishes COM ESTRUTURA EXATA DA PRODUÇÃO
+    console.log('🔍 REAL API: Loading dishes (PRODUCTION STRUCTURE)...');
     
     const { data: dishesData, error: dishesError } = await supabaseAdmin
       .from('dishes')
-      .select('*');
+      .select('id, name, price, description, category_id, image_url, available, is_active, is_available_on_digital_menu, tax_percentage, tax_code, preparation_time, track_stock, stock_quantity, min_stock_quantity, max_stock_quantity, supplier_id, unit, cost_price, created_at, updated_at, user_id, status'); // ESTRUTURA COMPLETA DA PRODUÇÃO
     
     console.log('🔍 REAL API: Dishes result:', { 
       count: dishesData?.length || 0, 
       error: dishesError?.message
     });
 
-    // Carregar categories com SERVICE_ROLE_KEY - USAR menu_categories
-    console.log('🔍 REAL API: Loading menu_categories (SIMPLE QUERY)...');
+    // Carregar categories COM ESTRUTURA EXATA DA PRODUÇÃO
+    console.log('🔍 REAL API: Loading menu_categories (PRODUCTION STRUCTURE)...');
     
     const { data: categoriesData, error: categoriesError } = await supabaseAdmin
       .from('menu_categories')
-      .select('*');
+      .select('id, name, description, image_url, is_active, created_at, updated_at'); // ESTRUTURA EXATA DA PRODUÇÃO
     
     console.log('🔍 REAL API: Categories result:', { 
       count: categoriesData?.length || 0, 
