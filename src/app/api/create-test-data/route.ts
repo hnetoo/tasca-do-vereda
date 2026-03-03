@@ -14,47 +14,41 @@ export async function POST() {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Criar orders de teste
+    // Criar orders de teste (ESTRUTURA EXATA DO SCHEMA)
     const testOrders = [
       {
         id: crypto.randomUUID(),
-        tableId: 'mesa-1',
         status: 'completed',
         total: 15000,
         created_at: new Date().toISOString(),
-        items: [
-          { name: 'Cerveja', price: 500, quantity: 2 },
-          { name: 'Frango', price: 7000, quantity: 1 }
-        ]
+        updated_at: new Date().toISOString()
       },
       {
         id: crypto.randomUUID(),
-        tableId: 'mesa-2',
         status: 'completed',
         total: 8500,
         created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hora atrás
-        items: [
-          { name: 'Refrigerante', price: 300, quantity: 2 },
-          { name: 'Batata', price: 4000, quantity: 1 }
-        ]
+        updated_at: new Date(Date.now() - 3600000).toISOString()
       }
     ];
     
-    // Criar expenses de teste
+    // Criar expenses de teste (ESTRUTURA EXATA DO SCHEMA)
     const testExpenses = [
       {
         id: crypto.randomUUID(),
         description: 'Compra de bebidas',
         amount: 5000,
         category: 'Estoque',
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        created_at: new Date().toISOString()
       },
       {
         id: crypto.randomUUID(),
         description: 'Limpeza',
         amount: 2000,
         category: 'Serviços',
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        created_at: new Date().toISOString()
       }
     ];
     
