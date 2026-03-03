@@ -318,26 +318,6 @@ const TableLayout = () => {
           </div>
         </header>
 
-        <div className="px-8 py-4 flex gap-3 overflow-x-auto no-scrollbar shrink-0 relative z-20">
-          {(['INTERIOR', 'EXTERIOR', 'BALCAO'] as TableZone[]).map(zone => {
-             const Icon = zoneConfig[zone].icon;
-             const isActive = activeZone === zone;
-             return (
-               <button
-                 key={zone}
-                 onClick={() => { setActiveZone(zone); setSelectedTableId(null); }}
-                 className={`px-6 py-3 rounded-2xl border flex items-center gap-3 transition-all whitespace-nowrap
-                   ${isActive ? 'bg-primary/20 border-primary text-primary shadow-glow' : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10 hover:text-slate-300'}
-                 `}
-               >
-                  <Icon size={18} />
-                  <span className="text-xs font-black uppercase tracking-widest">{zoneConfig[zone].label}</span>
-                  <span className="bg-black/20 px-2 py-0.5 rounded text-[10px] opacity-60">{(tables || []).filter(t => t.zone === zone).length}</span>
-               </button>
-             );
-          })}
-        </div>
-
         <div className="flex-1 p-8 pt-4 overflow-hidden flex flex-col">
           {(!tables || tables.length === 0) ? (
              <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center opacity-60">
@@ -373,7 +353,7 @@ const TableLayout = () => {
                 )}
              </div>
           ) : (
-          <>
+            <>
             {isEditMode && (
               <div className="absolute top-4 left-1/2 right-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
                 <div className="flex items-center gap-2 text-sm font-bold">
@@ -382,7 +362,7 @@ const TableLayout = () => {
                 </div>
               </div>
             )}
-            <div className={`flex-1 relative glass-panel rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-700 ${zoneConfig[activeZone].bg}`}>
+            <div className="flex-1 relative glass-panel rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-700">
             <div className="absolute inset-0 pointer-events-none opacity-[0.05]" 
               style={{ 
                 backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
@@ -395,25 +375,22 @@ const TableLayout = () => {
               style={{ 
                 gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
                 gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
-                width: 'min(98%, 1400px)',
-                height: 'min(90vh, 600px)',
+                width: 'min(98%, 1200px)',
+                height: 'min(80vh, 500px)',
                 aspectRatio: `${GRID_SIZE}/${GRID_ROWS}`
               }}
             >
               {Array.from({ length: GRID_ROWS }).map((_, y) => (
                 Array.from({ length: GRID_SIZE }).map((_, x) => {
-                  const table = filteredTables.find(t => t.x === x && t.y === y);
+                  const table = tables.find(t => t.x === x && t.y === y);
                   const isSelected = table?.id === selectedTableId;
                   const isOver = dragOverPos?.x === x && dragOverPos?.y === y;
                   const isOccupiedByOther = table && table.id !== draggedTableId;
-                  
-                  const { total, timeElapsed } = table ? getTableStats(table.id) : { total: 0, timeElapsed: '' };
 
                   return (
                     <div 
                       key={`${x}-${y}`}
                       onDragOver={(e) => handleDragOver(e, x, y)}
-                      onDragEnter={handleDragEnter}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, x, y)}
                       className={`aspect-square rounded-xl flex items-center justify-center transition-all relative
@@ -425,26 +402,15 @@ const TableLayout = () => {
                       {table && (
                         <div 
                           draggable={isEditMode}
-                          onDragStart={(e) => {
-                            console.log('🎯 DRAG START on table:', table.name, 'EditMode:', isEditMode);
-                            handleDragStart(e, table.id);
-                          }}
-                          onDragEnd={() => { 
-                            console.log('🎯 DRAG END on table:', table.name);
-                            setDragOverPos(null); 
-                            setDraggedTableId(null); 
-                          }}
-                          onClick={() => {
-                            console.log('🎯 CLICK on table:', table.name, 'EditMode:', isEditMode);
-                            toggleStatus(table);
-                          }}
+                          onDragStart={(e) => handleDragStart(e, table.id)}
+                          onDragEnd={() => { setDragOverPos(null); setDraggedTableId(null); }}
+                          onClick={() => toggleStatus(table)}
                           style={{ transform: `rotate(${table.rotation}deg)` }}
                           className={`w-full h-full border-2 flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 group relative
                             ${getStatusColor((table.status || 'AVAILABLE') as TableStatus)}
                             ${isSelected ? 'ring-4 ring-primary ring-offset-4 ring-offset-background z-20 scale-105 shadow-glow' : 'hover:scale-105'}
                             ${isEditMode ? 'cursor-grab active:cursor-grabbing border-4 border-dashed border-yellow-400/50' : ''}
                             ${table.shape === 'CIRCLE' ? 'rounded-full' : table.shape === 'RECTANGLE' ? 'rounded-lg' : 'rounded-2xl'}
-                            ${draggedTableId !== null && draggedTableId !== table.id ? 'pointer-events-none' : ''}
                           `}
                         >
                           {isOver && isOccupiedByOther && (
@@ -456,7 +422,6 @@ const TableLayout = () => {
                           <div className={`flex flex-col items-center gap-0.5 w-full px-1 text-center ${table.rotation !== 0 ? 'rotate-[-' + table.rotation + 'deg]' : ''}`}>
                              <span className="font-black text-[9px] md:text-[10px] tracking-tighter uppercase leading-none mb-1">{table.name}</span>
                              
-                             {/* Forma e Lugares */}
                              <div className="flex items-center justify-center gap-2 mb-2">
                                <div className="flex items-center gap-1">
                                  {table.shape === 'CIRCLE' && <Circle size={12} className="text-slate-300" />}
@@ -468,32 +433,13 @@ const TableLayout = () => {
                                </div>
                              </div>
                              
-                             {table.status === 'OCCUPIED' && !isEditMode && (
-                               <div className="flex flex-col items-center animate-in fade-in duration-500">
-                                 <div className="flex items-center gap-1 text-[9px] font-mono font-bold text-white mb-0.5">
-                                    <Clock size={10} className="text-primary" /> {timeElapsed}
-                                 </div>
-                                 <div className="text-[10px] font-mono font-black text-white bg-black/30 px-1.5 py-0.5 rounded border border-white/10">
-                                    {formatKz(total)}
-                                 </div>
-                               </div>
-                             )}
-
-                             {!table.activeOrderIds?.length && (table.status || 'AVAILABLE') !== 'OCCUPIED' && !(table.status || '').includes('PAGAMENTO') && isEditMode && (
-                               <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest bg-black/40 px-1.5 py-0.5 rounded opacity-70">
+                             {isEditMode && (
+                               <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest bg-yellow-400/80 px-1.5 py-0.5 rounded">
                                   Editar
-                               </div>
-                             )}
-
-                             {table.status === 'PAYMENT' && !isEditMode && (
-                               <div className="flex flex-col items-center">
-                                 <div className="text-[10px] font-mono font-black">FECHAR</div>
-                                 <div className="text-[9px] font-mono font-bold">{formatKz(total)}</div>
                                </div>
                              )}
                           </div>
 
-                          {/* Hover badge for capacity in occupied mode */}
                           {table.status === 'OCCUPIED' && !isEditMode && (
                              <div className="absolute -top-1 -right-1 bg-black text-white text-[8px] font-black p-1 rounded-full border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity">
                                <Users size={8} />
@@ -507,29 +453,28 @@ const TableLayout = () => {
               ))}
             </div>
           </div>
+          </>
           )}
           
           <div className="mt-6 flex flex-wrap gap-6 justify-center text-slate-500 font-bold uppercase tracking-widest text-[9px]">
              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500"></div> Livre</div>
-             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-600/40 border border-red-500 shadow-glow"></div> Ocupado (Tempo & Valor Ativos)</div>
+             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-600/40 border border-red-500 shadow-glow"></div> Ocupado</div>
              <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500"></div> Reservado</div>
-             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-primary/20 border border-primary animate-pulse"></div> Pagamento</div>
           </div>
         </div>
       </div>
 
       {isEditMode && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-xl shadow-2xl animate-pulse">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-xl shadow-2xl animate-pulse">
           <div className="flex items-center gap-3">
             <Move size={20} />
-            <span className="font-bold">MODO EDIÇÃO ATIVADO</span>
+            <span className="font-bold">MODO EDIÇÃO ATIVADO - Arraste as mesas para reposicionar</span>
           </div>
-          <div className="text-sm mt-1">Arraste as mesas para reposicionar</div>
         </div>
       )}
     </div>
   );
-};
+}
 
 export default TableLayout;
 
