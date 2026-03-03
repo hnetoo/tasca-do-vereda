@@ -42,7 +42,17 @@ const TableLayout = () => {
   const GRID_SIZE = 10; 
   const GRID_ROWS = 8; 
 
-  const filteredTables = useMemo(() => tables.filter(t => t.zone === activeZone), [tables, activeZone]);
+  const filteredTables = useMemo(() => {
+    // Se não houver zona ativa ou se a zona não for válida, mostrar TODAS as mesas
+    if (!activeZone || !['INTERIOR', 'EXTERIOR', 'BALCAO'].includes(activeZone)) {
+      console.log('🔍 NO VALID ZONE - showing ALL tables:', tables.length);
+      return tables;
+    }
+    
+    const filtered = tables.filter(t => t.zone === activeZone);
+    console.log('🔍 FILTERED TABLES for zone', activeZone, ':', filtered.length, 'tables:', tables.length);
+    return filtered;
+  }, [tables, activeZone]);
   const selectedTable = useMemo(() => tables.find(t => t.id === selectedTableId), [tables, selectedTableId]);
 
   const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { 
