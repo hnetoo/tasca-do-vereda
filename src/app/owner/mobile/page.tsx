@@ -20,11 +20,14 @@ import {
   Receipt,
   ShoppingCart,
   Calendar,
-  Clock
+  Clock,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { getOwnerMobileData } from '@/app/actions/ownerMobile';
 import { createSampleData } from '@/app/actions/createSampleData';
 import { resetProductionData } from '@/app/actions/resetProduction';
+import { ensureTables } from '@/app/actions/ensureTables';
 import { useSafeCardCalculations } from '@/utils/cardCalculations';
 
 const fmt = (n: number) =>
@@ -39,6 +42,7 @@ export default function OwnerMobilePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showTodaySales, setShowTodaySales] = useState(true);
   const [showAccumulatedSales, setShowAccumulatedSales] = useState(true);
+  const [isOnline, setIsOnline] = useState(true);
   const [supabaseData, setSupabaseData] = useState<any>({
     orders: [],
     expenses: [],
@@ -62,84 +66,42 @@ export default function OwnerMobilePage() {
     setExpenses
   } = useStore();
 
-  // Mobile: SEMPRE carregar da Server Action para dados em tempo real
+  // Função para carregar dados da API
   const loadApiData = useCallback(async () => {
-    setLoadingSupabase(true);
     try {
-      // MOBILE SPECIFIC LOGS - Funciona em computador e telemóvel
-      console.log('📱 MOBILE DASHBOARD: Iniciando carregamento de dados...');
-      console.log('📱 MOBILE DASHBOARD: User Agent:', navigator.userAgent);
-      console.log('📱 MOBILE DASHBOARD: Platform:', navigator.platform);
-      console.log('📱 MOBILE DASHBOARD: Screen:', {
-        width: window.screen.width,
-        height: window.screen.height,
-        isMobile: window.screen.width <= 768
-      });
+      setLoadingSupabase(true);
+      console.log('� MOBILE: Carregando dados da API...');
       
-      console.log('🔄 Starting Server Action call to getOwnerMobileData');
-      
-      const data = await getOwnerMobileData();
-      
-      console.log('🔍 SERVER ACTION RESPONSE:', data);
-      console.log('� MOBILE DATA COMPARISON:', {
-        '📊 Store Orders': orders.length,
-        '☁️ Supabase Orders': data.orders?.length || 0,
-        '📊 Store Expenses': expenses.length,
-        '☁️ Supabase Expenses': data.expenses?.length || 0,
-        '📊 Store Payroll': payroll.length,
-        '☁️ Supabase Payroll': data.payroll?.length || 0,
-        '📱 Device Type': window.screen.width <= 768 ? 'MOBILE' : 'DESKTOP',
-        '🕐 Timestamp': new Date().toISOString()
-      });
-      
-      if (!data.success) {
-        console.error('❌ Server Action returned error:', data.error);
-        addNotification(`❌ Erro: ${data.error}`, 'error');
+      // Primeiro, garantir que todas as tabelas existem
+      console.log('� MOBILE: Verificando tabelas...');
+      const tablesResult = await ensureTables();
+      if (!tablesResult.success) {
+        console.error('❌ MOBILE: Erro ao verificar tabelas:', tablesResult.error);
+        addNotification(`❌ Erro ao preparar tabelas: ${tablesResult.error}`, 'error');
         return;
       }
       
-      // FALLBACK: Se Supabase retornar vazio, usar dados da Store
-      const finalData = {
-        orders: (data.orders && data.orders.length > 0) ? data.orders : orders,
-        expenses: (data.expenses && data.expenses.length > 0) ? data.expenses : expenses,
-        payroll: (data.payroll && data.payroll.length > 0) ? data.payroll : payroll,
-        dishes: (data.dishes && data.dishes.length > 0) ? data.dishes : dishes,
-        categories: (data.categories && data.categories.length > 0) ? data.categories : categories
-      };
+      // Depois de garantir tabelas, carregar dados
+      console.log('📊 MOBILE: Carregando dados do Supabase...');
+      const data = await getOwnerMobileData();
       
-      console.log('🔍 FINAL DATA AFTER FALLBACK:', {
-        orders: finalData.orders.length,
-        expenses: finalData.expenses.length,
-        payroll: finalData.payroll.length,
-        usedStoreFallback: {
-          orders: data.orders?.length === 0,
-          expenses: data.expenses?.length === 0,
-          payroll: data.payroll?.length === 0
-        },
-        deviceInfo: {
-          type: window.screen.width <= 768 ? 'MOBILE' : 'DESKTOP',
-          screen: `${window.screen.width}x${window.screen.height}`,
-          userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER'
-        }
-      });
-      
-      setSupabaseData(finalData);
-      
-      console.log('✅ MOBILE DASHBOARD: Dados carregados com sucesso:', {
-        orders: finalData.orders.length,
-        expenses: finalData.expenses.length,
-        payroll: finalData.payroll.length,
-        device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
+      console.log('📱 MOBILE: Dados recebidos:', {
+        ordersCount: data.orders?.length || 0,
+        expensesCount: data.expenses?.length || 0,
+        payrollCount: data.payroll?.length || 0,
         timestamp: new Date().toISOString()
       });
       
+      setSupabaseData(data);
+      addNotification('✅ Dados atualizados com sucesso!', 'success');
+      
     } catch (error: any) {
-      console.error('❌ Mobile Server Action error:', error);
-      addNotification(`❌ Falha ao carregar dados: ${error.message}`, 'error');
+      console.error('❌ MOBILE: Erro ao carregar dados:', error);
+      addNotification(`❌ Erro ao carregar dados: ${error.message}`, 'error');
     } finally {
       setLoadingSupabase(false);
     }
-  }, [addNotification, orders, expenses, payroll, dishes, categories]);
+  }, [addNotification]);
 
   // Carregar dados no mount
   useEffect(() => {
@@ -152,14 +114,13 @@ export default function OwnerMobilePage() {
     return () => clearInterval(interval);
   }, [loadApiData]);
 
-  // Combinar dados locais com dados do Supabase - IGUAL AO DESKTOP
+  // Combinar dados locais com dados do Supabase
   const currentData = useMemo(() => {
-    // LÓGICA EXATAMENTE IGUAL AO DESKTOP /owner/page.tsx
     const allOrders = [...(orders || []), ...(supabaseData.orders || [])];
     const allExpenses = [...(expenses || []), ...(supabaseData.expenses || [])];
     const allPayroll = [...(payroll || []), ...(supabaseData.payroll || [])];
     
-    console.log('🔥 STORE VS API (MOBILE - SAME AS DESKTOP):', { 
+    console.log('🔥 STORE VS API (MOBILE):', { 
       store: orders.length, 
       api: supabaseData.orders?.length || 0,
       finalOrders: allOrders.length,
@@ -181,7 +142,7 @@ export default function OwnerMobilePage() {
   // Cálculos financeiros
   const calculations = useSafeCardCalculations(currentData, period);
 
-  // Filtrar por período - TEMPORARIAMENTE DESATIVADO PARA DEBUG
+  // Filtrar por período
   const filteredData = useMemo(() => {
     return {
       orders: currentData.orders,
@@ -190,20 +151,8 @@ export default function OwnerMobilePage() {
     };
   }, [currentData]);
 
-  // Cálculos do período - COM CÁLCULO MANUAL FORÇADO
+  // Cálculos do período
   const periodCalculations = useSafeCardCalculations(filteredData, period);
-  
-  // DEBUG COMPLETO - Verificar dados antes dos cálculos
-  console.log('🔍 DEBUG MOBILE COMPLETO:', {
-    'currentData.orders': currentData.orders,
-    'currentData.orders.length': currentData.orders.length,
-    'filteredData.orders': filteredData.orders,
-    'filteredData.orders.length': filteredData.orders.length,
-    'orders from store': orders,
-    'orders from store.length': orders.length,
-    'supabaseData.orders': supabaseData.orders,
-    'supabaseData.orders.length': supabaseData.orders?.length || 0
-  });
   
   // Cálculo manual forçado para garantir valores corretos
   const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
@@ -250,12 +199,10 @@ export default function OwnerMobilePage() {
     firstOrderDate: firstOrderDate.toLocaleDateString('pt-AO'),
     ordersCount: filteredData.orders.length,
     expensesCount: filteredData.expenses.length,
-    payrollCount: filteredData.payroll.length,
-    'primeiro order total': filteredData.orders[0]?.total,
-    'todos os orders totals': filteredData.orders.map((o: any) => o.total)
+    payrollCount: filteredData.payroll.length
   });
   
-  // USAR VALORES MANUAIS DIRETAMENTE - não tentar sobrescrever o objeto do hook
+  // USAR VALORES MANUAIS DIRETAMENTE
   const displayValues = {
     revenue: fmt(manualRevenue),
     expenses: fmt(manualExpenses),
@@ -274,7 +221,6 @@ export default function OwnerMobilePage() {
       
       if (result.success) {
         addNotification('✅ Dados de exemplo criados com sucesso!', 'success');
-        // Recarregar dados após criar
         await loadApiData();
       } else {
         addNotification(`❌ Erro: ${result.error}`, 'error');
@@ -295,10 +241,8 @@ export default function OwnerMobilePage() {
       
       if (result.success) {
         addNotification('✅ Dados limpos com sucesso!', 'success');
-        // Limpar store local
         setOrders([]);
         setExpenses([]);
-        // Recarregar dados
         await loadApiData();
       } else {
         addNotification(`❌ Erro: ${result.error}`, 'error');
@@ -308,7 +252,7 @@ export default function OwnerMobilePage() {
     }
   };
 
-  // Verificar autenticação
+  // Verificar autenticação e status online
   useEffect(() => {
     const checkAuth = () => {
       const cookie = document.cookie.split(';').find(c => c.trim().startsWith('owner_authenticated='));
@@ -318,7 +262,26 @@ export default function OwnerMobilePage() {
         router.push('/owner/mobile/login');
       }
     };
+    
+    // Verificar status online/offline
+    const checkOnlineStatus = () => {
+      setIsOnline(navigator.onLine);
+    };
+    
     checkAuth();
+    checkOnlineStatus();
+    
+    // Listener para mudanças de conexão
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [router]);
 
   if (authChecking) {
@@ -340,6 +303,24 @@ export default function OwnerMobilePage() {
           <div className="flex items-center gap-2">
             <Smartphone className="w-6 h-6" />
             <h1 className="text-xl font-bold">Tasca Mobile</h1>
+            {/* Status Online/Offline */}
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${
+              isOnline 
+                ? 'bg-green-500 text-white' 
+                : 'bg-gray-500 text-white'
+            }`}>
+              {isOnline ? (
+                <>
+                  <Wifi className="w-4 h-4" />
+                  <span className="text-sm font-medium">Online</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4" />
+                  <span className="text-sm font-medium">Offline</span>
+                </>
+              )}
+            </div>
           </div>
           <button
             onClick={() => {
@@ -406,18 +387,6 @@ export default function OwnerMobilePage() {
             <ArrowUpRight className="w-4 h-4" />
             <span>{filteredData.orders.length} vendas</span>
           </div>
-          {(() => {
-            console.log('📱 MOBILE CARD VENDAS:', { 
-              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
-              totalVendas: filteredData.orders.length, 
-              primeiroValor: filteredData.orders[0]?.total,
-              todosValores: filteredData.orders.map((o: any) => o.total),
-              calculado: periodCalculations.revenue.value,
-              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
-              timestamp: new Date().toISOString()
-            });
-            return null;
-          })()}
         </div>
 
         {/* Taxes Card (6.5%) */}
@@ -431,17 +400,6 @@ export default function OwnerMobilePage() {
             <Receipt className="w-4 h-4" />
             <span>Sobre total de vendas</span>
           </div>
-          {(() => {
-            console.log('📱 MOBILE CARD IMPOSTOS:', { 
-              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
-              totalImpostos: totalTaxes,
-              taxa: `${(taxRate * 100)}%`,
-              calculado: fmt(totalTaxes),
-              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
-              timestamp: new Date().toISOString()
-            });
-            return null;
-          })()}
         </div>
 
         {/* Expenses Card */}
@@ -455,18 +413,6 @@ export default function OwnerMobilePage() {
             <ArrowDownRight className="w-4 h-4" />
             <span>{filteredData.expenses.length} despesas</span>
           </div>
-          {(() => {
-            console.log('📱 MOBILE CARD DESPESAS:', { 
-              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
-              totalDespesas: filteredData.expenses.length, 
-              primeiroValor: filteredData.expenses[0]?.amount,
-              todosValores: filteredData.expenses.map((e: any) => e.amount),
-              calculado: periodCalculations.expenses.value,
-              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
-              timestamp: new Date().toISOString()
-            });
-            return null;
-          })()}
         </div>
 
         {/* Today Sales Card */}
@@ -480,16 +426,6 @@ export default function OwnerMobilePage() {
             <Clock className="w-4 h-4" />
             <span>{todayOrders.length} pedidos hoje</span>
           </div>
-          {(() => {
-            console.log('📱 MOBILE CARD VENDAS HOJE:', { 
-              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
-              todayRevenue,
-              todayOrdersCount: todayOrders.length,
-              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
-              timestamp: new Date().toISOString()
-            });
-            return null;
-          })()}
         </div>
 
         {/* Accumulated Sales Card */}
@@ -506,18 +442,6 @@ export default function OwnerMobilePage() {
           <div className="text-xs text-purple-80 mt-1">
             ({daysSinceStart} dias de operação)
           </div>
-          {(() => {
-            console.log('📱 MOBILE CARD VENDAS ACUMULADAS:', { 
-              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
-              accumulatedRevenue,
-              daysSinceStart,
-              firstOrderDate: firstOrderDate.toLocaleDateString('pt-AO'),
-              totalOrders: filteredData.orders.length,
-              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
-              timestamp: new Date().toISOString()
-            });
-            return null;
-          })()}
         </div>
 
         {/* Payroll Card */}
@@ -531,18 +455,6 @@ export default function OwnerMobilePage() {
             <Users className="w-4 h-4" />
             <span>{filteredData.payroll.length} registros</span>
           </div>
-          {(() => {
-            console.log('📱 MOBILE CARD FOLHA:', { 
-              device: window.screen.width <= 768 ? '📱 MOBILE' : '💻 DESKTOP',
-              totalFolha: filteredData.payroll.length, 
-              primeiroValor: filteredData.payroll[0]?.amount,
-              todosValores: filteredData.payroll.map((p: any) => p.amount),
-              calculado: totalPayroll,
-              userAgent: navigator.userAgent.includes('Mobile') ? 'MOBILE_BROWSER' : 'DESKTOP_BROWSER',
-              timestamp: new Date().toISOString()
-            });
-            return null;
-          })()}
         </div>
 
         {/* Net Profit Card */}
@@ -636,7 +548,7 @@ export default function OwnerMobilePage() {
             </>
           ) : (
             <>
-              <ArrowUpRight className="w-4 h-4" />
+              <RefreshCw className="w-5 h-5" />
               <span>Atualizar Dados</span>
             </>
           )}
