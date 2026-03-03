@@ -7,12 +7,12 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json();
-    const { name, capacity, seats, status, x, y, zone, shape, rotation, color } = body;
+    const { name, seats, status, x, y, zone, shape, rotation, color } = body;
     
     // Validar campos obrigatórios
-    if (!name || !capacity) {
+    if (!name || !seats) {
       return NextResponse.json(
-        { error: 'Campos name e capacity são obrigatórios' },
+        { error: 'Campos name e seats são obrigatórios' },
         { status: 400 }
       );
     }
@@ -37,8 +37,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name: name,
         number: parseInt(name.replace(/\D/g, '')) || 1,
-        seats: seats || capacity,
-        capacity: capacity,
+        seats: seats,
         status: status || 'AVAILABLE',
         x: x || 0,
         y: y || 0,
@@ -148,7 +147,7 @@ export async function PUT(request: NextRequest) {
   
   try {
     const body = await request.json();
-    const { id, name, capacity, seats, status, x, y, zone, shape, rotation, color } = body;
+    const { id, name, seats, status, x, y, zone, shape, rotation, color } = body;
     
     if (!id) {
       return NextResponse.json(
@@ -176,8 +175,7 @@ export async function PUT(request: NextRequest) {
       .update({
         name: name,
         number: parseInt(name.replace(/\D/g, '')) || 1,
-        seats: seats || capacity,
-        capacity: capacity,
+        seats: seats,
         status: status,
         x: x,
         y: y,

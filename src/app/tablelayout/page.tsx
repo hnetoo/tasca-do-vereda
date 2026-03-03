@@ -248,6 +248,12 @@ const TableLayout = () => {
                <span className="text-xs font-mono font-bold tracking-widest uppercase">Arquitetura de Salão</span>
             </div>
             <h2 className="text-3xl font-bold text-white tracking-tight italic">Gestão de Ambientes</h2>
+            {isEditMode && (
+              <div className="mt-2 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse inline-flex items-center gap-2">
+                <Settings2 size={12} />
+                MODO DE EDIÇÃO ATIVADO
+              </div>
+            )}
           </div>
           
           <div className="flex gap-3 items-center">
@@ -289,13 +295,13 @@ const TableLayout = () => {
                     setSelectedTableId(null);
                   }
                 }}
-                className={`px-8 py-3 rounded-xl border-2 font-bold flex items-center gap-3 transition-all shadow-lg text-sm
+                className={`px-8 py-4 text-xl font-black rounded-2xl border-4 flex items-center gap-3 transition-all shadow-lg
                   ${isEditMode 
-                    ? 'bg-red-500 text-white border-red-500 shadow-red-500/50 animate-pulse' 
-                    : 'bg-green-500 text-white border-green-500 shadow-green-500/50 hover:bg-green-600'
+                    ? 'bg-red-500 text-white border-red-500 shadow-red-500/50 animate-pulse hover:scale-105' 
+                    : 'bg-green-500 text-white border-green-500 shadow-green-500/50 hover:bg-green-600 hover:scale-105'
                   }`}
               >
-                {isEditMode ? <CheckCircle2 size={20} /> : <Move size={20} />}
+                {isEditMode ? <CheckCircle2 size={24} /> : <Move size={24} />}
                 {isEditMode ? 'TERMINAR EDIÇÃO' : 'MOVER MESAS'}
               </button>
             )}
