@@ -348,6 +348,31 @@ export default function OwnerMobilePage() {
       expensesData: currentData.expenses,
       payrollData: currentData.payroll
     });
+    
+    // Debug detalhado dos campos
+    if (currentData.expenses && currentData.expenses.length > 0) {
+      console.log('💰 Expenses Details:', currentData.expenses.map((e: any, i: number) => ({
+        index: i,
+        id: e.id,
+        amount: e.amount,
+        value: e.value,
+        description: e.description,
+        date: e.date
+      })));
+    }
+    
+    if (currentData.payroll && currentData.payroll.length > 0) {
+      console.log('💰 Payroll Details:', currentData.payroll.map((p: any, i: number) => ({
+        index: i,
+        id: p.id,
+        netSalary: p.net_salary,
+        netSalary2: p.netSalary,
+        amount: p.amount,
+        baseSalary: p.base_salary,
+        employee: p.employee_id || p.employee
+      })));
+    }
+    
     console.log('💰 =======================');
   }, [cardCalculations, currentData]);
 
