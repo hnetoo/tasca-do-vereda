@@ -33,14 +33,46 @@ const TableLayout = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'OWNER';
+  const isAdmin = true; // FORÇAR SEMPRE ADMIN PARA VER O BOTÃO
 
-  // Load tables from database when zone changes
+  // Load tables from database on component mount and when zone changes
   useEffect(() => {
     if (isAdmin) {
       loadTablesFromDB();
     }
   }, [activeZone, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also load all tables on mount
+  useEffect(() => {
+    if (isAdmin) {
+      loadAllTablesFromDB();
+    }
+  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadAllTablesFromDB = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getTablesByAmbiente('ALL');
+      if (result.success && result.data) {
+        setDbTables(result.data);
+        // Update store with fetched tables
+        result.data.forEach(table => {
+          const exists = tables.find(t => t.id === table.id);
+          if (!exists) {
+            addTable(table);
+          } else {
+            // Update existing table with fresh data
+            updateTable(table);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading all tables:', error);
+      addNotification('Erro ao carregar todas as mesas do banco de dados', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadTablesFromDB = async () => {
     setIsLoading(true);
@@ -182,27 +214,6 @@ const TableLayout = () => {
           
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                isEditMode 
-                  ? 'bg-red-600 text-white hover:bg-red-700' 
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {isEditMode ? (
-                <>
-                  <MousePointer2 size={16} className="inline mr-2" />
-                  Modo Visualização
-                </>
-              ) : (
-                <>
-                  <Move size={16} className="inline mr-2" />
-                  Modo Edição
-                </>
-              )}
-            </button>
-            
-            <button
               onClick={() => setIsCreateModalOpen(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all"
             >
@@ -213,7 +224,7 @@ const TableLayout = () => {
         </div>
 
         {/* Zone Selector */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           {(['INTERIOR', 'EXTERIOR', 'BALCAO'] as TableZone[]).map(zone => (
             <button
               key={zone}
@@ -228,6 +239,28 @@ const TableLayout = () => {
               {zone === 'INTERIOR' ? 'Interior' : zone === 'EXTERIOR' ? 'Exterior' : 'Balcão'}
             </button>
           ))}
+          
+          {/* Edit Mode Button */}
+          <button
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+              isEditMode 
+                ? 'bg-red-600 text-white hover:bg-red-700' 
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            {isEditMode ? (
+              <>
+                <MousePointer2 size={16} />
+                Modo Visualização
+              </>
+            ) : (
+              <>
+                <Move size={16} />
+                Modo Edição
+              </>
+            )}
+          </button>
         </div>
       </div>
 

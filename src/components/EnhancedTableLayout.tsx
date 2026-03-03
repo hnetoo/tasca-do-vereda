@@ -20,7 +20,6 @@ import {
   verticalListSortingStrategy 
 } from '@dnd-kit/sortable';
 import { Table, TableZone, TableStatus } from '@/types';
-import { updateTablePosition } from '@/app/actions/tableLayout';
 
 interface DraggableTableProps {
   table: Table;
@@ -146,8 +145,20 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
       const newX = (table.posicao_x || table.x || 0) + delta.x;
       const newY = (table.posicao_y || table.y || 0) + delta.y;
       
-      // Update in database via server action
-      const result = await updateTablePosition(table.id, newX, newY);
+      // Update in database via API route for better security
+      const response = await fetch('/api/tables/update-position', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tableId: table.id,
+          x: newX,
+          y: newY
+        })
+      });
+      
+      const result = await response.json();
       
       if (result.success) {
         // Update local state
