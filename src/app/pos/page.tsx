@@ -71,6 +71,37 @@ const POS = () => {
   const [activeZone, setActiveZone] = useState<TableZone>('INTERIOR');
   const [showMap, setShowMap] = useState(false);
 
+  const isImmersive = settings.isSidebarCollapsed;
+
+  // Auto-hide sidebar when entering POS
+  useEffect(() => {
+    // Auto-collapse sidebar when POS loads
+    if (!isSidebarCollapsed) {
+      toggleMobileMenu();
+    }
+  }, [isSidebarCollapsed, toggleMobileMenu]);
+
+  // Restore sidebar when leaving POS
+  useEffect(() => {
+    return () => {
+      // Restore sidebar when component unmounts (leaving POS)
+      if (isSidebarCollapsed) {
+        toggleMobileMenu();
+      }
+    };
+  }, [isSidebarCollapsed, toggleMobileMenu]);
+
+  // ESC key to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isImmersive) {
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isImmersive, toggleSidebar]);
+
 
 
 
@@ -1123,37 +1154,6 @@ const POS = () => {
     }, 500);
   };
 
-  const isImmersive = settings.isSidebarCollapsed;
-
-  // Auto-hide sidebar when entering POS
-  useEffect(() => {
-    // Auto-collapse sidebar when POS loads
-    if (!isSidebarCollapsed) {
-      toggleMobileMenu();
-    }
-  }, [isSidebarCollapsed, toggleMobileMenu]);
-
-  // Restore sidebar when leaving POS
-  useEffect(() => {
-    return () => {
-      // Restore sidebar when component unmounts (leaving POS)
-      if (isSidebarCollapsed) {
-        toggleMobileMenu();
-      }
-    };
-  }, [isSidebarCollapsed, toggleMobileMenu]);
-
-  // ESC key to exit fullscreen
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isImmersive) {
-        toggleSidebar();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isImmersive, toggleSidebar]);
-
   const getCategoryIcon = (name: string, predefinedIcon?: string) => {
     if (predefinedIcon) {
       const iconObj = AVAILABLE_ICONS.find(i => i.name === predefinedIcon);
@@ -1373,7 +1373,7 @@ const POS = () => {
                          <span className="text-[10px] font-black text-primary uppercase tracking-widest">{activeTable?.name}</span>
                          <span className="text-[8px] text-slate-500 font-bold uppercase">{openOrdersForTable.length} Contas ativas</span>
                        </div>
-                       <button onClick={() => { setActiveTable(null); setShowTableBar(false); }} className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"><X size={16}/></button>
+                       <button onClick={() => { setActiveTable(null); setShowTableBar(false); }} title="Fechar mesa" className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"><X size={16}/></button>
                     </div>
                   )}
               </div>
