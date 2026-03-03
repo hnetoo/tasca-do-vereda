@@ -90,7 +90,7 @@ export default function OwnerMobilePage() {
     try {
       console.log('🔄 Starting API call to /api/owner-data');
       
-      const response = await fetch('/api/owner-data');
+      const response = await fetch('/api/owner-data/test-route');
       const data = await response.json();
       
       console.log('🔍 DEBUG API RESPONSE:', data);
