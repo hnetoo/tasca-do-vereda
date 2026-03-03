@@ -47,13 +47,9 @@ export async function POST(request: Request) {
       const hasOrderItems = existingTables.includes('order_items');
       const hasMenuItems = existingTables.includes('menu_items');
       
-      if (!hasOrderItems && !hasMenuItems) {
-        console.log('⚠️ CLEAR PRODUCTION API: Neither order_items nor menu_items exist, cannot clear orders safely');
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Cannot clear orders: related tables order_items/menu_items do not exist'
-        }, { status: 500 });
-      }
+      // REMOVIDO: Não bloquear reset se order_items/menu_items não existem
+      // Apenas limpar orders diretamente
+      console.log(`🔍 CLEAR PRODUCTION API: Related tables - order_items: ${hasOrderItems}, menu_items: ${hasMenuItems}`);
       
       if (existingTables.length === 0) {
         return NextResponse.json({ 
