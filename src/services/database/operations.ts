@@ -394,7 +394,7 @@ export const databaseOperations = {
       await executeQuery(supabase, 'DROP TABLE IF EXISTS products CASCADE');
       await executeQuery(supabase, 'DROP TABLE IF EXISTS categories CASCADE');
       await executeQuery(supabase, 'DROP TABLE IF EXISTS menu CASCADE');
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu_items CASCADE');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS dishes CASCADE');
       
       // 2. Recreate Menu Categories Table (Postgres syntax)
       await executeQuery(supabase, `

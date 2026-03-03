@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     
     if (type === 'all') {
       // Verificar se tabelas existem antes de limpar
-      const tablesToCheck = ['orders', 'expenses', 'order_items', 'menu_items'];
+      const tablesToCheck = ['orders', 'expenses', 'order_items', 'dishes', 'categories'];
       const existingTables = [];
       
       console.log('🔍 CLEAR PRODUCTION API: Checking tables existence...');
@@ -45,11 +45,11 @@ export async function POST(request: Request) {
       
       // Verificar se order_items existe antes de limpar orders
       const hasOrderItems = existingTables.includes('order_items');
-      const hasMenuItems = existingTables.includes('menu_items');
+      const hasDishes = existingTables.includes('dishes');
       
-      // REMOVIDO: Não bloquear reset se order_items/menu_items não existem
+      // REMOVIDO: Não bloquear reset se order_items/dishes não existem
       // Apenas limpar orders diretamente
-      console.log(`🔍 CLEAR PRODUCTION API: Related tables - order_items: ${hasOrderItems}, menu_items: ${hasMenuItems}`);
+      console.log(`🔍 CLEAR PRODUCTION API: Related tables - order_items: ${hasOrderItems}, dishes: ${hasDishes}`);
       
       if (existingTables.length === 0) {
         return NextResponse.json({ 
@@ -61,8 +61,8 @@ export async function POST(request: Request) {
       
       // Clear only existing tables
       for (const tableName of existingTables) {
-        // Pular order_items e menu_items - apenas limpar orders e expenses
-        if (tableName === 'order_items' || tableName === 'menu_items') {
+        // Pular order_items e dishes - apenas limpar orders e expenses
+        if (tableName === 'order_items' || tableName === 'dishes') {
           console.log(`⚠️ CLEAR PRODUCTION API: Skipping ${tableName} - will clear orders instead`);
           continue;
         }
@@ -78,16 +78,15 @@ export async function POST(request: Request) {
               .delete()
               .neq('id', '00000000-0000-0000-0000-000000000000'); // DELETE ALL
               
-            // Se houver erro relacionado a menu_items, tentar abordagem diferente
-            if (deleteResult.error && deleteResult.error.message?.includes('menu_items')) {
-              console.log(`⚠️ CLEAR PRODUCTION API: menu_items constraint detected, trying alternative approach`);
+            // Se houver erro relacionado a dishes, tentar abordagem diferente
+            if (deleteResult.error && deleteResult.error.message?.includes('dishes')) {
+              console.log(`⚠️ CLEAR PRODUCTION API: dishes constraint detected, trying alternative approach`);
               
               // Tentar DELETE sem retornar dados (evita problemas com constraints)
               const silentDelete = await supabase
                 .from(tableName)
                 .delete()
-                .neq('id', '00000000-0000-0000-0000-000000000000');
-              
+                .neq('id', '00000000-0000-0000-0000-000000000000'); // DELETE ALL            
               if (silentDelete.error) {
                 // Se ainda falhar, tentar apagar com TRUNCATE via RPC
                 console.log(`⚠️ CLEAR PRODUCTION API: Trying RPC approach for ${tableName}`);
@@ -111,9 +110,9 @@ export async function POST(request: Request) {
           }
           
           if (deleteResult.error) {
-            // Se for erro de menu_items, tentar sem dependências
-            if (deleteResult.error.message?.includes('menu_items')) {
-              console.log(`⚠️ CLEAR PRODUCTION API: menu_items error detected, trying CASCADE DELETE`);
+            // Se for erro de dishes, tentar sem dependências
+            if (deleteResult.error.message?.includes('dishes')) {
+              console.log(`⚠️ CLEAR PRODUCTION API: dishes error detected, trying CASCADE DELETE`);
               // Tentar DELETE com CASCADE se disponível
               const cascadeResult = await supabase
                 .from(tableName)
