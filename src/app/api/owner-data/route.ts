@@ -129,36 +129,36 @@ export async function GET(request: Request) {
       sampleData: ordersData?.slice(0, 3)
     });
     
-    // Carregar expenses COM ESTRUTURA EXATA DA PRODUÇÃO
-    console.log('🔍 REAL API: Loading expenses (PRODUCTION STRUCTURE)...');
+    // Carregar expenses - BUSCAR TODOS OS CAMPOS
+    console.log('🔍 REAL API: Loading expenses (ALL DATA)...');
     
     const { data: expensesData, error: expensesError } = await supabaseAdmin
       .from('expenses')
-      .select('id, description, amount, category, date, created_at'); // SÓ CAMPOS QUE EXISTEM NA PRODUÇÃO
+      .select('*'); // BUSCAR TODOS OS CAMPOS E TODOS OS REGISTROS
     
     console.log('🔍 REAL API: Expenses result:', { 
       count: expensesData?.length || 0, 
       error: expensesError?.message
     });
 
-    // Carregar dishes COM ESTRUTURA EXATA DA PRODUÇÃO
-    console.log('🔍 REAL API: Loading dishes (PRODUCTION STRUCTURE)...');
+    // Carregar dishes - BUSCAR TODOS OS CAMPOS
+    console.log('🔍 REAL API: Loading dishes (ALL DATA)...');
     
     const { data: dishesData, error: dishesError } = await supabaseAdmin
       .from('dishes')
-      .select('id, name, price, description, category_id, image_url, available, is_active, is_available_on_digital_menu, tax_percentage, tax_code, preparation_time, track_stock, stock_quantity, min_stock_quantity, max_stock_quantity, supplier_id, unit, cost_price, created_at, updated_at, user_id, status'); // ESTRUTURA COMPLETA DA PRODUÇÃO
+      .select('*'); // BUSCAR TODOS OS CAMPOS E TODOS OS REGISTROS
     
     console.log('🔍 REAL API: Dishes result:', { 
       count: dishesData?.length || 0, 
       error: dishesError?.message
     });
 
-    // Carregar categories COM ESTRUTURA EXATA DA PRODUÇÃO
-    console.log('🔍 REAL API: Loading menu_categories (PRODUCTION STRUCTURE)...');
+    // Carregar categories - BUSCAR TODOS OS CAMPOS
+    console.log('🔍 REAL API: Loading menu_categories (ALL DATA)...');
     
     const { data: categoriesData, error: categoriesError } = await supabaseAdmin
       .from('menu_categories')
-      .select('id, name, description, image_url, is_active, created_at, updated_at'); // ESTRUTURA EXATA DA PRODUÇÃO
+      .select('*'); // BUSCAR TODOS OS CAMPOS E TODOS OS REGISTROS
     
     console.log('🔍 REAL API: Categories result:', { 
       count: categoriesData?.length || 0, 
