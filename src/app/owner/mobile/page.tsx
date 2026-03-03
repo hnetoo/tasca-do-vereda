@@ -110,7 +110,7 @@ export default function OwnerMobilePage() {
     } finally {
       setLoadingSupabase(false);
     }
-  };
+  }, []);
 
   // Função de Reset COM TRUNCATE DIRETO NO BANCO
   const handleResetProduction = async () => {

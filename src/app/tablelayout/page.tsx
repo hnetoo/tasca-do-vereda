@@ -190,30 +190,11 @@ const TableLayout = () => {
     // Atualizar posição da mesa
     const updatedTable = { ...table, x, y };
     
-    // Salvar via API
-    try {
-      const response = await fetch('/api/tables', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedTable)
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Falha ao atualizar posição da mesa');
-      }
-
-      // Atualizar localmente também
-      updateTable(updatedTable);
-      addNotification('success', 'Mesa movida com sucesso!');
-      console.log('🎯 DROP: Table moved successfully:', updatedTable);
-    } catch (error: any) {
-      console.error('Erro ao mover mesa:', error);
-      addNotification('error', `Falha ao mover mesa: ${error.message}`);
-    }
-    
+    // Usar a função updateTable do store (que já salva no banco)
+    updateTable(updatedTable);
     setDraggedTableId(null);
+    addNotification('success', 'Mesa movida com sucesso!');
+    console.log('🎯 DROP: Table moved successfully via updateTable');
   };
 
   const toggleStatus = (table: Table) => {
@@ -270,6 +251,16 @@ const TableLayout = () => {
           </div>
           
           <div className="flex gap-3 items-center">
+            {isAdmin && (
+              <button 
+                onClick={handleAddTable}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2"
+                title="Adicionar nova mesa"
+              >
+                <Plus size={18} />
+                <span className="hidden sm:inline">Adicionar Mesa</span>
+              </button>
+            )}
             {saveStatus === 'SAVING' && (
               <div className="flex items-center gap-2 text-xs font-medium text-slate-400 animate-pulse">
                 <Clock size={14} className="animate-spin" />
@@ -344,17 +335,25 @@ const TableLayout = () => {
                    </p>
                 </div>
                 {isAdmin && (
-                  <button 
-                    onClick={() => {
-                       if(window.confirm('Carregar layout padrão de mesas? Isso pode sobrescrever dados existentes.')) {
-                          MOCK_TABLES.forEach((t: Table) => addTable(t));
-                          window.location.reload();
-                       }
-                    }}
-                    className="px-8 py-3 bg-primary text-black rounded-xl font-bold hover:bg-primary/90 transition-all shadow-glow flex items-center gap-2"
-                  >
-                     <RotateCw size={18} /> Inicializar Layout Padrão
-                  </button>
+                  <div className="flex gap-3 flex-wrap justify-center">
+                    <button 
+                      onClick={handleAddTable}
+                      className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2"
+                    >
+                       <Plus size={18} /> Criar Primeira Mesa
+                    </button>
+                    <button 
+                      onClick={() => {
+                         if(window.confirm('Carregar layout padrão de mesas? Isso pode sobrescrever dados existentes.')) {
+                            MOCK_TABLES.forEach((t: Table) => addTable(t));
+                            window.location.reload();
+                         }
+                      }}
+                      className="px-8 py-3 bg-primary text-black rounded-xl font-bold hover:bg-primary/90 transition-all shadow-glow flex items-center gap-2"
+                    >
+                       <RotateCw size={18} /> Inicializar Layout Padrão
+                    </button>
+                  </div>
                 )}
              </div>
           ) : (
