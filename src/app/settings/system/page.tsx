@@ -98,6 +98,7 @@ export default function SettingsSystemPage() {
                   value={dbConfig.type}
                   onChange={(e) => setDbConfig({ ...dbConfig, type: e.target.value })}
                   className="w-full mt-2 p-3 bg-black/40 border border-white/10 rounded-xl text-white"
+                  title="Tipo de Base de Dados"
                 >
                   <option value="local_storage">Armazenamento Local</option>
                   <option value="sqlite">SQLite</option>
@@ -179,23 +180,25 @@ export default function SettingsSystemPage() {
                     />
                   </div>
                   
-                  <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Chave API</label>
-                    <input
-                      type="password"
-                      value={settings.supabaseConfig?.key || ''}
-                      onChange={(e) => updateSettings({ 
-                        supabaseConfig: { 
-                          enabled: settings.supabaseConfig?.enabled || false,
-                          url: settings.supabaseConfig?.url || "",
-                          key: e.target.value,
-                          autoSync: settings.supabaseConfig?.autoSync || false
-                        } 
-                      })}
-                      placeholder="sua-chave-supabase"
-                      className="w-full mt-2 p-3 bg-black/40 border border-white/10 rounded-xl text-white"
-                    />
-                  </div>
+                  <form onSubmit={(e) => { e.preventDefault(); }}>
+                    <div>
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Chave API</label>
+                      <input
+                        type="password"
+                        value={settings.supabaseConfig?.key || ''}
+                        onChange={(e) => updateSettings({ 
+                          supabaseConfig: { 
+                            enabled: settings.supabaseConfig?.enabled || false,
+                            url: settings.supabaseConfig?.url || "",
+                            key: e.target.value,
+                            autoSync: settings.supabaseConfig?.autoSync || false
+                          } 
+                        })}
+                        placeholder="sua-chave-supabase"
+                        className="w-full mt-2 p-3 bg-black/40 border border-white/10 rounded-xl text-white"
+                      />
+                    </div>
+                  </form>
                 </>
               )}
             </div>

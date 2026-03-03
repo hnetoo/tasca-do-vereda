@@ -80,7 +80,6 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
     { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
-    { path: '/settings/tables', icon: <LayoutGrid size={24} />, label: 'Configurar Mesas' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout Mesas' },
     { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },

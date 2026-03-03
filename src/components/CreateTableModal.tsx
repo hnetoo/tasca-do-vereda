@@ -68,12 +68,12 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+      <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md border border-gray-700">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Criar Nova Mesa</h2>
+          <h2 className="text-xl font-bold text-white">Criar Nova Mesa</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-200"
             title="Fechar modal"
             aria-label="Fechar modal"
           >
@@ -82,14 +82,14 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="mb-4 p-3 bg-red-900 border border-red-700 text-red-200 rounded">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="tableName" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="tableName" className="block text-sm font-medium text-gray-200 mb-1">
               Nome da Mesa
             </label>
             <input
@@ -97,7 +97,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
               id="tableName"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
               placeholder="Ex: Mesa 1"
               required
             />
@@ -105,7 +105,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="tableNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="tableNumber" className="block text-sm font-medium text-gray-200 mb-1">
                 Número
               </label>
               <input
@@ -113,14 +113,14 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 id="tableNumber"
                 value={formData.number}
                 onChange={(e) => handleInputChange('number', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                 min="1"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="tableSeats" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="tableSeats" className="block text-sm font-medium text-gray-200 mb-1">
                 Lugares
               </label>
               <input
@@ -128,7 +128,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 id="tableSeats"
                 value={formData.seats}
                 onChange={(e) => handleInputChange('seats', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                 min="1"
                 max="20"
                 required
@@ -137,14 +137,14 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="ambiente" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="ambiente" className="block text-sm font-medium text-gray-200 mb-1">
               Ambiente
             </label>
             <select
               id="ambiente"
               value={formData.ambiente}
               onChange={(e) => handleInputChange('ambiente', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
               required
             >
               <option value="INTERIOR">Interior</option>
@@ -154,14 +154,14 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="tableShape" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="tableShape" className="block text-sm font-medium text-gray-200 mb-1">
               Forma
             </label>
             <select
               id="tableShape"
               value={formData.shape}
               onChange={(e) => handleInputChange('shape', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
             >
               <option value="RECTANGLE">Retangular</option>
               <option value="SQUARE">Quadrada</option>
@@ -170,7 +170,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="tableColor" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="tableColor" className="block text-sm font-medium text-gray-200 mb-1">
               Cor
             </label>
             <div className="flex gap-2">
@@ -179,14 +179,14 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 id="tableColor"
                 value={formData.color}
                 onChange={(e) => handleInputChange('color', e.target.value)}
-                className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
+                className="w-12 h-10 bg-gray-800 border border-gray-600 rounded cursor-pointer"
               />
               <input
                 type="text"
                 id="tableColorText"
                 value={formData.color}
                 onChange={(e) => handleInputChange('color', e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                 placeholder="#3B82F6"
               />
             </div>
@@ -194,7 +194,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="tablePosX" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="tablePosX" className="block text-sm font-medium text-gray-200 mb-1">
                 Posição X
               </label>
               <input
@@ -202,13 +202,13 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 id="tablePosX"
                 value={formData.posicao_x}
                 onChange={(e) => handleInputChange('posicao_x', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                 step="10"
               />
             </div>
 
             <div>
-              <label htmlFor="tablePosY" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="tablePosY" className="block text-sm font-medium text-gray-200 mb-1">
                 Posição Y
               </label>
               <input
@@ -216,7 +216,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 id="tablePosY"
                 value={formData.posicao_y}
                 onChange={(e) => handleInputChange('posicao_y', parseFloat(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                 step="10"
               />
             </div>
@@ -226,7 +226,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              className="flex-1 px-4 py-2 border border-gray-600 text-gray-300 rounded-md hover:bg-gray-800"
             >
               Cancelar
             </button>

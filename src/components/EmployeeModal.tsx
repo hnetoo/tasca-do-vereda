@@ -172,19 +172,21 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
           {/* PIN */}
           <div>
             <label htmlFor="pin" className="block text-sm font-medium text-slate-400 mb-1">PIN (Acesso)</label>
-            <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700">
-              <Key size={18} className="text-slate-500 ml-3" />
-              <input
-                type="password"
-                id="pin"
-                name="pin"
-                value={formData.pin || ''}
-                onChange={handleChange}
-                placeholder="****"
-                className="flex-1 p-2.5 bg-transparent outline-none"
-                maxLength={4}
-              />
-            </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+              <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700">
+                <Key size={18} className="text-slate-500 ml-3" />
+                <input
+                  type="password"
+                  id="pin"
+                  name="pin"
+                  value={formData.pin || ''}
+                  onChange={handleChange}
+                  placeholder="****"
+                  className="flex-1 p-2.5 bg-transparent outline-none"
+                  maxLength={4}
+                />
+              </div>
+            </form>
             <p className="text-xs text-slate-500 mt-1">PIN de 4 dígitos para login no POS</p>
           </div>
 
