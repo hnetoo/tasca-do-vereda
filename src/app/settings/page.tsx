@@ -24,7 +24,10 @@ import {
   Database,
   History,
   Lock,
-  ScanLine
+  ScanLine,
+  FileCheck,
+  ShieldCheck,
+  Receipt
 } from 'lucide-react';
 import StatusIndicator from '@/components/StatusIndicator';
 
@@ -46,6 +49,13 @@ export default function SettingsPage() {
       icon: Shield,
       href: '/settings/fiscal',
       color: 'from-orange-600 to-orange-700'
+    },
+    {
+      title: 'AGT / Fiscal',
+      description: 'Certificação AGT, SAF-T e declarações fiscais',
+      icon: FileCheck,
+      href: '/settings/system/agt',
+      color: 'from-red-600 to-red-700'
     },
     {
       title: 'Menu QR',
