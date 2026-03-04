@@ -40,6 +40,35 @@ export async function ensureTables() {
       console.log('✅ Tabela menu_items verificada/criada');
     }
     
+    // Verificar/criar tabela users se não existir
+    const { error: usersError } = await supabase.rpc('exec_sql', {
+      sql: `
+        CREATE TABLE IF NOT EXISTS users (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) UNIQUE,
+          pin VARCHAR(10) NOT NULL,
+          role VARCHAR(50) DEFAULT 'CAIXA',
+          status VARCHAR(20) DEFAULT 'active',
+          permissions TEXT[] DEFAULT '{}',
+          last_login TIMESTAMP WITH TIME ZONE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        
+        INSERT INTO users (id, name, email, pin, role, status)
+        SELECT 
+          gen_random_uuid(), 'Administrador', 'admin@tasca.com', '1234', 'ADMIN', 'active'
+        WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@tasca.com');
+      `
+    });
+    
+    if (usersError) {
+      console.error('❌ Erro ao criar users:', usersError);
+    } else {
+      console.log('✅ Tabela users verificada/criada');
+    }
+
     // Verificar/criar tabela employees se não existir
     const { error: employeesError } = await supabase.rpc('exec_sql', {
       sql: `
