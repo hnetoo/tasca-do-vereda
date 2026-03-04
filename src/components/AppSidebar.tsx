@@ -66,21 +66,43 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
 
   // Menu items for different user roles
   const staffMenuItems: MenuItem[] = [
-    { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout de Mesas' },
-    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
+    { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
+    { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
+    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Comando' },
     { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
+    { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout de Mesas' },
   ];
 
   const ownerMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
-    { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout de Mesas' },
-    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
+    { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
+    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Comando' },
     { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
-    { path: '/settings', icon: <Settings size={24} />, label: 'Configurações' },
+    { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout de Mesas' },
+    { path: '/customers', icon: <Users size={24} />, label: 'Clientes' },
+    { path: '/reservations', icon: <Calendar size={24} />, label: 'Reservas' },
+    { path: '/inventory', icon: <Warehouse size={24} />, label: 'Inventário' },
+  ];
+
+  const financeMenuItems: MenuItem[] = [
+    { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
+    { path: '/settings/payroll', icon: <Wallet size={24} />, label: 'Folha Salarial' },
+  ];
+
+  const analyticsMenuItems: MenuItem[] = [
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },
-    { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
-    { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
+  ];
+
+  const staffMenuItems2: MenuItem[] = [
+    { path: '/roles', icon: <UserCog size={24} />, label: 'Staff' },
+    { path: '/settings/payroll', icon: <CalendarCheck size={24} />, label: 'Escalas' },
+  ];
+
+  const settingsMenuItems: MenuItem[] = [
+    { path: '/settings', icon: <Settings size={24} />, label: 'Configurações' },
+    { path: '/qrcodeanalytics', icon: <QrCode size={24} />, label: 'QR Code Analytics' },
+    { path: '/qrmenumanager', icon: <QrCode size={24} />, label: 'QR Code Menu Manager' },
   ];
 
   const menuItems = user?.role === UserRole.Owner || user?.role === UserRole.Admin ? ownerMenuItems : staffMenuItems;
@@ -170,6 +192,98 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
               </Link>
             </li>
           ))}
+          
+          {/* Submenu Financeiro */}
+          {!collapsed && (
+            <li>
+              <div className="text-xs text-gray-500 uppercase tracking-wider px-3 py-2 mt-4 mb-2">
+                Financeiro
+              </div>
+              {financeMenuItems.map((item) => (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ml-4 ${
+                    isActive(item.path)
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  {item.icon}
+                  <span className="text-sm font-medium">{item.label}</span>
+                </Link>
+              ))}
+            </li>
+          )}
+          
+          {/* Submenu Analytics */}
+          {!collapsed && (
+            <li>
+              <div className="text-xs text-gray-500 uppercase tracking-wider px-3 py-2 mt-4 mb-2">
+                Analytics
+              </div>
+              {analyticsMenuItems.map((item) => (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ml-4 ${
+                    isActive(item.path)
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  {item.icon}
+                  <span className="text-sm font-medium">{item.label}</span>
+                </Link>
+              ))}
+            </li>
+          )}
+          
+          {/* Submenu Gestão de Staff */}
+          {!collapsed && (
+            <li>
+              <div className="text-xs text-gray-500 uppercase tracking-wider px-3 py-2 mt-4 mb-2">
+                Gestão de Staff
+              </div>
+              {staffMenuItems2.map((item) => (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ml-4 ${
+                    isActive(item.path)
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  {item.icon}
+                  <span className="text-sm font-medium">{item.label}</span>
+                </Link>
+              ))}
+            </li>
+          )}
+          
+          {/* Submenu Definições */}
+          {!collapsed && (
+            <li>
+              <div className="text-xs text-gray-500 uppercase tracking-wider px-3 py-2 mt-4 mb-2">
+                Definições
+              </div>
+              {settingsMenuItems.map((item) => (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ml-4 ${
+                    isActive(item.path)
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  }`}
+                >
+                  {item.icon}
+                  <span className="text-sm font-medium">{item.label}</span>
+                </Link>
+              ))}
+            </li>
+          )}
         </ul>
       </nav>
 

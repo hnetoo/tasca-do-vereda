@@ -90,9 +90,8 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
             {showSidebar && !pathname.startsWith('/owner') && (
               <button
                 onClick={() => setSidebarHidden(true)}
-                className="fixed top-4 right-4 z-[9999] w-12 h-12 rounded-lg flex items-center justify-center bg-red-600 text-white hover:bg-red-700 transition-all border-2 border-red-400 shadow-lg"
+                className="fixed top-4 right-4 z-50 w-12 h-12 rounded-lg flex items-center justify-center bg-red-600 text-white hover:bg-red-700 transition-all border-2 border-red-400 shadow-lg"
                 title="Esconder Menu"
-                style={{position: 'fixed', top: '16px', right: '16px', zIndex: 9999}}
               >
                 <X size={20} />
               </button>
