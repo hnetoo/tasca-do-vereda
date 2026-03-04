@@ -139,8 +139,7 @@ export async function fixPayrollTable() {
     
     return { 
       success: true, 
-      message: 'Tabela payroll corrigida e verificada com sucesso',
-      migrated: migratedCount || 0
+      message: 'Tabela payroll corrigida e verificada com sucesso'
     };
     
   } catch (error: any) {

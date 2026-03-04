@@ -10,8 +10,7 @@ export async function POST(request: NextRequest) {
     if (result.success) {
       return NextResponse.json({
         success: true,
-        message: result.message,
-        migrated: result.migrated
+        message: result.message
       });
     } else {
       return NextResponse.json({
