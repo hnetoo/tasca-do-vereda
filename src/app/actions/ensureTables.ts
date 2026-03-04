@@ -154,7 +154,7 @@ export async function ensureTables() {
       console.log('✅ Tabela restaurant_tables verificada/criada');
     }
 
-    // Verificar/criar tabela daily_analytics se não existir e inserir dados básicos
+    // Verificar/criar tabela daily_analytics se não existir
     const { data: existingAnalytics, error: analyticsError } = await supabase
       .from('daily_analytics')
       .select('*')
@@ -163,29 +163,7 @@ export async function ensureTables() {
     if (analyticsError) {
       console.error('❌ Erro ao verificar daily_analytics:', analyticsError);
     } else {
-      // Se não existirem dados, inserir dados básicos
-      if (!existingAnalytics || existingAnalytics.length === 0) {
-        const { error: insertError } = await supabase
-          .from('daily_analytics')
-          .insert({
-            date: new Date().toISOString().split('T')[0],
-            total_revenue: 230000,
-            total_expenses: 50000,
-            total_product_cost: 100000,
-            total_orders: 15,
-            net_profit: 80000,
-            last_updated: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        
-        if (insertError) {
-          console.error('❌ Erro ao inserir dados básicos em daily_analytics:', insertError);
-        } else {
-          console.log('✅ Dados básicos inseridos em daily_analytics');
-        }
-      } else {
-        console.log('✅ Tabela daily_analytics já contém dados');
-      }
+      console.log('✅ Tabela daily_analytics verificada');
     }
     
     return {

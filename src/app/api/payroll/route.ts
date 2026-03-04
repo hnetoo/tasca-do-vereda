@@ -23,14 +23,30 @@ export async function POST(request: NextRequest) {
       notes 
     } = body;
     
-    // Validar campos obrigatórios
-    if (!employee_id || !month || !base_salary || !net_salary) {
-      console.error('❌ PAYROLL API: Missing required fields:', { employee_id, month, base_salary, net_salary });
+    // Validar formato do mês - aceitar tanto número quanto texto
+    let monthValue = month;
+    if (typeof month === 'string') {
+      // Se vier como '2026-03', extrair apenas o mês
+      const monthMatch = month.match(/(\d{4})-(\d{2})/);
+      if (monthMatch) {
+        monthValue = parseInt(monthMatch[2]); // Extrair mês (03 = 3)
+      } else {
+        monthValue = parseInt(month);
+      }
+    } else {
+      monthValue = parseInt(month);
+    }
+    
+    // Validar se o mês é válido
+    if (isNaN(monthValue) || monthValue < 1 || monthValue > 12) {
+      console.error('❌ PAYROLL API: Invalid month format:', { month, monthValue });
       return NextResponse.json(
-        { error: 'Campos obrigatórios: employee_id, month, base_salary, net_salary' },
+        { error: 'Formato de mês inválido. Use número (1-12) ou texto (YYYY-MM)' },
         { status: 400 }
       );
     }
+    
+    console.log('💼 PAYROLL API: Processed month value:', { original: month, processed: monthValue });
     
     // Validar valores numéricos
     if (isNaN(parseFloat(base_salary)) || isNaN(parseFloat(net_salary))) {
@@ -74,7 +90,7 @@ export async function POST(request: NextRequest) {
     // Inserir registro da folha salarial
     const insertData = {
       employee_id: employee_id,
-      month: month,
+      month: monthValue, // Usar o mês processado (número)
       base_salary: parseFloat(base_salary),
       overtime_hours: parseFloat(overtime_hours || '0'),
       overtime_pay: parseFloat(overtime_pay || '0'),
