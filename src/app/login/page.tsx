@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/store/reduxStore';
 import { loginWithPin, resetAuthStatus } from '@/store/slices/authSlice';
 import { UserRole } from '@/types/auth.types';
-
+import { getUsers, User as DatabaseUser } from '@/app/actions/getUsers';
 
 import { Loader2, Shield, ShoppingBag, Utensils, ChefHat, User, QrCode } from 'lucide-react';
 import Image from 'next/image';
@@ -38,6 +38,8 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ role, name, description, icon
 const LoginPage: React.FC = () => {
   const [pin, setPin] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [users, setUsers] = useState<DatabaseUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,6 +51,28 @@ const LoginPage: React.FC = () => {
   
   // Track if we are in the process of logging in
   const isLoggingIn = React.useRef(false);
+
+  // Fetch users from database
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoadingUsers(true);
+        const result = await getUsers();
+        if (result.success) {
+          setUsers(result.users);
+          console.log('✅ [LOGIN] Users fetched:', result.users.length);
+        } else {
+          console.error('❌ [LOGIN] Error fetching users:', result.error);
+        }
+      } catch (error) {
+        console.error('❌ [LOGIN] General error:', error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     // REMOVIDO: Não limpar estado automaticamente para evitar loop
@@ -76,13 +100,47 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const roles = [
-    { id: UserRole.Admin, name: 'Gerente', description: 'ADMIN', icon: Shield },
-    { id: UserRole.Caixa, name: 'Operador de Caixa', description: 'CAIXA', icon: ShoppingBag },
-    { id: UserRole.Cozinha, name: 'Chefe de Cozinha', description: 'COZINHA', icon: ChefHat },
-    { id: UserRole.Garcom, name: 'Garçom', description: 'GARCOM', icon: Utensils },
-    { id: UserRole.Owner, name: 'Proprietário', description: 'OWNER', icon: User },
-  ];
+  // Build roles from database users
+  const getRoleIcon = (role: string) => {
+    switch (role.toLowerCase()) {
+      case 'admin': return Shield;
+      case 'caixa': return ShoppingBag;
+      case 'cozinha': return ChefHat;
+      case 'garcom': return Utensils;
+      case 'owner': return User;
+      default: return User;
+    }
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    switch (role.toLowerCase()) {
+      case 'admin': return 'Gerente';
+      case 'caixa': return 'Operador de Caixa';
+      case 'cozinha': return 'Chefe de Cozinha';
+      case 'garcom': return 'Garçom';
+      case 'owner': return 'Proprietário';
+      default: return role.toUpperCase();
+    }
+  };
+
+  // Create roles array from database users
+  const roles = users.map(user => ({
+    id: user.role.toLowerCase() as UserRole,
+    name: user.name || getRoleDisplayName(user.role),
+    description: user.role.toUpperCase(),
+    icon: getRoleIcon(user.role)
+  }));
+
+  // Add fallback roles if no users found
+  if (roles.length === 0 && !loadingUsers) {
+    roles.push(
+      { id: UserRole.Admin, name: 'Gerente', description: 'ADMIN', icon: Shield },
+      { id: UserRole.Caixa, name: 'Operador de Caixa', description: 'CAIXA', icon: ShoppingBag },
+      { id: UserRole.Cozinha, name: 'Chefe de Cozinha', description: 'COZINHA', icon: ChefHat },
+      { id: UserRole.Garcom, name: 'Garçom', description: 'GARCOM', icon: Utensils },
+      { id: UserRole.Owner, name: 'Proprietário', description: 'OWNER', icon: User }
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-4">
@@ -103,17 +161,24 @@ const LoginPage: React.FC = () => {
 
         {!selectedRole ? (
           <div className="grid grid-cols-2 gap-4">
-            {roles.map((role) => (
-              <ProfileCard
-                key={role.id}
-                role={role.id as UserRole}
-                name={role.name}
-                description={role.description}
-                icon={role.icon}
-                onClick={setSelectedRole}
-                isSelected={selectedRole === role.id}
-              />
-            ))}
+            {loadingUsers ? (
+              <div className="col-span-2 flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <span className="ml-2 text-slate-400">Carregando perfis...</span>
+              </div>
+            ) : (
+              roles.map((role) => (
+                <ProfileCard
+                  key={role.id}
+                  role={role.id as UserRole}
+                  name={role.name}
+                  description={role.description}
+                  icon={role.icon}
+                  onClick={setSelectedRole}
+                  isSelected={selectedRole === role.id}
+                />
+              ))
+            )}
           </div>
         ) : (
           <form onSubmit={handleLogin}>
