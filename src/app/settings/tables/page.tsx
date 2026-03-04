@@ -19,11 +19,23 @@ import { ensureTables } from '@/app/actions/ensureTables';
 interface TableData {
   id: string;
   number: number;
-  status: string;
-  zone: string;
-  x: number;
-  y: number;
-  label: string;
+  label: string | null;
+  x: number | null;
+  y: number | null;
+  status: string | null;
+  zone: string | null;
+  color: string | null;
+  created_at: string | null;
+  group_id: string | null;
+  height: number | null;
+  is_active: boolean | null;
+  name: string | null;
+  rotation: number | null;
+  seats: number | null;
+  shape: string | null;
+  updated_at: string | null;
+  user_id: string | null;
+  width: number | null;
 }
 
 export default function SettingsTablesPage() {

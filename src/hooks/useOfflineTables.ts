@@ -6,11 +6,23 @@ import { createClient } from '@supabase/supabase-js';
 interface TableData {
   id: string;
   number: number;
-  status: string;
-  zone: string;
-  x: number;
-  y: number;
-  label: string;
+  label: string | null;
+  x: number | null;
+  y: number | null;
+  status: string | null;
+  zone: string | null;
+  color: string | null;
+  created_at: string | null;
+  group_id: string | null;
+  height: number | null;
+  is_active: boolean | null;
+  name: string | null;
+  rotation: number | null;
+  seats: number | null;
+  shape: string | null;
+  updated_at: string | null;
+  user_id: string | null;
+  width: number | null;
 }
 
 const CACHE_KEY = 'tasca_tables_cache';
@@ -53,12 +65,12 @@ export function useOfflineTables() {
 
         const { data, error } = await supabase
           .from('restaurant_tables')
-          .select('id, number, status, zone, x, y, label')
+          .select('id, number, label, x, y, status, zone, color, created_at, group_id, height, is_active, name, rotation, seats, shape, updated_at, user_id, width')
           .order('number', { ascending: true });
 
         console.log('🔍 Query executada:', {
           table: 'restaurant_tables',
-          select: 'id, number, status, zone, x, y, label',
+          select: 'id, number, label, x, y, status, zone, color, created_at, group_id, height, is_active, name, rotation, seats, shape, updated_at, user_id, width',
           order: 'number ASC'
         });
 
