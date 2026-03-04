@@ -1,302 +1,318 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useStore } from '@/store/useStore';
-import { ChefHat, Plus, Trash2, Edit } from 'lucide-react';
-import { generateUUID } from '@/utils/uuid';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Table, 
+  Users, 
+  MapPin,
+  RefreshCw
+} from 'lucide-react';
+import FormMesa from '@/components/forms/FormMesa';
+import { getTablesByAmbiente } from '@/app/actions/tableLayout';
+import { ensureTables } from '@/app/actions/ensureTables';
+
+interface TableData {
+  id: string;
+  name: string;
+  number: number;
+  seats: number;
+  shape: string;
+  ambiente: 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
+  posicao_x: number;
+  posicao_y: number;
+  color: string;
+  status: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function SettingsTablesPage() {
-  const { settings, tables, addTable, updateTable, removeTable, addNotification } = useStore();
-  const [editingTable, setEditingTable] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: '', capacity: 4, seats: 4, status: 'AVAILABLE' });
+  const router = useRouter();
+  const [tables, setTables] = useState<TableData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingTable, setEditingTable] = useState<TableData | undefined>();
+  const [selectedAmbiente, setSelectedAmbiente] = useState<'ALL' | 'INTERIOR' | 'EXTERIOR' | 'BALCAO'>('ALL');
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editingTable) {
-      const updatedTable = { 
-        ...editingTable, 
-        ...formData,
-        // Garantir que zone e shape não sejam perdidos
-        zone: editingTable.zone || 'INTERIOR',
-        shape: editingTable.shape || 'SQUARE',
-        x: editingTable.x || 0,
-        y: editingTable.y || 0,
-        rotation: editingTable.rotation || 0
-      };
+  const loadTables = async () => {
+    setLoading(true);
+    try {
+      // Primeiro garantir que as tabelas existam
+      await ensureTables();
       
-      // Atualizar via API
-      try {
-        const response = await fetch('/api/tables', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedTable)
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Falha ao atualizar mesa');
-        }
-
-        // Atualizar localmente também
-        updateTable(updatedTable);
-        addNotification('success', 'Mesa atualizada com sucesso!');
-      } catch (error: any) {
-        console.error('Erro ao atualizar mesa:', error);
-        addNotification('error', `Falha ao atualizar mesa: ${error.message}`);
+      const result = await getTablesByAmbiente(selectedAmbiente);
+      if (result.success) {
+        setTables(result.data || []);
       }
-    } else {
-      const newTable = {
-        id: generateUUID(),
-        name: formData.name,
-        capacity: formData.capacity,
-        seats: formData.seats || formData.capacity,
-        status: formData.status,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        label: formData.name,
-        is_active: true,
-        color: null,
-        group_id: null,
-        height: null,
-        width: null,
-        x_position: null,
-        y_position: null,
-        x: 0, // Posição padrão
-        y: 0, // Posição padrão
-        zone: 'INTERIOR', // Zona padrão
-        shape: 'SQUARE', // Forma padrão
-        min_capacity: null,
-        max_capacity: null,
-        qr_code_url: null,
-        reservation_enabled: false,
-        number: parseInt(formData.name.replace(/\D/g, '')) || 1,
-        rotation: 0,
-        user_id: null,
-        activeOrderIds: []
-      } as any;
-      
-      // Salvar via API
-      try {
-        const response = await fetch('/api/tables', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newTable)
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Falha ao criar mesa');
-        }
-
-        // Adicionar localmente também
-        addTable({ ...newTable, id: result.data.id });
-        addNotification('success', 'Mesa adicionada com sucesso!');
-      } catch (error: any) {
-        console.error('Erro ao criar mesa:', error);
-        addNotification('error', `Falha ao criar mesa: ${error.message}`);
-      }
+    } catch (error) {
+      console.error('Error loading tables:', error);
+    } finally {
+      setLoading(false);
     }
-    setFormData({ name: '', capacity: 4, seats: 4, status: 'AVAILABLE' });
-    setEditingTable(null);
   };
 
-  const handleEdit = (table: any) => {
+  useEffect(() => {
+    loadTables();
+  }, [selectedAmbiente]);
+
+  const handleCreateTable = () => {
+    setEditingTable(undefined);
+    setFormMode('create');
+    setShowForm(true);
+  };
+
+  const handleEditTable = (table: TableData) => {
     setEditingTable(table);
-    setFormData({ 
-      name: table.name, 
-      capacity: table.capacity || table.seats || 4, 
-      seats: table.seats || table.capacity || 4, 
-      status: table.status 
-    });
+    setFormMode('edit');
+    setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja remover esta mesa?')) {
-      try {
-        // Deletar via API
-        const response = await fetch(`/api/tables?id=${id}`, {
-          method: 'DELETE'
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Falha ao remover mesa');
-        }
-
-        // Remover localmente também
-        removeTable(id);
-        addNotification('success', 'Mesa removida com sucesso!');
-      } catch (error: any) {
-        console.error('Erro ao remover mesa:', error);
-        addNotification('error', `Falha ao remover mesa: ${error.message}`);
-      }
-    }
+  const handleFormSuccess = () => {
+    loadTables();
   };
 
-  const handleCancel = () => {
-    setEditingTable(null);
-    setFormData({ name: '', capacity: 4, seats: 4, status: 'AVAILABLE' });
+  const getTablesByAmbienteFiltered = () => {
+    if (selectedAmbiente === 'ALL') return tables;
+    return tables.filter(table => table.ambiente === selectedAmbiente);
   };
+
+  const getAmbienteStats = () => {
+    const stats = {
+      INTERIOR: tables.filter(t => t.ambiente === 'INTERIOR').length,
+      EXTERIOR: tables.filter(t => t.ambiente === 'EXTERIOR').length,
+      BALCAO: tables.filter(t => t.ambiente === 'BALCAO').length,
+      total: tables.length
+    };
+    return stats;
+  };
+
+  const stats = getAmbienteStats();
 
   return (
-    <div className="p-8 h-full overflow-y-auto bg-slate-950">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Mesas</h1>
-        <p className="text-slate-400">Gestão de mesas e layout</p>
-      </div>
-
-      <div className="space-y-8">
-        {/* Formulário */}
-        <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 bg-primary/20 rounded-xl text-primary">
-              <ChefHat size={22} />
-            </div>
-            <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">
-              {editingTable ? 'Editar Mesa' : 'Adicionar Nova Mesa'}
-            </h3>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nome da Mesa</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-bold"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Mesa 1, Balcão, etc."
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Capacidade</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  max="20"
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-bold"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Status</label>
-                <select
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:border-primary outline-none font-bold appearance-none"
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                >
-                  <option value="available" className="bg-slate-900">Disponível</option>
-                  <option value="occupied" className="bg-slate-900">Ocupada</option>
-                  <option value="maintenance" className="bg-slate-900">Manutenção</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-4">
               <button
-                type="submit"
-                className="px-8 py-4 bg-primary text-black rounded-2xl font-black uppercase text-xs tracking-widest hover:brightness-110 transition-all shadow-glow"
+                onClick={() => router.push('/settings')}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
               >
-                {editingTable ? 'Atualizar Mesa' : 'Adicionar Mesa'}
+                <ArrowLeft className="w-4 h-4" />
+                Voltar
               </button>
-              {editingTable && (
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-8 py-4 bg-slate-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-600 transition-all"
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-
-        {/* Lista de Mesas */}
-        <div className="bg-slate-900/50 p-6 rounded-3xl border border-white/5">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-500">
-                <ChefHat size={22} />
-              </div>
-              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter">Mesas Configuradas</h3>
-            </div>
-            <div className="text-sm text-slate-400">
-              Total: {tables?.length || 0} mesas
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {(tables || []).map((table: any) => (
-              <div
-                key={table.id}
-                className={`p-6 rounded-2xl border transition-all duration-200 ${
-                  table.status === 'available'
-                    ? 'bg-emerald-500/10 border-emerald-500/30'
-                    : table.status === 'occupied'
-                    ? 'bg-red-500/10 border-red-500/30'
-                    : 'bg-yellow-500/10 border-yellow-500/30'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-black text-white">{table.name}</h4>
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      table.status === 'available'
-                        ? 'bg-emerald-500'
-                        : table.status === 'occupied'
-                        ? 'bg-red-500'
-                        : 'bg-yellow-500'
-                    }`}
-                  />
-                </div>
-                <div className="space-y-2 mb-4">
-                  <p className="text-sm text-slate-400">
-                    Capacidade: <span className="text-white font-bold">{table.capacity} pessoas</span>
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    Status: <span className="text-white font-bold capitalize">
-                      {table.status === 'available' ? 'Disponível' : table.status === 'occupied' ? 'Ocupada' : 'Manutenção'}
-                    </span>
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(table)}
-                    className="flex-1 p-2 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-colors"
-                  >
-                    <Edit size={16} className="mx-auto" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(table.id)}
-                    className="flex-1 p-2 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
-                  >
-                    <Trash2 size={16} className="mx-auto" />
-                  </button>
+              <div className="flex items-center gap-3">
+                <Table className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Gestão de Mesas</h1>
+                  <p className="text-sm text-gray-500">Configurações do Restaurante</p>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {(!tables || tables.length === 0) && (
-            <div className="text-center py-12">
-              <ChefHat className="mx-auto h-16 w-16 text-slate-600 mb-4" />
-              <h4 className="text-xl font-semibold text-white mb-2">Nenhuma mesa configurada</h4>
-              <p className="text-slate-400">
-                Adicione sua primeira mesa para começar a configurar o layout do restaurante.
-              </p>
             </div>
-          )}
+            <button
+              onClick={handleCreateTable}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Nova Mesa
+            </button>
+          </div>
         </div>
       </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total de Mesas</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              </div>
+              <Table className="w-8 h-8 text-blue-500" />
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Interior</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.INTERIOR}</p>
+              </div>
+              <MapPin className="w-8 h-8 text-green-500" />
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Exterior</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.EXTERIOR}</p>
+              </div>
+              <MapPin className="w-8 h-8 text-purple-500" />
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-amber-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Balcão</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.BALCAO}</p>
+              </div>
+              <MapPin className="w-8 h-8 text-amber-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="flex -mb-px">
+              {(['ALL', 'INTERIOR', 'EXTERIOR', 'BALCAO'] as const).map((ambiente) => (
+                <button
+                  key={ambiente}
+                  onClick={() => setSelectedAmbiente(ambiente)}
+                  className={`py-3 px-6 border-b-2 font-medium text-sm transition-colors ${
+                    selectedAmbiente === ambiente
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {ambiente === 'ALL' ? 'Todas' : 
+                   ambiente === 'INTERIOR' ? 'Interior' :
+                   ambiente === 'EXTERIOR' ? 'Exterior' : 'Balcão'}
+                  <span className="ml-2 bg-gray-100 text-gray-600 py-1 px-2 rounded-full text-xs">
+                    {ambiente === 'ALL' ? stats.total :
+                     ambiente === 'INTERIOR' ? stats.INTERIOR :
+                     ambiente === 'EXTERIOR' ? stats.EXTERIOR : stats.BALCAO}
+                  </span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Tables List */}
+        <div className="bg-white rounded-lg shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">
+                {selectedAmbiente === 'ALL' ? 'Todas as Mesas' : `Mesas - ${
+                  selectedAmbiente === 'INTERIOR' ? 'Interior' :
+                  selectedAmbiente === 'EXTERIOR' ? 'Exterior' : 'Balcão'
+                }`}
+              </h3>
+              <button
+                onClick={loadTables}
+                disabled={loading}
+                className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </button>
+            </div>
+          </div>
+          
+          <div className="divide-y divide-gray-200">
+            {loading ? (
+              <div className="px-6 py-12 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-500">Carregando mesas...</p>
+              </div>
+            ) : getTablesByAmbienteFiltered().length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <Table className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">Nenhuma mesa encontrada</p>
+                <button
+                  onClick={handleCreateTable}
+                  className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Criar primeira mesa
+                </button>
+              </div>
+            ) : (
+              getTablesByAmbienteFiltered().map((table) => (
+                <div key={table.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div 
+                        className="w-4 h-4 rounded"
+                        style={{ backgroundColor: table.color }}
+                      ></div>
+                      <div>
+                        <h4 className="text-lg font-medium text-gray-900">{table.name}</h4>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <span className="font-medium">#{table.number}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="w-4 h-4" />
+                            {table.seats} lugares
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-4 h-4" />
+                            {table.ambiente === 'INTERIOR' ? 'Interior' :
+                             table.ambiente === 'EXTERIOR' ? 'Exterior' : 'Balcão'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            Forma: {table.shape === 'RECTANGLE' ? 'Retangular' :
+                                   table.shape === 'SQUARE' ? 'Quadrada' : 'Circular'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        table.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
+                        table.status === 'OCCUPIED' ? 'bg-red-100 text-red-800' :
+                        table.status === 'RESERVED' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {table.status === 'AVAILABLE' ? 'Disponível' :
+                         table.status === 'OCCUPIED' ? 'Ocupada' :
+                         table.status === 'RESERVED' ? 'Reservada' : 'Limpeza'}
+                      </span>
+                      
+                      <button
+                        onClick={() => handleEditTable(table)}
+                        className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                        title="Editar mesa"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      
+                      <button
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        title="Excluir mesa"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Form Modal */}
+      <FormMesa
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        onSuccess={handleFormSuccess}
+        tableData={editingTable}
+        mode={formMode}
+      />
     </div>
   );
 }
