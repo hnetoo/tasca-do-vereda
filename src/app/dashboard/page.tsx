@@ -434,9 +434,9 @@ const Dashboard = () => {
                 <YAxis stroke="#64748b" tickLine={false} axisLine={false} />
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: 'hsl(var(--background))', border: 'none', borderRadius: '8px' }}
-                  itemStyle={{ color: 'hsl(var(--foreground))' }}
-                  labelStyle={{ color: 'hsl(var(--primary))' }}
+                  contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '8px' }}
+                  itemStyle={{ color: '#f1f5f9' }}
+                  labelStyle={{ color: '#60a5fa' }}
                 />
                 <Area type="monotone" dataKey="vendas" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorUv)" />
                 <Area type="monotone" dataKey="lucro" stroke="#82ca9d" fillOpacity={1} fill="url(#colorPv)" />
@@ -507,9 +507,9 @@ const Dashboard = () => {
               <XAxis dataKey="name" stroke="#64748b" tickLine={false} axisLine={false} />
               <YAxis stroke="#64748b" tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: 'none', borderRadius: '8px' }}
-                itemStyle={{ color: 'hsl(var(--foreground))' }}
-                labelStyle={{ color: 'hsl(var(--primary))' }}
+                contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '8px' }}
+                itemStyle={{ color: '#f1f5f9' }}
+                labelStyle={{ color: '#60a5fa' }}
                 formatter={(value: number) => formatKz(value)}
               />
               {paymentMethods.map(method => (
