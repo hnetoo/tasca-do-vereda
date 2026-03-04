@@ -19,28 +19,17 @@ export const useTables = () => {
 
     // Subscribe to realtime changes
     const channel = supabase
-      .channel('table-changes')
+      .channel('tables')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'restaurant_tables'
+          table: 'tables'
         },
         (payload) => {
-          logger.info('Realtime table update received', { event: payload.eventType }, 'REALTIME');
-          
-          if (payload.eventType === 'INSERT') {
-            addTable(payload.new as Table);
-          } else if (payload.eventType === 'UPDATE') {
-            updateTable(payload.new as Table);
-          } else if (payload.eventType === 'DELETE') {
-            // payload.old only contains the ID if REPLICA IDENTITY is set to FULL or if it's the PK
-            // Assuming ID is available
-            if (payload.old && payload.old.id) {
-               removeTable(payload.old.id as string);
-            }
-          }
+          logger.info('Realtime table change', payload, 'DATABASE');
+          fetchTables();
         }
       )
       .subscribe((status) => {
