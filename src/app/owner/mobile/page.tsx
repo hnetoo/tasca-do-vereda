@@ -157,7 +157,13 @@ export default function OwnerMobilePage() {
   // Cálculo manual forçado para garantir valores corretos
   const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
-  const totalPayroll = filteredData.payroll.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+  
+  // Cálculo corrigido da folha salarial - verificar diferentes campos possíveis
+  const totalPayroll = filteredData.payroll.reduce((sum: number, p: any) => {
+    // Tentar diferentes campos onde o valor pode estar
+    const amount = p.amount || p.net_salary || p.base_salary || p.total || 0;
+    return sum + amount;
+  }, 0);
   
   // Filtrar vendas de hoje
   const today = new Date();
@@ -190,6 +196,15 @@ export default function OwnerMobilePage() {
     manualRevenue,
     manualExpenses,
     totalPayroll,
+    payrollDetails: filteredData.payroll.map(p => ({
+      id: p.id,
+      amount: p.amount,
+      net_salary: p.net_salary,
+      base_salary: p.base_salary,
+      total: p.total,
+      month: p.month,
+      employee_id: p.employee_id
+    })),
     totalTaxes,
     taxRate: `${(taxRate * 100)}%`,
     todayRevenue,
@@ -409,11 +424,25 @@ export default function OwnerMobilePage() {
             <span className="text-blue-100">Folha Salarial</span>
             <Wallet className="w-5 h-5 text-blue-100" />
           </div>
-          <div className="text-2xl font-bold">{displayValues.payroll}</div>
-          <div className="flex items-center gap-1 text-sm text-blue-100">
-            <Users className="w-4 h-4" />
-            <span>{filteredData.payroll.length} registros</span>
-          </div>
+          {loadingSupabase ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-100"></div>
+              <span className="text-blue-100 text-sm">Carregando...</span>
+            </div>
+          ) : (
+            <>
+              <div className="text-2xl font-bold">{displayValues.payroll}</div>
+              <div className="flex items-center gap-1 text-sm text-blue-100">
+                <Users className="w-4 h-4" />
+                <span>{filteredData.payroll.length} registros</span>
+              </div>
+              {filteredData.payroll.length === 0 && (
+                <div className="text-xs text-blue-200 mt-1">
+                  Nenhum registro de folha encontrado
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Net Profit Card */}
