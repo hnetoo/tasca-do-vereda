@@ -18,7 +18,12 @@ import { ensureTables } from '@/app/actions/ensureTables';
 
 interface TableData {
   id: string;
+  number: number;
   status: string;
+  zone: string;
+  x: number;
+  y: number;
+  label: string;
 }
 
 export default function SettingsTablesPage() {

@@ -38,9 +38,9 @@ const TableLayout = () => {
   useEffect(() => {
     if (isAdmin) {
       // Primeiro garantir que as tabelas existem
-      ensureTables().then(() => {
+      // ensureTables().then(() => {
         loadTablesFromDB();
-      });
+      // });
     }
   }, [activeZone, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -48,9 +48,9 @@ const TableLayout = () => {
   useEffect(() => {
     if (isAdmin) {
       // Primeiro garantir que as tabelas existem
-      ensureTables().then(() => {
+      // ensureTables().then(() => {
         loadAllTablesFromDB();
-      });
+      // });
     }
   }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -68,11 +68,11 @@ const TableLayout = () => {
         result.data.forEach(table => {
           const exists = tables.find(t => t.id === table.id);
           if (!exists) {
-            console.log('➕ [LAYOUT] Adicionando mesa ao store:', table.name);
+            console.log('➕ [LAYOUT] Adicionando mesa ao store:', table.label);
             addTable(table);
           } else {
             // Update existing table with fresh data
-            console.log('🔄 [LAYOUT] Atualizando mesa no store:', table.name);
+            console.log('🔄 [LAYOUT] Atualizando mesa no store:', table.label);
             updateTable(table);
           }
         });

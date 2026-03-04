@@ -107,12 +107,12 @@ export async function getTablesByAmbiente(ambiente: 'INTERIOR' | 'EXTERIOR' | 'B
   const supabase = await createClient();
   
   try {
-    // SIMPLIFICADO: Apenas id e status
+    // CORREÇÃO: Nomes exatos das colunas do Supabase
     const { data, error } = await supabase
       .from('restaurant_tables')
-      .select('id, status')
+      .select('id, number, status, zone, x, y, label')
       .eq('is_active', true)
-      .order('id', { ascending: true });
+      .order('number', { ascending: true });
 
     if (error) {
       console.error('Error fetching tables:', error);

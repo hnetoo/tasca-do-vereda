@@ -5,6 +5,12 @@ import { createClient } from '@supabase/supabase-js';
 
 interface TableData {
   id: string;
+  number: number;
+  status: string;
+  zone: string;
+  x: number;
+  y: number;
+  label: string;
 }
 
 const CACHE_KEY = 'tasca_tables_cache';
@@ -47,13 +53,13 @@ export function useOfflineTables() {
 
         const { data, error } = await supabase
           .from('restaurant_tables')
-          .select('id')
-          .order('id', { ascending: true });
+          .select('id, number, status, zone, x, y, label')
+          .order('number', { ascending: true });
 
         console.log('🔍 Query executada:', {
           table: 'restaurant_tables',
-          select: 'id',
-          order: 'id ASC'
+          select: 'id, number, status, zone, x, y, label',
+          order: 'number ASC'
         });
 
         console.log('🔍 Supabase client:', {
