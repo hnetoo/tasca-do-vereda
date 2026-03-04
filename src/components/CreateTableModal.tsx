@@ -20,9 +20,9 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
     number: 1,
     seats: 4,
     shape: 'RECTANGLE',
-    ambiente: 'INTERIOR' as 'INTERIOR' | 'EXTERIOR' | 'BALCAO',
-    posicao_x: 0,
-    posicao_y: 0,
+    zone: 'INTERIOR' as 'INTERIOR' | 'EXTERIOR' | 'BALCAO',
+    x: 0,
+    y: 0,
     color: '#3B82F6'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,9 +45,9 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
           number: formData.number + 1,
           seats: 4,
           shape: 'RECTANGLE',
-          ambiente: 'INTERIOR',
-          posicao_x: 0,
-          posicao_y: 0,
+          zone: 'INTERIOR',
+          x: 0,
+          y: 0,
           color: '#3B82F6'
         });
       } else {
@@ -137,13 +137,13 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="ambiente" className="block text-sm font-medium text-gray-200 mb-1">
+            <label htmlFor="zone" className="block text-sm font-medium text-gray-200 mb-1">
               Ambiente
             </label>
             <select
-              id="ambiente"
-              value={formData.ambiente}
-              onChange={(e) => handleInputChange('ambiente', e.target.value)}
+              id="zone"
+              value={formData.zone}
+              onChange={(e) => handleInputChange('zone', e.target.value)}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
               required
             >
@@ -200,8 +200,8 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
               <input
                 type="number"
                 id="tablePosX"
-                value={formData.posicao_x}
-                onChange={(e) => handleInputChange('posicao_x', parseFloat(e.target.value))}
+                value={formData.x}
+                onChange={(e) => handleInputChange('x', parseFloat(e.target.value))}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                 step="10"
               />
@@ -214,8 +214,8 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
               <input
                 type="number"
                 id="tablePosY"
-                value={formData.posicao_y}
-                onChange={(e) => handleInputChange('posicao_y', parseFloat(e.target.value))}
+                value={formData.y}
+                onChange={(e) => handleInputChange('y', parseFloat(e.target.value))}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                 step="10"
               />

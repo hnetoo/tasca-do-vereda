@@ -116,9 +116,9 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#020617]">
+    <div className="min-h-screen bg-slate-950">
       {/* Header */}
-      <div className="bg-[#1e293b] shadow-sm border-b border-[#334155]">
+      <div className="bg-slate-900 shadow-sm border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
@@ -130,7 +130,7 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={() => router.push('/owner')}
-              className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-slate-50 hover:bg-slate-700 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-slate-50 hover:bg-slate-800 rounded-lg transition-colors"
             >
               <Home className="w-4 h-4" />
               Dashboard
@@ -154,7 +154,7 @@ export default function SettingsPage() {
             <button
               key={section.href}
               onClick={() => router.push(section.href)}
-              className="group relative bg-slate-800 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden border border-slate-700"
+              className="group relative bg-slate-900 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden border border-slate-800"
             >
               {/* Gradient Background */}
               <div className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-0 group-hover:opacity-10 transition-opacity`}></div>
@@ -183,18 +183,18 @@ export default function SettingsPage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="mt-8 bg-slate-800 rounded-xl shadow-sm p-6 border border-slate-700">
+        <div className="mt-8 bg-slate-900 rounded-xl shadow-sm p-6 border border-slate-800">
           <h3 className="text-lg font-semibold text-slate-50 mb-4">Resumo Rápido</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-slate-700 rounded-lg">
+            <div className="text-center p-4 bg-slate-800 rounded-lg">
               <div className="text-2xl font-bold text-blue-400">12</div>
               <div className="text-sm text-slate-400">Mesas Configuradas</div>
             </div>
-            <div className="text-center p-4 bg-slate-700 rounded-lg">
+            <div className="text-center p-4 bg-slate-800 rounded-lg">
               <div className="text-2xl font-bold text-purple-400">8</div>
               <div className="text-sm text-slate-400">Usuários Ativos</div>
             </div>
-            <div className="text-center p-4 bg-slate-700 rounded-lg">
+            <div className="text-center p-4 bg-slate-800 rounded-lg">
               <div className="text-2xl font-bold text-green-400">15</div>
               <div className="text-sm text-slate-400">Funcionários</div>
             </div>
