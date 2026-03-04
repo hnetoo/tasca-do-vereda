@@ -36,7 +36,7 @@ export interface OperationalSlice {
   
   setActiveTable: (id: string | null) => void;
   addTable: (table: Table) => void;
-  updateTable: (table: Table) => void;
+  updateTable: (tableId: string, updates: Partial<Table>) => void;
   removeTable: (id: string) => void;
   updateTableStatus: (id: string, status: TableStatus) => Promise<void>;
   
@@ -144,22 +144,25 @@ export const createOperationalSlice: StateCreator<
     });
   },
   
-  updateTable: (table: Table, updates?: Partial<Table>) => {
+  updateTable: (tableId: string, updates: Partial<Table>) => {
+    const table = get().tables.find(t => t.id === tableId);
+    if (!table) return;
+    
     set({ saveStatus: 'SAVING' });
     set((state) => ({
-      tables: state.tables.map((t: Table) => t.id === table.id ? { ...t, ...updates } : t)
+      tables: state.tables.map((t: Table) => t.id === tableId ? { ...t, ...updates } : t)
     }));
     saveTableClient({ ...table, ...updates }).then(res => {
       if (!res.success) {
         set({ saveStatus: 'ERROR' });
-        logger.error('Failed to persist updated table to SQL', { id: table.id, error: res.error }, 'DATABASE');
+        logger.error('Failed to persist updated table to SQL', { id: tableId, error: res.error }, 'DATABASE');
       } else {
         set({ saveStatus: 'SAVED' });
         setTimeout(() => set({ saveStatus: 'IDLE' }), 2000);
       }
     }).catch(e => {
       set({ saveStatus: 'ERROR' });
-      logger.error('Failed to persist updated table to SQL', { id: table.id, error: e.message }, 'DATABASE')
+      logger.error('Failed to persist updated table to SQL', { id: tableId, error: e.message }, 'DATABASE')
     });
   },
   
