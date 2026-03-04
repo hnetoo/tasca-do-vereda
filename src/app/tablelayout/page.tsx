@@ -57,22 +57,30 @@ const TableLayout = () => {
   const loadAllTablesFromDB = async () => {
     setIsLoading(true);
     try {
+      console.log('🔍 [LAYOUT] Carregando mesas do banco de dados...');
       const result = await getTablesByAmbiente('ALL');
+      
       if (result.success && result.data) {
+        console.log('✅ [LAYOUT] Mesas carregadas:', result.data.length, 'mesas');
         setDbTables(result.data);
+        
         // Update store with fetched tables
         result.data.forEach(table => {
           const exists = tables.find(t => t.id === table.id);
           if (!exists) {
+            console.log('➕ [LAYOUT] Adicionando mesa ao store:', table.name);
             addTable(table);
           } else {
             // Update existing table with fresh data
+            console.log('🔄 [LAYOUT] Atualizando mesa no store:', table.name);
             updateTable(table);
           }
         });
+      } else {
+        console.error('❌ [LAYOUT] Falha ao carregar mesas:', result.error);
       }
     } catch (error) {
-      console.error('Error loading all tables:', error);
+      console.error('❌ [LAYOUT] Erro ao carregar mesas:', error);
       addNotification('Erro ao carregar todas as mesas do banco de dados', 'error');
     } finally {
       setIsLoading(false);
