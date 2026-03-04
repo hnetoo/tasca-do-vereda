@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
-import SQLMigrationPanel from '@/components/SQLMigrationPanel';
 import { LogEntry } from '@/services/logger';
 import { 
   listBackupsAction, 
@@ -397,7 +396,12 @@ const DLPRecovery = () => {
       </div>
 
       {/* SQL Server Migration & Instance Management */}
-      <SQLMigrationPanel />
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Migração de Dados</h3>
+        <p className="text-gray-600">
+          A migração de dados foi desativada. A aplicação agora usa exclusivamente Supabase como fonte de dados.
+        </p>
+      </div>
     </div>
   );
 };

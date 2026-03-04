@@ -3,7 +3,6 @@ import "../styles/globals.css";
 import AppShell from "@/components/AppShell";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ReduxProvider } from "@/providers/ReduxProvider";
-import OfflineIndicator from "@/components/OfflineIndicator";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
@@ -47,7 +46,6 @@ export default function RootLayout({
         <ReduxProvider>
           <AppShell>
             {children}
-            <OfflineIndicator />
             <PWAInstallPrompt />
             <ServiceWorkerRegister />
           </AppShell>

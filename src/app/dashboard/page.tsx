@@ -9,7 +9,6 @@ import { Order, AIAnalysisResult, PedidoPayload, DailyAnalyticsPayload, PaymentM
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import Image from 'next/image';
-import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 import ExportButton from '@/components/ExportButton';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { formatDateInLuanda } from '@/utils/date';
@@ -262,7 +261,10 @@ const Dashboard = () => {
           <p className="text-slate-400 text-sm mt-1">Visão geral em tempo real</p>
         </div>
         <div className="flex gap-3 flex-wrap items-center">
-          <SyncStatusIndicator />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-sm">Online</span>
+          </div>
 
           <button
             onClick={handleAIAnalysis}

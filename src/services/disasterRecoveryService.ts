@@ -32,7 +32,6 @@ const initTauriModules = async () => {
     return false;
 };
 
-import { sqlServerMigrationService } from './sqlServerMigrationService';
 import { useStore } from '../store/useStore';
 
 export interface BackupMetadata {
