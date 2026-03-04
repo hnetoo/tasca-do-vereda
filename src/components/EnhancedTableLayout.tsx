@@ -98,16 +98,26 @@ interface TableLayoutProps {
   tables: Table[];
   activeZone: TableZone;
   isEditMode: boolean;
+  selectedTableId?: string | null;
   onTableClick?: (table: Table) => void;
   onTablesChange?: (tables: Table[]) => void;
+  onTableSelect?: (tableId: string | null) => void;
+  onTableMove?: (tableId: string, x: number, y: number) => void;
+  onTableStatusChange?: (tableId: string, status: any) => void;
+  onTableDelete?: (tableId: string) => void;
 }
 
 const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
   tables,
   activeZone,
   isEditMode,
+  selectedTableId,
   onTableClick,
-  onTablesChange
+  onTablesChange,
+  onTableSelect,
+  onTableMove,
+  onTableStatusChange,
+  onTableDelete
 }) => {
   const [draggedTable, setDraggedTable] = useState<Table | null>(null);
   const [isSaving, setIsSaving] = useState(false);

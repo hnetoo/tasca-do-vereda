@@ -112,8 +112,7 @@ const TableLayout = () => {
   };
 
   const handleUpdateTablePosition = (tableId: string, x: number, y: number) => {
-    const table = { x, y };
-    updateTable(tableId, table);
+    updateTable(tableId, { x, y });
   };
 
   const handleUpdateTableStatus = (tableId: string, status: any) => {
