@@ -18,16 +18,22 @@ import { ensureTables } from '@/app/actions/ensureTables';
 
 interface TableData {
   id: string;
-  name: string;
   number: number;
+  name: string;
   seats: number;
+  zone: string;
   shape: string;
-  ambiente: 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
-  posicao_x: number;
-  posicao_y: number;
-  color: string;
+  x: number;
+  y: number;
+  width: number | null;
+  height: number | null;
+  rotation: number;
   status: string;
   is_active: boolean;
+  group_id: string | null;
+  color: string | null;
+  label: string;
+  user_id: string | null;
   created_at: string;
   updated_at: string;
 }

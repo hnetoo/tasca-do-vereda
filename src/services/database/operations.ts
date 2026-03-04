@@ -1116,7 +1116,7 @@ export const databaseOperations = {
 
   getTables: async (): Promise<Table[]> => {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
-      const { data, error } = await supabase.from('restaurant_tables').select('*');
+      const { data, error } = await supabase.from('restaurant_tables').select('id, number, name, seats, zone, shape, x, y, width, height, rotation, status, is_active, group_id, color, label, user_id, created_at, updated_at');
       if (error) throw error;
       
       // Map database fields to application type if needed

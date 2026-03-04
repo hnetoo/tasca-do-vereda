@@ -215,13 +215,14 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
   // FORÇAR POSIÇÃO PADRÃO PARA TODAS AS MESAS
   const tablesWithPosition = filteredTables.map((table, index) => ({
     ...table,
-    // Renderização de emergência: posição automática se não existir
-    posicao_x: table.posicao_x || table.x || (index % 3) * 120, // 3 mesas por linha
-    posicao_y: table.posicao_y || table.y || Math.floor(index / 3) * 120, // Próxima linha
-    // Garantir que table_number seja usado se number não existir
-    number: table.number || table.table_number || index + 1,
-    // Nome padrão se não existir
-    name: table.name || `Mesa ${table.table_number || table.number || index + 1}`
+    // Usar coordenadas reais do banco (x, y) ou posição automática
+    posicao_x: table.x || (index % 3) * 120, // 3 mesas por linha
+    posicao_y: table.y || Math.floor(index / 3) * 120, // Próxima linha
+    // Garantir compatibilidade com componentes antigos
+    number: table.number,
+    name: table.name || table.label || `Mesa ${table.number}`,
+    // Mapear zone para ambiente se necessário
+    ambiente: table.zone || 'INTERIOR'
   }));
 
   return (
