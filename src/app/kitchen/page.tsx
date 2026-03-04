@@ -39,13 +39,31 @@ const FilterButton = ({ label, status, icon: Icon, count, colorClass, activeFilt
 );
 
 const Kitchen = () => {
-  const { activeOrders, dishes: menu, updateOrderItemStatus, markOrderAsServed } = useStore();
+  const { activeOrders, dishes: menu, updateOrderItemStatus, markOrderAsServed, settings, updateSettings } = useStore();
   const [activeFilter, setActiveFilter] = useState<KitchenFilter>('TODOS');
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isKDSOffline, setIsKDSOffline] = useState(false);
 
   // Refs to track previous state for sound triggers
   const prevOrdersRef = useRef(activeOrders);
+
+  // Check KDS status from settings
+  useEffect(() => {
+    const kdsStatus = settings?.kdsEnabled ?? true;
+    setIsKDSOffline(!kdsStatus);
+  }, [settings?.kdsEnabled, setIsKDSOffline]);
+
+  // Toggle KDS status
+  const toggleKDSStatus = async () => {
+    const newStatus = !isKDSOffline;
+    setIsKDSOffline(newStatus);
+    
+    // Save to settings/store
+    if (updateSettings) {
+      updateSettings({ kdsEnabled: !newStatus });
+    }
+  };
 
   // Update current time every second to drive the order timers
   useEffect(() => {
@@ -211,10 +229,53 @@ const Kitchen = () => {
 
   return (
     <div className="p-6 bg-gray-900 h-full overflow-y-auto flex flex-col">
+      {/* KDS Status Toggle */}
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          onClick={toggleKDSStatus}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+            isKDSOffline 
+              ? 'bg-red-600 border-red-500 text-white hover:bg-red-700' 
+              : 'bg-green-600 border-green-500 text-white hover:bg-green-700'
+          }`}
+          title={isKDSOffline ? 'Ativar KDS' : 'Desativar KDS'}
+        >
+          <Zap size={16} />
+          <span className="text-sm font-medium">
+            KDS {isKDSOffline ? 'Offline' : 'Online'}
+          </span>
+        </button>
+      </div>
+
+      {/* KDS Offline Overlay */}
+      {isKDSOffline && (
+        <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center">
+          <div className="bg-red-900 border-2 border-red-500 rounded-xl p-8 max-w-md mx-4">
+            <div className="text-center">
+              <AlertCircle size={48} className="text-red-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-white mb-2">Cozinha em Pausa</h3>
+              <p className="text-red-200 text-lg">Não são aceites novos pedidos</p>
+              <button
+                onClick={toggleKDSStatus}
+                className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                Reativar Cozinha
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="mb-6 flex justify-between items-center">
         <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <span className="bg-white/10 p-2 rounded-lg text-orange-500 animate-pulse"><Zap size={24} /></span>
+            <span className={`p-2 rounded-lg ${
+              isKDSOffline 
+                ? 'bg-red-600 text-white' 
+                : 'bg-white/10 text-orange-500 animate-pulse'
+            }`}>
+              <Zap size={24} />
+            </span>
             Monitor de Cozinha (KDS)
             </h2>
             <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">

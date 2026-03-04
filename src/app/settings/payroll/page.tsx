@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, 
@@ -23,7 +23,7 @@ import {
   deletePayrollRecord,
   PayrollRecord 
 } from '@/app/actions/payrollActions';
-import { createPayrollTable } from '@/app/actions/createPayrollTable';
+import { ensurePayrollTable } from '@/app/actions/ensurePayrollTable';
 
 export default function SettingsPayrollPage() {
   const router = useRouter();
@@ -41,17 +41,13 @@ export default function SettingsPayrollPage() {
     status_pagamento: 'pendente' as 'pendente' | 'pago' | 'cancelado'
   });
 
-  useEffect(() => {
-    initializePayroll();
-  }, []);
-
-  const initializePayroll = async () => {
+  const initializePayroll = useCallback(async () => {
     try {
       setLoading(true);
       setTableStatus('checking');
       
       // Verificar/criar tabela
-      const tableResult = await createPayrollTable();
+      const tableResult = await ensurePayrollTable();
       
       if (tableResult.success) {
         setTableStatus('exists');
@@ -67,7 +63,11 @@ export default function SettingsPayrollPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    initializePayroll();
+  }, [initializePayroll]);
 
   const loadRecords = async () => {
     try {
