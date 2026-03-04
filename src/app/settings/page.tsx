@@ -116,21 +116,21 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-[#020617]">
       {/* Header */}
-      <div className="bg-slate-800 shadow-sm border-b border-slate-700">
+      <div className="bg-[#1e293b] shadow-sm border-b border-[#334155]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
               <Settings className="w-8 h-8 text-blue-400" />
               <div>
-                <h1 className="text-xl font-bold text-white">Configurações</h1>
+                <h1 className="text-xl font-bold text-slate-50">Configurações</h1>
                 <p className="text-sm text-slate-400">Painel de Gestão</p>
               </div>
             </div>
             <button
               onClick={() => router.push('/owner')}
-              className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-slate-50 hover:bg-slate-700 rounded-lg transition-colors"
             >
               <Home className="w-4 h-4" />
               Dashboard
@@ -142,7 +142,7 @@ export default function SettingsPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-2">Central de Configurações</h2>
+          <h2 className="text-2xl font-bold text-slate-50 mb-2">Central de Configurações</h2>
           <p className="text-slate-400">
             Gerencie todas as configurações do restaurante em um único local
           </p>
@@ -165,7 +165,7 @@ export default function SettingsPage() {
                   <section.icon className="w-6 h-6" />
                 </div>
                 
-                <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
+                <h3 className="text-lg font-semibold text-slate-50 mb-2 group-hover:text-blue-400 transition-colors">
                   {section.title}
                 </h3>
                 
@@ -184,7 +184,7 @@ export default function SettingsPage() {
 
         {/* Quick Stats */}
         <div className="mt-8 bg-slate-800 rounded-xl shadow-sm p-6 border border-slate-700">
-          <h3 className="text-lg font-semibold text-white mb-4">Resumo Rápido</h3>
+          <h3 className="text-lg font-semibold text-slate-50 mb-4">Resumo Rápido</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 bg-slate-700 rounded-lg">
               <div className="text-2xl font-bold text-blue-400">12</div>

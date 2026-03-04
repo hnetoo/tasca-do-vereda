@@ -93,7 +93,7 @@ export default function SettingsTablesPage() {
   const stats = getAmbienteStats();
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-[#020617]">
       {/* Header */}
       <div className="bg-[#1e293b] shadow-sm border-b border-[#334155]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -101,7 +101,7 @@ export default function SettingsTablesPage() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/settings')}
-                className="flex items-center gap-2 text-[#94a3b8] hover:text-white hover:bg-[#334155] px-3 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-[#94a3b8] hover:text-slate-50 hover:bg-[#334155] px-3 py-2 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Voltar
@@ -109,7 +109,7 @@ export default function SettingsTablesPage() {
               <div className="flex items-center gap-3">
                 <Table className="w-6 h-6 text-blue-400" />
                 <div>
-                  <h1 className="text-xl font-bold text-white">Gestão de Mesas</h1>
+                  <h1 className="text-xl font-bold text-slate-50">Gestão de Mesas</h1>
                   <p className="text-sm text-[#94a3b8]">Configurações do Restaurante</p>
                 </div>
               </div>
