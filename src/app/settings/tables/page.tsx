@@ -256,8 +256,8 @@ export default function SettingsTablesPage() {
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin className="w-4 h-4" />
-                            {table.ambiente === 'INTERIOR' ? 'Interior' :
-                             table.ambiente === 'EXTERIOR' ? 'Exterior' : 'Balcão'}
+                            {table.zone === 'INTERIOR' ? 'Interior' :
+                              table.zone === 'EXTERIOR' ? 'Exterior' : 'Balcão'}
                           </span>
                           <span className="flex items-center gap-1">
                             Forma: {table.shape === 'RECTANGLE' ? 'Retangular' :
