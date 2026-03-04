@@ -23,12 +23,15 @@ const CACHE_VERSION = '1.0';
 export function useOfflineTables() {
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true); // FORÇADO ONLINE
 
   useEffect(() => {
-    // Monitorar status da conexão
+    // FORÇAR ONLINE - Remover monitoramento offline
+    setIsOnline(true);
+    
+    // Monitorar status da conexão (mas manter online)
     const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOffline = () => setIsOnline(true); // FORÇAR ONLINE mesmo offline
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -47,70 +50,56 @@ export function useOfflineTables() {
     try {
       setLoading(true);
       
-      // Se estiver online, buscar do Supabase
-      if (isOnline) {
-        console.log('🌐 Online: Buscando mesas do Supabase...');
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+      // SINCRONIZAÇÃO DIRETA - Sempre buscar do Supabase
+      console.log('🌐 Sincronização Direta: Buscando mesas do Supabase...');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
 
-        const { data, error } = await supabase
-          .from('restaurant_tables')
-          .select('id, number, seats, shape, status, is_active, color, x, y, zone, label')
-          .order('number', { ascending: true });
+      const { data, error } = await supabase
+        .from('restaurant_tables')
+        .select('id, number, seats, shape, status, is_active, color, x, y, zone, label')
+        .order('number', { ascending: true });
 
-        console.log('🔍 Query executada:', {
-          table: 'restaurant_tables',
-          select: 'id, number, seats, shape, status, is_active, color, x, y, zone, label',
-          order: 'number ASC'
+      console.log('🔍 Query executada:', {
+        table: 'restaurant_tables',
+        select: 'id, number, seats, shape, status, is_active, color, x, y, zone, label',
+        order: 'number ASC'
+      });
+
+      console.log('🔍 Supabase client:', {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT_SET',
+        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT_SET'
+      });
+
+      if (error) {
+        console.error('❌ Erro ao buscar mesas do Supabase:', error);
+        console.error('🔍 Detalhes do erro:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
         });
-
-        console.log('🔍 Supabase client:', {
-          url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT_SET',
-          key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT_SET'
-        });
-
-        if (error) {
-          console.error('❌ Erro ao buscar mesas do Supabase:', error);
-          console.error('🔍 Detalhes do erro:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code
-          });
-          
-          // TENTAR VERIFICAR SE TABELA EXISTE
-          console.log('🔍 Verificando se tabela existe...');
-          const { data: tableData, error: tableError } = await supabase
-            .from('restaurant_tables')
-            .select('count', { count: 'exact', head: true });
-          
-          console.log('🔍 Resultado verificação tabela:', {
-            count: tableData,
-            error: tableError
-          });
-          
-          setTables([]);
-        } else {
-          console.log('✅ Mesas carregadas do Supabase:', data?.length || 0);
-          setTables(data || []);
-          
-          // Salvar no cache
-          saveToCache(data || []);
-        }
-      } else {
-        // Se estiver offline, carregar do cache
-        console.log('📱 Offline: Carregando mesas do cache...');
-        const cachedTables = loadFromCache();
         
-        if (cachedTables.length > 0) {
-          console.log('✅ Mesas carregadas do cache:', cachedTables.length);
-          setTables(cachedTables);
-        } else {
-          console.log('⚠️ Cache vazio, sem mesas disponíveis offline');
-          setTables([]);
-        }
+        // TENTAR VERIFICAR SE TABELA EXISTE
+        console.log('🔍 Verificando se tabela existe...');
+        const { data: tableData, error: tableError } = await supabase
+          .from('restaurant_tables')
+          .select('count', { count: 'exact', head: true });
+        
+        console.log('🔍 Resultado verificação tabela:', {
+          count: tableData,
+          error: tableError
+        });
+        
+        setTables([]);
+      } else {
+        console.log('✅ Mesas carregadas do Supabase:', data?.length || 0);
+        setTables(data || []);
+        
+        // Salvar no cache
+        saveToCache(data || []);
       }
     } catch (error) {
       console.error('❌ Erro ao carregar mesas:', error);
@@ -142,15 +131,7 @@ export function useOfflineTables() {
       if (!cached) return [];
       
       const cacheData = JSON.parse(cached);
-      
-      // Verificar versão do cache
-      if (cacheData.version !== CACHE_VERSION) {
-        console.log('🔄 Versão do cache incompatível, limpando...');
-        localStorage.removeItem(CACHE_KEY);
-        return [];
-      }
-      
-      console.log('📂 Cache carregado:', new Date(cacheData.timestamp));
+      console.log('� Cache carregado:', cacheData.tables?.length || 0, 'mesas');
       return cacheData.tables || [];
     } catch (error) {
       console.error('❌ Erro ao carregar cache:', error);
@@ -159,15 +140,21 @@ export function useOfflineTables() {
   };
 
   const clearCache = () => {
-    localStorage.removeItem(CACHE_KEY);
-    setTables([]);
-    console.log('🗑️ Cache limpo');
+    try {
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem('tasca-vereda-storage-v2');
+      localStorage.removeItem('tasca-vereda-storage-v2_schema_version');
+      console.log('🧹 Cache local limpo com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao limpar cache:', error);
+    }
   };
 
-  return {
-    tables,
-    loading,
-    isOnline,
+  return { 
+    tables, 
+    loading, 
+    isOnline, 
+    loadTables, 
     refreshTables: loadTables,
     clearCache
   };
