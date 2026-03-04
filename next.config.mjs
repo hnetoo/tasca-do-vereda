@@ -13,14 +13,6 @@ const nextConfig = {
   // ESTABILIZAÇÃO - Configurações para evitar erros de chunks
   experimental: {
     optimizePackageImports: ['lucide-react'],
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
   },
   
   // PWA Configuration
