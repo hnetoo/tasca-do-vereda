@@ -42,8 +42,7 @@ export default function SettingsTablesPage() {
   const loadTables = async () => {
     setLoading(true);
     try {
-      // Primeiro garantir que as tabelas existam
-      await ensureTables();
+      // APAGADO: ensureTables() - estava a derrubar o servidor
       
       const result = await getTablesByAmbiente(selectedAmbiente);
       if (result.success) {
@@ -78,14 +77,14 @@ export default function SettingsTablesPage() {
 
   const getTablesByAmbienteFiltered = () => {
     if (selectedAmbiente === 'ALL') return tables;
-    return tables.filter(table => table.ambiente === selectedAmbiente);
+    return tables.filter(table => table.zone === selectedAmbiente);
   };
 
   const getAmbienteStats = () => {
     const stats = {
-      INTERIOR: tables.filter(t => t.ambiente === 'INTERIOR').length,
-      EXTERIOR: tables.filter(t => t.ambiente === 'EXTERIOR').length,
-      BALCAO: tables.filter(t => t.ambiente === 'BALCAO').length,
+      INTERIOR: tables.filter(t => t.zone === 'INTERIOR').length,
+      EXTERIOR: tables.filter(t => t.zone === 'EXTERIOR').length,
+      BALCAO: tables.filter(t => t.zone === 'BALCAO').length,
       total: tables.length
     };
     return stats;
@@ -94,24 +93,24 @@ export default function SettingsTablesPage() {
   const stats = getAmbienteStats();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0f172a]">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-[#1e293b] shadow-sm border-b border-[#334155]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push('/settings')}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-[#94a3b8] hover:text-white hover:bg-[#334155] px-3 py-2 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Voltar
               </button>
               <div className="flex items-center gap-3">
-                <Table className="w-6 h-6 text-blue-600" />
+                <Table className="w-6 h-6 text-blue-400" />
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">Gestão de Mesas</h1>
-                  <p className="text-sm text-gray-500">Configurações do Restaurante</p>
+                  <h1 className="text-xl font-bold text-white">Gestão de Mesas</h1>
+                  <p className="text-sm text-[#94a3b8]">Configurações do Restaurante</p>
                 </div>
               </div>
             </div>
