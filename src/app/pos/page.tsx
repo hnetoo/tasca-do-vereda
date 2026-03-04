@@ -1221,8 +1221,8 @@ const POS = () => {
   return (
     <div className={`flex h-full overflow-hidden relative bg-background font-sans text-slate-200 ${isImmersive ? 'pl-0' : ''}`}>
       
-      {/* Fullscreen Exit Button - Apenas visível quando em modo immersive */}
-      {isImmersive && (
+      {/* Fullscreen Exit Button - REMOVIDO - layout limpo */}
+      {/* {isImmersive && (
         <div className="fixed top-4 left-4 z-50 animate-in slide-in-from-left">
           <button 
             onClick={() => {
@@ -1237,7 +1237,7 @@ const POS = () => {
             Sair Fullscreen
           </div>
         </div>
-      )}
+      )} */}
 
       {/* POS Internal Command Bar - Com animação suave */}
       <div className={`w-20 bg-slate-950 border-r border-white/5 flex flex-col items-center py-4 z-40 shrink-0 h-full transition-transform duration-500 ease-in-out ${isImmersive ? '-translate-x-full opacity-0' : 'translate-x-0 opacity-100'}`}>

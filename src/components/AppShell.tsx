@@ -86,8 +86,8 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
       <div className="min-h-[100dvh] bg-slate-950 text-white flex transition-opacity duration-300">
           <AppSidebar showSidebar={showSidebar && !pathname.startsWith('/owner')} />
           <main className={`flex-1 min-w-0 ${showSidebar && !pathname.startsWith('/owner') ? '' : 'ml-0'}`}>
-            {/* Botão para esconder sidebar - aparece quando sidebar está visível */}
-            {showSidebar && !pathname.startsWith('/owner') && (
+            {/* Botão para esconder sidebar - REMOVIDO - layout limpo */}
+            {/* {showSidebar && !pathname.startsWith('/owner') && (
               <button
                 onClick={() => setSidebarHidden(true)}
                 className="fixed top-4 right-4 z-50 w-12 h-12 rounded-lg flex items-center justify-center bg-red-600 text-white hover:bg-red-700 transition-all border-2 border-red-400 shadow-lg"
@@ -95,7 +95,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
               >
                 <X size={20} />
               </button>
-            )}
+            )} */}
             
             {!pathname.startsWith('/owner') && <Breadcrumbs />} 
             
