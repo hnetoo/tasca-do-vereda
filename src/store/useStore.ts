@@ -3,7 +3,8 @@ import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { logger } from '@/services/logger';
 import { env } from '@/utils/env';
 
-import { saveSettingsAction, saveSupplierAction } from '@/app/actions';
+// Import actions individually to avoid module factory issues
+import { getDatabaseConfigAction, saveDatabaseConfigAction } from '@/app/actions/settings';
 import { integrationAPIService } from '@/services/integrationAPIService';
 import { createMenuSlice } from './slices/menuSlice';
 import { createStaffSlice } from './slices/staffSlice';
