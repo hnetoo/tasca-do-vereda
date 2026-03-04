@@ -1,3 +1,4 @@
+// v1.1.0 - Cache Fix & Balcão Fix
 import type { Metadata } from "next";
 import "../styles/globals.css";
 import AppShell from "@/components/AppShell";
