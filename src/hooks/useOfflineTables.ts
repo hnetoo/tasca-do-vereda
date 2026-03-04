@@ -9,11 +9,10 @@ interface TableData {
   number: number;
   seats: number;
   shape: string;
-  ambiente: 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
+  status: string;
   posicao_x: number;
   posicao_y: number;
   color: string;
-  status: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -59,7 +58,7 @@ export function useOfflineTables() {
 
         const { data, error } = await supabase
           .from('restaurant_tables')
-          .select('*')
+          .select('id, name, number, seats, shape, status, posicao_x, posicao_y, color, is_active, created_at, updated_at')
           .eq('is_active', true)
           .order('number', { ascending: true });
 

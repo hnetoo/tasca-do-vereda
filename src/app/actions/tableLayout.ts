@@ -62,7 +62,6 @@ export async function createTableWithAmbiente(tableData: {
   number: number;
   seats?: number;
   shape?: string;
-  ambiente: 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
   posicao_x?: number;
   posicao_y?: number;
   color?: string;
@@ -78,7 +77,6 @@ export async function createTableWithAmbiente(tableData: {
         number: tableData.number,
         seats: tableData.seats || 4,
         shape: tableData.shape || 'RECTANGLE',
-        ambiente: tableData.ambiente,
         posicao_x: tableData.posicao_x || 0,
         posicao_y: tableData.posicao_y || 0,
         color: tableData.color || '#3B82F6',
@@ -110,9 +108,10 @@ export async function getTablesByAmbiente(ambiente: 'INTERIOR' | 'EXTERIOR' | 'B
   
   try {
     // SIMPLIFICADO: Apenas retornar todas as mesas ativas sem filtros
+    // PROIBIDO incluir ambiente no .select()
     const { data, error } = await supabase
       .from('restaurant_tables')
-      .select('*')
+      .select('id, name, number, seats, shape, status, posicao_x, posicao_y, color, is_active, created_at, updated_at')
       .eq('is_active', true)
       .order('number', { ascending: true });
 
