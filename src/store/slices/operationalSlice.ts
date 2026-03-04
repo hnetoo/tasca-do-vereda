@@ -144,12 +144,12 @@ export const createOperationalSlice: StateCreator<
     });
   },
   
-  updateTable: (table: Table) => {
+  updateTable: (table: Table, updates?: Partial<Table>) => {
     set({ saveStatus: 'SAVING' });
     set((state) => ({
-      tables: state.tables.map((t: Table) => t.id === table.id ? table : t)
+      tables: state.tables.map((t: Table) => t.id === table.id ? { ...t, ...updates } : t)
     }));
-    saveTableClient(table).then(res => {
+    saveTableClient({ ...table, ...updates }).then(res => {
       if (!res.success) {
         set({ saveStatus: 'ERROR' });
         logger.error('Failed to persist updated table to SQL', { id: table.id, error: res.error }, 'DATABASE');
