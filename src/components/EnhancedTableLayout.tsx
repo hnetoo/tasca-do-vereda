@@ -197,6 +197,13 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
   console.log('🔍 Mesas após filtro:', filteredTables.length);
   console.log('🔍 Mesas filtradas:', filteredTables.map(t => ({ id: t.id, name: t.name, ambiente: t.ambiente || t.zone || 'INTERIOR' })));
 
+  // FORÇAR POSIÇÃO PADRÃO PARA TODAS AS MESAS
+  const tablesWithPosition = filteredTables.map((table, index) => ({
+    ...table,
+    posicao_x: table.posicao_x || table.x || (index % 3) * 120, // 3 mesas por linha
+    posicao_y: table.posicao_y || table.y || Math.floor(index / 3) * 120, // Próxima linha
+  }));
+
   return (
     <div className="relative w-full h-full bg-gray-100 rounded-lg overflow-hidden">
       <DndContext
@@ -207,7 +214,7 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
         modifiers={[restrictToWindowEdges]}
       >
         <div className="relative w-full h-full">
-          {filteredTables.map((table) => (
+          {tablesWithPosition.map((table) => (
             <DraggableTable
               key={table.id}
               table={table}

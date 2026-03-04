@@ -93,6 +93,7 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
 
   const generalMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
+    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
     { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout Mesas' },
@@ -101,10 +102,6 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
     { path: '/inventory', icon: <Warehouse size={24} />, label: 'Inventário' },
     { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
-    { path: '/customers', icon: <Users size={24} />, label: 'Clientes' },
-    { path: '/reservations', icon: <Calendar size={24} />, label: 'Reservas' },
-    { path: '/qrcodeanalytics', icon: <QrCode size={24} />, label: 'QR Code Analytics' },
-    { path: '/qrmenumanager', icon: <Menu size={24} />, label: 'QR Menu Manager' },
   ];
 
   // Função para filtrar menus baseada na role do utilizador
