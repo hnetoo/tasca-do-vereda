@@ -214,33 +214,17 @@ export default function OwnerMobilePage() {
   };
 
   // Funções para gerenciar dados
-  const handleCreateSampleData = async () => {
-    try {
-      addNotification('🔄 Criando dados de exemplo...', 'info');
-      const result = await createSampleData();
-      
-      if (result.success) {
-        addNotification('✅ Dados de exemplo criados com sucesso!', 'success');
-        await loadApiData();
-      } else {
-        addNotification(`❌ Erro: ${result.error}`, 'error');
-      }
-    } catch (error: any) {
-      addNotification(`❌ Erro ao criar dados: ${error.message}`, 'error');
-    }
-  };
-
   const handleResetData = async () => {
-    if (!confirm('⚠️ Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
+    if (!confirm('⚠️ Tem certeza que deseja resetar os dados de produção? Esta ação limpará todas as vendas e despesas.')) {
       return;
     }
     
     try {
-      addNotification('🔄 Limpando dados de produção...', 'info');
+      addNotification('🔄 Resetando dados de produção...', 'info');
       const result = await resetProductionData();
       
       if (result.success) {
-        addNotification('✅ Dados limpos com sucesso!', 'success');
+        addNotification('✅ Dados resetados com sucesso!', 'success');
         setOrders([]);
         setExpenses([]);
         await loadApiData();
@@ -248,7 +232,7 @@ export default function OwnerMobilePage() {
         addNotification(`❌ Erro: ${result.error}`, 'error');
       }
     } catch (error: any) {
-      addNotification(`❌ Erro ao limpar dados: ${error.message}`, 'error');
+      addNotification(`❌ Erro ao resetar dados: ${error.message}`, 'error');
     }
   };
 
@@ -353,18 +337,11 @@ export default function OwnerMobilePage() {
         {/* Control Buttons */}
         <div className="flex gap-2 mb-4">
           <button
-            onClick={handleCreateSampleData}
-            className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 flex items-center justify-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Criar Dados
-          </button>
-          <button
             onClick={handleResetData}
             className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 flex items-center justify-center gap-2"
           >
             <Trash2 className="w-4 h-4" />
-            Limpar Tudo
+            Reset Produção
           </button>
           <button
             onClick={loadApiData}

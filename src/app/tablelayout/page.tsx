@@ -4,14 +4,13 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useStore } from '@/store/useStore';
 import { 
-  LayoutGrid, Plus, MousePointer2, Move, Trash2, Users, 
+  LayoutGrid, MousePointer2, Move, Trash2, Users, 
   AlertCircle, CheckCircle2, Home, Sun, 
   Beer, Square, Circle, RectangleHorizontal, RotateCw, Settings2,
   Clock
 } from 'lucide-react';
 import { Table, TableStatus, TableZone } from '@/types';
 import EnhancedTableLayout from '@/components/EnhancedTableLayout';
-import CreateTableModal from '@/components/CreateTableModal';
 import { getTablesByAmbiente } from '@/app/actions/tableLayout';
 
 const TableLayout = () => {
@@ -24,7 +23,6 @@ const TableLayout = () => {
   const [activeZone, setActiveZone] = useState<TableZone>('INTERIOR');
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [dbTables, setDbTables] = useState<Table[]>([]);
 
@@ -136,11 +134,6 @@ const filteredTables = useMemo(() => {
     });
   };
 
-  const handleCreateSuccess = () => {
-    addNotification('Mesa criada com sucesso', 'success');
-    loadTablesFromDB(); // Reload tables from DB
-  };
-
   const getZoneIcon = (zone: TableZone) => {
     switch (zone) {
       case 'INTERIOR': return <Home size={16} />;
@@ -214,16 +207,6 @@ const filteredTables = useMemo(() => {
               </div>
               <div>{formatDate(currentTime)}</div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all"
-            >
-              <Plus size={16} className="inline mr-2" />
-              Nova Mesa
-            </button>
           </div>
         </div>
 
@@ -320,13 +303,6 @@ const filteredTables = useMemo(() => {
           </div>
         </div>
       )}
-
-      {/* Create Table Modal */}
-      <CreateTableModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleCreateSuccess}
-      />
     </div>
   );
 };
