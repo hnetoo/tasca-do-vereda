@@ -10,13 +10,13 @@ interface FormMesaProps {
   onSuccess: () => void;
   tableData?: {
     id: string;
-    name: string;
+    label: string;
     number: number;
     seats: number;
     shape: string;
-    ambiente: 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
-    posicao_x: number;
-    posicao_y: number;
+    zone: 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
+    x: number;
+    y: number;
     color: string;
   };
   mode?: 'create' | 'edit';
@@ -30,13 +30,13 @@ const FormMesa: React.FC<FormMesaProps> = ({
   mode = 'create'
 }) => {
   const [formData, setFormData] = useState({
-    name: tableData?.name || '',
+    label: tableData?.label || '',
     number: tableData?.number || 1,
     seats: tableData?.seats || 4,
     shape: tableData?.shape || 'RECTANGLE',
-    ambiente: tableData?.ambiente || 'INTERIOR' as 'INTERIOR' | 'EXTERIOR' | 'BALCAO',
-    posicao_x: tableData?.posicao_x || 0,
-    posicao_y: tableData?.posicao_y || 0,
+    zone: tableData?.zone || 'INTERIOR' as 'INTERIOR' | 'EXTERIOR' | 'BALCAO',
+    x: tableData?.x || 0,
+    y: tableData?.y || 0,
     color: tableData?.color || '#3B82F6'
   });
   

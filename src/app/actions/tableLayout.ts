@@ -107,10 +107,10 @@ export async function getTablesByAmbiente(ambiente: 'INTERIOR' | 'EXTERIOR' | 'B
   const supabase = await createClient();
   
   try {
-    // ESPelhamento EXATO do database.types.ts
+    // Colunas EXATAS como no Supabase
     const { data, error } = await supabase
       .from('restaurant_tables')
-      .select('id, number, label, x, y, status, zone, color, created_at, group_id, height, is_active, name, rotation, seats, shape, updated_at, user_id, width')
+      .select('id, number, seats, shape, status, is_active, color, x, y, zone, label')
       .eq('is_active', true)
       .order('number', { ascending: true });
 
