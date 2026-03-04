@@ -86,7 +86,7 @@ const customStorage: StateStorage = {
         console.error('📦 Error removing item:', error);
       }
     }
-  },
+  }
 };
 
 export const useStore = create<StoreState>()(

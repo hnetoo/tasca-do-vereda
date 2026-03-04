@@ -100,56 +100,25 @@ export async function ensureTables() {
     }
 
     // Verificar/criar tabela payroll_records se não existir
-    const { error: payrollError } = await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS payroll_records (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          employee_id UUID NOT NULL,
-          base_salary DECIMAL(12,2) NOT NULL,
-          net_salary DECIMAL(12,2) NOT NULL,
-          month VARCHAR(7) NOT NULL,
-          overtime_hours DECIMAL(5,2) DEFAULT 0,
-          overtime_pay DECIMAL(12,2) DEFAULT 0,
-          bonuses DECIMAL(12,2) DEFAULT 0,
-          deductions DECIMAL(12,2) DEFAULT 0,
-          payment_date DATE,
-          payment_method VARCHAR(50),
-          notes TEXT,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `
-    });
+    const { error: payrollError } = await supabase
+      .from('payroll_records')
+      .select('*')
+      .limit(1);
     
-    if (payrollError) {
-      console.error('❌ Erro ao criar payroll_records:', payrollError);
+    if (payrollError && payrollError.code !== 'PGRST116') { // PGRST116 = table doesn't exist
+      console.error('❌ Erro ao verificar payroll_records:', payrollError);
     } else {
       console.log('✅ Tabela payroll_records verificada/criada');
     }
     
     // Verificar/criar tabela restaurant_tables se não existir
-    const { error: tablesError } = await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS restaurant_tables (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          name VARCHAR(255) NOT NULL,
-          number INTEGER NOT NULL UNIQUE,
-          seats INTEGER DEFAULT 4,
-          shape VARCHAR(50) DEFAULT 'RECTANGLE',
-          ambiente VARCHAR(20) DEFAULT 'INTERIOR' CHECK (ambiente IN ('INTERIOR', 'EXTERIOR', 'BALCAO')),
-          posicao_x DECIMAL(10,2) DEFAULT 0,
-          posicao_y DECIMAL(10,2) DEFAULT 0,
-          color VARCHAR(20) DEFAULT '#3B82F6',
-          status VARCHAR(20) DEFAULT 'AVAILABLE' CHECK (status IN ('AVAILABLE', 'OCCUPIED', 'RESERVED', 'CLEANING')),
-          is_active BOOLEAN DEFAULT true,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `
-    });
+    const { error: tablesError } = await supabase
+      .from('restaurant_tables')
+      .select('*')
+      .limit(1);
     
-    if (tablesError) {
-      console.error('❌ Erro ao criar restaurant_tables:', tablesError);
+    if (tablesError && tablesError.code !== 'PGRST116') { // PGRST116 = table doesn't exist
+      console.error('❌ Erro ao verificar restaurant_tables:', tablesError);
     } else {
       console.log('✅ Tabela restaurant_tables verificada/criada');
     }
