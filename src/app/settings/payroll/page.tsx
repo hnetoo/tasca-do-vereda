@@ -146,32 +146,29 @@ export default function SettingsPayrollPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#020617]">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-slate-800 border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center">
               <button
                 onClick={() => router.push('/settings')}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mr-4"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-5 h-5" />
                 Voltar
               </button>
-              <div className="flex items-center gap-3">
-                <DollarSign className="w-6 h-6 text-green-600" />
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Financeiro e RH</h1>
-                  <p className="text-sm text-gray-500">Gestão de Folha de Salário</p>
-                </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">Folha Salarial</h1>
+                <p className="text-sm text-gray-400">Gestão de salários e pagamentos</p>
               </div>
             </div>
             <button
               onClick={handleCreateRecord}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               Novo Registro
             </button>
           </div>
@@ -181,70 +178,70 @@ export default function SettingsPayrollPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Funcionários Ativos</p>
-                <p className="text-2xl font-bold text-gray-900">{getActiveEmployees()}</p>
+                <p className="text-sm text-gray-400">Funcionários Ativos</p>
+                <p className="text-2xl font-bold text-white">{getActiveEmployees()}</p>
               </div>
-              <Users className="w-8 h-8 text-green-500" />
+              <Users className="w-8 h-8 text-green-400" />
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Folha do Mês</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(getTotalPayroll())}</p>
+                <p className="text-sm text-gray-400">Folha do Mês</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(getTotalPayroll())}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-blue-500" />
+              <DollarSign className="w-8 h-8 text-blue-400" />
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Salário Base Total</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(getTotalBaseSalary())}</p>
+                <p className="text-sm text-gray-400">Salário Base Total</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(getTotalBaseSalary())}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-purple-500" />
+              <DollarSign className="w-8 h-8 text-purple-400" />
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-amber-500">
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Mês Atual</p>
-                <p className="text-2xl font-bold text-gray-900">{new Date().toLocaleDateString('pt-AO', { month: 'long' })}</p>
+                <p className="text-sm text-gray-400">Mês Atual</p>
+                <p className="text-2xl font-bold text-white">{new Date().toLocaleDateString('pt-AO', { month: 'long' })}</p>
               </div>
-              <Calendar className="w-8 h-8 text-amber-500" />
+              <Calendar className="w-8 h-8 text-amber-400" />
             </div>
           </div>
         </div>
 
         {/* Month Selector */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 mb-6">
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700">Mês de Referência:</label>
+            <label className="text-sm font-medium text-gray-300">Mês de Referência:</label>
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="AAAA-MM"
             />
           </div>
         </div>
 
         {/* Payroll Records */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg">
+          <div className="px-6 py-4 border-b border-slate-700">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Registros de Folha de Salário</h3>
+              <h3 className="text-lg font-medium text-white">Registros de Folha de Salário</h3>
               <button
                 onClick={loadData}
                 disabled={loading}
-                className="flex items-center gap-2 px-3 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                className="flex items-center gap-2 px-3 py-1 text-gray-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 Atualizar
@@ -252,19 +249,19 @@ export default function SettingsPayrollPage() {
             </div>
           </div>
           
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-slate-700">
             {loading ? (
               <div className="px-6 py-12 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-                <p className="text-gray-500">Carregando dados...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto mb-4"></div>
+                <p className="text-gray-400">Carregando dados...</p>
               </div>
             ) : payrollRecords.length === 0 ? (
               <div className="px-6 py-12 text-center">
-                <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">Nenhum registro encontrado</p>
+                <DollarSign className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                <p className="text-gray-400">Nenhum registro encontrado</p>
                 <button
                   onClick={handleCreateRecord}
-                  className="mt-4 text-green-600 hover:text-green-700 font-medium"
+                  className="mt-4 text-green-400 hover:text-green-300 font-medium"
                 >
                   Criar primeiro registro
                 </button>
@@ -273,29 +270,29 @@ export default function SettingsPayrollPage() {
               payrollRecords.map((record) => {
                 const employee = employees.find(emp => emp.id === record.employee_id);
                 return (
-                  <div key={record.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div key={record.id} className="px-6 py-4 hover:bg-slate-700 transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-4 mb-2">
-                          <h4 className="text-lg font-medium text-gray-900">{employee?.name}</h4>
-                          <span className="text-sm text-gray-500">{employee?.position}</span>
+                          <h4 className="text-lg font-medium text-white">{employee?.name}</h4>
+                          <span className="text-sm text-gray-400">{employee?.position}</span>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <span className="text-gray-500">Salário Base:</span>
-                            <span className="font-medium">{formatCurrency(record.base_salary)}</span>
+                            <span className="text-gray-400">Salário Base:</span>
+                            <span className="font-medium text-white">{formatCurrency(record.base_salary)}</span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Salário Líquido:</span>
-                            <span className="font-medium text-green-600">{formatCurrency(record.net_salary)}</span>
+                            <span className="text-gray-400">Salário Líquido:</span>
+                            <span className="font-medium text-green-400">{formatCurrency(record.net_salary)}</span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Mês:</span>
-                            <span className="font-medium">{record.month}</span>
+                            <span className="text-gray-400">Mês:</span>
+                            <span className="font-medium text-white">{record.month}</span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Pagamento:</span>
-                            <span className="font-medium">{record.payment_date || 'Pendente'}</span>
+                            <span className="text-gray-400">Pagamento:</span>
+                            <span className="font-medium text-white">{record.payment_date || 'Pendente'}</span>
                           </div>
                         </div>
                       </div>
@@ -303,14 +300,14 @@ export default function SettingsPayrollPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEditRecord(record)}
-                          className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                          className="p-2 text-green-400 hover:text-green-300 hover:bg-slate-600 rounded transition-colors"
                           title="Editar registro"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         
                         <button
-                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                          className="p-2 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded transition-colors"
                           title="Excluir registro"
                         >
                           <Trash2 className="w-4 h-4" />

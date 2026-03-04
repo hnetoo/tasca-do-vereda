@@ -41,12 +41,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/auth.types';
+import StatusIndicator from '@/components/StatusIndicator';
 
 interface MenuItem {
   path: string;
   icon: React.ReactNode;
   label: string;
   badge?: string;
+  statusType?: 'supabase' | 'kitchen' | 'reservations';
 }
 
 const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
@@ -60,7 +62,7 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
     { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
     { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
+    { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha', statusType: 'kitchen' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout de Mesas' },
     { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
@@ -72,10 +74,10 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
     { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
     { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
     { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
+    { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha', statusType: 'kitchen' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout de Mesas' },
-    { path: '/customers', icon: <Users size={24} />, label: 'Clientes' },
-    { path: '/reservations', icon: <Calendar size={24} />, label: 'Reservas' },
+    { path: '/customers', icon: <Users size={24} />, label: 'Clientes', statusType: 'reservations' },
+    { path: '/reservations', icon: <Calendar size={24} />, label: 'Reservas', statusType: 'reservations' },
     { path: '/inventory', icon: <Warehouse size={24} />, label: 'Inventário' },
     { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
@@ -160,12 +162,19 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
               >
                 {item.icon}
                 {!collapsed && (
-                  <span className="text-sm font-medium">{item.label}</span>
-                )}
-                {item.badge && !collapsed && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    {item.badge}
-                  </span>
+                  <>
+                    <span className="text-sm font-medium">{item.label}</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      {item.statusType && (
+                        <StatusIndicator type={item.statusType} size="sm" />
+                      )}
+                      {item.badge && (
+                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  </>
                 )}
               </Link>
             </li>

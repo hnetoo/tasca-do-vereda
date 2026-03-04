@@ -26,6 +26,7 @@ import {
   Lock,
   ScanLine
 } from 'lucide-react';
+import StatusIndicator from '@/components/StatusIndicator';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -129,7 +130,8 @@ export default function SettingsPage() {
       description: 'Sincronização e backup na nuvem',
       icon: Cloud,
       href: '/settings/system/cloud',
-      color: 'from-sky-600 to-sky-700'
+      color: 'from-sky-600 to-sky-700',
+      statusType: 'supabase' as const
     },
     {
       title: 'Backup/Restore',
@@ -184,9 +186,15 @@ export default function SettingsPage() {
                 {setting.description}
               </p>
               
-              <div className="flex items-center text-blue-400 group-hover:text-blue-300 transition-colors">
-                <span className="text-sm font-medium">Acessar</span>
-                <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-blue-400 group-hover:text-blue-300 transition-colors">
+                  <span className="text-sm font-medium">Acessar</span>
+                  <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                </div>
+                
+                {setting.statusType && (
+                  <StatusIndicator type={setting.statusType} size="sm" />
+                )}
               </div>
             </div>
           </button>
