@@ -21,6 +21,14 @@ export function clearTableCache() {
       };
     }
     
+    // Limpar qualquer cache de mesas antigo
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes('table') || key.includes('mesa')) {
+        localStorage.removeItem(key);
+        console.log('🗑️ Cache antigo removido:', key);
+      }
+    });
+    
     console.log('🗑️ Cache de mesas limpo completamente');
     return true;
   } catch (error) {
