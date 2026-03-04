@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -42,6 +42,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { UserRole } from '@/types/auth.types';
 import StatusIndicator from '@/components/StatusIndicator';
+import { useStore } from '@/store/useStore';
 
 interface MenuItem {
   path: string;
@@ -56,6 +57,27 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const { settings } = useStore();
+
+  // Sincronizar logo com as configurações globais
+  const getLogoDisplay = () => {
+    if (settings?.logo) {
+      return (
+        <Image 
+          src={settings.logo} 
+          alt="Logo" 
+          width={40} 
+          height={40}
+          className="rounded-lg object-cover"
+        />
+      );
+    }
+    return (
+      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+        <span className="text-white font-bold text-lg">T</span>
+      </div>
+    );
+  };
 
   // Menu items for different user roles
   const staffMenuItems: MenuItem[] = [
@@ -111,12 +133,10 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-center justify-between">
           <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">T</span>
-            </div>
+            {getLogoDisplay()}
             {!collapsed && (
               <div>
-                <h2 className="text-lg font-semibold text-white">Tasca</h2>
+                <h2 className="text-lg font-semibold text-white">{settings?.restaurantName || 'Tasca'}</h2>
                 <p className="text-xs text-gray-400">Sistema de Gestão</p>
               </div>
             )}
