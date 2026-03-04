@@ -47,11 +47,12 @@ import {
   Image as ImageIcon,
   Wallet
 } from 'lucide-react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from '@/store/reduxStore';
 import { logoutUser } from '@/store/slices/authSlice';
 import { useStore } from '../store/useStore';
 import { SystemSettings } from '@/types';
+import { UserRole } from '@/types/auth.types';
 
 interface MenuItem {
   path: string;
@@ -64,9 +65,12 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
   const pathname = usePathname();
   const { settings, isMobileMenuOpen, toggleMobileMenu } = useStore();
   const dispatch = useDispatch<AppDispatch>();
+  
+  // Obter o utilizador atual da store Redux
+  const user = useSelector((state: any) => state.auth.user);
+  const userRole = user?.role;
 
-  const isActive = (path: string) => pathname === path || (path !== '/' && pathname.startsWith(path + '/'));
-
+  // Definir menus por role
   const ownerMenuItems: MenuItem[] = [
     { path: '/owner', icon: <LayoutGrid size={24} />, label: 'Dashboard' },
     { path: '/owner/analytics', icon: <BarChart2 size={24} />, label: 'Análises' },
@@ -76,9 +80,19 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/owner/settings', icon: <Settings size={24} />, label: 'Definições' },
   ];
 
+  const staffMenuItems: MenuItem[] = [
+    { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout Mesas' },
+    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
+    { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
+  ];
+
+  const kitchenMenuItems: MenuItem[] = [
+    { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha' },
+    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
+  ];
+
   const generalMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <LayoutGrid size={24} />, label: 'Comando' },
-    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
     { path: '/settings', icon: <Settings size={24} />, label: 'Definições' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout Mesas' },
@@ -93,9 +107,41 @@ const Sidebar = ({ showSidebar }: { showSidebar: boolean }) => {
     { path: '/qrmenumanager', icon: <Menu size={24} />, label: 'QR Menu Manager' },
   ];
 
+  // Função para filtrar menus baseada na role do utilizador
+  const filterMenuByRole = (menuItems: MenuItem[]) => {
+    if (!userRole) return [];
+    
+    switch (userRole) {
+      case UserRole.Admin:
+      case UserRole.Owner:
+        // OWNER/ADMIN: Acesso total a tudo
+        return menuItems;
+      
+      case UserRole.Caixa:
+      case UserRole.Garcom:
+        // STAFF: Acesso limitado
+        return menuItems.filter(item => 
+          staffMenuItems.some(staffItem => staffItem.path === item.path)
+        );
+      
+      case UserRole.Cozinha:
+        // COZINHA: Acesso apenas a cozinha e encomendas
+        return menuItems.filter(item => 
+          kitchenMenuItems.some(kitchenItem => kitchenItem.path === item.path)
+        );
+      
+      default:
+        return [];
+    }
+  };
+
+  const isActive = (path: string) => pathname === path || (path !== '/' && pathname.startsWith(path + '/'));
+
   const menuItems: MenuItem[] = pathname.startsWith('/owner')
-    ? ownerMenuItems
-    : generalMenuItems;
+    ? filterMenuByRole(ownerMenuItems)
+    : pathname.startsWith('/settings')
+    ? filterMenuByRole(generalMenuItems)
+    : filterMenuByRole(generalMenuItems);
 
   return (
     <>
