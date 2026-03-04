@@ -24,6 +24,7 @@ import {
   PayrollRecord 
 } from '@/app/actions/payrollActions';
 import { ensurePayrollTable } from '@/app/actions/ensurePayrollTable';
+import { createPayrollTableDirect } from '@/app/actions/createPayrollTableDirect';
 
 export default function SettingsPayrollPage() {
   const router = useRouter();
@@ -41,35 +42,7 @@ export default function SettingsPayrollPage() {
     status_pagamento: 'pendente' as 'pendente' | 'pago' | 'cancelado'
   });
 
-  const initializePayroll = useCallback(async () => {
-    try {
-      setLoading(true);
-      setTableStatus('checking');
-      
-      // Verificar/criar tabela
-      const tableResult = await ensurePayrollTable();
-      
-      if (tableResult.success) {
-        setTableStatus('exists');
-        // Carregar registros
-        await loadRecords();
-      } else {
-        setTableStatus('error');
-        console.error('Erro na tabela:', tableResult.error);
-      }
-    } catch (error) {
-      console.error('Erro ao inicializar payroll:', error);
-      setTableStatus('error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    initializePayroll();
-  }, [initializePayroll]);
-
-  const loadRecords = async () => {
+  const loadRecords = useCallback(async () => {
     try {
       setLoading(true);
       const result = await getPayrollRecords();
@@ -84,7 +57,45 @@ export default function SettingsPayrollPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const initializePayroll = useCallback(async () => {
+    try {
+      setLoading(true);
+      setTableStatus('checking');
+      
+      // Primeiro tentar verificar/criar tabela
+      const tableResult = await ensurePayrollTable();
+      
+      if (tableResult.success) {
+        setTableStatus('exists');
+        // Carregar registros
+        await loadRecords();
+      } else {
+        // Se ensure falhar, tentar método direto
+        console.log('🔄 [PAYROLL] Trying direct table creation...');
+        const directResult = await createPayrollTableDirect();
+        
+        if (directResult.success) {
+          setTableStatus('exists');
+          await loadRecords();
+        } else {
+          setTableStatus('error');
+          console.error('Erro na criação da tabela:', directResult.error);
+          
+          // Se ainda falhar, mostrar SQL para execução manual
+          if (directResult.requiresManualAction) {
+            console.error('SQL para execução manual:', directResult.sql);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao inicializar payroll:', error);
+      setTableStatus('error');
+    } finally {
+      setLoading(false);
+    }
+  }, [loadRecords]);
 
   const handleCreateRecord = () => {
     setEditingRecord(null);
