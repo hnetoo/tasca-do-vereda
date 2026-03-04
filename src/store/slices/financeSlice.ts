@@ -922,7 +922,7 @@ export const createFinanceSlice: StateCreator<
 
      // Auto-liberate table
      const tableId = order.table_id || (order as any).tableId;
-     if (tableId) {
+     if (tableId && tableId !== 'balcao-999') {
         get().updateTableStatus(tableId, 'AVAILABLE');
      }
 

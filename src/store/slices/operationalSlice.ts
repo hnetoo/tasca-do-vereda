@@ -121,7 +121,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   setActiveTable: (id: string | null) => {
-    if (id) {
+    if (id && id !== 'balcao-999') {
       get().updateTableStatus(id, 'OCCUPIED');
     }
     set({ activeTableId: id });
@@ -479,7 +479,9 @@ export const createOperationalSlice: StateCreator<
   },
   
   closeTableWithoutOrders: (tableId: string) => {
-    get().updateTableStatus(tableId, 'AVAILABLE');
+    if (tableId !== 'balcao-999') {
+      get().updateTableStatus(tableId, 'AVAILABLE');
+    }
     set((state) => ({
       activeTableId: state.activeTableId === tableId ? null : state.activeTableId
     }));
