@@ -5,24 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 
 interface TableData {
   id: string;
-  number: number;
-  name: string;
-  seats: number;
-  zone: string;
-  shape: string;
-  x: number;
-  y: number;
-  width: number | null;
-  height: number | null;
-  rotation: number;
   status: string;
-  is_active: boolean;
-  group_id: string | null;
-  color: string | null;
-  label: string;
-  user_id: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 const CACHE_KEY = 'tasca_tables_cache';
@@ -65,9 +48,9 @@ export function useOfflineTables() {
 
         const { data, error } = await supabase
           .from('restaurant_tables')
-          .select('id, number, name, seats, zone, shape, x, y, width, height, rotation, status, is_active, group_id, color, label, user_id, created_at, updated_at')
+          .select('id, status')
           .eq('is_active', true)
-          .order('number', { ascending: true });
+          .order('id', { ascending: true });
 
         if (error) {
           console.error('❌ Erro ao buscar mesas do Supabase:', error);

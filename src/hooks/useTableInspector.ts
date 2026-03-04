@@ -21,12 +21,14 @@ export function useTableInspector() {
         // Buscar uma linha só para ver as colunas
         const { data, error } = await supabase
           .from('restaurant_tables')
-          .select('id, number, name, seats, zone, shape, x, y, width, height, rotation, status, is_active, group_id, color, label, user_id, created_at, updated_at')
+          .select('id, status')
           .limit(1);
 
         if (error) {
           console.error('❌ Erro ao inspecionar tabela:', error);
           setError(error.message);
+          // Tratamento de erro silencioso - não crasha a app
+          setColumns(['id', 'status']); // Define colunas padrão
           return;
         }
 
@@ -41,7 +43,7 @@ export function useTableInspector() {
           // Se não há dados, tentar uma query vazia para ver a estrutura
           const { data: emptyData, error: emptyError } = await supabase
             .from('restaurant_tables')
-            .select('id, number, name, seats, zone, shape, x, y, width, height, rotation, status, is_active, group_id, color, label, user_id, created_at, updated_at')
+            .select('id, status')
             .eq('id', 'non-existent-id');
 
           if (emptyError) {
@@ -51,6 +53,8 @@ export function useTableInspector() {
       } catch (err) {
         console.error('❌ Erro ao inspecionar:', err);
         setError(err instanceof Error ? err.message : 'Erro desconhecido');
+        // Tratamento de erro silencioso - não crasha a app
+        setColumns(['id', 'status']); // Define colunas padrão
       } finally {
         setLoading(false);
       }
