@@ -97,18 +97,18 @@ export default function SettingsPage() {
       color: 'from-indigo-600 to-indigo-700'
     },
     {
-      title: 'Gestão de Staff',
+      title: 'Staff / Equipa',
       description: 'Gestão de funcionários',
-      icon: UserCog,
-      href: '/roles',
+      icon: Users,
+      href: '/settings/staff',
       color: 'from-blue-600 to-blue-700'
     },
     {
-      title: 'Escalas',
-      description: 'Organização de horários',
-      icon: Calendar,
-      href: '/settings/staff/escalas',
-      color: 'from-cyan-600 to-cyan-700'
+      title: 'Utilizadores',
+      description: 'Gestão de acessos e PINs',
+      icon: UserCog,
+      href: '/roles',
+      color: 'from-purple-600 to-purple-700'
     },
     {
       title: 'Folha Salarial',

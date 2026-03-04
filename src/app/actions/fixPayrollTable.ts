@@ -42,45 +42,46 @@ export async function fixPayrollTable() {
       }
       
       let migratedCount = 0;
-      if (oldRecords && oldRecords.length > 0) {
-        console.log(`🔄 [PAYROLL] Migrating ${oldRecords.length} records...`);
+    
+    if (oldRecords && oldRecords.length > 0) {
+      console.log(`🔄 [PAYROLL] Migrating ${oldRecords.length} records...`);
+      
+      for (const record of oldRecords) {
+        const newRecord = {
+          funcionario_name: record.funcionario_name || record.employee_name || '',
+          mes_referencia: record.mes_referencia || record.reference_month || new Date().toISOString().slice(0, 7),
+          salario_base: parseFloat(record.valor_base || record.base_salary || '0'),
+          subsidios: parseFloat(record.subsidios || record.bonuses || '0'),
+          descontos: parseFloat(record.descontos || record.deductions || '0'),
+          status: record.status_pagamento || record.payment_status || 'pendente'
+        };
         
-        for (const record of oldRecords) {
-          const newRecord = {
-            funcionario_name: record.funcionario_name || record.employee_name || '',
-            mes_referencia: record.mes_referencia || record.reference_month || new Date().toISOString().slice(0, 7),
-            salario_base: parseFloat(record.valor_base || record.base_salary || '0'),
-            subsidios: parseFloat(record.subsidios || record.bonuses || '0'),
-            descontos: parseFloat(record.descontos || record.deductions || '0'),
-            status: record.status_pagamento || record.payment_status || 'pendente'
-          };
-          
-          const { error: insertError } = await supabase
-            .from('payroll')
-            .insert(newRecord);
-          
-          if (insertError) {
-            console.error('❌ [PAYROLL] Error migrating record:', insertError);
-          } else {
-            console.log('✅ [PAYROLL] Migrated record:', newRecord.funcionario_name);
-            migratedCount++;
-          }
-        }
+        const { error: insertError } = await supabase
+          .from('payroll')
+          .insert(newRecord);
         
-        console.log('✅ [PAYROLL] Migration completed');
-        console.log(`📊 [PAYROLL] Total migrated: ${migratedCount}/${oldRecords.length} records`);
-        
-        // Drop old table
-        const { error: dropError } = await supabase.rpc('exec_sql', {
-          sql: 'DROP TABLE IF EXISTS public.payroll_records;'
-        });
-        
-        if (dropError) {
-          console.error('❌ [PAYROLL] Error dropping old table:', dropError);
+        if (insertError) {
+          console.error('❌ [PAYROLL] Error migrating record:', insertError);
         } else {
-          console.log('✅ [PAYROLL] Dropped old payroll_records table');
+          console.log('✅ [PAYROLL] Migrated record:', newRecord.funcionario_name);
+          migratedCount++;
         }
       }
+      
+      console.log('✅ [PAYROLL] Migration completed');
+      console.log(`📊 [PAYROLL] Total migrated: ${migratedCount}/${oldRecords.length} records`);
+      
+      // Drop old table
+      const { error: dropError } = await supabase.rpc('exec_sql', {
+        sql: 'DROP TABLE IF EXISTS public.payroll_records;'
+      });
+      
+      if (dropError) {
+        console.error('❌ [PAYROLL] Error dropping old table:', dropError);
+      } else {
+        console.log('✅ [PAYROLL] Dropped old payroll_records table');
+      }
+    }
     }
     
     // Step 3: Create payroll table if it doesn't exist

@@ -25,9 +25,11 @@ import {
 } from '@/app/actions/payrollActions';
 import { ensurePayrollTable } from '@/app/actions/ensurePayrollTable';
 import { createPayrollTableDirect } from '@/app/actions/createPayrollTableDirect';
+import { createStaffTable } from '@/app/actions/createStaffTable';
 
 export default function SettingsPayrollPage() {
   const router = useRouter();
+  const [staff, setStaff] = useState<any[]>([]);
   const [records, setRecords] = useState<PayrollRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -64,7 +66,7 @@ export default function SettingsPayrollPage() {
       setLoading(true);
       setTableStatus('checking');
       
-      // Primeiro tentar verificar/criar tabela
+      // Primeiro tentar verificar/criar tabela payroll
       const tableResult = await ensurePayrollTable();
       
       if (tableResult.success) {
@@ -89,6 +91,15 @@ export default function SettingsPayrollPage() {
           }
         }
       }
+      
+      // Garantir que tabela staff existe
+      console.log('🔧 [PAYROLL] Ensuring staff table exists...');
+      const staffTableResult = await createStaffTable();
+      
+      if (!staffTableResult.success) {
+        console.error('Erro ao criar tabela staff:', staffTableResult.error);
+      }
+      
     } catch (error) {
       console.error('Erro ao inicializar payroll:', error);
       setTableStatus('error');
@@ -96,6 +107,28 @@ export default function SettingsPayrollPage() {
       setLoading(false);
     }
   }, [loadRecords]);
+
+  // Carregar staff para dropdown
+  const loadStaff = useCallback(async () => {
+    try {
+      const response = await fetch('/api/staff');
+      const result = await response.json();
+      
+      if (result.success) {
+        setStaff(result.data || []);
+      } else {
+        console.error('Erro ao carregar staff:', result.error);
+        setStaff([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar staff:', error);
+      setStaff([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStaff();
+  }, [loadStaff]);
 
   const handleCreateRecord = () => {
     setEditingRecord(null);
@@ -442,6 +475,26 @@ export default function SettingsPayrollPage() {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Nome completo"
                   />
+                  
+                  {/* Staff Dropdown */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Funcionário
+                    </label>
+                    <select
+                      required
+                      value={formData.funcionario_name}
+                      onChange={(e) => setFormData({...formData, funcionario_name: e.target.value})}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Selecione um funcionário...</option>
+                      {staff.map((member) => (
+                        <option key={member.id} value={member.nome}>
+                          {member.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 
                 <div>
