@@ -8,6 +8,8 @@ export async function fixPayrollTable() {
   try {
     console.log('🔧 [PAYROLL] Fixing table name and structure...');
     
+    let migratedCount = 0;
+    
     // Step 1: Check if payroll table exists
     const { error: checkError } = await supabase
       .from('payroll')
@@ -41,7 +43,6 @@ export async function fixPayrollTable() {
         throw fetchError;
       }
       
-      let migratedCount = 0;
       if (oldRecords && oldRecords.length > 0) {
         console.log(`🔄 [PAYROLL] Migrating ${oldRecords.length} records...`);
         
