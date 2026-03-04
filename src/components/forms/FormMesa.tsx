@@ -53,7 +53,7 @@ const FormMesa: React.FC<FormMesaProps> = ({
       
       if (mode === 'edit' && tableData?.id) {
         // Edit existing table
-        result = await updateTableAmbiente(tableData.id, formData.ambiente);
+        result = await updateTableAmbiente(tableData.id, formData.zone);
       } else {
         // Create new table
         result = await createTableWithAmbiente(formData);
@@ -65,13 +65,13 @@ const FormMesa: React.FC<FormMesaProps> = ({
         // Reset form for next creation
         if (mode === 'create') {
           setFormData({
-            name: '',
+            label: '',
             number: formData.number + 1,
             seats: 4,
-            shape: 'RECTANGLE',
-            ambiente: 'INTERIOR',
-            posicao_x: 0,
-            posicao_y: 0,
+            shape: 'square',
+            zone: 'INTERIOR',
+            x: 100,
+            y: 100,
             color: '#3B82F6'
           });
         }

@@ -9,8 +9,8 @@ export async function updateTablePosition(tableId: string, x: number, y: number)
     const { error } = await supabase
       .from('restaurant_tables')
       .update({ 
-        posicao_x: x, 
-        posicao_y: y,
+        x: x, 
+        y: y,
         updated_at: new Date().toISOString()
       })
       .eq('id', tableId);
@@ -30,26 +30,26 @@ export async function updateTablePosition(tableId: string, x: number, y: number)
   }
 }
 
-export async function updateTableAmbiente(tableId: string, ambiente: 'INTERIOR' | 'EXTERIOR' | 'BALCAO') {
+export async function updateTableAmbiente(tableId: string, zone: 'INTERIOR' | 'EXTERIOR' | 'BALCAO') {
   const supabase = await createClient();
   
   try {
     const { error } = await supabase
       .from('restaurant_tables')
       .update({ 
-        ambiente,
+        zone,
         updated_at: new Date().toISOString()
       })
       .eq('id', tableId);
 
     if (error) {
-      console.error('Error updating table ambiente:', error);
+      console.error('Error updating table zone:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (error) {
-    console.error('Unexpected error updating table ambiente:', error);
+    console.error('Unexpected error updating table zone:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
@@ -58,12 +58,13 @@ export async function updateTableAmbiente(tableId: string, ambiente: 'INTERIOR' 
 }
 
 export async function createTableWithAmbiente(tableData: {
-  name: string;
+  label: string;
   number: number;
   seats?: number;
   shape?: string;
-  posicao_x?: number;
-  posicao_y?: number;
+  x?: number;
+  y?: number;
+  zone?: string;
   color?: string;
 }) {
   const supabase = await createClient();
@@ -73,14 +74,15 @@ export async function createTableWithAmbiente(tableData: {
       .from('restaurant_tables')
       .insert({
         id: crypto.randomUUID(),
-        name: tableData.name,
+        label: tableData.label,
         number: tableData.number,
         seats: tableData.seats || 4,
-        shape: tableData.shape || 'RECTANGLE',
-        posicao_x: tableData.posicao_x || 0,
-        posicao_y: tableData.posicao_y || 0,
+        shape: tableData.shape || 'square',
+        x: tableData.x || 100,
+        y: tableData.y || 100,
+        zone: tableData.zone || 'Sala',
         color: tableData.color || '#3B82F6',
-        status: 'AVAILABLE',
+        status: 'available',
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
