@@ -8,13 +8,14 @@ export async function ensureTables() {
   try {
     console.log('🔍 Verificando tabelas existentes...');
     
-    // Apenas verificar se as tabelas existem - NÃO criar nada
+    // Apenas verificar se as tabelas existem - NÃO criar nada via servidor
+    // O Vercel não suporta criação de tabelas dinâmicas
     const { error: menuItemsError } = await supabase
       .from('menu_items')
       .select('*')
       .limit(1);
     
-    if (menuItemsError) {
+    if (menuItemsError && menuItemsError.code !== 'PGRST116') {
       console.error('❌ Erro ao verificar menu_items:', menuItemsError);
     } else {
       console.log('✅ Tabela menu_items existe');
@@ -25,7 +26,7 @@ export async function ensureTables() {
       .select('*')
       .limit(1);
     
-    if (usersError) {
+    if (usersError && usersError.code !== 'PGRST116') {
       console.error('❌ Erro ao verificar users:', usersError);
     } else {
       console.log('✅ Tabela users existe');
@@ -36,46 +37,43 @@ export async function ensureTables() {
       .select('*')
       .limit(1);
     
-    if (employeesError) {
+    if (employeesError && employeesError.code !== 'PGRST116') {
       console.error('❌ Erro ao verificar employees:', employeesError);
     } else {
       console.log('✅ Tabela employees existe');
     }
 
-    // Verificar/criar tabela payroll_records se não existir
     const { error: payrollError } = await supabase
       .from('payroll_records')
       .select('*')
       .limit(1);
     
-    if (payrollError && payrollError.code !== 'PGRST116') { // PGRST116 = table doesn't exist
+    if (payrollError && payrollError.code !== 'PGRST116') {
       console.error('❌ Erro ao verificar payroll_records:', payrollError);
     } else {
-      console.log('✅ Tabela payroll_records verificada/criada');
+      console.log('✅ Tabela payroll_records existe');
     }
     
-    // Verificar/criar tabela restaurant_tables se não existir
     const { error: tablesError } = await supabase
       .from('restaurant_tables')
       .select('*')
       .limit(1);
     
-    if (tablesError && tablesError.code !== 'PGRST116') { // PGRST116 = table doesn't exist
+    if (tablesError && tablesError.code !== 'PGRST116') {
       console.error('❌ Erro ao verificar restaurant_tables:', tablesError);
     } else {
-      console.log('✅ Tabela restaurant_tables verificada/criada');
+      console.log('✅ Tabela restaurant_tables existe');
     }
 
-    // Verificar/criar tabela daily_analytics se não existir
-    const { data: existingAnalytics, error: analyticsError } = await supabase
+    const { error: analyticsError } = await supabase
       .from('daily_analytics')
       .select('*')
       .limit(1);
     
-    if (analyticsError) {
+    if (analyticsError && analyticsError.code !== 'PGRST116') {
       console.error('❌ Erro ao verificar daily_analytics:', analyticsError);
     } else {
-      console.log('✅ Tabela daily_analytics verificada');
+      console.log('✅ Tabela daily_analytics existe');
     }
     
     return {

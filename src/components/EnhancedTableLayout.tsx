@@ -2,6 +2,7 @@
 
 // CONFIGURAÇÃO DEFINITIVA - NÃO REVERTER PARA MOCKS
 // PRIORIDADE MÁXIMA AO BANCO DE DADOS - USAR APENAS DADOS DO SUPABASE
+// OFFLINE-FIRST: Cache local com fallback para Supabase
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
@@ -23,6 +24,7 @@ import {
   verticalListSortingStrategy 
 } from '@dnd-kit/sortable';
 import { Table, TableZone, TableStatus } from '@/types';
+import { useOfflineTables } from '@/hooks/useOfflineTables';
 
 interface DraggableTableProps {
   table: Table;
@@ -110,6 +112,12 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
   const [draggedTable, setDraggedTable] = useState<Table | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
+  // OFFLINE-FIRST: Usar hook de cache offline
+  const { tables: offlineTables, loading, isOnline, refreshTables } = useOfflineTables();
+  
+  // Usar mesas do cache offline quando disponível
+  const displayTables = offlineTables.length > 0 ? offlineTables : tables;
+  
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -123,7 +131,7 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const table = tables.find(t => t.id === active.id);
+    const table = displayTables.find(t => t.id === active.id);
     setDraggedTable(table || null);
   };
 
@@ -135,7 +143,7 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
       return;
     }
 
-    const table = tables.find(t => t.id === active.id);
+    const table = displayTables.find(t => t.id === active.id);
     if (!table || !isEditMode) {
       setDraggedTable(null);
       return;
@@ -165,11 +173,17 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
       
       if (result.success) {
         // Update local state
-        const updatedTables = tables.map(t => 
+        const updatedTables = displayTables.map(t => 
           t.id === table.id 
             ? { ...t, posicao_x: newX, posicao_y: newY }
             : t
         );
+        
+        // Atualizar cache offline também
+        if (offlineTables.length > 0) {
+          refreshTables();
+        }
+        
         onTablesChange?.(updatedTables);
         console.log('✅ Posição da mesa atualizada com sucesso:', { tableId: table.id, newX, newY });
       } else {
@@ -186,13 +200,14 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
     }
   };
 
-  // LOG DEPURAÇÃO - MOSTRAR DADOS DO BANCO
-  console.log('🔍 Mesas vindas do banco:', tables);
-  console.log('🔍 Total de mesas:', tables.length);
+  // LOG DEPURAÇÃO - MOSTRAR DADOS DO CACHE
+  console.log('🔍 Mesas do cache:', offlineTables);
+  console.log('🔍 Total de mesas:', displayTables.length);
+  console.log('🔍 Status online:', isOnline);
   console.log('🔍 Filtro ativo (ambiente):', activeZone);
 
   // REMOVER FILTRO - MOSTRAR TODAS AS MESAS
-  const filteredTables = tables; // Sem filtro por agora - mostrar todas
+  const filteredTables = displayTables; // Sem filtro por agora - mostrar todas
 
   console.log('🔍 Mesas após filtro:', filteredTables.length);
   console.log('🔍 Mesas filtradas:', filteredTables.map(t => ({ id: t.id, name: t.name, ambiente: t.ambiente || t.zone || 'INTERIOR' })));
