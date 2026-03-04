@@ -25,6 +25,7 @@ import { useTables } from '@/hooks/useTables';
 import { getSQLiteClient, ensureSqliteSchema } from '@/lib/sqlite';
 import { supabaseService } from '@/services/supabaseService';
 import { databaseOperations } from '@/services/database/operations';
+import { ensureBalcaoTable } from '@/app/actions/ensureBalcaoTable';
 
 
 const POS = () => {
@@ -80,6 +81,24 @@ const POS = () => {
       toggleMobileMenu();
     }
   }, [isSidebarCollapsed, toggleMobileMenu]);
+
+  // Garantir que mesa Balcão exista no Supabase
+  useEffect(() => {
+    const ensureBalcao = async () => {
+      try {
+        const result = await ensureBalcaoTable();
+        if (result.success) {
+          console.log('✅ Mesa Balcão garantida no Supabase');
+        } else {
+          console.error('❌ Erro ao garantir mesa Balcão:', result.error);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao verificar mesa Balcão:', error);
+      }
+    };
+    
+    ensureBalcao();
+  }, []);
 
   // Restore sidebar when leaving POS
   useEffect(() => {
@@ -1039,9 +1058,12 @@ const POS = () => {
       // Garantir que mesa fique disponível e limpar estado ativo
       if (activeTableId && currentOrder) {
         const tableId = currentOrder.table_id || (currentOrder as any).tableId;
-        if (tableId) {
+        
+        // Se for Balcão, não tentar atualizar status no Supabase
+        if (tableId && tableId !== 'balcao-999') {
           await updateTableStatus(String(tableId), 'AVAILABLE');
         }
+        
         // Limpar mesa ativa se não tiver mais pedidos abertos
         const remainingOrders = activeOrders.filter(o => 
           o.tableId === activeTableId && o.status === 'ABERTO'
