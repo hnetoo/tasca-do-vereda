@@ -21,7 +21,7 @@ export function useTableInspector() {
         // Buscar uma linha só para ver as colunas
         const { data, error } = await supabase
           .from('restaurant_tables')
-          .select('*')
+          .select('id, number, name, seats, zone, shape, x, y, width, height, rotation, status, is_active, group_id, color, label, user_id, created_at, updated_at')
           .limit(1);
 
         if (error) {
@@ -41,7 +41,7 @@ export function useTableInspector() {
           // Se não há dados, tentar uma query vazia para ver a estrutura
           const { data: emptyData, error: emptyError } = await supabase
             .from('restaurant_tables')
-            .select('*')
+            .select('id, number, name, seats, zone, shape, x, y, width, height, rotation, status, is_active, group_id, color, label, user_id, created_at, updated_at')
             .eq('id', 'non-existent-id');
 
           if (emptyError) {

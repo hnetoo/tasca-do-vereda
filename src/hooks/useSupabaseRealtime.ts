@@ -201,7 +201,7 @@ export function useRealtimeTables() {
   return useRealtime(
     supabase
       .from('restaurant_tables')
-      .select('*')
+      .select('id, number, name, seats, zone, shape, x, y, width, height, rotation, status, is_active, group_id, color, label, user_id, created_at, updated_at')
       .order('number'),
     {
       table: 'restaurant_tables',
