@@ -158,10 +158,10 @@ export default function OwnerMobilePage() {
   const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   
-  // Cálculo corrigido da folha salarial - verificar diferentes campos possíveis
+  // Cálculo corrigido da folha salarial - usar apenas tabela payroll
   const totalPayroll = filteredData.payroll.reduce((sum: number, p: any) => {
-    // Tentar diferentes campos onde o valor pode estar
-    const amount = p.amount || p.net_salary || p.base_salary || p.total || 0;
+    // Usar apenas o campo total_liquido da tabela payroll
+    const amount = p.total_liquido || 0;
     return sum + amount;
   }, 0);
   
@@ -198,12 +198,10 @@ export default function OwnerMobilePage() {
     totalPayroll,
     payrollDetails: filteredData.payroll.map(p => ({
       id: p.id,
-      amount: p.amount,
-      net_salary: p.net_salary,
-      base_salary: p.base_salary,
-      total: p.total,
-      month: p.month,
-      employee_id: p.employee_id
+      total_liquido: p.total_liquido,
+      funcionario_name: p.funcionario_name,
+      mes_referencia: p.mes_referencia,
+      status_pagamento: p.status_pagamento
     })),
     totalTaxes,
     taxRate: `${(taxRate * 100)}%`,

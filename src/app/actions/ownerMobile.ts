@@ -24,9 +24,9 @@ export async function getOwnerMobileData() {
 
     console.log('🔍 MOBILE SERVER ACTION: Expenses encontrados:', expensesData?.length || 0);
 
-    // Carregar payroll - BUSCAR TODOS OS CAMPOS
+    // Carregar payroll - BUSCAR DA TABELA PAYROLL
     const { data: payrollData, error: payrollError } = await supabase
-      .from('payroll_records')
+      .from('payroll')
       .select('*')
       .order('created_at', { ascending: false });
 
