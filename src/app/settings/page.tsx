@@ -15,7 +15,15 @@ import {
   TrendingUp,
   FileText,
   UserCog,
-  Shield
+  Shield,
+  UserPlus,
+  Briefcase,
+  Link,
+  Activity,
+  Cloud,
+  Database,
+  History,
+  Lock
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -49,10 +57,89 @@ export default function SettingsPage() {
       icon: DollarSign,
       href: '/settings/payroll',
       color: 'from-blue-600 to-blue-700'
+    },
+    {
+      title: 'Utilizadores',
+      description: 'Gestão de usuários e permissões',
+      icon: UserPlus,
+      href: '/settings/system/users',
+      color: 'from-purple-600 to-purple-700'
+    },
+    {
+      title: 'Cargos',
+      description: 'Definir cargos e responsabilidades',
+      icon: Briefcase,
+      href: '/settings/system/roles',
+      color: 'from-indigo-600 to-indigo-700'
+    },
+    {
+      title: 'Integrações',
+      description: 'Conectar serviços externos',
+      icon: Link,
+      href: '/settings/system/integrations',
+      color: 'from-pink-600 to-pink-700'
+    },
+    {
+      title: 'Monitorização',
+      description: 'Monitor de sistema e performance',
+      icon: Activity,
+      href: '/settings/system/health',
+      color: 'from-red-600 to-red-700'
+    },
+    {
+      title: 'Nuvem',
+      description: 'Sincronização e backup na nuvem',
+      icon: Cloud,
+      href: '/settings/system/cloud',
+      color: 'from-cyan-600 to-cyan-700'
+    },
+    {
+      title: 'Backup/Restore',
+      description: 'Backup e restauração de dados',
+      icon: Database,
+      href: '/settings/system/backup',
+      color: 'from-amber-600 to-amber-700'
+    },
+    {
+      title: 'DLP',
+      description: 'Proteção contra perda de dados',
+      icon: Lock,
+      href: '/settings/system/dlp',
+      color: 'from-rose-600 to-rose-700'
+    },
+    {
+      title: 'Histórico',
+      description: 'Logs e auditoria do sistema',
+      icon: History,
+      href: '/settings/system/history',
+      color: 'from-emerald-600 to-emerald-700'
     }
   ];
 
   const submenuSections = [
+    {
+      title: 'Administração',
+      description: 'Gestão de equipa e recursos humanos',
+      icon: Users,
+      color: 'from-indigo-600 to-indigo-700',
+      items: [
+        { title: 'Staff', description: 'Gestão de funcionários', href: '/roles', icon: UserCog },
+        { title: 'Escalas', description: 'Organização de horários', href: '/settings/staff/escalas', icon: Calendar },
+        { title: 'Utilizadores', description: 'Gestão de usuários e permissões', href: '/settings/system/users', icon: UserPlus },
+        { title: 'Cargos', description: 'Definir cargos e responsabilidades', href: '/settings/system/roles', icon: Briefcase }
+      ]
+    },
+    {
+      title: 'Sistema',
+      description: 'Infraestrutura e operações do sistema',
+      icon: Settings,
+      color: 'from-gray-600 to-gray-700',
+      items: [
+        { title: 'Monitorização', description: 'Monitor de sistema e performance', href: '/settings/system/health', icon: Activity },
+        { title: 'Nuvem', description: 'Sincronização e backup na nuvem', href: '/settings/system/cloud', icon: Cloud },
+        { title: 'Backup/Restore', description: 'Backup e restauração de dados', href: '/settings/system/backup', icon: Database }
+      ]
+    },
     {
       title: 'Financeiro',
       description: 'Gestão financeira e folha salarial',
@@ -74,16 +161,6 @@ export default function SettingsPage() {
       ]
     },
     {
-      title: 'Gestão de Staff',
-      description: 'Gestão de equipa e escalas',
-      icon: Users,
-      color: 'from-indigo-600 to-indigo-700',
-      items: [
-        { title: 'Staff', description: 'Gestão de funcionários', href: '/roles', icon: UserCog },
-        { title: 'Escalas', description: 'Organização de horários', href: '/settings/staff/escalas', icon: Calendar }
-      ]
-    },
-    {
       title: 'QR Codes',
       description: 'Ferramentas de QR Code',
       icon: QrCode,
@@ -91,6 +168,17 @@ export default function SettingsPage() {
       items: [
         { title: 'QR Code Analytics', description: 'Análise de QR codes', href: '/qrcodeanalytics', icon: BarChart2 },
         { title: 'QR Code Menu Manager', description: 'Gestão de menus digitais', href: '/qrmenumanager', icon: QrCode }
+      ]
+    },
+    {
+      title: 'Segurança',
+      description: 'Proteção e conformidade de dados',
+      icon: Shield,
+      color: 'from-red-600 to-red-700',
+      items: [
+        { title: 'Integrações', description: 'Conectar serviços externos', href: '/settings/system/integrations', icon: Link },
+        { title: 'DLP', description: 'Proteção contra perda de dados', href: '/settings/system/dlp', icon: Lock },
+        { title: 'Histórico', description: 'Logs e auditoria do sistema', href: '/settings/system/history', icon: History }
       ]
     }
   ];
