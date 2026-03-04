@@ -12,6 +12,7 @@ import {
 import { Table, TableStatus, TableZone } from '@/types';
 import EnhancedTableLayout from '@/components/EnhancedTableLayout';
 import { getTablesByAmbiente } from '@/app/actions/tableLayout';
+import { ensureTables } from '@/app/actions/ensureTables';
 
 const TableLayout = () => {
   const { 
@@ -36,14 +37,20 @@ const TableLayout = () => {
   // Load tables from database on component mount and when zone changes
   useEffect(() => {
     if (isAdmin) {
-      loadTablesFromDB();
+      // Primeiro garantir que as tabelas existem
+      ensureTables().then(() => {
+        loadTablesFromDB();
+      });
     }
   }, [activeZone, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Also load all tables on mount
   useEffect(() => {
     if (isAdmin) {
-      loadAllTablesFromDB();
+      // Primeiro garantir que as tabelas existem
+      ensureTables().then(() => {
+        loadAllTablesFromDB();
+      });
     }
   }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 

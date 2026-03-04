@@ -40,6 +40,36 @@ export async function ensureTables() {
       console.log('✅ Tabela menu_items verificada/criada');
     }
     
+    // Verificar/criar tabela employees se não existir
+    const { error: employeesError } = await supabase.rpc('exec_sql', {
+      sql: `
+        CREATE TABLE IF NOT EXISTS employees (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) UNIQUE,
+          phone VARCHAR(50),
+          position VARCHAR(100),
+          base_salary DECIMAL(12,2) DEFAULT 0,
+          hire_date DATE,
+          is_active BOOLEAN DEFAULT true,
+          role VARCHAR(50) DEFAULT 'EMPLOYEE',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        
+        INSERT INTO employees (id, name, email, position, base_salary, role)
+        SELECT 
+          gen_random_uuid(), 'Administrador', 'admin@tasca.com', 'Gerente', 300000.00, 'ADMIN'
+        WHERE NOT EXISTS (SELECT 1 FROM employees WHERE email = 'admin@tasca.com');
+      `
+    });
+    
+    if (employeesError) {
+      console.error('❌ Erro ao criar employees:', employeesError);
+    } else {
+      console.log('✅ Tabela employees verificada/criada');
+    }
+
     // Verificar/criar tabela payroll_records se não existir
     const { error: payrollError } = await supabase.rpc('exec_sql', {
       sql: `

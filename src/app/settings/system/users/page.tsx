@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Users, Plus, Trash2, Edit, Shield, Mail, Phone, Calendar, Key, Eye, EyeOff } from 'lucide-react';
 import { supabaseAuthService } from '@/services/supabaseAuth.service';
 import { User, UserRole } from '@/types/auth.types';
+import { ensureTables } from '@/app/actions/ensureTables';
 
 export default function SettingsUsersPage() {
   const { addNotification } = useStore();
@@ -28,7 +29,10 @@ export default function SettingsUsersPage() {
   
   // Carregar usuários do Supabase
   useEffect(() => {
-    loadUsers();
+    // Primeiro garantir que as tabelas existam
+    ensureTables().then(() => {
+      loadUsers();
+    });
   }, []);
 
   const loadUsers = async () => {

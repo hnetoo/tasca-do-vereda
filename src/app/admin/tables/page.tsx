@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import FormMesa from '@/components/forms/FormMesa';
 import { getTablesByAmbiente } from '@/app/actions/tableLayout';
+import { ensureTables } from '@/app/actions/ensureTables';
 
 interface TableData {
   id: string;
@@ -43,6 +44,9 @@ export default function AdminTablesPage() {
   const loadTables = async () => {
     setLoading(true);
     try {
+      // Primeiro garantir que as tabelas existam
+      await ensureTables();
+      
       const result = await getTablesByAmbiente(selectedAmbiente);
       if (result.success) {
         setTables(result.data || []);
