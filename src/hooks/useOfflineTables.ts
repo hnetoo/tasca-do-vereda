@@ -56,6 +56,11 @@ export function useOfflineTables() {
           order: 'id ASC'
         });
 
+        console.log('🔍 Supabase client:', {
+          url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT_SET',
+          key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT_SET'
+        });
+
         if (error) {
           console.error('❌ Erro ao buscar mesas do Supabase:', error);
           console.error('🔍 Detalhes do erro:', {
@@ -64,6 +69,18 @@ export function useOfflineTables() {
             hint: error.hint,
             code: error.code
           });
+          
+          // TENTAR VERIFICAR SE TABELA EXISTE
+          console.log('🔍 Verificando se tabela existe...');
+          const { data: tableData, error: tableError } = await supabase
+            .from('restaurant_tables')
+            .select('count', { count: 'exact', head: true });
+          
+          console.log('🔍 Resultado verificação tabela:', {
+            count: tableData,
+            error: tableError
+          });
+          
           setTables([]);
         } else {
           console.log('✅ Mesas carregadas do Supabase:', data?.length || 0);
