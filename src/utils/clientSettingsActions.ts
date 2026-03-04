@@ -20,10 +20,10 @@ const clientLog = (message: string, data?: any, type: string = 'INFO') => {
 
 export async function getDatabaseConfigActionClient(): Promise<{ success: boolean; data?: DatabaseConfig; error?: string }> {
   try {
-    // Para ambiente client-side, usar localStorage ou configuração padrão
+    // Para ambiente client-side, usar apenas Supabase
     const config: DatabaseConfig = {
-      type: 'sqlite', // Mudar padrão para SQLite
-      connectionString: 'tasca.db' // Arquivo SQLite padrão
+      type: 'supabase', // Apenas Supabase
+      connectionString: process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     };
     
     // Tentar obter do localStorage se disponível
@@ -63,31 +63,36 @@ export async function testDatabaseConnectionActionClient(type: string, connectio
       return { success: true };
     }
     
-    if (type === 'sqlite' && connectionString) {
-      // Testar conexão SQLite
+    if (type === 'supabase' && connectionString) {
+      // Testar conexão Supabase
       try {
-        const { createClient } = await import('@libsql/client');
+        const { createClient } = await import('@/lib/supabase/server');
         
-        // Normalizar URL SQLite
+        // Normalizar URL Supabase
         let url = connectionString;
-        if (!url.startsWith('file:') && !url.startsWith('sqlite:')) {
-          url = 'file:' + url;
+        if (!url.startsWith('http') && !url.startsWith('https')) {
+          url = 'https://' + url;
         }
         
-        const client = createClient({ url });
+        const client = createClient(url);
         
-        // Testar conexão executando uma query simples
-        await client.execute('SELECT 1');
+        // Testar conexão simples
+        const { data, error } = await client.from('restaurant_tables').select('count').limit(1);
         
+        if (error) {
+          console.error('❌ Supabase connection failed:', error);
+          return { success: false, error: `Supabase connection failed: ${error.message}` };
+        }
+        
+        console.log('✅ Supabase connection successful');
         return { success: true };
       } catch (error: any) {
-        return { success: false, error: `Erro na conexão SQLite: ${error.message}` };
+        return { success: false, error: `Supabase connection error: ${error.message}` };
       }
     }
     
     if (type === 'postgres' && connectionString) {
       // Testar conexão PostgreSQL - versão client-side
-      // Em ambiente client-side, não podemos testar conexão direta
       // Vamos apenas validar o formato da string
       try {
         // Validação básica da connection string

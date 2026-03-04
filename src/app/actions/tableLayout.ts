@@ -109,16 +109,12 @@ export async function getTablesByAmbiente(ambiente: 'INTERIOR' | 'EXTERIOR' | 'B
   const supabase = await createClient();
   
   try {
-    let query = supabase
+    // SIMPLIFICADO: Apenas retornar todas as mesas ativas sem filtros
+    const { data, error } = await supabase
       .from('restaurant_tables')
       .select('*')
       .eq('is_active', true)
       .order('number', { ascending: true });
-
-    // NÃO filtrar por ambiente - retornar todas as mesas ativas
-    // O filtro por ambiente será feito no frontend
-    
-    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching tables:', error);
