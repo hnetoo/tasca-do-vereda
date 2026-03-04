@@ -115,10 +115,9 @@ export async function getTablesByAmbiente(ambiente: 'INTERIOR' | 'EXTERIOR' | 'B
       .eq('is_active', true)
       .order('number', { ascending: true });
 
-    if (ambiente !== 'ALL') {
-      query = query.eq('ambiente', ambiente);
-    }
-
+    // NÃO filtrar por ambiente - retornar todas as mesas ativas
+    // O filtro por ambiente será feito no frontend
+    
     const { data, error } = await query;
 
     if (error) {

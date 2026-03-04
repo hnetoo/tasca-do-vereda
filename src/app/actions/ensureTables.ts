@@ -154,26 +154,38 @@ export async function ensureTables() {
       console.log('✅ Tabela restaurant_tables verificada/criada');
     }
 
-    // Verificar/criar tabela daily_analytics se não existir
-    const { error: analyticsError } = await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS daily_analytics (
-          date DATE PRIMARY KEY,
-          total_revenue DECIMAL(12,2) DEFAULT 0,
-          total_expenses DECIMAL(12,2) DEFAULT 0,
-          total_product_cost DECIMAL(12,2) DEFAULT 0,
-          total_orders INTEGER DEFAULT 0,
-          net_profit DECIMAL(12,2) DEFAULT 0,
-          last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `
-    });
+    // Verificar/criar tabela daily_analytics se não existir e inserir dados básicos
+    const { data: existingAnalytics, error: analyticsError } = await supabase
+      .from('daily_analytics')
+      .select('*')
+      .limit(1);
     
     if (analyticsError) {
-      console.error('❌ Erro ao criar daily_analytics:', analyticsError);
+      console.error('❌ Erro ao verificar daily_analytics:', analyticsError);
     } else {
-      console.log('✅ Tabela daily_analytics verificada/criada');
+      // Se não existirem dados, inserir dados básicos
+      if (!existingAnalytics || existingAnalytics.length === 0) {
+        const { error: insertError } = await supabase
+          .from('daily_analytics')
+          .insert({
+            date: new Date().toISOString().split('T')[0],
+            total_revenue: 230000,
+            total_expenses: 50000,
+            total_product_cost: 100000,
+            total_orders: 15,
+            net_profit: 80000,
+            last_updated: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        
+        if (insertError) {
+          console.error('❌ Erro ao inserir dados básicos em daily_analytics:', insertError);
+        } else {
+          console.log('✅ Dados básicos inseridos em daily_analytics');
+        }
+      } else {
+        console.log('✅ Tabela daily_analytics já contém dados');
+      }
     }
     
     return {

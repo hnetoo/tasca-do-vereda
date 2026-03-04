@@ -287,24 +287,6 @@ export default function OwnerMobilePage() {
           <div className="flex items-center gap-2">
             <Smartphone className="w-6 h-6" />
             <h1 className="text-xl font-bold">Tasca Mobile</h1>
-            {/* Status Online/Offline */}
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${
-              isOnline 
-                ? 'bg-green-500 text-white' 
-                : 'bg-gray-500 text-white'
-            }`}>
-              {isOnline ? (
-                <>
-                  <Wifi className="w-4 h-4" />
-                  <span className="text-sm font-medium">Online</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-4 h-4" />
-                  <span className="text-sm font-medium">Offline</span>
-                </>
-              )}
-            </div>
           </div>
           <button
             onClick={() => {
