@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
+import AppSidebar from '@/components/AppSidebar';
 import SmartAlertsPanel from '@/components/SmartAlertsPanel';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { useAuth } from '@/hooks/useAuth';
@@ -84,7 +84,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
       )}
       
       <div className="min-h-[100dvh] bg-slate-950 text-white flex transition-opacity duration-300">
-          <Sidebar showSidebar={showSidebar && !pathname.startsWith('/owner')} />
+          <AppSidebar showSidebar={showSidebar && !pathname.startsWith('/owner')} />
           <main className={`flex-1 min-w-0 ${showSidebar && !pathname.startsWith('/owner') ? '' : 'ml-0'}`}>
             {/* Botão para esconder sidebar - aparece quando sidebar está visível */}
             {showSidebar && !pathname.startsWith('/owner') && (
