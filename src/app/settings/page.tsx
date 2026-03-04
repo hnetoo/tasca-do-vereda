@@ -16,25 +16,102 @@ export default function SettingsPage() {
 
   const settingsSections = [
     {
-      title: 'Gestão de Mesas',
+      title: 'Geral',
+      description: 'Configurações básicas do sistema',
+      icon: Settings,
+      href: '/settings/general',
+      color: 'from-gray-600 to-gray-700'
+    },
+    {
+      title: 'Fiscal',
+      description: 'Configurações fiscais e certificação',
+      icon: Settings,
+      href: '/settings/fiscal',
+      color: 'from-orange-600 to-orange-700'
+    },
+    {
+      title: 'Mesas',
       description: 'Criar, editar e organizar mesas do restaurante',
       icon: Table,
       href: '/settings/tables',
       color: 'from-blue-600 to-blue-700'
     },
     {
-      title: 'Gestão de Usuários',
+      title: 'Menu QR',
+      description: 'Configurar menu digital e QR codes',
+      icon: Settings,
+      href: '/settings/qr',
+      color: 'from-green-600 to-green-700'
+    },
+    {
+      title: 'Financeiro',
+      description: 'Folha de salário e gestão financeira',
+      icon: DollarSign,
+      href: '/settings/payroll',
+      color: 'from-yellow-600 to-yellow-700'
+    },
+    {
+      title: 'Utilizadores',
       description: 'Administrar usuários e permissões do sistema',
       icon: Users,
       href: '/settings/system/users',
       color: 'from-purple-600 to-purple-700'
     },
     {
-      title: 'Financeiro e RH',
-      description: 'Folha de salário e gestão financeira',
-      icon: DollarSign,
-      href: '/settings/payroll',
-      color: 'from-green-600 to-green-700'
+      title: 'Cargos',
+      description: 'Definir cargos e permissões',
+      icon: Users,
+      href: '/settings/system/roles',
+      color: 'from-indigo-600 to-indigo-700'
+    },
+    {
+      title: 'Integrações',
+      description: 'Configurar integrações externas',
+      icon: Settings,
+      href: '/settings/system/integrations',
+      color: 'from-pink-600 to-pink-700'
+    },
+    {
+      title: 'Monitorização',
+      description: 'Saúde do sistema e logs',
+      icon: Settings,
+      href: '/settings/system/health',
+      color: 'from-red-600 to-red-700'
+    },
+    {
+      title: 'Nuvem/App',
+      description: 'Configurações de aplicação e backup',
+      icon: Settings,
+      href: '/settings/system/cloud',
+      color: 'from-cyan-600 to-cyan-700'
+    },
+    {
+      title: 'Backup/Restore',
+      description: 'Backup e restauração de dados',
+      icon: Settings,
+      href: '/settings/system/backup',
+      color: 'from-teal-600 to-teal-700'
+    },
+    {
+      title: 'AGT',
+      description: 'Configurações de comunicação fiscal',
+      icon: Settings,
+      href: '/settings/fiscal',
+      color: 'from-amber-600 to-amber-700'
+    },
+    {
+      title: 'DLP',
+      description: 'Proteção de dados e privacidade',
+      icon: Settings,
+      href: '/settings/system/dlp',
+      color: 'from-lime-600 to-lime-700'
+    },
+    {
+      title: 'Histórico',
+      description: 'Logs e auditoria do sistema',
+      icon: Settings,
+      href: '/settings/system/history',
+      color: 'from-emerald-600 to-emerald-700'
     }
   ];
 
