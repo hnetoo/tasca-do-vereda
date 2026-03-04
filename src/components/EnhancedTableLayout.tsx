@@ -191,12 +191,8 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
   console.log('🔍 Total de mesas:', tables.length);
   console.log('🔍 Filtro ativo (ambiente):', activeZone);
 
-  const filteredTables = tables.filter(table => {
-    if (!activeZone) return true;
-    // Prioridade à coluna 'ambiente', fallback para 'zone' se não existir
-    const tableZone = table.ambiente || table.zone || 'INTERIOR';
-    return tableZone === activeZone;
-  });
+  // REMOVER FILTRO - MOSTRAR TODAS AS MESAS
+  const filteredTables = tables; // Sem filtro por agora - mostrar todas
 
   console.log('🔍 Mesas após filtro:', filteredTables.length);
   console.log('🔍 Mesas filtradas:', filteredTables.map(t => ({ id: t.id, name: t.name, ambiente: t.ambiente || t.zone || 'INTERIOR' })));
