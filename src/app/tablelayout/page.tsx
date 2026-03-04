@@ -271,6 +271,7 @@ const TableLayout = () => {
               
               <EnhancedTableLayout
                 tables={filteredTables}
+                activeZone={activeZone}
                 isEditMode={isEditMode}
                 selectedTableId={selectedTableId}
                 onTableSelect={setSelectedTableId}

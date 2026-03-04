@@ -122,8 +122,8 @@ const FormMesa: React.FC<FormMesaProps> = ({
             <input
               type="text"
               id="tableName"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              value={formData.label}
+              onChange={(e) => handleInputChange('label', e.target.value)}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
               placeholder="Ex: Mesa 1"
               required
@@ -170,8 +170,8 @@ const FormMesa: React.FC<FormMesaProps> = ({
             </label>
             <select
               id="ambiente"
-              value={formData.ambiente}
-              onChange={(e) => handleInputChange('ambiente', e.target.value)}
+              value={formData.zone}
+              onChange={(e) => handleInputChange('zone', e.target.value)}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
               required
             >
@@ -229,8 +229,8 @@ const FormMesa: React.FC<FormMesaProps> = ({
                 <input
                   type="number"
                   id="tablePosX"
-                  value={formData.posicao_x}
-                  onChange={(e) => handleInputChange('posicao_x', parseFloat(e.target.value))}
+                  value={formData.x}
+                  onChange={(e) => handleInputChange('x', parseFloat(e.target.value))}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                   step="10"
                 />
@@ -243,8 +243,8 @@ const FormMesa: React.FC<FormMesaProps> = ({
                 <input
                   type="number"
                   id="tablePosY"
-                  value={formData.posicao_y}
-                  onChange={(e) => handleInputChange('posicao_y', parseFloat(e.target.value))}
+                  value={formData.y}
+                  onChange={(e) => handleInputChange('y', parseFloat(e.target.value))}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
                   step="10"
                 />

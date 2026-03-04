@@ -22,7 +22,7 @@ export async function getDatabaseConfigActionClient(): Promise<{ success: boolea
   try {
     // Para ambiente client-side, usar apenas Supabase
     const config: DatabaseConfig = {
-      type: 'supabase', // Apenas Supabase
+      type: 'postgres', // Apenas Supabase
       connectionString: process.env.NEXT_PUBLIC_SUPABASE_URL || ''
     };
     
@@ -74,10 +74,10 @@ export async function testDatabaseConnectionActionClient(type: string, connectio
           url = 'https://' + url;
         }
         
-        const client = createClient(url);
+        const client = createClient();
         
         // Testar conexão simples
-        const { data, error } = await client.from('restaurant_tables').select('count').limit(1);
+        const { data, error } = await (await client).from('restaurant_tables').select('count').limit(1);
         
         if (error) {
           console.error('❌ Supabase connection failed:', error);

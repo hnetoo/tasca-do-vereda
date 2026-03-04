@@ -773,7 +773,7 @@ export interface OperationalSlice {
   
   setActiveTable: (id: string | null) => void;
   addTable: (table: Table) => void;
-  updateTable: (table: Table) => void;
+  updateTable: (tableId: string, updates: Partial<Table>) => void;
   removeTable: (id: string) => void;
   updateTableStatus: (id: string, status: TableStatus) => Promise<void>;
   

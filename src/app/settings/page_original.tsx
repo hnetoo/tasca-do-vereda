@@ -292,9 +292,9 @@ const Settings = () => {
     if (!newTableData.name) return;
 
     if (editingTable) {
-      updateTable({
+      updateTable(editingTable.id, {
         ...editingTable,
-        name: newTableData.name,
+        label: newTableData.name,
         seats: newTableData.seats,
         zone: newTableData.zone
       });
@@ -302,7 +302,7 @@ const Settings = () => {
     } else {
       addTable({
         id: crypto.randomUUID(),
-        name: newTableData.name,
+        label: newTableData.name,
         seats: newTableData.seats,
         zone: newTableData.zone,
         status: 'AVAILABLE',
@@ -316,7 +316,6 @@ const Settings = () => {
         height: 100,
         width: 100,
         is_active: true,
-        label: newTableData.name,
         rotation: 0,
         shape: 'RECTANGLE',
         user_id: null,

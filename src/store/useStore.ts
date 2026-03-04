@@ -139,7 +139,7 @@ export const useStore = create<StoreState>()(
         const currentSettings = get().settings;
         set((state: StoreState) => {
             const updated = { ...state.settings, ...newSettings };
-            saveSettingsAction(updated).catch((e: any) => logger.error('Failed to save settings to DB', { error: (e as Error).message }, 'DATABASE'));
+            saveDatabaseConfigAction({ type: 'postgres', ...updated }).catch((e: any) => logger.error('Failed to save settings to DB', { error: (e as Error).message }, 'DATABASE'));
             
             logger.info('Supabase config for sync:', { config: updated.supabaseConfig }, 'STORE');
             logger.info('IntegrationAPIService is connected:', { isConnected: integrationAPIService.isConnected() }, 'STORE');
@@ -300,11 +300,11 @@ export const useStore = create<StoreState>()(
       setSuppliers: (suppliers: Fornecedor[]) => set({ suppliers }),
       addSupplier: (supplier: Fornecedor) => {
         set((state: StoreState) => ({ suppliers: [...(state.suppliers || []), supplier] }));
-        saveSupplierAction(supplier);
+        // saveSupplierAction(supplier); // TODO: Implement saveSupplierAction
       },
       updateSupplier: (supplier: Fornecedor) => {
         set((state: StoreState) => ({ suppliers: (state.suppliers || []).map((s: Fornecedor) => s.id === supplier.id ? supplier : s) }));
-        saveSupplierAction(supplier);
+        // saveSupplierAction(supplier); // TODO: Implement saveSupplierAction
       },
       removeSupplier: (id: string) => {
         set((state: StoreState) => ({ suppliers: (state.suppliers || []).filter((s: Fornecedor) => s.id !== id) }));

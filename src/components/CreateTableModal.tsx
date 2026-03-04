@@ -16,7 +16,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    label: '',
     number: 1,
     seats: 4,
     shape: 'RECTANGLE',
@@ -41,7 +41,7 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
         onClose();
         // Reset form
         setFormData({
-          name: '',
+          label: '',
           number: formData.number + 1,
           seats: 4,
           shape: 'RECTANGLE',
@@ -95,8 +95,8 @@ const CreateTableModal: React.FC<CreateTableModalProps> = ({
             <input
               type="text"
               id="tableName"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              value={formData.label}
+              onChange={(e) => handleInputChange('label', e.target.value)}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
               placeholder="Ex: Mesa 1"
               required
