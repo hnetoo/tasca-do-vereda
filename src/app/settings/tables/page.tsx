@@ -245,7 +245,7 @@ export default function SettingsTablesPage() {
                         style={{ backgroundColor: table.color }}
                       ></div>
                       <div>
-                        <h4 className="text-lg font-medium text-gray-900">{table.name}</h4>
+                        <h4 className="text-lg font-medium text-gray-900">{table.label}</h4>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
                             <span className="font-medium">#{table.number}</span>
