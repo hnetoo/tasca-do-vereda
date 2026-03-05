@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Settings, ArrowLeft, Shield, Cloud, Users, Activity } from 'lucide-react';
+import { Settings, ArrowLeft, Shield, Cloud, Users, Activity, DollarSign } from 'lucide-react';
 
 export default function SettingsPage() {
   return (
@@ -90,6 +90,26 @@ export default function SettingsPage() {
             </div>
           </Link>
 
+          {/* Users Card */}
+          <Link
+            href="/settings/users"
+            className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors">
+                <Users className="w-8 h-8 text-purple-400" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Gestão de Acesso</h3>
+            <p className="text-slate-400 text-sm mb-4">
+              Usuários da App com PINs e permissões
+            </p>
+            <div className="flex items-center text-purple-400 group-hover:text-purple-300 transition-colors">
+              <span className="text-sm font-medium">Configurar</span>
+              <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+            </div>
+          </Link>
+
           {/* Staff Card */}
           <Link
             href="/settings/staff"
@@ -100,11 +120,51 @@ export default function SettingsPage() {
                 <Users className="w-8 h-8 text-orange-400" />
               </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Utilizadores</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Staff do Restaurante</h3>
             <p className="text-slate-400 text-sm mb-4">
-              PINs, funcionários e gestão de pessoal
+              Funcionários sem PIN, apenas dados contratuais
             </p>
             <div className="flex items-center text-orange-400 group-hover:text-orange-300 transition-colors">
+              <span className="text-sm font-medium">Configurar</span>
+              <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+            </div>
+          </Link>
+
+          {/* Payroll Card */}
+          <Link
+            href="/settings/payroll"
+            className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-green-500/20 rounded-xl group-hover:bg-green-500/30 transition-colors">
+                <DollarSign className="w-8 h-8 text-green-400" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Folha Salarial</h3>
+            <p className="text-slate-400 text-sm mb-4">
+              Gestão de pagamentos com exportação PDF
+            </p>
+            <div className="flex items-center text-green-400 group-hover:text-green-300 transition-colors">
+              <span className="text-sm font-medium">Configurar</span>
+              <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+            </div>
+          </Link>
+
+          {/* Menu Digital Card */}
+          <Link
+            href="/settings/menu-digital"
+            className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-indigo-500/20 rounded-xl group-hover:bg-indigo-500/30 transition-colors">
+                <Activity className="w-8 h-8 text-indigo-400" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Menu Digital & QR Code</h3>
+            <p className="text-slate-400 text-sm mb-4">
+              Menu online com sincronização automática
+            </p>
+            <div className="flex items-center text-indigo-400 group-hover:text-indigo-300 transition-colors">
               <span className="text-sm font-medium">Configurar</span>
               <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
             </div>
@@ -120,9 +180,9 @@ export default function SettingsPage() {
                 <Activity className="w-8 h-8 text-red-400" />
               </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Saúde</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Base de Dados</h3>
             <p className="text-slate-400 text-sm mb-4">
-              Status do sistema e monitoramento
+              Status da conexão e logs de erro
             </p>
             <div className="flex items-center text-red-400 group-hover:text-red-300 transition-colors">
               <span className="text-sm font-medium">Verificar</span>
