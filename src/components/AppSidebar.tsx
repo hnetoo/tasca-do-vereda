@@ -91,7 +91,7 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
     { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },
-    { path: '/sistema', icon: <Settings size={24} />, label: 'Sistema' },
+    { path: '/settings', icon: <Settings size={24} />, label: 'Sistema' },
   ];
 
   const toggleMenu = (menuPath: string) => {
