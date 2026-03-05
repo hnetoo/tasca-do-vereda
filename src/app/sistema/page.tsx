@@ -385,7 +385,7 @@ export default function SistemaPage() {
 
               {/* Códigos de Acesso Card */}
               <Link
-                href="/staff"
+                href="/settings/staff"
                 className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
               >
                 <div className="flex items-center justify-between mb-4">
@@ -425,7 +425,7 @@ export default function SistemaPage() {
 
               {/* Folha Salarial Card */}
               <Link
-                href="/payroll"
+                href="/settings/payroll"
                 className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
               >
                 <div className="flex items-center justify-between mb-4">
