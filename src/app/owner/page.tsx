@@ -274,15 +274,19 @@ export default function OwnerPage() {
       userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR',
       isMobile: typeof window !== 'undefined' ? /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) : 'SSR',
       orders: orders?.length || 0,
+      revenues: revenues?.length || 0,
       dishes: dishes?.length || 0,
       categories: categories?.length || 0,
       sampleOrders: orders?.slice(0, 2).map(o => ({ id: o.id, total: o.total, itemsCount: o.items?.length || 0 })),
-      sampleDishes: dishes?.slice(0, 2).map(d => ({ id: d.id, name: d.name, price: d.price }))
+      sampleRevenues: revenues?.slice(0, 2).map(r => ({ id: r.id, amount: r.amount, description: r.description }))
     });
     
-    // Se não há dados, retornar zeros estáveis
-    if (!currentData.orders || currentData.orders.length === 0) {
-      console.log('📊 No orders found, returning zeros');
+    // PRIORIDADE: Usar revenues se existirem, senão usar orders
+    const hasRevenues = revenues && revenues.length > 0;
+    const hasOrders = orders && orders.length > 0;
+    
+    if (!hasRevenues && !hasOrders) {
+      console.log('📊 No sales data found, returning zeros');
       return {
         todaySales: 0,
         todayOrders: 0,
@@ -301,6 +305,43 @@ export default function OwnerPage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
+      // PRIORIDADE 1: Calcular usando revenues (dados diretos do POS)
+      if (hasRevenues) {
+        const todayRevenues = revenues.filter((revenue: any) => {
+          const revenueDate = new Date(revenue.date instanceof Date ? revenue.date : new Date(revenue.date));
+          return revenueDate >= today;
+        });
+        
+        const todaySales = todayRevenues.reduce((sum: number, revenue: any) => {
+          return sum + (revenue.amount || 0);
+        }, 0);
+        
+        const totalRevenue = revenues.reduce((sum: number, revenue: any) => {
+          return sum + (revenue.amount || 0);
+        }, 0);
+        
+        console.log('📊 Using revenues for calculations:', {
+          todayRevenues: todayRevenues.length,
+          todaySales,
+          totalRevenue,
+          sample: todayRevenues.slice(0, 2)
+        });
+        
+        return {
+          todaySales,
+          todayOrders: todayRevenues.length,
+          todayRevenue: todaySales * 0.85, // 85% de margem
+          activeTables: 0, // Revenues não têm mesas ativas
+          totalRevenue,
+          totalOrders: revenues.length,
+          avgTicket: todayRevenues.length > 0 ? todaySales / todayRevenues.length : 0,
+          growth: 0,
+          pendingOrders: 0,
+          averageTicket: todayRevenues.length > 0 ? todaySales / todayRevenues.length : 0
+        };
+      }
+      
+      // PRIORIDADE 2: Fallback para orders (se não houver revenues)
       const todayOrders = currentData.orders.filter((order: any) => {
         const orderDate = new Date(order.created_at || new Date());
         return orderDate >= today;
@@ -320,6 +361,13 @@ export default function OwnerPage() {
       const activeTables = currentData.orders.filter((order: any) => 
         order.status !== 'closed' && order.status !== 'paid'
       ).length;
+
+      console.log('📊 Using orders for calculations:', {
+        todayOrders: todayOrders.length,
+        todaySales,
+        totalRevenue,
+        activeTables
+      });
 
       return {
         todaySales,
@@ -348,7 +396,7 @@ export default function OwnerPage() {
         averageTicket: 0
       };
     }
-  }, [orders]);
+  }, [orders, revenues, currentData.orders]);
 
   // Combinar transações - PRIORIDADE LOCAL + REVENUES
   const combinedTransactions = useMemo(() => {
