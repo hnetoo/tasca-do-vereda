@@ -30,10 +30,7 @@ import { resetProductionData } from '@/app/actions/resetProduction';
 import { ensureTables } from '@/app/actions/ensureTables';
 import { useSafeCardCalculations } from '@/utils/cardCalculations';
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(
-    Number.isFinite(n) ? n : 0
-  );
+import { formatKwanza } from '@/utils/currency';
 
 export default function OwnerMobilePage() {
   const router = useRouter();
@@ -159,9 +156,12 @@ export default function OwnerMobilePage() {
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   
   // Cálculo corrigido da folha salarial - usar apenas tabela payroll
-  const totalPayroll = filteredData.payroll.reduce((sum: number, p: any) => {
-    // Usar apenas o campo total_liquido da tabela payroll
-    const amount = p.total_liquido || 0;
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const totalPayroll = filteredData.payroll
+    .filter(p => p.mes_referencia === currentMonth)
+    .reduce((sum: number, p: any) => {
+    // Usar apenas o campo net_total da tabela payroll
+    const amount = p.net_total || 0;
     return sum + amount;
   }, 0);
   
@@ -217,12 +217,12 @@ export default function OwnerMobilePage() {
   
   // USAR VALORES MANUAIS DIRETAMENTE
   const displayValues = {
-    revenue: fmt(manualRevenue),
-    expenses: fmt(manualExpenses),
-    payroll: fmt(totalPayroll),
-    taxes: fmt(totalTaxes),
-    todayRevenue: fmt(todayRevenue),
-    accumulatedRevenue: fmt(accumulatedRevenue),
+    revenue: formatKwanza(manualRevenue),
+    expenses: formatKwanza(manualExpenses),
+    payroll: formatKwanza(totalPayroll),
+    taxes: formatKwanza(totalTaxes),
+    todayRevenue: formatKwanza(todayRevenue),
+    accumulatedRevenue: formatKwanza(accumulatedRevenue),
     netProfit: manualRevenue - manualExpenses - totalPayroll - totalTaxes
   };
 
@@ -429,7 +429,7 @@ export default function OwnerMobilePage() {
             </div>
           ) : (
             <>
-              <div className="text-2xl font-bold">{displayValues.payroll}</div>
+              <div className="text-3xl font-bold text-blue-100">{displayValues.payroll}</div>
               <div className="flex items-center gap-1 text-sm text-blue-100">
                 <Users className="w-4 h-4" />
                 <span>{filteredData.payroll.length} registros</span>
@@ -453,7 +453,7 @@ export default function OwnerMobilePage() {
             <span className="text-white/80">Lucro Líquido</span>
             <TrendingUp className="w-5 h-5 text-white/80" />
           </div>
-          <div className="text-2xl font-bold">{fmt(displayValues.netProfit)}</div>
+          <div className="text-2xl font-bold">{formatKwanza(displayValues.netProfit)}</div>
           <div className="text-sm text-white/60">
             Margem: {manualRevenue > 0 ? ((displayValues.netProfit / manualRevenue) * 100).toFixed(1) : 0}%
           </div>
@@ -506,11 +506,9 @@ export default function OwnerMobilePage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-green-400 font-bold text-lg">
-                          {fmt(order.total || 0)}
-                        </div>
+                        <div className="text-lg font-bold text-green-400">{formatKwanza(order.total || 0)}</div>
                         <div className="text-gray-400 text-xs">
-                          +{fmt(order.tax_total || 0)} imposto
+                          +{formatKwanza(order.tax_total || 0)} imposto
                         </div>
                       </div>
                     </div>

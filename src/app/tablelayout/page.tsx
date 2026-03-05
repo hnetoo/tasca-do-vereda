@@ -1,34 +1,56 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { Plus, Home, Sun } from 'lucide-react';
+import { formatKwanza } from '@/utils/currency';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 export default function TableLayout() {
   const [tables, setTables] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [tableNumber, setTableNumber] = useState('');
+  const [selectedZone, setSelectedZone] = useState<'INTERIOR' | 'EXTERIOR'>('INTERIOR');
+  const [filterZone, setFilterZone] = useState<'TODOS' | 'INTERIOR' | 'EXTERIOR'>('TODOS');
 
-  useEffect(() => { fetchTables(); }, []);
-
-  async function fetchTables() {
-    const { data } = await supabase.from('restaurant_tables').select('*').order('number', { ascending: true });
-    if (data) setTables(data);
-    setLoading(false);
-  }
+  useEffect(() => { 
+    const load = async () => {
+      const { data } = await supabase.from('restaurant_tables').select('*').order('number', { ascending: true });
+      if (data) setTables(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   // FUNÇÃO PARA ADICIONAR MESA NOVA
   async function addTable() {
     const nextNumber = tables.length > 0 ? Math.max(...tables.map(t => t.number)) + 1 : 1;
     const { data, error } = await supabase.from('restaurant_tables')
-      .insert([{ number: nextNumber, status: 'disponível', x: 50, y: 150 }])
+      .insert([{ 
+        number: tableNumber || nextNumber, 
+        status: 'disponível', 
+        category: selectedZone,
+        x: 50, 
+        y: 150 
+      }])
       .select();
-    if (data) setTables([...tables, data[0]]);
+    if (data) {
+      setTables([...tables, data[0]]);
+      setShowModal(false);
+      setTableNumber('');
+    }
   }
 
   // FUNÇÃO PARA ATUALIZAR POSIÇÃO (DRAG END)
   async function updatePosition(id: string, x: number, y: number) {
     await supabase.from('restaurant_tables').update({ x, y }).eq('id', id);
   }
+
+  const filteredTables = tables.filter(table => {
+  if (filterZone === 'TODOS') return true;
+  return table.category === filterZone;
+});
 
   const handleDragEnd = (e: React.DragEvent, id: string) => {
     const rect = e.currentTarget.parentElement?.getBoundingClientRect();
@@ -40,26 +62,136 @@ export default function TableLayout() {
     }
   };
 
+  const handleSubmit = () => {
+    if (!tableNumber) {
+      alert('Por favor, insira o número da mesa');
+      return;
+    }
+    
+    // Verificar se número já existe
+    const existingTable = tables.find(t => t.number === parseInt(tableNumber));
+    if (existingTable) {
+      alert('Este número de mesa já existe');
+      return;
+    }
+    
+    addTable();
+  };
+
   return (
     <div className="p-6 min-h-screen bg-[#0f172a] text-white">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-black text-orange-500">DESIGNER DE MESAS</h1>
+          <h1 className="text-4xl font-black text-orange-500">DESIGNER DE MESAS</h1>
           <p className="text-slate-400 text-sm italic">Arrasta as mesas para organizar o salão</p>
         </div>
         <button 
-          onClick={addTable}
+          onClick={() => setShowModal(true)}
           className="bg-orange-600 hover:bg-orange-500 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-orange-900/20"
         >
-          <span className="text-2xl">+</span> ADICIONAR MESA
+          <Plus className="w-5 h-5" />
+          <span className="text-lg">ADICIONAR MESA</span>
         </button>
       </div>
+
+      {/* Filtro de Visualização */}
+      <div className="mb-6">
+        <div className="flex gap-2 bg-slate-800/50 rounded-xl p-1 border border-slate-700/50">
+          {(['TODOS', 'INTERIOR', 'EXTERIOR'] as const).map((zone) => (
+            <button
+              key={zone}
+              onClick={() => setFilterZone(zone)}
+              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                filterZone === zone
+                  ? 'bg-orange-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              {zone === 'TODOS' && 'Todas'}
+              {zone === 'INTERIOR' && 'Interior'}
+              {zone === 'EXTERIOR' && 'Exterior'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-900 rounded-2xl p-8 w-full max-w-md shadow-2xl border border-slate-700">
+            <div className="flex items-center gap-3 mb-6">
+              <Plus className="w-6 h-6 text-orange-500" />
+              <h2 className="text-2xl font-bold text-white">Nova Mesa</h2>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Número</label>
+                <input
+                  type="number"
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Ex: 1"
+                  min="1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">Zona</label>
+                <div className="flex gap-2 bg-slate-800 rounded-lg p-1 border border-gray-600">
+                  <button
+                    onClick={() => setSelectedZone('INTERIOR')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
+                      selectedZone === 'INTERIOR' 
+                        ? 'bg-orange-600 text-white' 
+                        : 'text-gray-400 hover:text-white hover:bg-slate-700'
+                    }`}
+                  >
+                    <Home className="w-4 h-4" />
+                    Interior
+                  </button>
+                  <button
+                    onClick={() => setSelectedZone('EXTERIOR')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
+                      selectedZone === 'EXTERIOR' 
+                        ? 'bg-orange-600 text-white' 
+                        : 'text-gray-400 hover:text-white hover:bg-slate-700'
+                    }`}
+                  >
+                    <Sun className="w-4 h-4" />
+                    Exterior
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setTableNumber('');
+                }}
+                className="flex-1 px-6 py-3 bg-transparent border border-gray-600 text-gray-400 rounded-lg hover:bg-slate-800 hover:text-white transition-all font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-500 transition-all font-bold"
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative w-full h-[70vh] bg-slate-800/50 rounded-3xl border-4 border-slate-700/50 overflow-hidden backdrop-blur-sm">
         {/* Grelha de fundo para ajudar no alinhamento */}
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-        {tables.map((mesa) => (
+        {filteredTables.map((mesa) => (
           <div
             key={mesa.id}
             draggable
