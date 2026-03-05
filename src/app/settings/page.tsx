@@ -2,7 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Settings, ArrowLeft, Shield, Cloud, Users, Activity, DollarSign } from 'lucide-react';
+import { 
+  Settings, Users, CreditCard, FileText, Database, Shield, 
+  DollarSign, Activity, ArrowLeft, Clock, TrendingUp
+} from 'lucide-react';
 
 export default function SettingsPage() {
   return (
@@ -77,7 +80,7 @@ export default function SettingsPage() {
           >
             <div className="flex items-center justify-between mb-4">
               <div className="p-3 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors">
-                <Cloud className="w-8 h-8 text-purple-400" />
+                <Database className="w-8 h-8 text-purple-400" />
               </div>
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Nuvem</h3>
@@ -165,6 +168,26 @@ export default function SettingsPage() {
               Menu online com sincronização automática
             </p>
             <div className="flex items-center text-indigo-400 group-hover:text-indigo-300 transition-colors">
+              <span className="text-sm font-medium">Configurar</span>
+              <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+            </div>
+          </Link>
+
+          {/* History Card */}
+          <Link
+            href="/settings/history"
+            className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors">
+                <TrendingUp className="w-8 h-8 text-purple-400" />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Histórico Externo</h3>
+            <p className="text-slate-400 text-sm mb-4">
+              Importe dados financeiros de sistemas anteriores
+            </p>
+            <div className="flex items-center text-purple-400 group-hover:text-purple-300 transition-colors">
               <span className="text-sm font-medium">Configurar</span>
               <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
             </div>

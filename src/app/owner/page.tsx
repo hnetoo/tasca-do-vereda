@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { useSafeCardCalculations } from '@/utils/cardCalculations';
+import { createClient } from '@/lib/supabase/client';
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA', maximumFractionDigits: 0 }).format(
@@ -46,6 +47,35 @@ export default function OwnerPage() {
     setExpenses,
     setRevenues
   } = useStore();
+
+  // Estado para dados financeiros externos
+  const [externalFinance, setExternalFinance] = useState<any[]>([]);
+
+  // Buscar dados financeiros externos
+  useEffect(() => {
+    const fetchExternalFinance = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('external_finance')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('❌ [OWNER] Erro ao buscar dados externos:', error);
+          setExternalFinance([]);
+        } else {
+          console.log('✅ [OWNER] Dados externos carregados:', data?.length || 0);
+          setExternalFinance(data || []);
+        }
+      } catch (err) {
+        console.error('❌ [OWNER] Exceção ao buscar dados externos:', err);
+        setExternalFinance([]);
+      }
+    };
+
+    fetchExternalFinance();
+  }, []);
 
   // Fallback: Carregar dados da API se store local estiver vazio
   useEffect(() => {
@@ -319,11 +349,20 @@ export default function OwnerPage() {
         const totalRevenue = revenues.reduce((sum: number, revenue: any) => {
           return sum + (revenue.amount || 0);
         }, 0);
+
+        // Adicionar dados externos ao total
+        const externalTotal = externalFinance.reduce((sum: number, ext: any) => {
+          return sum + (ext.amount || 0);
+        }, 0);
+
+        const grandTotal = totalRevenue + externalTotal;
         
-        console.log('📊 Using revenues for calculations:', {
+        console.log('📊 Using revenues + external for calculations:', {
           todayRevenues: todayRevenues.length,
           todaySales,
           totalRevenue,
+          externalTotal,
+          grandTotal,
           sample: todayRevenues.slice(0, 2)
         });
         
@@ -332,7 +371,7 @@ export default function OwnerPage() {
           todayOrders: todayRevenues.length,
           todayRevenue: todaySales * 0.85, // 85% de margem
           activeTables: 0, // Revenues não têm mesas ativas
-          totalRevenue,
+          totalRevenue: grandTotal, // Incluir dados externos
           totalOrders: revenues.length,
           avgTicket: todayRevenues.length > 0 ? todaySales / todayRevenues.length : 0,
           growth: 0,
@@ -396,7 +435,7 @@ export default function OwnerPage() {
         averageTicket: 0
       };
     }
-  }, [orders, revenues, currentData.orders]);
+  }, [orders, revenues, externalFinance, currentData.orders]);
 
   // Combinar transações - PRIORIDADE LOCAL + REVENUES
   const combinedTransactions = useMemo(() => {
