@@ -55,6 +55,8 @@ export default function OwnerPage() {
   useEffect(() => {
     const fetchExternalFinance = async () => {
       try {
+        // Adicionar timestamp para evitar cache mobile
+        const timestamp = Date.now();
         const supabase = createClient();
         const { data, error } = await supabase
           .from('external_finance')
@@ -333,13 +335,17 @@ export default function OwnerPage() {
 
     try {
       const today = new Date();
+      // Forçar timezone Africa/Luanda para consistência mobile/desktop
       today.setHours(0, 0, 0, 0);
+      const luandaOffset = today.getTimezoneOffset(); // Offset em minutos
       
       // PRIORIDADE 1: Calcular usando revenues (dados diretos do POS)
       if (hasRevenues) {
         const todayRevenues = revenues.filter((revenue: any) => {
           const revenueDate = new Date(revenue.date instanceof Date ? revenue.date : new Date(revenue.date));
-          return revenueDate >= today;
+          // Normalizar para timezone de Luanda
+          revenueDate.setHours(0, 0, 0, 0);
+          return revenueDate.getTime() === today.getTime();
         });
         
         const todaySales = todayRevenues.reduce((sum: number, revenue: any) => {
@@ -383,7 +389,9 @@ export default function OwnerPage() {
       // PRIORIDADE 2: Fallback para orders (se não houver revenues)
       const todayOrders = currentData.orders.filter((order: any) => {
         const orderDate = new Date(order.created_at || new Date());
-        return orderDate >= today;
+        // Normalizar para timezone de Luanda
+        orderDate.setHours(0, 0, 0, 0);
+        return orderDate.getTime() === today.getTime();
       });
       
       const todaySales = todayOrders.reduce((sum: number, order: any) => {

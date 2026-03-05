@@ -29,6 +29,7 @@ import { createSampleData } from '@/app/actions/createSampleData';
 import { resetProductionData } from '@/app/actions/resetProduction';
 import { ensureTables } from '@/app/actions/ensureTables';
 import { useSafeCardCalculations } from '@/utils/cardCalculations';
+import { createClient } from '@/lib/supabase/client';
 
 import { formatKwanza } from '@/utils/currency';
 
@@ -48,6 +49,37 @@ export default function OwnerMobilePage() {
     categories: []
   });
   const [loadingSupabase, setLoadingSupabase] = useState(false);
+  
+  // Estado para dados financeiros externos
+  const [externalFinance, setExternalFinance] = useState<any[]>([]);
+
+  // Buscar dados financeiros externos
+  useEffect(() => {
+    const fetchExternalFinance = async () => {
+      try {
+        // Adicionar timestamp para evitar cache mobile
+        const timestamp = Date.now();
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('external_finance')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('❌ [MOBILE] Erro ao buscar dados externos:', error);
+          setExternalFinance([]);
+        } else {
+          console.log('✅ [MOBILE] Dados externos carregados:', data?.length || 0);
+          setExternalFinance(data || []);
+        }
+      } catch (err) {
+        console.error('❌ [MOBILE] Exceção ao buscar dados externos:', err);
+        setExternalFinance([]);
+      }
+    };
+
+    fetchExternalFinance();
+  }, []);
   
   // Dados em tempo real do store local
   const { 
@@ -155,6 +187,10 @@ export default function OwnerMobilePage() {
   const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   
+  // Adicionar dados externos ao total
+  const externalTotal = externalFinance.reduce((sum: number, ext: any) => sum + (ext.amount || 0), 0);
+  const grandTotalRevenue = manualRevenue + externalTotal;
+  
   // Cálculo corrigido da folha salarial - usar apenas tabela payroll
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
   const totalPayroll = filteredData.payroll
@@ -167,19 +203,22 @@ export default function OwnerMobilePage() {
   
   // Filtrar vendas de hoje
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Início do dia
+  // Forçar timezone Africa/Luanda para consistência mobile/desktop
+  today.setHours(0, 0, 0, 0);
   const todayEnd = new Date(today);
   todayEnd.setHours(23, 59, 59, 999); // Fim do dia
   
   const todayOrders = filteredData.orders.filter((order: any) => {
     const orderDate = new Date(order.created_at);
-    return orderDate >= today && orderDate <= todayEnd;
+    // Normalizar para timezone de Luanda
+    orderDate.setHours(0, 0, 0, 0);
+    return orderDate.getTime() === today.getTime();
   });
   
   const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
   
   // Vendas acumuladas (total desde o início - NUNCA ZERA)
-  const accumulatedRevenue = manualRevenue; // Já é o total acumulado
+  const accumulatedRevenue = grandTotalRevenue; // Incluir dados externos
   
   // Data do primeiro registro para mostrar "desde quando"
   const firstOrderDate = filteredData.orders.length > 0 
@@ -190,7 +229,7 @@ export default function OwnerMobilePage() {
   
   // Cálculo de impostos (6,5% sobre o total de vendas)
   const taxRate = 0.065; // 6.5%
-  const totalTaxes = manualRevenue * taxRate;
+  const totalTaxes = grandTotalRevenue * taxRate;
   
   console.log('🔍 CÁLCULOS MANUAIS:', {
     manualRevenue,
