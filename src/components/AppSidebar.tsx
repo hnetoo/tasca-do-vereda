@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
   Home, 
-  ShoppingBag, 
+  ShoppingCart,
+  ShoppingBag,
   ChefHat, 
   Users, 
   BarChart2, 
@@ -93,9 +94,11 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
 
   const ownerMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
+    { path: '/pos', icon: <ShoppingCart size={24} />, label: 'POS Terminal' },
     { path: '/menu', icon: <UtensilsCrossed size={24} />, label: 'Menu' },
     { path: '/orders', icon: <ShoppingBag size={24} />, label: 'Pedidos' },
     { path: '/tablelayout', icon: <LayoutGrid size={24} />, label: 'Mesas' },
+    { path: '/inventory', icon: <Warehouse size={24} />, label: 'Inventário' },
     { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },
