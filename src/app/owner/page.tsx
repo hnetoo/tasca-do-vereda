@@ -37,23 +37,25 @@ export default function OwnerPage() {
   const { 
     orders, 
     expenses,
+    revenues,
     dishes,
     categories,
     settings,
     employees,
     setOrders,
-    setExpenses
+    setExpenses,
+    setRevenues
   } = useStore();
 
   // Fallback: Carregar dados da API se store local estiver vazio
   useEffect(() => {
-    const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0;
+    const hasLocalData = (orders?.length || 0) > 0 || (expenses?.length || 0) > 0 || (revenues?.length || 0) > 0;
     
     if (!hasLocalData && !loadingSupabase) {
       console.log('🔄 Loading data from API (fallback for owner desktop)');
       loadApiData();
     }
-  }, [orders, expenses, loadingSupabase]);
+  }, [orders, expenses, revenues, loadingSupabase]);
 
   const loadApiData = async () => {
     setLoadingSupabase(true);
@@ -194,6 +196,7 @@ export default function OwnerPage() {
     const debugInfo = {
       localOrders: orders?.length || 0,
       localExpenses: expenses?.length || 0,
+      localRevenues: revenues?.length || 0,
       localDishes: dishes?.length || 0,
       localCategories: categories?.length || 0,
       apiOrders: supabaseData.orders.length,
@@ -203,18 +206,16 @@ export default function OwnerPage() {
       isMobile: typeof window !== 'undefined' ? /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) : 'SSR'
     };
     
-    console.log('📊 Owner Desktop Data Debug:', debugInfo);
-    
-    // Adicionar debug visual na página
-    const debugElement = document.getElementById('mobile-debug');
-    if (debugElement) {
-      debugElement.innerHTML = `
-        <div style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-size: 12px;">
-          📊 DEBUG: ${JSON.stringify(debugInfo)}
-        </div>
-      `;
+    if (typeof window !== 'undefined') {
+      console.log('📊 Owner Debug Info:', debugInfo);
+      
+      // Mostrar aviso no console se não há dados
+      if (debugInfo.localOrders === 0 && debugInfo.localRevenues === 0) {
+        console.warn('⚠️ NO SALES DATA FOUND: Orders=0, Revenues=0');
+        console.warn('⚠️ CHECK: POS may not be creating revenue records');
+      }
     }
-  }, [orders, expenses, dishes, categories]);
+  }, [orders, expenses, revenues, dishes, categories, supabaseData.orders.length, supabaseData.expenses.length, currentData.orders.length, currentData.expenses.length]);
 
   // Verificar autenticação
   useEffect(() => {
@@ -349,7 +350,7 @@ export default function OwnerPage() {
     }
   }, [orders]);
 
-  // Combinar transações - PRIORIDADE LOCAL
+  // Combinar transações - PRIORIDADE LOCAL + REVENUES
   const combinedTransactions = useMemo(() => {
     const txs: Array<{
       id: string;
@@ -392,6 +393,22 @@ export default function OwnerPage() {
         });
       }
 
+      // Adicionar revenues do store local (CRÍTICO PARA VENDAS)
+      if (revenues && revenues.length > 0) {
+        revenues.forEach(revenue => {
+          if (revenue && revenue.id) {
+            txs.push({
+              id: `revenue-${revenue.id}`,
+              date: (revenue.date instanceof Date ? revenue.date.toISOString() : revenue.date) || new Date().toISOString(),
+              description: revenue.description || 'Receita',
+              category: revenue.category || 'Vendas',
+              type: 'REVENUE',
+              amount: revenue.amount || 0
+            });
+          }
+        });
+      }
+
       // Adicionar transações financeiras (local)
       if (expenses && expenses.length > 0) {
         expenses.forEach(expense => {
@@ -422,12 +439,21 @@ export default function OwnerPage() {
           }
         });
       }
-    } catch (error) {
-      console.error('Erro ao combinar transações:', error);
-    }
 
-    return txs;
-  }, [orders, expenses, supabaseData.orders, supabaseData.expenses]);
+      console.log('📊 Combined Transactions:', {
+        total: txs.length,
+        orders: orders?.length || 0,
+        revenues: revenues?.length || 0,
+        expenses: expenses?.length || 0,
+        sample: txs.slice(0, 3)
+      });
+
+      return txs;
+    } catch (error) {
+      console.error('Error combining transactions:', error);
+      return [];
+    }
+  }, [orders, revenues, expenses, supabaseData.orders, supabaseData.expenses, calculateOrderTotal]);
 
   // Filtrar transações por período
   const filteredTransactions = useMemo(() => {
