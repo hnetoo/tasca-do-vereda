@@ -96,11 +96,10 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
     { path: '/menu', icon: <UtensilsCrossed size={24} />, label: 'Menu' },
     { path: '/orders', icon: <ShoppingBag size={24} />, label: 'Pedidos' },
     { path: '/tablelayout', icon: <LayoutGrid size={24} />, label: 'Mesas' },
-    { path: '/staff', icon: <Users size={24} />, label: 'Pessoal' },
     { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },
-    { path: '/sistema', icon: <Settings size={24} />, label: 'Sistema' },
+    { path: '/settings', icon: <Settings size={24} />, label: 'Configurações' },
   ];
 
   const menuItems = user?.role === UserRole.Owner || user?.role === UserRole.Admin ? ownerMenuItems : staffMenuItems;

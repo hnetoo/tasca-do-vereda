@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Store, 
   Globe, 
@@ -17,14 +18,17 @@ import {
   Activity,
   CheckCircle,
   AlertCircle,
-  Settings
+  Settings,
+  Users,
+  ArrowLeft,
+  Calendar
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 
 export default function SistemaPage() {
   const router = useRouter();
   const { settings, updateSettings, addNotification } = useStore();
-  const [activeTab, setActiveTab] = useState<'geral' | 'base-dados' | 'aparência'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'base-dados' | 'aparência' | 'utilizadores'>('geral');
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     restaurantName: settings?.restaurantName || 'Tasca do Vereda',
@@ -101,7 +105,8 @@ export default function SistemaPage() {
   const tabs = [
     { id: 'geral', label: '📍 Geral', icon: Store },
     { id: 'base-dados', label: '📊 Base de Dados', icon: Database },
-    { id: 'aparência', label: '🎨 Aparência', icon: Palette }
+    { id: 'aparência', label: '🎨 Aparência', icon: Palette },
+    { id: 'utilizadores', label: '👥 Utilizadores', icon: Users }
   ];
 
   return (
@@ -349,6 +354,136 @@ export default function SistemaPage() {
                 >
                   Limpar Todos os Dados
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Utilizadores Tab */}
+        {activeTab === 'utilizadores' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Gestão de Utilizadores Card */}
+              <Link
+                href="/sistema/utilizadores"
+                className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
+                    <Users className="w-8 h-8 text-blue-400" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Gestão de Utilizadores</h3>
+                <p className="text-slate-400 text-sm mb-4">
+                  Lista completa de funcionários, cargos e informações
+                </p>
+                <div className="flex items-center text-blue-400 group-hover:text-blue-300 transition-colors">
+                  <span className="text-sm font-medium">Ver Lista</span>
+                  <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                </div>
+              </Link>
+
+              {/* Códigos de Acesso Card */}
+              <Link
+                href="/staff"
+                className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-green-500/20 rounded-xl group-hover:bg-green-500/30 transition-colors">
+                    <Shield className="w-8 h-8 text-green-400" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Códigos de Acesso</h3>
+                <p className="text-slate-400 text-sm mb-4">
+                  Gerencie PINs e permissões de acesso ao sistema
+                </p>
+                <div className="flex items-center text-green-400 group-hover:text-green-300 transition-colors">
+                  <span className="text-sm font-medium">Gerenciar PINs</span>
+                  <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                </div>
+              </Link>
+
+              {/* Escalas Card */}
+              <Link
+                href="/escalas"
+                className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-purple-500/20 rounded-xl group-hover:bg-purple-500/30 transition-colors">
+                    <Calendar className="w-8 h-8 text-purple-400" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Escalas</h3>
+                <p className="text-slate-400 text-sm mb-4">
+                  Calendário de turnos e horários da equipe
+                </p>
+                <div className="flex items-center text-purple-400 group-hover:text-purple-300 transition-colors">
+                  <span className="text-sm font-medium">Gerenciar Escalas</span>
+                  <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                </div>
+              </Link>
+
+              {/* Folha Salarial Card */}
+              <Link
+                href="/payroll"
+                className="group bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-orange-500/50 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-orange-500/20 rounded-xl group-hover:bg-orange-500/30 transition-colors">
+                    <DollarSign className="w-8 h-8 text-orange-400" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Folha Salarial</h3>
+                <p className="text-slate-400 text-sm mb-4">
+                  Processamento de pagamentos e histórico em AOA
+                </p>
+                <div className="flex items-center text-orange-400 group-hover:text-orange-300 transition-colors">
+                  <span className="text-sm font-medium">Gerenciar Pagamentos</span>
+                  <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                </div>
+              </Link>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-400">Total de Utilizadores</p>
+                    <p className="text-2xl font-bold text-white">12</p>
+                  </div>
+                  <Users className="w-8 h-8 text-blue-500" />
+                </div>
+              </div>
+
+              <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-400">PINs Ativos</p>
+                    <p className="text-2xl font-bold text-white">12</p>
+                  </div>
+                  <Shield className="w-8 h-8 text-green-500" />
+                </div>
+              </div>
+
+              <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-400">Escalas Ativas</p>
+                    <p className="text-2xl font-bold text-white">8</p>
+                  </div>
+                  <Calendar className="w-8 h-8 text-purple-500" />
+                </div>
+              </div>
+
+              <div className="bg-slate-900 rounded-xl p-6 border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-400">Folha Mensal</p>
+                    <p className="text-2xl font-bold text-white">450K AOA</p>
+                  </div>
+                  <DollarSign className="w-8 h-8 text-orange-500" />
+                </div>
               </div>
             </div>
           </div>
