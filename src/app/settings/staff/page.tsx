@@ -1,9 +1,38 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+'use client';
 
-export default async function StaffPage() {
-  const supabase = createServerComponentClient({ cookies })
-  const { data: staff } = await supabase.from('profiles').select('*')
+import React, { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export default function StaffPage() {
+  const [staff, setStaff] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+        
+        if (error) {
+          console.error('Error fetching staff:', error)
+        } else {
+          setStaff(data || [])
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStaff()
+  }, [])
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -36,7 +65,11 @@ export default async function StaffPage() {
         <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800">
           <h2 className="text-2xl font-bold text-white mb-6">Lista de Funcionários</h2>
           
-          {staff && staff.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-slate-400">Carregando...</p>
+            </div>
+          ) : staff && staff.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
