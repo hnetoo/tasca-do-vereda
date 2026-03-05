@@ -59,19 +59,17 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const body = await request.json();
     
-    // Mapear campos do formulário para as colunas corretas da BD
-    const mappedData = {
-      name: body.nome,           // nome -> name
-      role: body.cargo,          // cargo -> role
-      phone: body.telefone,       // telefone -> phone
-      base_salary: body.salario_base, // salario_base -> base_salary
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
+    // Enviar dados diretamente com os nomes das colunas da BD
     const { data, error } = await supabase
       .from('staff')
-      .insert(mappedData)
+      .insert({
+        name: body.nome,
+        role: body.cargo,
+        phone: body.telefone,
+        base_salary: parseFloat(body.salario_base) || 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .select()
       .single();
     
@@ -102,18 +100,16 @@ export async function PUT(request: NextRequest) {
     const { id } = await request.json();
     const body = await request.json();
     
-    // Mapear campos do formulário para as colunas corretas da BD
-    const mappedData = {
-      name: body.nome,           // nome -> name
-      role: body.cargo,          // cargo -> role
-      phone: body.telefone,       // telefone -> phone
-      base_salary: body.salario_base, // salario_base -> base_salary
-      updated_at: new Date().toISOString()
-    };
-    
+    // Enviar dados diretamente com os nomes das colunas da BD
     const { data, error } = await supabase
       .from('staff')
-      .update(mappedData)
+      .update({
+        name: body.nome,
+        role: body.cargo,
+        phone: body.telefone,
+        base_salary: parseFloat(body.salario_base) || 0,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', id)
       .select()
       .single();
