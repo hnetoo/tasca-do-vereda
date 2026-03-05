@@ -126,12 +126,21 @@ export default function SettingsStaffPage() {
       
       if (result.success) {
         setShowModal(false);
+        setFormData({
+          nome: '',
+          cargo: '',
+          telefone: '',
+          salario_base: ''
+        });
+        setEditingMember(null);
         await loadStaff();
       } else {
         console.error('Erro ao salvar membro:', result.error);
+        alert('Erro ao salvar membro: ' + result.error);
       }
     } catch (error) {
       console.error('Erro ao salvar membro:', error);
+      alert('Erro ao salvar membro: ' + error);
     } finally {
       setLoading(false);
     }
