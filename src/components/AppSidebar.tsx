@@ -80,19 +80,8 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
     );
   };
 
-  // Menu items for different user roles
-  const staffMenuItems: MenuItem[] = [
-    { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
-    { path: '/menu', icon: <UtensilsCrossed size={24} />, label: 'Menu' },
-    { path: '/orders', icon: <ShoppingBag size={24} />, label: 'Pedidos' },
-    { path: '/tablelayout', icon: <LayoutGrid size={24} />, label: 'Mesas' },
-    { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
-    { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
-    { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },
-    { path: '/sistema', icon: <Settings size={24} />, label: 'Sistema' },
-  ];
-
-  const ownerMenuItems: MenuItem[] = [
+  // Menu items - SEM RESTRICÇÕES DE ROLE
+  const menuItems: MenuItem[] = [
     { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
     { path: '/pos', icon: <ShoppingCart size={24} />, label: 'POS Terminal' },
     { path: '/orders', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
@@ -104,8 +93,6 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
     { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },
     { path: '/sistema', icon: <Settings size={24} />, label: 'Sistema' },
   ];
-
-  const menuItems = user?.role === UserRole.Owner || user?.role === UserRole.Admin ? ownerMenuItems : staffMenuItems;
 
   const toggleMenu = (menuPath: string) => {
     setExpandedMenus(prev => 
@@ -219,7 +206,9 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
         
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-gray-300 hover:bg-red-600 hover:text-white transition-colors"
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-gray-300 hover:bg-gray-800 hover:text-white ${
+            collapsed ? 'justify-center' : ''
+          }`}
         >
           <LogOut size={20} />
           {!collapsed && <span className="text-sm font-medium">Sair</span>}
