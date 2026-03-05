@@ -30,6 +30,12 @@ export default function FinancePage() {
   const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'reports'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    description: '',
+    amount: '',
+    category: 'outras'
+  });
   
   // Calculate financial metrics
   const calculateMetrics = () => {
@@ -50,6 +56,27 @@ export default function FinancePage() {
   };
 
   const metrics = calculateMetrics();
+
+  // Handle expense form submission
+  const handleAddExpense = () => {
+    if (!expenseForm.description || !expenseForm.amount) {
+      addNotification('error', 'Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    const expense = {
+      id: Date.now().toString(),
+      description: expenseForm.description,
+      amount: parseFloat(expenseForm.amount),
+      category: expenseForm.category,
+      date: new Date().toISOString()
+    };
+
+    addExpense(expense);
+    setExpenseForm({ description: '', amount: '', category: 'outras' });
+    setShowExpenseModal(false);
+    addNotification('success', 'Despesa adicionada com sucesso');
+  };
 
   // Filter data based on date range
   const getFilteredData = () => {
@@ -335,10 +362,7 @@ export default function FinancePage() {
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-bold text-white">Gestão de Despesas</h3>
                 <button
-                  onClick={() => {
-                    // TODO: Implement expense modal
-                    addNotification('info', 'Despesa adicionada com sucesso');
-                  }}
+                  onClick={() => setShowExpenseModal(true)}
                   className="bg-primary text-black px-4 py-2 rounded-lg font-bold hover:bg-white transition-colors"
                 >
                   <Plus size={16} className="inline mr-2" />
@@ -397,6 +421,85 @@ export default function FinancePage() {
           )}
         </div>
       </div>
+
+      {/* Expense Modal */}
+      {showExpenseModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 rounded-3xl p-6 w-full max-w-md border border-slate-800">
+            <h2 className="text-2xl font-bold text-white mb-6">Adicionar Despesa</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  Nome da Despesa
+                </label>
+                <input
+                  type="text"
+                  value={expenseForm.description}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-primary focus:outline-none"
+                  placeholder="Ex: Aluguer, Água, Luz..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  Valor (AOA)
+                </label>
+                <input
+                  type="number"
+                  value={expenseForm.amount}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-primary focus:outline-none"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  Categoria
+                </label>
+                <select
+                  value={expenseForm.category}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-primary focus:outline-none"
+                  title="Categoria da despesa"
+                >
+                  <option value="aluguer">Aluguer</option>
+                  <option value="agua">Água</option>
+                  <option value="luz">Luz</option>
+                  <option value="salarios">Salários</option>
+                  <option value="limpeza">Limpeza</option>
+                  <option value="seguro">Seguro</option>
+                  <option value="material">Material de Limpeza</option>
+                  <option value="manutencao">Manutenção</option>
+                  <option value="outras">Outras</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowExpenseModal(false);
+                    setExpenseForm({ description: '', amount: '', category: 'outras' });
+                  }}
+                  className="flex-1 px-4 py-3 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddExpense}
+                  className="flex-1 px-4 py-3 bg-primary text-black rounded-lg hover:bg-white transition-colors font-bold"
+                >
+                  Adicionar Despesa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
