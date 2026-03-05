@@ -82,29 +82,25 @@ const AppSidebar = ({ showSidebar = true }: { showSidebar?: boolean }) => {
   // Menu items for different user roles
   const staffMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
-    { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
-    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha', statusType: 'kitchen' },
-    { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout de Mesas' },
+    { path: '/menu', icon: <UtensilsCrossed size={24} />, label: 'Menu' },
+    { path: '/orders', icon: <ShoppingBag size={24} />, label: 'Pedidos' },
+    { path: '/tablelayout', icon: <LayoutGrid size={24} />, label: 'Mesas' },
     { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },
-    { path: '/settings', icon: <Settings size={24} />, label: 'Configurações' },
+    { path: '/sistema', icon: <Settings size={24} />, label: 'Sistema' },
   ];
 
   const ownerMenuItems: MenuItem[] = [
     { path: '/dashboard', icon: <Home size={24} />, label: 'Dashboard' },
-    { path: '/pos', icon: <Monitor size={24} />, label: 'POS Terminal' },
-    { path: '/encomendas', icon: <ShoppingBag size={24} />, label: 'Encomendas' },
-    { path: '/kitchen', icon: <ChefHat size={24} />, label: 'Cozinha', statusType: 'kitchen' },
-    { path: '/tablelayout', icon: <UtensilsCrossed size={24} />, label: 'Layout de Mesas' },
-    { path: '/customers', icon: <Users size={24} />, label: 'Clientes', statusType: 'reservations' },
-    { path: '/reservations', icon: <Calendar size={24} />, label: 'Reservas', statusType: 'reservations' },
-    { path: '/inventory', icon: <Warehouse size={24} />, label: 'Inventário' },
+    { path: '/menu', icon: <UtensilsCrossed size={24} />, label: 'Menu' },
+    { path: '/orders', icon: <ShoppingBag size={24} />, label: 'Pedidos' },
+    { path: '/tablelayout', icon: <LayoutGrid size={24} />, label: 'Mesas' },
+    { path: '/staff', icon: <Users size={24} />, label: 'Pessoal' },
     { path: '/finance', icon: <DollarSign size={24} />, label: 'Finanças' },
     { path: '/analytics', icon: <BarChart2 size={24} />, label: 'Analytics' },
     { path: '/reports', icon: <BarChart3 size={24} />, label: 'Relatórios' },
-    { path: '/settings', icon: <Settings size={24} />, label: 'Configurações' },
+    { path: '/sistema', icon: <Settings size={24} />, label: 'Sistema' },
   ];
 
   const menuItems = user?.role === UserRole.Owner || user?.role === UserRole.Admin ? ownerMenuItems : staffMenuItems;

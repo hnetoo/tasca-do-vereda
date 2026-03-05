@@ -97,7 +97,7 @@ const DLPRecovery = () => {
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div className="flex items-center gap-4">
-          <Link href="/settings" className="p-2 bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors">
+          <Link href="/sistema" className="p-2 bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </Link>
           <div>

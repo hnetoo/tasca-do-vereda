@@ -4,12 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const tabs = [
-  { name: 'DASHBOARD', path: '/owner' },
-  { name: 'ANÁLISES', path: '/owner/analytics' },
+  { name: 'DASHBOARD', path: '/owner/mobile' },
   { name: 'POS', path: '/owner/pos' },
   { name: 'PESSOAL', path: '/owner/staff' },
   { name: 'FINANÇAS', path: '/owner/finance' },
-  { name: 'DEFINIÇÕES', path: '/owner/settings' },
+  { name: 'SISTEMA', path: '/sistema' },
 ];
 
 export function OwnerTabs() {

@@ -21,8 +21,8 @@ export default function TableLayout() {
         const { data, error } = await supabase.from('restaurant_tables').select('*').order('number', { ascending: true });
         
         if (error) {
-          console.error(' ERRO AO CARREGAR MESAS:', error);
-          alert('Erro ao carregar mesas: ' + error.message);
+          console.error('❌ ERRO AO CARREGAR MESAS:', error);
+          alert('ERRO DETALHADO: ' + JSON.stringify(error));
           return;
         }
         
@@ -62,8 +62,39 @@ export default function TableLayout() {
         .select();
       
       if (error) {
-        console.error(' ERRO SUPABASE AO CRIAR MESA:', error);
-        alert('Erro ao criar mesa: ' + error.message);
+        console.error('❌ ERRO SUPABASE AO CRIAR MESA:', error);
+        
+        // TENTAR COM COLUNA EM PORTUGUÊS SE CATEGORY FALHAR
+        if (error.message?.includes('category')) {
+          console.log('🔄 TENTANDO COM CATEGORIA EM PORTUGUÊS...');
+          const { data: dataPT, error: errorPT } = await supabase
+            .from('restaurant_tables')
+            .insert([{ 
+              number: tableNumber || (tables.length > 0 ? Math.max(...tables.map(t => t.number)) + 1 : 1), 
+              status: 'disponível', 
+              categoria: selectedZone, // COLUNA EM PORTUGUÊS
+              x: 50, 
+              y: 150 
+            }])
+            .select();
+          
+          if (errorPT) {
+            console.error('❌ ERRO TAMBÉM COM CATEGORIA PT:', errorPT);
+            alert('ERRO DETALHADO: ' + JSON.stringify(errorPT));
+            return;
+          }
+          
+          if (dataPT && dataPT.length > 0) {
+            console.log('✅ MESA CRIADA COM CATEGORIA PT:', dataPT[0]);
+            setTables([...tables, dataPT[0]]);
+            setShowModal(false);
+            setTableNumber('');
+            alert('Mesa criada com sucesso!');
+            return;
+          }
+        }
+        
+        alert('ERRO DETALHADO: ' + JSON.stringify(error));
         return;
       }
       

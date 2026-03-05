@@ -1,4 +1,4 @@
-import SettingsUsersPage from '@/app/settings/system/users/page';
+import SettingsUsersPage from '@/app/sistema/utilizadores/page';
 
 export default function OwnerStaffPage() {
   return <SettingsUsersPage />;
