@@ -46,19 +46,29 @@ export default function SettingsPayrollPage() {
 
   const fetchPayroll = async () => {
     try {
+      console.log('🔄 [PAYROLL] Buscando registros do Supabase...');
       const { data, error } = await supabase
         .from('payroll')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching payroll:', error);
+        console.error('❌ [PAYROLL] Erro ao buscar registros:', error);
+        
+        // Verificar se é erro de tabela não existente
+        if (error.code === 'PGRST116' || error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          console.error('❌ [PAYROLL] Tabela payroll não existe!');
+          setPayroll([]);
+          return;
+        }
+        
         setPayroll([]);
       } else {
+        console.log('✅ [PAYROLL] Registros buscados com sucesso:', data?.length || 0);
         setPayroll(data || []);
       }
     } catch (err) {
-      console.error('Unexpected error:', err);
+      console.error('❌ [PAYROLL] Erro inesperado:', err);
       setPayroll([]);
     } finally {
       setLoading(false);
@@ -73,6 +83,19 @@ export default function SettingsPayrollPage() {
     e.preventDefault();
     
     const total = calculateTotal();
+    
+    console.log('🔄 [PAYROLL] Enviando dados para Supabase:', {
+      staff_id: formData.staff_id,
+      staff_name: formData.staff_name,
+      base_salary: formData.base_salary,
+      bonus: formData.bonus,
+      overtime: formData.overtime,
+      deductions: formData.deductions,
+      total: total,
+      month: formData.month,
+      year: formData.month.split('-')[0],
+      status: formData.status
+    });
     
     if (editingPayroll) {
       // Update existing payroll
@@ -91,10 +114,15 @@ export default function SettingsPayrollPage() {
         })
         .eq('id', editingPayroll.id);
 
-      if (!error) {
-        setEditingPayroll(null);
-        fetchPayroll();
+      if (error) {
+        console.error('❌ [PAYROLL] Erro ao atualizar registro:', error);
+        alert(`Erro ao atualizar registro: ${error.message}`);
+        return;
       }
+
+      console.log('✅ [PAYROLL] Registro atualizado com sucesso');
+      setEditingPayroll(null);
+      fetchPayroll();
     } else {
       // Create new payroll
       const { error } = await supabase
@@ -112,19 +140,37 @@ export default function SettingsPayrollPage() {
           status: formData.status
         });
 
-      if (!error) {
-        setFormData({
-          staff_id: '',
-          staff_name: '',
-          base_salary: 0,
-          bonus: 0,
-          overtime: 0,
-          deductions: 0,
-          month: new Date().toISOString().slice(0, 7),
-          status: 'pending'
-        });
-        fetchPayroll();
+      if (error) {
+        console.error('❌ [PAYROLL] Erro ao criar registro:', error);
+        
+        // Verificar se é erro de tabela não existente
+        if (error.code === 'PGRST116' || error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          alert('❌ ERRO CRÍTICO: A tabela "payroll" não existe no Supabase!\n\nExecute o SQL do arquivo "create_payroll_table.sql" no painel do Supabase para criar a tabela.');
+          return;
+        }
+        
+        // Verificar se é erro de coluna
+        if (error.code === 'PGRST204' || error.message?.includes('column')) {
+          alert(`❌ ERRO DE COLUNA: ${error.message}\n\nVerifique se todas as colunas existem na tabela payroll.`);
+          return;
+        }
+        
+        alert(`Erro ao criar registro: ${error.message}`);
+        return;
       }
+
+      console.log('✅ [PAYROLL] Registro criado com sucesso');
+      setFormData({
+        staff_id: '',
+        staff_name: '',
+        base_salary: 0,
+        bonus: 0,
+        overtime: 0,
+        deductions: 0,
+        month: new Date().toISOString().slice(0, 7),
+        status: 'pending'
+      });
+      fetchPayroll();
     }
   };
 
