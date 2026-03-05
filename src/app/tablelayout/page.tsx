@@ -9,7 +9,7 @@ import {
   Clock, Plus, Edit3
 } from 'lucide-react';
 import EnhancedTableLayout from '@/components/EnhancedTableLayout';
-import { getTablesByAmbiente } from '@/app/actions/tableLayout';
+import { supabase } from '@/lib/supabase';
 
 const TableLayout = () => {
   const { 
@@ -33,9 +33,10 @@ const TableLayout = () => {
     const loadTables = async () => {
       try {
         setIsLoading(true);
-        const result = await getTablesByAmbiente(activeZone);
-        if (result.success && result.data) {
-          result.data.forEach(table => {
+        const { data } = await supabase.from('restaurant_tables').select('*');
+        console.log('Mesas carregadas:', data);
+        if (data) {
+          data.forEach(table => {
             const existingTable = tables.find(t => t.id === table.id);
             if (!existingTable) {
               addTable({
@@ -49,25 +50,23 @@ const TableLayout = () => {
                 status: table.status,
                 is_active: table.is_active !== false,
                 color: table.color || 'blue',
-                ambiente: (table as any).zone || activeZone
+                ambiente: table.ambiente || 'INTERIOR'
               });
             }
           });
         }
       } catch (error) {
         console.error('Error loading tables:', error);
-        addNotification('Erro ao carregar mesas', 'error');
       } finally {
         setIsLoading(false);
       }
     };
-
     loadTables();
-  }, [activeZone, addTable, addNotification, tables]);
+  }, [tables, addTable]);
 
   const filteredTables = useMemo(() => {
-    return tables.filter(table => table.ambiente === activeZone);
-  }, [tables, activeZone]);
+    return tables; // Remove filter to show ALL tables
+  }, [tables]);
 
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isEditMode) return;
