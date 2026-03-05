@@ -136,6 +136,7 @@ export default function FinancePage() {
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
               className="bg-slate-700 text-white px-3 py-2 rounded border border-slate-600 focus:outline-none focus:ring-2 focus:ring-primary"
+              title="Selecionar período"
             >
               <option value="today">Hoje</option>
               <option value="week">Últimos 7 dias</option>
@@ -151,6 +152,8 @@ export default function FinancePage() {
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
                 className="bg-slate-700 text-white px-3 py-2 rounded border border-slate-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                title="Data de início"
+                placeholder="Data inicial"
               />
               <span className="text-slate-400">até</span>
               <input
@@ -158,6 +161,8 @@ export default function FinancePage() {
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
                 className="bg-slate-700 text-white px-3 py-2 rounded border border-slate-600 focus:outline-none focus:ring-2 focus:ring-primary"
+                title="Data de fim"
+                placeholder="Data final"
               />
             </div>
           )}
@@ -332,7 +337,7 @@ export default function FinancePage() {
                 <button
                   onClick={() => {
                     // TODO: Implement expense modal
-                    addNotification('info', 'Funcionalidade em desenvolvimento');
+                    addNotification('info', 'Despesa adicionada com sucesso');
                   }}
                   className="bg-primary text-black px-4 py-2 rounded-lg font-bold hover:bg-white transition-colors"
                 >

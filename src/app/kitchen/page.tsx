@@ -247,25 +247,7 @@ const Kitchen = () => {
         </button>
       </div>
 
-      {/* KDS Offline Overlay */}
-      {isKDSOffline && (
-        <div className="fixed inset-0 bg-black/80 z-40 flex items-center justify-center">
-          <div className="bg-red-900 border-2 border-red-500 rounded-xl p-8 max-w-md mx-4">
-            <div className="text-center">
-              <AlertCircle size={48} className="text-red-400 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-2">Cozinha em Pausa</h3>
-              <p className="text-red-200 text-lg">Não são aceites novos pedidos</p>
-              <button
-                onClick={toggleKDSStatus}
-                className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-              >
-                Reativar Cozinha
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      
       <header className="mb-6 flex justify-between items-center">
         <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-3">

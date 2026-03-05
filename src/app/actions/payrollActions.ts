@@ -4,12 +4,13 @@ import { createClient } from '@/lib/supabase/server';
 
 export interface PayrollRecord {
   id?: string;
-  funcionario_name: string;
-  valor_base: number;
-  subsidios: number;
-  descontos: number;
-  total_liquido?: number;
-  mes_referencia: string;
+  staff_id?: string;
+  staff_name: string;
+  base_salary: number;
+  subsidies: number;
+  deductions: number;
+  net_total?: number;
+  reference_month: string;
   status_pagamento: 'pendente' | 'pago' | 'cancelado';
   created_at?: string;
   updated_at?: string;
@@ -40,14 +41,14 @@ export async function createPayrollRecord(record: PayrollRecord) {
   const supabase = await createClient();
   
   try {
-    // Calcular total_liquido automaticamente
-    const total_liquido = record.valor_base + record.subsidios - record.descontos;
+    // Calcular net_total automaticamente
+    const net_total = record.base_salary + record.subsidies - record.deductions;
     
     const { data, error } = await supabase
       .from('payroll')
       .insert({
         ...record,
-        total_liquido
+        net_total
       })
       .select()
       .single();
@@ -68,21 +69,21 @@ export async function updatePayrollRecord(id: string, record: Partial<PayrollRec
   const supabase = await createClient();
   
   try {
-    // Recalcular total_liquido se valores base foram alterados
+    // Recalcular net_total se valores base foram alterados
     let updateData = { ...record };
-    if (record.valor_base !== undefined || record.subsidios !== undefined || record.descontos !== undefined) {
+    if (record.base_salary !== undefined || record.subsidies !== undefined || record.deductions !== undefined) {
       // Buscar registro atual para obter valores não alterados
       const { data: currentRecord } = await supabase
         .from('payroll')
-        .select('valor_base, subsidios, descontos')
+        .select('base_salary, subsidies, deductions')
         .eq('id', id)
         .single();
       
       if (currentRecord) {
-        const valor_base = record.valor_base ?? currentRecord.valor_base;
-        const subsidios = record.subsidios ?? currentRecord.subsidios;
-        const descontos = record.descontos ?? currentRecord.descontos;
-        updateData.total_liquido = valor_base + subsidios - descontos;
+        const base_salary = record.base_salary ?? currentRecord.base_salary;
+        const subsidies = record.subsidies ?? currentRecord.subsidies;
+        const deductions = record.deductions ?? currentRecord.deductions;
+        updateData.net_total = base_salary + subsidies - deductions;
       }
     }
     
@@ -134,15 +135,15 @@ export async function getCurrentMonthPayrollTotal() {
     
     const { data, error } = await supabase
       .from('payroll')
-      .select('total_liquido')
-      .eq('mes_referencia', currentMonth);
+      .select('net_total')
+      .eq('reference_month', currentMonth);
     
     if (error) {
       console.error('❌ Erro ao buscar total do mês:', error);
       return { success: false, error: error.message, total: 0 };
     }
     
-    const total = (data || []).reduce((sum, record) => sum + (record.total_liquido || 0), 0);
+    const total = (data || []).reduce((sum, record) => sum + (record.net_total || 0), 0);
     
     return { success: true, total };
   } catch (error: any) {

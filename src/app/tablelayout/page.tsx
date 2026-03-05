@@ -29,43 +29,41 @@ const TableLayout = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Load tables from database on component mount
   useEffect(() => {
-    loadTablesFromDB();
-  }, [activeZone]);
-
-  const loadTablesFromDB = async () => {
-    try {
-      setIsLoading(true);
-      const result = await getTablesByAmbiente(activeZone);
-      if (result.success && result.data) {
-        // Add tables to store if they don't exist
-        result.data.forEach(table => {
-          const existingTable = tables.find(t => t.id === table.id);
-          if (!existingTable) {
-            addTable({
-              id: table.id,
-              number: table.number,
-              label: table.label,
-              x: table.x,
-              y: table.y,
-              seats: table.seats || 4,
-              shape: table.shape,
-              status: table.status,
-              is_active: table.is_active !== false,
-              color: table.color || 'blue',
-              zone: (table as any).ambiente || activeZone
-            });
-          }
-        });
+    const loadTables = async () => {
+      try {
+        setIsLoading(true);
+        const result = await getTablesByAmbiente(activeZone);
+        if (result.success && result.data) {
+          result.data.forEach(table => {
+            const existingTable = tables.find(t => t.id === table.id);
+            if (!existingTable) {
+              addTable({
+                id: table.id,
+                number: table.number,
+                label: table.label,
+                x: table.x,
+                y: table.y,
+                seats: table.seats || 4,
+                shape: table.shape,
+                status: table.status,
+                is_active: table.is_active !== false,
+                color: table.color || 'blue',
+                ambiente: (table as any).zone || activeZone
+              });
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error loading tables:', error);
+        addNotification('Erro ao carregar mesas', 'error');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading tables:', error);
-      addNotification('Erro ao carregar mesas', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+
+    loadTables();
+  }, [activeZone, addTable, addNotification, tables]);
 
   const filteredTables = useMemo(() => {
     return tables.filter(table => table.ambiente === activeZone);
@@ -86,17 +84,17 @@ const TableLayout = () => {
     if (!clickPosition) return;
     
     const newTable = {
-      id: `table_${Date.now()}`,
-      number: tableData.number,
+      id: crypto.randomUUID(),
       label: tableData.label,
-      x: clickPosition.x,
-      y: clickPosition.y,
+      number: tableData.number,
       seats: tableData.capacity || 4,
       shape: tableData.shape,
+      x: clickPosition.x,
+      y: clickPosition.y,
+      ambiente: activeZone,
+      color: '#3B82F6',
       status: 'available',
-      is_active: true,
-      color: 'blue',
-      zone: activeZone
+      is_active: true
     };
     
     addTable(newTable);
@@ -135,6 +133,7 @@ const TableLayout = () => {
               value={activeZone}
               onChange={(e) => setActiveZone(e.target.value as 'INTERIOR' | 'EXTERIOR' | 'BALCAO')}
               className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Selecionar zona"
             >
               <option value="INTERIOR">Interior</option>
               <option value="EXTERIOR">Exterior</option>
@@ -297,6 +296,7 @@ const TableLayout = () => {
                 <select
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   id="tableShape"
+                  title="Selecionar forma da mesa"
                 >
                   <option value="square">Quadrada</option>
                   <option value="circle">Redonda</option>
