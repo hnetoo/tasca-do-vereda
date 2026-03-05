@@ -189,10 +189,19 @@ export const createOperationalSlice: StateCreator<
     const table = get().tables.find((t: Table) => t.id === tableId);
     if (!table) {
       logger.warn('updateTableStatus: Mesa não encontrada', { tableId }, 'OPERATIONAL');
+      get().addNotification?.('error', `Mesa ${tableId} não encontrada.`);
       return;
     }
 
     const originalStatus = table.status;
+    const tableName = table.name || `Mesa ${tableId}`;
+
+    console.log('🔄 [OPERATIONAL SLICE] Iniciando atualização de status:', { 
+      tableId, 
+      tableName, 
+      originalStatus, 
+      newStatus 
+    });
 
     // 1. Atualização Otimista
     set((state) => ({
@@ -212,19 +221,48 @@ export const createOperationalSlice: StateCreator<
             t.id === tableId ? { ...t, status: newStatus } : t
           ),
         }));
+        
         get().addAuditLog({
           action: 'TABLE_STATUS_CHANGE',
-          details: `Mesa ${table.name || tableId} alterada de ${originalStatus} para ${newStatus}`,
+          details: `Mesa ${tableName} alterada de ${originalStatus} para ${newStatus}`,
           metadata: { tableId, originalStatus, newStatus },
         });
+
+        console.log('✅ [OPERATIONAL SLICE] Status atualizado com sucesso:', { 
+          tableId, 
+          tableName, 
+          originalStatus, 
+          newStatus 
+        });
+
+        get().addNotification?.('success', `Mesa ${tableName} atualizada para ${newStatus}`);
       } else {
         // 4. Erro: Reverter e notificar
-        throw new Error(error || 'Erro desconhecido ao atualizar o estado da mesa.');
+        const errorMsg = error || 'Erro desconhecido ao atualizar o estado da mesa.';
+        console.error('❌ [OPERATIONAL SLICE] Erro ao atualizar status:', { tableId, tableName, error: errorMsg });
+        throw new Error(errorMsg);
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
-      logger.error('Falha ao atualizar o estado da mesa', { tableId, newStatus, error: errorMessage }, 'OPERATIONAL');
-      get().addNotification?.('error', `Não foi possível atualizar a mesa ${table.name}.`);
+      console.error('❌ [OPERATIONAL SLICE] Exceção ao atualizar status:', { 
+        tableId, 
+        tableName, 
+        originalStatus, 
+        newStatus, 
+        error: errorMessage,
+        stack: e instanceof Error ? e.stack : undefined
+      });
+      
+      logger.error('Falha ao atualizar o estado da mesa', { 
+        tableId, 
+        tableName, 
+        originalStatus, 
+        newStatus, 
+        error: errorMessage 
+      }, 'OPERATIONAL');
+      
+      get().addNotification?.('error', `Não foi possível atualizar a mesa ${tableName}: ${errorMessage}`);
+      
       // Reverter para o estado original
       set((state) => ({
         tables: state.tables.map((t) =>

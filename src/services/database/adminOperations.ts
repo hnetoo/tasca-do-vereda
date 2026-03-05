@@ -8,17 +8,60 @@ import { MOCK_USERS } from '@/constants/index';
 export const adminOperations = {
   updateTableStatus: async (tableId: string, status: TableStatus): Promise<{ success: boolean; error?: string }> => {
     if (!supabaseAdmin) return { success: false, error: 'A chave de serviço do Supabase não está configurada.' };
+    
+    console.log('🔄 [ADMIN OPERATIONS] Atualizando status da mesa:', { tableId, status });
+    
     try {
+      // Verificar se a mesa existe antes de atualizar
+      const { data: existingTable, error: fetchError } = await supabaseAdmin
+        .from('restaurant_tables')
+        .select('id, number, status')
+        .eq('id', tableId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ [ADMIN OPERATIONS] Erro ao buscar mesa:', fetchError);
+        return { success: false, error: `Mesa não encontrada: ${fetchError.message}` };
+      }
+
+      if (!existingTable) {
+        console.error('❌ [ADMIN OPERATIONS] Mesa não encontrada:', tableId);
+        return { success: false, error: `Mesa com ID ${tableId} não encontrada` };
+      }
+
+      console.log('📋 [ADMIN OPERATIONS] Mesa encontrada:', existingTable);
+
+      // Atualizar o status
       const { error } = await supabaseAdmin
         .from('restaurant_tables')
-        .update({ status: status, updated_at: new Date().toISOString() })
+        .update({ 
+          status: status, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', tableId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [ADMIN OPERATIONS] Erro ao atualizar status:', error);
+        logger.error('Erro ao atualizar o estado da mesa (admin)', { 
+          tableId, 
+          status, 
+          error: error.message,
+          details: error 
+        }, 'DATABASE_ADMIN');
+        return { success: false, error: `Erro ao atualizar: ${error.message}` };
+      }
+
+      console.log('✅ [ADMIN OPERATIONS] Status atualizado com sucesso:', { tableId, newStatus: status });
       return { success: true };
     } catch (error: any) {
-      logger.error('Erro ao atualizar o estado da mesa (admin)', { tableId, status, error: error.message }, 'DATABASE_ADMIN');
-      return { success: false, error: error.message };
+      console.error('❌ [ADMIN OPERATIONS] Exceção ao atualizar status:', error);
+      logger.error('Exceção ao atualizar o estado da mesa (admin)', { 
+        tableId, 
+        status, 
+        error: error.message,
+        stack: error.stack 
+      }, 'DATABASE_ADMIN');
+      return { success: false, error: `Exceção: ${error.message}` };
     }
   },
   getEmployees: async (): Promise<{ success: boolean; data: Employee[]; error?: string }> => {
