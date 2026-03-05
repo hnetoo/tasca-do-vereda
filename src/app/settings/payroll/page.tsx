@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function PayrollPage() {
-  const [records, setRecords] = useState([]);
+  const [records, setRecords] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchPayroll = async () => {
