@@ -16,35 +16,89 @@ export default function TableLayout() {
 
   useEffect(() => { 
     const load = async () => {
-      const { data } = await supabase.from('restaurant_tables').select('*').order('number', { ascending: true });
-      if (data) setTables(data);
-      setLoading(false);
+      console.log(' CARREGANDO MESAS...');
+      try {
+        const { data, error } = await supabase.from('restaurant_tables').select('*').order('number', { ascending: true });
+        
+        if (error) {
+          console.error(' ERRO AO CARREGAR MESAS:', error);
+          alert('Erro ao carregar mesas: ' + error.message);
+          return;
+        }
+        
+        console.log(' MESAS CARREGADAS:', data?.length || 0, 'registros');
+        if (data) setTables(data);
+      } catch (error) {
+        console.error(' ERRO CRÍTICO AO CARREGAR MESAS:', error);
+        alert('Erro ao carregar mesas. Verifique o console para detalhes.');
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
 
   // FUNÇÃO PARA ADICIONAR MESA NOVA
   async function addTable() {
-    const nextNumber = tables.length > 0 ? Math.max(...tables.map(t => t.number)) + 1 : 1;
-    const { data, error } = await supabase.from('restaurant_tables')
-      .insert([{ 
-        number: tableNumber || nextNumber, 
-        status: 'disponível', 
-        category: selectedZone,
-        x: 50, 
-        y: 150 
-      }])
-      .select();
-    if (data) {
-      setTables([...tables, data[0]]);
-      setShowModal(false);
-      setTableNumber('');
+    console.log(' ADICIONANDO MESA...');
+    console.log(' DADOS DA MESA:', {
+      number: tableNumber || (tables.length > 0 ? Math.max(...tables.map(t => t.number)) + 1 : 1),
+      status: 'disponível',
+      category: selectedZone,
+      x: 50,
+      y: 150
+    });
+
+    try {
+      const { data, error } = await supabase
+        .from('restaurant_tables')
+        .insert([{ 
+          number: tableNumber || (tables.length > 0 ? Math.max(...tables.map(t => t.number)) + 1 : 1), 
+          status: 'disponível', 
+          category: selectedZone,
+          x: 50, 
+          y: 150 
+        }])
+        .select();
+      
+      if (error) {
+        console.error(' ERRO SUPABASE AO CRIAR MESA:', error);
+        alert('Erro ao criar mesa: ' + error.message);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        console.log(' MESA CRIADA COM SUCESSO:', data[0]);
+        setTables([...tables, data[0]]);
+        setShowModal(false);
+        setTableNumber('');
+        alert('Mesa criada com sucesso!');
+      } else {
+        console.error(' NENHUM DADO RETORNADO AO CRIAR MESA');
+        alert('Erro ao criar mesa: nenhum dado retornado');
+      }
+    } catch (error) {
+      console.error(' ERRO CRÍTICO AO CRIAR MESA:', error);
+      alert('Erro ao criar mesa. Verifique o console para detalhes.');
     }
   }
 
   // FUNÇÃO PARA ATUALIZAR POSIÇÃO (DRAG END)
   async function updatePosition(id: string, x: number, y: number) {
-    await supabase.from('restaurant_tables').update({ x, y }).eq('id', id);
+    console.log(' ATUALIZANDO POSIÇÃO DA MESA:', { id, x, y });
+    
+    try {
+      const { error } = await supabase.from('restaurant_tables').update({ x, y }).eq('id', id);
+      
+      if (error) {
+        console.error(' ERRO AO ATUALIZAR POSIÇÃO:', error);
+        return;
+      }
+      
+      console.log(' POSIÇÃO ATUALIZADA COM SUCESSO');
+    } catch (error) {
+      console.error(' ERRO CRÍTICO AO ATUALIZAR POSIÇÃO:', error);
+    }
   }
 
   const filteredTables = tables.filter(table => {

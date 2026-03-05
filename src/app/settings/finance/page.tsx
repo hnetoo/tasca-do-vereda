@@ -143,46 +143,87 @@ export default function SettingsFinancePage() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleManualRevenueUpdate = () => {
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      type: manualEntry.type,
-      description: manualEntry.description || 'Atualização manual',
-      amount: manualEntry.amount,
-      category: manualEntry.category || 'manual',
-      date: new Date().toISOString(),
-      paymentMethod: manualEntry.paymentMethod || 'manual',
-      status: 'completed'
-    };
-
-    setTransactions([newTransaction, ...transactions]);
-
-    // Atualizar dados financeiros
-    if (manualEntry.type === 'revenue') {
-      setFinancialData(prev => ({
-        ...prev,
-        totalRevenue: prev.totalRevenue + manualEntry.amount,
-        dailyRevenue: prev.dailyRevenue + manualEntry.amount,
-        monthlyRevenue: prev.monthlyRevenue + manualEntry.amount,
-        profit: prev.profit + manualEntry.amount
-      }));
-    } else {
-      setFinancialData(prev => ({
-        ...prev,
-        costs: prev.costs + manualEntry.amount,
-        profit: prev.profit - manualEntry.amount
-      }));
+  const handleManualRevenueUpdate = async () => {
+    console.log('💰 ENVIANDO TRANSAÇÃO MANUAL:', manualEntry);
+    
+    // Validar dados
+    if (!manualEntry.description || !manualEntry.amount || manualEntry.amount <= 0) {
+      console.error('❌ VALIDAÇÃO FALHOU:', manualEntry);
+      alert('Preencha todos os campos obrigatórios');
+      return;
     }
 
-    setManualEntry({
-      type: 'revenue',
-      description: '',
-      amount: 0,
-      category: '',
-      paymentMethod: ''
-    });
-    setShowManualEntry(false);
-    addNotification('success', 'Receita atualizada com sucesso!');
+    try {
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: manualEntry.amount,
+          category: manualEntry.category || 'Outros',
+          date: new Date().toISOString().split('T')[0],
+          description: manualEntry.description,
+          notes: manualEntry.type === 'expense' ? 'Despesa manual' : 'Receita manual',
+          payment_method: manualEntry.paymentMethod || 'manual',
+          status: 'completed'
+        }),
+      });
+
+      const result = await response.json();
+      console.log('📊 RESPOSTA API EXPENSES:', result);
+      
+      if (result.success) {
+        console.log('✅ TRANSAÇÃO SALVA COM SUCESSO');
+        
+        // Adicionar transação local para UI imediata
+        const newTransaction: Transaction = {
+          id: result.data.id || Date.now().toString(),
+          type: manualEntry.type,
+          description: manualEntry.description || 'Atualização manual',
+          amount: manualEntry.amount,
+          category: manualEntry.category || 'manual',
+          date: new Date().toISOString(),
+          paymentMethod: manualEntry.paymentMethod || 'manual',
+          status: 'completed'
+        };
+
+        setTransactions([newTransaction, ...transactions]);
+
+        // Atualizar dados financeiros
+        if (manualEntry.type === 'revenue') {
+          setFinancialData(prev => ({
+            ...prev,
+            totalRevenue: prev.totalRevenue + manualEntry.amount,
+            dailyRevenue: prev.dailyRevenue + manualEntry.amount,
+            monthlyRevenue: prev.monthlyRevenue + manualEntry.amount,
+            profit: prev.profit + manualEntry.amount
+          }));
+        } else {
+          setFinancialData(prev => ({
+            ...prev,
+            costs: prev.costs + manualEntry.amount,
+            profit: prev.profit - manualEntry.amount
+          }));
+        }
+
+        setManualEntry({
+          type: 'revenue',
+          description: '',
+          amount: 0,
+          category: '',
+          paymentMethod: ''
+        });
+        setShowManualEntry(false);
+        alert(manualEntry.type === 'revenue' ? 'Receita salva com sucesso!' : 'Despesa salva com sucesso!');
+      } else {
+        console.error('❌ ERRO AO SALVAR TRANSAÇÃO:', result.error);
+        alert('Erro ao salvar transação: ' + result.error);
+      }
+    } catch (error) {
+      console.error('❌ ERRO CRÍTICO AO SALVAR TRANSAÇÃO:', error);
+      alert('Erro ao salvar transação. Verifique o console para detalhes.');
+    }
   };
 
   const handleHistoricalRevenueUpdate = () => {

@@ -38,16 +38,22 @@ export default function SettingsStaffPage() {
   const loadStaff = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('🔄 CARREGANDO STAFF...');
       const response = await fetch('/api/staff');
       const result = await response.json();
       
+      console.log('📊 RESPOSTA STAFF:', result);
+      
       if (result.success) {
         setStaff(result.data || []);
+        console.log('✅ STAFF CARREGADO:', result.data?.length || 0, 'registros');
       } else {
-        console.error('Erro ao carregar staff:', result.error);
+        console.error('❌ ERRO AO CARREGAR STAFF:', result.error);
+        alert('Erro ao carregar staff: ' + result.error);
       }
     } catch (error) {
-      console.error('Erro ao carregar staff:', error);
+      console.error('❌ ERRO CRÍTICO AO CARREGAR STAFF:', error);
+      alert('Erro ao carregar staff. Verifique o console para detalhes.');
     } finally {
       setLoading(false);
     }
@@ -60,30 +66,41 @@ export default function SettingsStaffPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('📝 SUBMIT STAFF - FORM DATA:', formData);
+    
     if (!formData.name || !formData.base_salary) {
+      console.error('❌ VALIDAÇÃO FALHOU:', { name: formData.name, base_salary: formData.base_salary });
       alert('Nome e salário base são obrigatórios');
       return;
     }
 
+    const submitData = {
+      name: formData.name,
+      base_salary: parseFloat(formData.base_salary),
+      status: formData.status
+    };
+    
+    console.log('📦 DADOS A ENVIAR:', submitData);
+
     try {
       const url = editingMember ? `/api/staff/${editingMember.id}` : '/api/staff';
       const method = editingMember ? 'PUT' : 'POST';
+      
+      console.log('🌐 FAZENDO REQUEST:', { url, method, data: submitData });
       
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name,
-          base_salary: parseFloat(formData.base_salary),
-          status: formData.status
-        }),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();
+      console.log('📊 RESPOSTA SUBMIT STAFF:', result);
       
       if (result.success) {
+        console.log('✅ STAFF SALVO COM SUCESSO');
         await loadStaff();
         setShowModal(false);
         setEditingMember(null);
@@ -92,12 +109,14 @@ export default function SettingsStaffPage() {
           base_salary: '',
           status: 'active'
         });
+        alert(editingMember ? 'Funcionário atualizado!' : 'Funcionário criado!');
       } else {
+        console.error('❌ ERRO AO SALVAR FUNCIONÁRIO:', result.error);
         alert('Erro ao salvar funcionário: ' + result.error);
       }
     } catch (error) {
-      console.error('Erro ao salvar funcionário:', error);
-      alert('Erro ao salvar funcionário');
+      console.error('❌ ERRO CRÍTICO AO SALVAR FUNCIONÁRIO:', error);
+      alert('Erro ao salvar funcionário. Verifique o console para detalhes.');
     }
   };
 
@@ -116,26 +135,32 @@ export default function SettingsStaffPage() {
       return;
     }
 
+    console.log('🗑️ DELETANDO STAFF ID:', id);
+
     try {
       const response = await fetch(`/api/staff/${id}`, {
         method: 'DELETE',
       });
 
       const result = await response.json();
+      console.log('📊 RESPOSTA DELETE STAFF:', result);
       
       if (result.success) {
+        console.log('✅ STAFF DELETADO COM SUCESSO');
         await loadStaff();
+        alert('Funcionário removido!');
       } else {
+        console.error('❌ ERRO AO REMOVER FUNCIONÁRIO:', result.error);
         alert('Erro ao remover funcionário: ' + result.error);
       }
     } catch (error) {
-      console.error('Erro ao remover funcionário:', error);
-      alert('Erro ao remover funcionário');
+      console.error('❌ ERRO CRÍTICO AO REMOVER FUNCIONÁRIO:', error);
+      alert('Erro ao remover funcionário. Verifique o console para detalhes.');
     }
   };
 
   const filteredStaff = staff.filter(member =>
-    member.name.toLowerCase().includes(searchTerm.toLowerCase())
+    member && member.name && member.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
