@@ -34,13 +34,25 @@ export async function POST(request: NextRequest) {
     // Gerar número do pedido
     const orderNumber = `ORD-${Date.now()}`;
     
-    // Inserir pedido - ESTRUTURA CORRETA DA PRODUÇÃO
+    // Inserir pedido - ESTRUTURA COM METADATA JSONB
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
       .insert({
         id: crypto.randomUUID(),
         status: status || 'OPEN',
         total: total || 0,
+        table_id: tableId,
+        shift_id: null, // Será preenchido quando o turno for aberto
+        metadata: {
+          customer_name: customer_name || null,
+          customer_phone: customer_phone || null,
+          payment_method: payment_method || null,
+          table_name: `Mesa ${tableId}`,
+          created_via: 'POS',
+          items_count: items?.length || 0,
+          subtotal: subtotal || 0,
+          tax_amount: tax_amount || 0
+        },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

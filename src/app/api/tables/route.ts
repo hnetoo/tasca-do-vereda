@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('restaurant_tables')
       .insert({
-        name: name,
+        label: name,
         number: parseInt(name.replace(/\D/g, '')) || 1,
         seats: seats,
         status: status || 'AVAILABLE',
@@ -173,7 +173,7 @@ export async function PUT(request: NextRequest) {
     const { data, error } = await supabase
       .from('restaurant_tables')
       .update({
-        name: name,
+        label: name,
         number: parseInt(name.replace(/\D/g, '')) || 1,
         seats: seats,
         status: status,

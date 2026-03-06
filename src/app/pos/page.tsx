@@ -261,12 +261,12 @@ const POS = () => {
     // Auto-select Balcão logic
     if (!targetTableId) {
       // Find or create Balcão table
-      let balcao = tables.find((t: Table) => t.name?.toLowerCase().includes('balcão') || t.id === 'balcao-999');
+      let balcao = tables.find((t: Table) => t.label?.toLowerCase().includes('balcão') || t.id === 'balcao-999');
       
       if (!balcao) {
         const newTable = {
           id: 'balcao-999',
-          name: 'Balcão',
+          label: 'Balcão',
           seats: 100,
           status: 'AVAILABLE',
           x: 0,
@@ -300,7 +300,7 @@ const POS = () => {
           }
        } else {
           // Create new order
-          const tableName = tables.find((t: Table) => t.id === targetTableId)?.name || 'Mesa';
+          const tableName = tables.find((t: Table) => t.id === targetTableId)?.label || 'Mesa';
           targetOrderId = createNewOrder(targetTableId!, tableName);
           setActiveOrder(targetOrderId || null);
        }
@@ -336,9 +336,9 @@ const POS = () => {
   
   // Sort tables numerically
   const sortedTables = [...tables].sort((a, b) => {
-    const numA = parseInt(a.name?.replace(/\D/g, '') || '9999');
-    const numB = parseInt(b.name?.replace(/\D/g, '') || '9999');
-    return numA - numB || a.name?.localeCompare(b.name || '') || 0;
+    const numA = parseInt(a.label?.replace(/\D/g, '') || '9999');
+    const numB = parseInt(b.label?.replace(/\D/g, '') || '9999');
+    return numA - numB || a.label?.localeCompare(b.label || '') || 0;
   });
 
   // Encontrar todas as mesas que têm pelo menos um pedido aberto

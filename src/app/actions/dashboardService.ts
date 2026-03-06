@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/client';
 import { headers } from 'next/headers';
 
 interface DashboardData {
@@ -117,7 +117,7 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     // DEBUG: Verificar dados das orders
     if (ordersData && ordersData.length > 0) {
       console.log('📋 DADOS DAS ORDERS:');
-      ordersData.forEach((order, index) => {
+      ordersData.forEach((order: any, index: number) => {
         console.log(`  Order ${index + 1}:`, {
           id: order.id,
           status: order.status,
@@ -197,12 +197,23 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       console.error('❌ Erro ao buscar expenses:', expensesError);
     }
 
-    // 6. FOLHA SALARIAL - Tabela payroll (nome real no schema)
+    // 6. FOLHA SALARIAL - Verificar qual tabela existe primeiro
+    let payrollTableName = 'payroll';
+    const { data: tableCheck, error: tableCheckError } = await supabase
+      .from('payroll')
+      .select('id')
+      .limit(1);
+    
+    if (tableCheckError && tableCheckError.code === 'PGRST116') {
+      // Tabela payroll não existe, tentar payroll_records
+      payrollTableName = 'payroll_records';
+    }
+    
     const currentMonth = angolaTime.toISOString().slice(0, 7); // YYYY-MM
     const { data: payrollData, error: payrollError } = await supabase
-      .from('payroll')  // CORRIGIDO: usar 'payroll' em vez de 'payroll_records'
-      .select('*')
-      .eq('status_pagamento', 'pago')  // CORRIGIDO: usar coluna real 'status_pagamento'
+      .from(payrollTableName)
+      .select('staff_id, staff_name, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
+      .eq('status_pagamento', 'pago')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
@@ -210,11 +221,11 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       console.error('❌ Erro ao buscar payroll:', payrollError);
     }
 
-    // 7. FOLHA DO MÊS ATUAL - USAR TABELA CORRETA
+    // 7. FOLHA DO MÊS ATUAL
     const { data: currentMonthPayroll, error: currentMonthPayrollError } = await supabase
-      .from('payroll')  // CORRIGIDO: usar 'payroll' em vez de 'payroll_records'
-      .select('*')
-      .eq('status_pagamento', 'pago')  // CORRIGIDO: usar coluna real 'status_pagamento'
+      .from(payrollTableName)
+      .select('staff_id, staff_name, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
+      .eq('status_pagamento', 'pago')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
@@ -226,37 +237,80 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     const taxRate = 0.065; // 6.5%
 
     // VENDAS POS: Usar coluna 'total' (confirmada no schema)
-    const salesPosTotal = ordersData?.reduce((sum, order) => {
-      const amount = (order as any).total || 0;
+    const salesPosTotal = ordersData?.reduce((sum: number, order: any) => {
+      const amount = order.total || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
-    const salesPosToday = todayOrdersData?.reduce((sum, order) => {
-      const amount = (order as any).total || 0;
+    const salesPosToday = todayOrdersData?.reduce((sum: number, order: any) => {
+      const amount = order.total || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
-    const salesPosYesterday = yesterdayOrdersData?.reduce((sum, order) => {
-      const amount = (order as any).total || 0;
+    const salesPosYesterday = yesterdayOrdersData?.reduce((sum: number, order: any) => {
+      const amount = order.total || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
     // RECEITAS EXTERNAS
-    const externalRevenueTotal = externalRevenueData?.reduce((sum, revenue) => {
-      const amount = (revenue as any).amount || 0;
+    const externalRevenueTotal = externalRevenueData?.reduce((sum: number, revenue: any) => {
+      const amount = revenue.amount || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
     // DESPESAS
-    const expensesTotal = expensesData?.reduce((sum, expense) => {
-      const amount = (expense as any).amount || 0;
+    const expensesTotal = expensesData?.reduce((sum: number, expense: any) => {
+      const amount = expense.amount || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
-    // FOLHA SALARIAL
-    const payrollTotal = payrollData?.reduce((sum, payroll) => {
-      const amount = (payroll as any).amount || (payroll as any).net_total || 0;
-      return sum + (typeof amount === 'number' ? amount : 0);
+    // FOLHA SALARIAL - Incluir valores do metadata JSONB
+    const payrollTotal = payrollData?.reduce((sum: number, payroll: any) => {
+      let total = payroll.net_total || payroll.amount || 0;
+      
+      // Se não tiver net_total, calcular a partir das colunas + metadata
+      if (!payroll.net_total && payroll.base_salary) {
+        total = payroll.base_salary;
+        
+        // Adicionar subsidios tradicionais
+        if (payroll.subsidies) {
+          total += payroll.subsidies;
+        }
+        
+        // Adicionar valores do metadata
+        if (payroll.metadata) {
+          const metadata = payroll.metadata;
+          
+          // Adicionar bónus
+          if (metadata.bonus) {
+            total += metadata.bonus;
+          }
+          
+          // Adicionar hora extra
+          if (metadata.hora_extra?.total) {
+            total += metadata.hora_extra.total;
+          }
+          
+          // Adicionar subsidios do metadata
+          if (metadata.subsidios) {
+            const subsidiosValues = Object.values(metadata.subsidios);
+            total += subsidiosValues.reduce((s: number, val: any) => s + (typeof val === 'number' ? val : 0), 0);
+          }
+          
+          // Subtrair deduções tradicionais
+          if (payroll.deductions) {
+            total -= payroll.deductions;
+          }
+          
+          // Subtrair deduções do metadata
+          if (metadata.deducoes) {
+            const deducoesValues = Object.values(metadata.deducoes);
+            total -= deducoesValues.reduce((s: number, val: any) => s + (typeof val === 'number' ? val : 0), 0);
+          }
+        }
+      }
+      
+      return sum + (typeof total === 'number' ? total : 0);
     }, 0) || 0;
 
     const payrollCurrentMonth = payrollTotal; // Usar total do período em vez de mês específico
