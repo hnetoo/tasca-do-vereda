@@ -44,7 +44,7 @@ export default function SettingsStaffPage() {
   const fetchStaff = async () => {
     try {
       const { data, error } = await supabase
-        .from('restaurant_staff')
+        .from('staff')  // CORRIGIDO: usar 'staff' em vez de 'restaurant_staff'
         .select('*')
         .order('hire_date', { ascending: false });
 
@@ -68,7 +68,7 @@ export default function SettingsStaffPage() {
     if (editingStaff) {
       // Update existing staff
       const { error } = await supabase
-        .from('restaurant_staff')
+        .from('staff')  
         .update({
           name: formData.name,
           position: formData.position,
@@ -88,7 +88,7 @@ export default function SettingsStaffPage() {
     } else {
       // Create new staff
       const { error } = await supabase
-        .from('restaurant_staff')
+        .from('staff')  // CORRIGIDO: usar 'staff' em vez de 'restaurant_staff'
         .insert({
           name: formData.name,
           position: formData.position,
@@ -133,7 +133,7 @@ export default function SettingsStaffPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja remover este funcionário?')) {
       const { error } = await supabase
-        .from('restaurant_staff')
+        .from('staff')  // CORRIGIDO: usar 'staff' em vez de 'restaurant_staff'
         .delete()
         .eq('id', id);
 
