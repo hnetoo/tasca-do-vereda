@@ -176,19 +176,19 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     // CÁLCULOS
     const taxRate = 0.065; // 6.5%
 
-    // VENDAS POS: Verificar se usa total_amount ou total
+    // VENDAS POS: Usar coluna 'total' (confirmada no schema)
     const salesPosTotal = ordersData?.reduce((sum, order) => {
-      const amount = (order as any).total_amount || (order as any).total || 0;
+      const amount = (order as any).total || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
     const salesPosToday = todayOrdersData?.reduce((sum, order) => {
-      const amount = (order as any).total_amount || (order as any).total || 0;
+      const amount = (order as any).total || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
     const salesPosYesterday = yesterdayOrdersData?.reduce((sum, order) => {
-      const amount = (order as any).total_amount || (order as any).total || 0;
+      const amount = (order as any).total || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
