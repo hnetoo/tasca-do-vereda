@@ -6,8 +6,10 @@ interface DashboardData {
   sales: {
     total: number;
     today: number;
+    yesterday: number;
     count: number;
     todayCount: number;
+    growth: number;
   };
   expenses: {
     total: number;
@@ -40,9 +42,9 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
   try {
     console.log('🔍 DASHBOARD SERVICE: Calculando dados para período:', period);
     
-    // Fuso horário de Angola (UTC+1)
+    // Fuso horário de Angola (UTC+1) - FORÇADO
     const now = new Date();
-    const angolaTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (60 * 60000));
+    const angolaTime = new Date(now.getTime() + (60 * 60000)); // UTC+1
     angolaTime.setHours(0, 0, 0, 0);
     
     let startDate: Date;
@@ -70,10 +72,11 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     console.log('📅 Período calculado (Angola UTC+1):', {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      period
+      period,
+      angolaTime: angolaTime.toISOString()
     });
     
-    // 1. VENDAS - Tabela orders com status paid/completed
+    // 1. VENDAS POS - Tabela orders com status paid/completed
     const { data: ordersData, error: ordersError } = await supabase
       .from('orders')
       .select('*')
@@ -103,43 +106,24 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       console.error('❌ Erro ao buscar orders de hoje:', todayOrdersError);
     }
 
-    // 3. DESPESAS - Tabela expenses
-    const { data: expensesData, error: expensesError } = await supabase
-      .from('expenses')
-      .select('*')
-      .gte('date', startDate.toISOString().split('T')[0])
-      .lte('date', endDate.toISOString().split('T')[0])
-      .order('date', { ascending: false });
+    // 3. VENDAS DE ONTEM (para cálculo de crescimento)
+    const yesterdayStart = new Date(angolaTime);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayEnd = new Date(yesterdayStart);
+    yesterdayEnd.setHours(23, 59, 59, 999);
 
-    if (expensesError) {
-      console.error('❌ Erro ao buscar expenses:', expensesError);
+    const { data: yesterdayOrdersData, error: yesterdayOrdersError } = await supabase
+      .from('orders')
+      .select('*')
+      .in('status', ['paid', 'completed'])
+      .gte('created_at', yesterdayStart.toISOString())
+      .lte('created_at', yesterdayEnd.toISOString());
+
+    if (yesterdayOrdersError) {
+      console.error('❌ Erro ao buscar orders de ontem:', yesterdayOrdersError);
     }
 
-    // 4. FOLHA SALARIAL - Tabela payroll_records
-    const currentMonth = angolaTime.toISOString().slice(0, 7); // YYYY-MM
-    const { data: payrollData, error: payrollError } = await supabase
-      .from('payroll_records')
-      .select('*')
-      .eq('status', 'paid')
-      .gte('payment_date', startDate.toISOString())
-      .lte('payment_date', endDate.toISOString());
-
-    if (payrollError) {
-      console.error('❌ Erro ao buscar payroll_records:', payrollError);
-    }
-
-    // 5. FOLHA DO MÊS ATUAL
-    const { data: currentMonthPayroll, error: currentMonthPayrollError } = await supabase
-      .from('payroll_records')
-      .select('*')
-      .eq('status', 'paid')
-      .eq('payment_month', currentMonth);
-
-    if (currentMonthPayrollError) {
-      console.error('❌ Erro ao buscar payroll do mês:', currentMonthPayrollError);
-    }
-
-    // 6. RECEITAS EXTERNAS - Tabela revenues (que não venham de orders)
+    // 4. RECEITAS EXTERNAS - Tabela revenues (que não venham de orders)
     const { data: externalRevenueData, error: externalRevenueError } = await supabase
       .from('revenues')
       .select('*')
@@ -152,17 +136,64 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       console.error('❌ Erro ao buscar revenues externas:', externalRevenueError);
     }
 
+    // 5. DESPESAS - Tabela expenses
+    const { data: expensesData, error: expensesError } = await supabase
+      .from('expenses')
+      .select('*')
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0])
+      .order('date', { ascending: false });
+
+    if (expensesError) {
+      console.error('❌ Erro ao buscar expenses:', expensesError);
+    }
+
+    // 6. FOLHA SALARIAL - Tabela payroll_records
+    const currentMonth = angolaTime.toISOString().slice(0, 7); // YYYY-MM
+    const { data: payrollData, error: payrollError } = await supabase
+      .from('payroll_records')
+      .select('*')
+      .eq('status', 'paid')
+      .gte('payment_date', startDate.toISOString())
+      .lte('payment_date', endDate.toISOString());
+
+    if (payrollError) {
+      console.error('❌ Erro ao buscar payroll_records:', payrollError);
+    }
+
+    // 7. FOLHA DO MÊS ATUAL
+    const { data: currentMonthPayroll, error: currentMonthPayrollError } = await supabase
+      .from('payroll_records')
+      .select('*')
+      .eq('status', 'paid')
+      .eq('payment_month', currentMonth);
+
+    if (currentMonthPayrollError) {
+      console.error('❌ Erro ao buscar payroll do mês:', currentMonthPayrollError);
+    }
+
     // CÁLCULOS
     const taxRate = 0.065; // 6.5%
 
-    // VENDAS: Verificar se usa total_amount ou total
-    const salesTotal = ordersData?.reduce((sum, order) => {
+    // VENDAS POS: Verificar se usa total_amount ou total
+    const salesPosTotal = ordersData?.reduce((sum, order) => {
       const amount = (order as any).total_amount || (order as any).total || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
-    const salesToday = todayOrdersData?.reduce((sum, order) => {
+    const salesPosToday = todayOrdersData?.reduce((sum, order) => {
       const amount = (order as any).total_amount || (order as any).total || 0;
+      return sum + (typeof amount === 'number' ? amount : 0);
+    }, 0) || 0;
+
+    const salesPosYesterday = yesterdayOrdersData?.reduce((sum, order) => {
+      const amount = (order as any).total_amount || (order as any).total || 0;
+      return sum + (typeof amount === 'number' ? amount : 0);
+    }, 0) || 0;
+
+    // RECEITAS EXTERNAS
+    const externalRevenueTotal = externalRevenueData?.reduce((sum, revenue) => {
+      const amount = (revenue as any).amount || 0;
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
@@ -183,23 +214,24 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
-    // RECEITAS EXTERNAS
-    const externalRevenueTotal = externalRevenueData?.reduce((sum, revenue) => {
-      const amount = (revenue as any).amount || 0;
-      return sum + (typeof amount === 'number' ? amount : 0);
-    }, 0) || 0;
-
-    // TOTAIS FINAIS
-    const totalSales = salesTotal + externalRevenueTotal;
+    // TOTAIS FINAIS - UNIFICADO: ORDERS + REVENUES
+    const totalSales = salesPosTotal + externalRevenueTotal;
     const totalTaxes = totalSales * taxRate;
     const netProfit = totalSales - expensesTotal - payrollTotal - totalTaxes;
+
+    // CÁLCULO DE CRESCIMENTO
+    const growthPercentage = salesPosYesterday > 0 
+      ? ((salesPosToday - salesPosYesterday) / salesPosYesterday) * 100
+      : (salesPosToday > 0 ? 100 : 0);
 
     const dashboardData: DashboardData = {
       sales: {
         total: totalSales,
-        today: salesToday,
+        today: salesPosToday,
+        yesterday: salesPosYesterday,
         count: ordersData?.length || 0,
-        todayCount: todayOrdersData?.length || 0
+        todayCount: todayOrdersData?.length || 0,
+        growth: growthPercentage
       },
       expenses: {
         total: expensesTotal,

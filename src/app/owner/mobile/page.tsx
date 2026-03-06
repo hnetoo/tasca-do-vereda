@@ -1,5 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDashboardData } from '@/app/actions/dashboardService';
@@ -37,6 +40,8 @@ export default function OwnerMobilePage() {
       setError(null);
       
       console.log('📱 MOBILE: Carregando dados do dashboard...');
+      // Adicionar timestamp para evitar cache
+      const timestamp = Date.now();
       const result = await getDashboardData(period);
       
       if (result.success && result.data) {
@@ -185,6 +190,25 @@ export default function OwnerMobilePage() {
                   Hoje: {formatKwanza(dashboardData.sales.today)} ({dashboardData.sales.todayCount} pedidos)
                 </div>
               )}
+            </div>
+
+            {/* Crescimento Card */}
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4 rounded-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-purple-100">Crescimento</span>
+                <TrendingUp className="w-5 h-5 text-purple-100" />
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {dashboardData.sales.growth > 0 ? '+' : ''}{dashboardData.sales.growth.toFixed(1)}%
+              </div>
+              <div className="flex items-center gap-1 text-sm text-purple-100">
+                {dashboardData.sales.growth > 0 ? (
+                  <ArrowUpRight className="w-4 h-4 text-green-400" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 text-red-400" />
+                )}
+                <span>vs ontem</span>
+              </div>
             </div>
 
             {/* Impostos Card */}
