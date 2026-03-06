@@ -161,12 +161,13 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       console.error('❌ Erro ao buscar payroll_records:', payrollError);
     }
 
-    // 7. FOLHA DO MÊS ATUAL
+    // 7. FOLHA DO MÊS ATUAL - REMOVIDO payment_month (não existe)
     const { data: currentMonthPayroll, error: currentMonthPayrollError } = await supabase
       .from('payroll_records')
       .select('*')
       .eq('status', 'paid')
-      .eq('payment_month', currentMonth);
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString());
 
     if (currentMonthPayrollError) {
       console.error('❌ Erro ao buscar payroll do mês:', currentMonthPayrollError);
@@ -209,10 +210,7 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       return sum + (typeof amount === 'number' ? amount : 0);
     }, 0) || 0;
 
-    const payrollCurrentMonth = currentMonthPayroll?.reduce((sum, payroll) => {
-      const amount = (payroll as any).amount || (payroll as any).net_total || 0;
-      return sum + (typeof amount === 'number' ? amount : 0);
-    }, 0) || 0;
+    const payrollCurrentMonth = payrollTotal; // Usar total do período em vez de mês específico
 
     // TOTAIS FINAIS - UNIFICADO: ORDERS + REVENUES
     const totalSales = salesPosTotal + externalRevenueTotal;
