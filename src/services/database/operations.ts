@@ -1440,6 +1440,18 @@ export const databaseOperations = {
     }, 'apply database optimizations', 'DATABASE');
   },
 
+  getCategories: async (): Promise<{ success: boolean; data?: MenuCategory[]; error?: string }> => {
+    return databaseOperations._handleDatabaseOperation(async (supabase) => {
+      const { data, error } = await supabase
+        .from('menu_categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      
+      if (error) throw error;
+      return data as MenuCategory[];
+    }, 'get categories', 'DATABASE');
+  },
+
   clearAllData: async (): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         const tables = [

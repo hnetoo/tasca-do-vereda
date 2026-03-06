@@ -53,11 +53,11 @@ export default function PublicMenuPage() {
   const loadAll = async () => {
     const supabase = createClient();
     const [c, d] = await Promise.all([
-      supabase.from('menu_menu_categories').select('*').order('sort_order', { ascending: true }),
+      supabase.from('menu_categories').select('*').order('sort_order', { ascending: true }),
       supabase.from('dishes').select('*')
     ]);
     if (!c.error && c.data) {
-      const mapped = (c.data as CategoryRow[]).map(cat => ({
+      const mapped = (c.data as any[]).map(cat => ({
         ...cat,
         name: (typeof cat.name === 'string' && cat.name.trim().toLowerCase() === 'grelhoes') ? 'Grelhados' : cat.name
       }));

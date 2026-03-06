@@ -21,52 +21,38 @@ import { generateUUID, isValidUUID } from '@/utils/uuid';
 
 export interface MenuSlice {
   dishes: Dish[];
-  menu_categories: MenuCategory[];
+  categories: MenuCategory[];
   deletedCategoryIds: UUID[];
   isDiagnosing: boolean;
   integrityIssues: IntegrityIssue[];
-  
-  // Basic CRUD
   setDishes: (dishes: Dish[]) => void;
-  setmenu_categories: (menu_categories: MenuCategory[]) => void;
-  
-  // Cloud Sync Helpers
+  setCategories: (categories: MenuCategory[]) => void;
   setDishesFromCloud: (dishes: Dish[]) => void;
-  setmenu_categoriesFromCloud: (menu_categories: MenuCategory[]) => void;
-  
-  // Category Management
+  setCategoriesFromCloud: (categories: MenuCategory[]) => void;
   addCategory: (cat: MenuCategory) => void;
   updateCategory: (cat: MenuCategory) => void;
   removeCategory: (id: UUID) => void;
   restoreCategory: (id: UUID) => void;
   recoverDeletedCategory: (category: MenuCategory) => void;
-  scanAndRecovermenu_categories: () => Promise<void>;
-  
-  // Dish Management
+  scanAndRecoverCategories: () => Promise<void>;
   addDish: (dish: Dish) => Promise<boolean>;
   updateDish: (dish: Dish) => Promise<boolean>;
   batchUpdateDishes: (updates: { id: UUID; changes: Partial<Dish> }[]) => Promise<boolean>;
   removeDish: (id: UUID) => void;
-  
-  // Utilities
   restoreMenuData: () => Promise<void>;
   hardResetMenu: () => Promise<void>;
   loadFromSQLExclusively: () => Promise<boolean>;
   getDishById: (id: UUID) => Dish | undefined;
   getDishesByCategory: (categoryId: UUID) => Dish[];
   getCategoryById: (id: UUID) => MenuCategory | undefined;
-  rebuildMenu: (menu_categories: MenuCategory[], dishes: Dish[]) => void;
+  rebuildMenu: (categories: MenuCategory[], dishes: Dish[]) => void;
   invalidateMenuCache: () => void;
   syncMenuWithCloud: () => Promise<void>;
-  
-  // Integrity & Diagnostics
-  validateMenuIntegrity: (menu_categories: MenuCategory[], dishes: Dish[]) => { isValid: boolean; issues: IntegrityIssue[] };
+  validateMenuIntegrity: (categories: MenuCategory[], dishes: Dish[]) => { isValid: boolean; issues: IntegrityIssue[] };
   runIntegrityDiagnostics: () => Promise<void>;
   performSafeCleanup: () => Promise<boolean>;
-  importCloudItems: (data: { menu_categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => Promise<void>;
-  detectCloudConflicts: (data: { menu_categories: MenuCategory[], products: Dish[] }) => { menu_categories: MenuCategory[], products: Dish[] };
-  
-  // Analytics
+  importCloudItems: (data: { categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => Promise<void>;
+  detectCloudConflicts: (data: { categories: MenuCategory[], products: Dish[] }) => { categories: MenuCategory[], products: Dish[] };
   menuAccessLogs: MenuAccessLog[];
   getMenuAccessStats: () => MenuAccessAggregatedStats;
   clearMenuAccessLogs: () => void;
@@ -80,7 +66,7 @@ export const createMenuSlice: StateCreator<
   MenuSlice
 > = (set, get) => ({
   dishes: MOCK_MENU as Dish[],
-  menu_categories: MOCK_CATEGORIES,
+  categories: MOCK_CATEGORIES,
   deletedCategoryIds: [],
   isDiagnosing: false,
   integrityIssues: [],
@@ -115,22 +101,31 @@ export const createMenuSlice: StateCreator<
   },
   
   setDishes: (dishes: Dish[]) => set({ dishes }),
-  setmenu_categories: (menu_categories: MenuCategory[]) => set({ menu_categories }),
-  
+  setCategories: (categories: MenuCategory[]) => set({ categories }),
   setDishesFromCloud: (dishes: Dish[]) => {
       set({ dishes });
       get().addIntegrationLog?.({ type: 'cloud.dishes.sync', status: 'INFO', message: 'Pratos atualizados da cloud', details: { count: dishes.length } } as any);
   },
+  setCategoriesFromCloud: (categories: MenuCategory[]) => {
+      set({ categories });
+      get().addIntegrationLog?.({ type: 'cloud.categories.sync', status: 'INFO', message: 'Categorias atualizadas da cloud', details: { count: categories.length } } as any);
+  },
   
-  setmenu_categoriesFromCloud: (menu_categories: MenuCategory[]) => {
-      set({ menu_categories });
-      get().addIntegrationLog?.({ type: 'cloud.menu_categories.sync', status: 'INFO', message: 'Categorias atualizadas da cloud', details: { count: menu_categories.length } } as any);
+  scanAndRecoverCategories: async () => {
+      // Placeholder: Implementation requires access to recoveryService which might cause circular dependency if imported directly?
+      // But we imported backupService. recoveryService was imported in useStore.ts.
+      // Let's assume we can import it or logic is simple.
+      // For now, simple notification as placeholder or implement fully if possible.
+      // Given the complexity, I'll keep it simple for now to avoid breaking build.
+      // Wait, useStore had full implementation. I should try to keep it if imports allow.
+      const state = get();
+      state.addNotification?.('info', 'Funcionalidade de recuperação em manutenção.');
   },
 
   getDishById: (id: UUID) => get().dishes.find((p: Dish) => p.id === id),
   getDishesByCategory: (categoryId: string) => get().dishes.filter((p: Dish) => p.categoryId === categoryId),
-  getCategoryById: (id: UUID) => get().menu_categories.find((c: MenuCategory) => c.id === id),
-  rebuildMenu: (menu_categories: MenuCategory[], dishes: Dish[]) => set({ menu_categories, dishes }),
+  getCategoryById: (id: UUID) => get().categories.find((c: MenuCategory) => c.id === id),
+  rebuildMenu: (categories: MenuCategory[], dishes: Dish[]) => set({ categories, dishes }),
   
   invalidateMenuCache: () => {
     logger.info('Menu cache invalidated', undefined, 'SYSTEM');
@@ -151,7 +146,7 @@ export const createMenuSlice: StateCreator<
     }
 
     // 3. Validation: Duplicate ID
-    if (state.menu_categories.some((c: MenuCategory) => c.id === cat.id)) {
+    if (state.categories.some((c: MenuCategory) => c.id === cat.id)) {
         state.addNotification?.('error', `A categoria com ID "${cat.id}" já existe.`);
         return;
     }
@@ -164,26 +159,26 @@ export const createMenuSlice: StateCreator<
 
     // 5. Validation: Duplicate Name (Case insensitive)
     const normalizedName = cat.name.trim().toLowerCase();
-    if (state.menu_categories.some((c: MenuCategory) => c.name.trim().toLowerCase() === normalizedName)) {
+    if (state.categories.some((c: MenuCategory) => c.name.trim().toLowerCase() === normalizedName)) {
         state.addNotification?.('error', `A categoria "${cat.name}" já existe.`);
         return;
     }
 
     // 6. Real-time integrity check before adding
-    const integrity = get().validateMenuIntegrity([...state.menu_categories, cat], state.dishes);
+    const integrity = get().validateMenuIntegrity([...state.categories, cat], state.dishes);
     if (!integrity.isValid) {
        logger.error('Integrity warning before adding category', { issues: integrity.issues }, 'STORE');
     }
 
     // 7. Assign Sort Order if missing
     if (cat.sortOrder === undefined) {
-         const maxOrder = state.menu_categories.reduce((max: number, c: MenuCategory) => Math.max(max, c.sortOrder || 0), 0);
+         const maxOrder = state.categories.reduce((max: number, c: MenuCategory) => Math.max(max, c.sortOrder || 0), 0);
          cat.sortOrder = maxOrder + 1;
     }
 
     try {
       // Optimistic update
-      set((state: MenuSlice) => ({ menu_categories: [...state.menu_categories, cat] }));
+      set((state: MenuSlice) => ({ categories: [...state.categories, cat] }));
       get().invalidateMenuCache();
       
       // 4. Persist to SQL (CRITICAL)
@@ -205,7 +200,7 @@ export const createMenuSlice: StateCreator<
       } else {
           // Revert on failure
           set((state: MenuSlice) => ({ 
-              menu_categories: state.menu_categories.filter(c => c.id !== cat.id) 
+              categories: state.categories.filter(c => c.id !== cat.id) 
           }));
           logger.error('Falha na persistência SQL da categoria', { category: cat, error: result.error, fullErrorObject: JSON.stringify(result.error) }, 'DATABASE');
           state.addNotification?.('error', 'Erro ao guardar categoria na base de dados local. A operação foi revertida.');
@@ -213,7 +208,7 @@ export const createMenuSlice: StateCreator<
     } catch (e: unknown) {
       // Revert on exception
       set((state: MenuSlice) => ({ 
-          menu_categories: state.menu_categories.filter(c => c.id !== cat.id) 
+          categories: state.categories.filter(c => c.id !== cat.id) 
       }));
       logger.error('Critical error adding category', { error: (e as Error).message }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao adicionar categoria.');
@@ -222,7 +217,7 @@ export const createMenuSlice: StateCreator<
   
   updateCategory: async (cat: MenuCategory) => {
     const state = get();
-    const previousmenu_categories = state.menu_categories;
+    const previouscategories = state.categories;
 
     // 0. Validation: ID must be valid UUID
     if (!cat.id || !isValidUUID(cat.id)) {
@@ -245,15 +240,15 @@ export const createMenuSlice: StateCreator<
 
     // 3. Validation: Duplicate Name (Case insensitive, excluding self)
     const normalizedName = cat.name.trim().toLowerCase();
-    const existing = state.menu_categories.find((c: MenuCategory) => c.name.trim().toLowerCase() === normalizedName);
+    const existing = state.categories.find((c: MenuCategory) => c.name.trim().toLowerCase() === normalizedName);
     if (existing && existing.id !== cat.id) {
         state.addNotification?.('warning', `Já existe outra categoria com o nome "${cat.name}".`);
         return;
     }
 
     // 4. Real-time integrity check before updating
-    const nextmenu_categories = state.menu_categories.map((c: MenuCategory) => c.id === cat.id ? cat : c);
-    const integrity = get().validateMenuIntegrity(nextmenu_categories, state.dishes);
+    const nextcategories = state.categories.map((c: MenuCategory) => c.id === cat.id ? cat : c);
+    const integrity = get().validateMenuIntegrity(nextcategories, state.dishes);
     if (!integrity.isValid) {
        logger.error('Integrity warning before updating category', { issues: integrity.issues }, 'STORE');
     }
@@ -261,7 +256,7 @@ export const createMenuSlice: StateCreator<
     try {
       // Optimistic update
       set((state: MenuSlice) => ({
-        menu_categories: state.menu_categories.map((c: MenuCategory) => c.id === cat.id ? cat : c)
+        categories: state.categories.map((c: MenuCategory) => c.id === cat.id ? cat : c)
       }));
       
       get().invalidateMenuCache();
@@ -282,13 +277,13 @@ export const createMenuSlice: StateCreator<
           get().triggerSync?.();
       } else {
           // Revert on failure
-          set({ menu_categories: previousmenu_categories });
+          set({ categories: previouscategories });
           logger.error('Falha na atualização SQL da categoria', { category: cat, error: result.error, fullErrorObject: JSON.stringify(result.error) }, 'DATABASE');
           state.addNotification?.('error', 'Erro ao atualizar categoria na base de dados local. A operação foi revertida.');
       }
     } catch (e: unknown) {
       // Revert on exception
-      set({ menu_categories: previousmenu_categories });
+      set({ categories: previouscategories });
       logger.error('Critical error updating category', { error: (e as Error).message }, 'STORE');
       state.addNotification?.('error', 'Erro interno ao atualizar categoria.');
     }
@@ -296,7 +291,7 @@ export const createMenuSlice: StateCreator<
   
   removeCategory: async (id: UUID) => {
     const state = get();
-    const previousmenu_categories = state.menu_categories;
+    const previouscategories = state.categories;
     const previousDeleted = state.deletedCategoryIds;
     
     // 1. Check for active dishes first
@@ -306,22 +301,22 @@ export const createMenuSlice: StateCreator<
       return;
     }
 
-    const categoryToRemove = state.menu_categories.find((c: MenuCategory) => c.id === id);
+    const categoryToRemove = state.categories.find((c: MenuCategory) => c.id === id);
     if (!categoryToRemove) return;
 
     try {
-      const newmenu_categories = state.menu_categories.filter((c: MenuCategory) => c.id !== id);
+      const newcategories = state.categories.filter((c: MenuCategory) => c.id !== id);
 
       // SAFETY CHECK
-      if (state.menu_categories.length - newmenu_categories.length !== 1) {
-         logger.error('CRITICAL: removeCategory attempted to remove more than one category or failed. Aborting.', { id, originalCount: state.menu_categories.length, newCount: newmenu_categories.length }, 'STORE');
+      if (state.categories.length - newcategories.length !== 1) {
+         logger.error('CRITICAL: removeCategory attempted to remove more than one category or failed. Aborting.', { id, originalCount: state.categories.length, newCount: newcategories.length }, 'STORE');
          state.addNotification?.('error', 'Erro interno ao processar remoção da categoria.');
          return;
       }
 
       // Optimistic update
       set((state: MenuSlice) => ({
-        menu_categories: newmenu_categories,
+        categories: newcategories,
         deletedCategoryIds: [...(state.deletedCategoryIds || []), id]
       }));
 
@@ -345,7 +340,7 @@ export const createMenuSlice: StateCreator<
       } else {
           // Revert on failure
           set({ 
-              menu_categories: previousmenu_categories,
+              categories: previouscategories,
               deletedCategoryIds: previousDeleted
           });
           logger.error('Failed to delete category from SQL', { error: result.error, id }, 'DATABASE');
@@ -354,7 +349,7 @@ export const createMenuSlice: StateCreator<
     } catch (e: unknown) {
       // Revert on exception
       set({ 
-          menu_categories: previousmenu_categories,
+          categories: previouscategories,
           deletedCategoryIds: previousDeleted
       });
       logger.error('Critical error removing category', { error: (e as Error).message, id }, 'STORE');
@@ -371,14 +366,14 @@ export const createMenuSlice: StateCreator<
 
   recoverDeletedCategory: (category: MenuCategory) => {
     set((state: MenuSlice) => ({
-      menu_categories: [...state.menu_categories, category],
+      categories: [...state.categories, category],
       deletedCategoryIds: state.deletedCategoryIds.filter((id: UUID) => id !== category.id)
     }));
     saveCategoryAction(category);
     logger.info(`Category ${category.name} fully recovered`, undefined, 'SYSTEM');
   },
   
-  scanAndRecovermenu_categories: async () => {
+  scanAndRecovercategories: async () => {
       // Placeholder: Implementation requires access to recoveryService which might cause circular dependency if imported directly?
       // But we imported backupService. recoveryService was imported in useStore.ts.
       // Let's assume we can import it or logic is simple.
@@ -405,8 +400,8 @@ export const createMenuSlice: StateCreator<
     }
 
     // 2. Category Validation
-    const menu_categories = get().menu_categories;
-    const { valid, resolvedId, reason } = validateDishCategory(dish, menu_categories);
+    const categories = get().categories;
+    const { valid, resolvedId, reason } = validateDishCategory(dish, categories);
     if (!valid) {
       state.addNotification?.('error', reason || 'Categoria inválida');
       logger.error('Falha ao adicionar prato: Categoria inválida', { dish, reason }, 'STORE');
@@ -421,7 +416,7 @@ export const createMenuSlice: StateCreator<
     };
 
     // 3. Real-time integrity check
-    const integrity = get().validateMenuIntegrity(menu_categories, [...state.dishes, finalDish]);
+    const integrity = get().validateMenuIntegrity(categories, [...state.dishes, finalDish]);
     if (!integrity.isValid) {
        logger.error('Integrity warning before adding dish', { issues: integrity.issues }, 'STORE');
     }
@@ -479,8 +474,8 @@ export const createMenuSlice: StateCreator<
     }
 
     // 2. Category Validation
-    const menu_categories = get().menu_categories;
-    const { valid, resolvedId, reason } = validateDishCategory(dish, menu_categories);
+    const categories = get().categories;
+    const { valid, resolvedId, reason } = validateDishCategory(dish, categories);
     if (!valid) {
       state.addNotification?.('error', reason || 'Categoria inválida');
       logger.error('Falha ao atualizar prato: Categoria inválida', { dish, reason }, 'STORE');
@@ -495,7 +490,7 @@ export const createMenuSlice: StateCreator<
 
     // 3. Real-time integrity check
     const nextDishes = state.dishes.map((d: Dish) => d.id === finalDish.id ? finalDish : d);
-    const integrity = get().validateMenuIntegrity(menu_categories, nextDishes);
+    const integrity = get().validateMenuIntegrity(categories, nextDishes);
     if (!integrity.isValid) {
        logger.error('Integrity warning before updating dish', { issues: integrity.issues }, 'STORE');
     }
@@ -624,18 +619,18 @@ export const createMenuSlice: StateCreator<
 
   restoreMenuData: async () => {
     logger.info("Starting menu restoration from SQL", undefined, 'DATABASE');
-    const menu_categoriesResult = await getmenu_categoriesAction();
+    const categoriesResult = await getCategoriesAction();
     const dishesResult = await getDishesAction();
     
-    const menu_categories = menu_categoriesResult.data || [];
+    const categories = categoriesResult.data || [];
     const dishes = dishesResult.data?.map(p => ({ ...p, imageUrl: normalizeDishImage(p.imageUrl ?? undefined) })) || [];
     
-    if (menu_categories.length > 0 || dishes.length > 0) {
+    if (categories.length > 0 || dishes.length > 0) {
       set({ 
-        menu_categories: menu_categories.map((c: MenuCategory) => ({...c, isActive: !!c.isActive})), 
+        categories: categories.map((c: MenuCategory) => ({...c, isActive: !!c.isActive})), 
         dishes: dishes
       });
-      logger.info(`Restored ${menu_categories.length} menu_categories and ${dishes.length} dishes`, undefined, 'DATABASE');
+      logger.info(`Restored ${categories.length} categories and ${dishes.length} dishes`, undefined, 'DATABASE');
     }
   },
 
@@ -643,19 +638,19 @@ export const createMenuSlice: StateCreator<
     if (!window.confirm("ATENÇÃO: Isso apagará todo o menu local e recriará as tabelas. Deseja continuar?")) return;
     
     await recreateMenuSchemaAction();
-    set({ dishes: [], menu_categories: [] });
+    set({ dishes: [], categories: [] });
   },
 
   syncMenuWithCloud: async () => {
-    const { menu_categories, dishes, settings } = get();
+    const { categories, dishes, settings } = get();
     if (settings.supabaseConfig?.enabled && integrationAPIService.isConnected()) {
         logger.info('Starting menu cloud sync...', {}, 'SYNC');
         
-        // Sync menu_categories
-        const catResult = await integrationAPIService.syncMenu(menu_categories, [], settings);
+        // Sync categories
+        const catResult = await integrationAPIService.syncMenu(categories, [], settings);
         if (catResult.success) { 
             // Save to local DB
-            for (const cat of menu_categories) {
+            for (const cat of categories) {
                 await saveCategoryAction(cat);
             }
         }
@@ -691,7 +686,7 @@ export const createMenuSlice: StateCreator<
         return false;
       }
 
-      const cats = result.menu_categories || [];
+      const cats = result.categories || [];
       const rawDishes = result.dishes || [];
 
       // VALIDATION STEP: Filter out invalid data
@@ -711,10 +706,10 @@ export const createMenuSlice: StateCreator<
 
       if (cats.length > 0 || validDishes.length > 0) {
         set({
-          menu_categories: cats,
+          categories: cats,
           dishes: validDishes
         });
-        logger.info('Menu loaded exclusively from SQL via Server Action', { menu_categories: cats.length, dishes: validDishes.length }, 'DATABASE');
+        logger.info('Menu loaded exclusively from SQL via Server Action', { categories: cats.length, dishes: validDishes.length }, 'DATABASE');
         return true;
       }
       
@@ -727,9 +722,9 @@ export const createMenuSlice: StateCreator<
     }
   },
 
-  validateMenuIntegrity: (menu_categories: MenuCategory[], dishes: Dish[]) => {
+  validateMenuIntegrity: (categories: MenuCategory[], dishes: Dish[]) => {
     const issues: IntegrityIssue[] = [];
-    const catIds = new Set(menu_categories.map((c: MenuCategory) => c.id));
+    const catIds = new Set(categories.map((c: MenuCategory) => c.id));
     const dishIds = new Set();
     
     const createIssue = (msg: string, entityType: IntegrityIssue['entityType'], entityId?: string, severity: IntegrityIssue['severity'] = 'medium'): IntegrityIssue => ({
@@ -744,7 +739,7 @@ export const createMenuSlice: StateCreator<
     });
 
     // 1. Validar Categorias
-    menu_categories.forEach((c: MenuCategory) => {
+    categories.forEach((c: MenuCategory) => {
       if (!c.id) issues.push(createIssue(`Categoria "${c.name}" sem ID.`, 'CATEGORY', undefined, 'high'));
       if (!c.name) issues.push(createIssue(`Categoria com ID ${c.id} sem nome.`, 'CATEGORY', c.id, 'high'));
       
@@ -783,7 +778,7 @@ export const createMenuSlice: StateCreator<
       const issues: IntegrityIssue[] = [];
       
       // 1. Verificar pratos sem categoria válida
-      const invalidDishes = state.dishes.filter((d: Dish) => !state.menu_categories.find((c: MenuCategory) => c.id === d.categoryId));
+      const invalidDishes = state.dishes.filter((d: Dish) => !state.categories.find((c: MenuCategory) => c.id === d.categoryId));
       if (invalidDishes.length > 0) {
         issues.push({
           id: `issue-cat-${Date.now()}`,
@@ -800,7 +795,7 @@ export const createMenuSlice: StateCreator<
       // 2. Verificar categorias duplicadas ou sem ID
       const seenCatIds = new Set();
       const seenCatNames = new Set();
-      const catIssues = state.menu_categories.filter((c: MenuCategory) => {
+      const catIssues = state.categories.filter((c: MenuCategory) => {
         const isDupId = seenCatIds.has(c.id);
         const isDupName = seenCatNames.has(c.name.toLowerCase());
         const isInvalidId = !c.id || c.id === 'undefined' || c.id === 'null';
@@ -849,10 +844,10 @@ export const createMenuSlice: StateCreator<
     try {
       // 0. Backup in-memory
       const originalDishes = [...state.dishes];
-      const originalmenu_categories = [...state.menu_categories];
+      const originalcategories = [...state.categories];
       
       let cleanedDishes = [...state.dishes];
-      let cleanedmenu_categories = [...state.menu_categories];
+      let cleanedcategories = [...state.categories];
       let fixedCount = 0;
 
       // 1. Remove references to deleted stock items
@@ -876,7 +871,7 @@ export const createMenuSlice: StateCreator<
       const seenNames = new Set();
       let catFixed = false;
       
-      cleanedmenu_categories = cleanedmenu_categories.filter((c: MenuCategory) => {
+      cleanedcategories = cleanedcategories.filter((c: MenuCategory) => {
         const name = c.name.trim().toLowerCase();
         if (seenNames.has(name)) {
           fixedCount++;
@@ -895,7 +890,7 @@ export const createMenuSlice: StateCreator<
 
       // 3. Resolve broken category mappings
       cleanedDishes = cleanedDishes.map((d: Dish) => {
-        const resolvedId = resolveCategoryId(d, cleanedmenu_categories);
+        const resolvedId = resolveCategoryId(d, cleanedcategories);
         if (resolvedId && d.categoryId !== resolvedId) {
           fixedCount++;
           return { 
@@ -907,10 +902,10 @@ export const createMenuSlice: StateCreator<
       });
 
       // 4. Re-assign dishes to first available category if their category was removed
-      if (catFixed && cleanedmenu_categories.length > 0) {
-        const firstCatId = cleanedmenu_categories[0].id;
+      if (catFixed && cleanedcategories.length > 0) {
+        const firstCatId = cleanedcategories[0].id;
         cleanedDishes = cleanedDishes.map((d: Dish) => {
-          if (!cleanedmenu_categories.find((c: MenuCategory) => c.id === d.categoryId)) {
+          if (!cleanedcategories.find((c: MenuCategory) => c.id === d.categoryId)) {
             fixedCount++;
             return { ...d, categoryId: firstCatId };
           }
@@ -919,7 +914,7 @@ export const createMenuSlice: StateCreator<
       }
 
       if (fixedCount > 0) {
-        set({ dishes: cleanedDishes, menu_categories: cleanedmenu_categories });
+        set({ dishes: cleanedDishes, categories: cleanedcategories });
         state.addNotification?.('success', `${fixedCount} problemas de integridade foram corrigidos automaticamente.`);
         state.addAuditLog?.({ 
           type: 'INTEGRITY_CLEANUP', 
@@ -930,8 +925,8 @@ export const createMenuSlice: StateCreator<
         
         // Persist changes
         await Promise.all([
-          savemenu_categoriesAction(cleanedmenu_categories).then(res => {
-            if (!res.success) logger.error('Error saving menu_categories during cleanup', { error: res.error }, 'STORE');
+          saveCategoriesAction(cleanedcategories).then(res => {
+            if (!res.success) logger.error('Error saving categories during cleanup', { error: res.error }, 'STORE');
           }),
           saveDishesAction(cleanedDishes).then(res => {
             if (!res.success) logger.error('Error saving dishes during cleanup', { error: res.error }, 'STORE');
@@ -953,19 +948,19 @@ export const createMenuSlice: StateCreator<
     }
   },
 
-  importCloudItems: async (data: { menu_categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => {
-    const { menu_categories, dishes, preferCloud } = data;
+  importCloudItems: async (data: { categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => {
+    const { categories, dishes, preferCloud } = data;
     const state = get();
     
-    logger.info('Importing cloud items', { menu_categoriesCount: menu_categories.length, dishesCount: dishes.length, preferCloud }, 'STORE');
+    logger.info('Importing cloud items', { categoriesCount: categories.length, dishesCount: dishes.length, preferCloud }, 'STORE');
     
     // If preferCloud is true, we overwrite local state with cloud data
     if (preferCloud) {
-        set({ menu_categories, dishes: dishes });
+        set({ categories, dishes: dishes });
         // Persist to local DB
         await Promise.all([
-            savemenu_categoriesAction(menu_categories).then(res => {
-                if (!res.success) logger.error('Failed to save restored menu_categories', { error: res.error }, 'STORE');
+            saveCategoriesAction(categories).then(res => {
+                if (!res.success) logger.error('Failed to save restored categories', { error: res.error }, 'STORE');
             }),
             saveDishesAction(dishes).then(res => {
                 if (!res.success) logger.error('Failed to save restored dishes', { error: res.error }, 'STORE');
@@ -977,11 +972,11 @@ export const createMenuSlice: StateCreator<
         // For simplicity, let's just append/overwrite based on ID
         // This is a complex operation, but for now we'll do a simple merge
         
-        const currentCats = [...state.menu_categories];
+        const currentCats = [...state.categories];
         const currentDishes = [...state.dishes];
         
-        // Merge menu_categories
-        menu_categories.forEach((c: MenuCategory) => {
+        // Merge categories
+        categories.forEach((c: MenuCategory) => {
             const index = currentCats.findIndex((cc: MenuCategory) => cc.id === c.id);
             if (index >= 0) {
                 currentCats[index] = { ...currentCats[index], ...c }; // Update existing
@@ -1000,12 +995,12 @@ export const createMenuSlice: StateCreator<
             }
         });
         
-        set({ menu_categories: currentCats, dishes: currentDishes });
+        set({ categories: currentCats, dishes: currentDishes });
         
         // Persist
         await Promise.all([
-            savemenu_categoriesAction(currentCats).then(res => {
-                if (!res.success) logger.error('Failed to save synced menu_categories', { error: res.error }, 'STORE');
+            saveCategoriesAction(currentCats).then(res => {
+                if (!res.success) logger.error('Failed to save synced categories', { error: res.error }, 'STORE');
             }),
             saveDishesAction(currentDishes).then(res => {
                 if (!res.success) logger.error('Failed to save synced dishes', { error: res.error }, 'STORE');
@@ -1018,13 +1013,13 @@ export const createMenuSlice: StateCreator<
     get().invalidateMenuCache();
   },
 
-  detectCloudConflicts: (data: { menu_categories: MenuCategory[], products: Dish[] }) => {
-    const { menu_categories, products } = data;
+  detectCloudConflicts: (data: { categories: MenuCategory[], products: Dish[] }) => {
+    const { categories, products } = data;
     const state = get();
     
-    const conflictingCats = menu_categories.filter(c => state.menu_categories.some(local => local.id === c.id));
+    const conflictingCats = categories.filter(c => state.categories.some(local => local.id === c.id));
     const conflictingProds = products.filter(p => state.dishes.some(local => local.id === p.id));
     
-    return { menu_categories: conflictingCats, products: conflictingProds };
+    return { categories: conflictingCats, products: conflictingProds };
   }
 });

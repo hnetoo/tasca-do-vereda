@@ -30,7 +30,7 @@ export default function OwnerPage() {
     expenses: [],
     payroll: [],
     dishes: [],
-    menu_categories: []
+    categories: []
   });
   const [loadingSupabase, setLoadingSupabase] = useState(false);
   
@@ -40,7 +40,7 @@ export default function OwnerPage() {
     expenses,
     revenues,
     dishes,
-    menu_categories,
+    categories,
     settings,
     employees,
     setOrders,
@@ -110,7 +110,7 @@ export default function OwnerPage() {
           orders: [],
           expenses: [],
           dishes: supabaseData.dishes || [],
-          menu_categories: supabaseData.menu_categories || []
+          categories: supabaseData.categories || []
         });
         
         // Limpar store local também
@@ -131,14 +131,14 @@ export default function OwnerPage() {
         expenses: result.expenses || [],
         payroll: result.payroll || [],
         dishes: result.dishes || [],
-        menu_categories: result.menu_categories || []
+        categories: result.categories || []
       });
       
       console.log('✅ API data loaded for owner desktop:', {
         orders: result.orders?.length || 0,
         expenses: result.expenses?.length || 0,
         dishes: result.dishes?.length || 0,
-        menu_categories: result.menu_categories?.length || 0
+        categories: result.categories?.length || 0
       });
       
     } catch (error: any) {
@@ -199,7 +199,7 @@ export default function OwnerPage() {
         alert('✅ Produção limpa com sucesso! Backup salvo automaticamente.');
         
         // Recarregar dados
-        setSupabaseData({ orders: [], expenses: [], dishes: [], menu_categories: [] });
+        setSupabaseData({ orders: [], expenses: [], dishes: [], categories: [] });
         await loadApiData();
         
         // Mostrar resumo no console
@@ -221,7 +221,7 @@ export default function OwnerPage() {
     orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
     expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
     dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
-    menu_categories: (menu_categories?.length || 0) > 0 ? menu_categories : supabaseData.menu_categories,
+    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories,
     payroll: supabaseData.payroll || []
   };
 
@@ -235,7 +235,7 @@ export default function OwnerPage() {
       localExpenses: expenses?.length || 0,
       localRevenues: revenues?.length || 0,
       localDishes: dishes?.length || 0,
-      localmenu_categories: menu_categories?.length || 0,
+      localcategories: categories?.length || 0,
       apiOrders: supabaseData.orders.length,
       apiExpenses: supabaseData.expenses.length,
       finalOrders: currentData.orders.length,
@@ -252,7 +252,7 @@ export default function OwnerPage() {
         console.warn('⚠️ CHECK: POS may not be creating revenue records');
       }
     }
-  }, [orders, expenses, revenues, dishes, menu_categories, supabaseData.orders.length, supabaseData.expenses.length, currentData.orders.length, currentData.expenses.length]);
+  }, [orders, expenses, revenues, dishes, categories, supabaseData.orders.length, supabaseData.expenses.length, currentData.orders.length, currentData.expenses.length]);
 
   // Verificar autenticação
   useEffect(() => {
@@ -307,18 +307,22 @@ export default function OwnerPage() {
 
   // Estado para métricas calculadas
   const realtimeStats = useMemo(() => {
-    console.log('📊 Owner Stats Debug:', {
-      userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR',
-      isMobile: typeof window !== 'undefined' ? /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) : 'SSR',
-      orders: orders?.length || 0,
-      revenues: revenues?.length || 0,
-      dishes: dishes?.length || 0,
-      menu_categories: menu_categories?.length || 0,
-      sampleOrders: orders?.slice(0, 2).map(o => ({ id: o.id, total: o.total, itemsCount: o.items?.length || 0 })),
-      sampleRevenues: revenues?.slice(0, 2).map(r => ({ id: r.id, amount: r.amount, description: r.description }))
-    });
-    
-    // PRIORIDADE 1: Calcular usando revenues (dados diretos do POS)
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalizar para timezone de Luanda
+      
+      console.log('📊 Owner Stats Debug:', {
+        userAgent: typeof window !== 'undefined' ? navigator.userAgent : 'SSR',
+        isMobile: typeof window !== 'undefined' ? /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) : 'SSR',
+        orders: orders?.length || 0,
+        revenues: revenues?.length || 0,
+        dishes: dishes?.length || 0,
+        categories: categories?.length || 0,
+        sampleOrders: orders?.slice(0, 2).map(o => ({ id: o.id, total: o.total, itemsCount: o.items?.length || 0 })),
+        sampleRevenues: revenues?.slice(0, 2).map(r => ({ id: r.id, amount: r.amount, description: r.description }))
+      });
+      
+      // PRIORIDADE 1: Calcular usando revenues (dados diretos do POS)
       if (revenues && revenues.length > 0) {
         const todayRevenues = revenues.filter((revenue: any) => {
           const revenueDate = new Date(revenue.date instanceof Date ? revenue.date : new Date(revenue.date));
@@ -359,8 +363,8 @@ export default function OwnerPage() {
           growth: 0,
           pendingOrders: 0,
           averageTicket: todayRevenues.length > 0 ? todaySales / todayRevenues.length : 0
-        }
-      };
+        };
+      }
       
       // PRIORIDADE 2: Fallback para orders (se não houver revenues)
       const todayOrders = currentData.orders.filter((order: any) => {

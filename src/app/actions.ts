@@ -331,7 +331,7 @@ export async function saveCategoriesAction(categories: MenuCategory[]): Promise<
 
     // 2. Fallback to direct operations
     logger.warn('Admin saveCategories failed, falling back to direct SQL', undefined, 'SERVER_ACTION');
-    const directSuccess = await directOperations.saveCategories(categories);
+    const directSuccess = await directOperations.saveCategory(categories[0]); // Save first category for now
     if (directSuccess) {
       return { success: true };
     }

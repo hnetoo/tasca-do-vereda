@@ -91,7 +91,7 @@ export default function OwnerMobilePage() {
     orders, 
     expenses,
     dishes,
-    menu_categories,
+    categories,
     addNotification,
     settings,
     employees,

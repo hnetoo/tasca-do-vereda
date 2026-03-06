@@ -1018,7 +1018,7 @@ export const createFinanceSlice: StateCreator<
       if (menuResult.success && menuResult.data) {
          // Using 'as any' because these methods belong to other slices but are available in StoreState
          (state as any).importCloudItems({
-            categories: menuResult.data.categories,
+            categories: menuResult.data.menu_categories,
             dishes: menuResult.data.dishes,
             preferCloud: true
          });

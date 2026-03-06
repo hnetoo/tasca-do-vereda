@@ -33,7 +33,7 @@ export const recoveryService = {
         const localAuto = backupService.loadAutoBackup();
         const localManual = backupService.loadBackup();
         
-        [...(localAuto.categories || []), ...(localManual.categories || [])].forEach(cat => {
+        [...(localAuto.menu_categories || []), ...(localManual.menu_categories || [])].forEach(cat => {
             if (!foundItems.has(cat.id)) {
                 foundItems.set(cat.id, {
                     category: cat,

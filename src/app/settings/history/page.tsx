@@ -60,7 +60,7 @@ const ExternalFinanceHistory = () => {
         setRecords([]);
       } else {
         console.log('✅ [EXTERNAL FINANCE] Registros buscados com sucesso:', data?.length || 0);
-        setRecords(data || []);
+        setRecords((data || []) as ExternalFinanceRecord[]);
       }
     } catch (err) {
       console.error('❌ [EXTERNAL FINANCE] Erro inesperado:', err);
@@ -86,13 +86,14 @@ const ExternalFinanceHistory = () => {
       const { error } = await supabase
         .from('external_finance')
         .insert({
+          id: Math.random().toString(36).substr(2, 9),
           type: formData.type,
           amount: formData.amount,
           description: formData.description || null,
           period_start: formData.period_start || null,
           period_end: formData.period_end || null,
           metadata: { source: 'manual_import' }
-        });
+        } as any);
 
       if (error) {
         console.error('❌ [EXTERNAL FINANCE] Erro ao salvar registro:', error);
