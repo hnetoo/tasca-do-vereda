@@ -77,6 +77,12 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     });
     
     // 1. VENDAS POS - Tabela orders com status paid/completed
+    console.log('🔍 Buscando orders com período:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      status: ['paid', 'completed']
+    });
+    
     const { data: ordersData, error: ordersError } = await supabase
       .from('orders')
       .select('*')
@@ -84,6 +90,12 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString())
       .order('created_at', { ascending: false });
+
+    console.log('📊 Orders encontradas:', {
+      count: ordersData?.length || 0,
+      data: ordersData,
+      error: ordersError
+    });
 
     if (ordersError) {
       console.error('❌ Erro ao buscar orders:', ordersError);
