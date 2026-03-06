@@ -1,9 +1,8 @@
-import { createBrowserClient } from '@supabase/ssr';
-import { isTauri, supabaseUrl, supabaseAnonKey } from './config';
-import { SafeLock } from './SafeLock';
-import { Database } from '../../types/supabase';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { isTauri, supabaseUrl, supabaseAnonKey } from './config'
+import { SafeLock } from './SafeLock'
 
-let supabaseBrowserClient: ReturnType<typeof createBrowserClient<Database>> | undefined;
+let supabaseBrowserClient: ReturnType<typeof createSupabaseClient> | undefined;
 let isCreating = false;
 
 export function createClient() {
@@ -33,7 +32,7 @@ export function createClient() {
         subscribe: () => ({ unsubscribe: () => {} })
       })
     };
-    return dummy as unknown as ReturnType<typeof createBrowserClient<Database>>;
+    return dummy as unknown as ReturnType<typeof createSupabaseClient>;
   }
   
   isCreating = true;
@@ -60,14 +59,14 @@ export function createClient() {
         subscribe: () => ({ unsubscribe: () => {} })
       })
     };
-    supabaseBrowserClient = dummy as unknown as ReturnType<typeof createBrowserClient<Database>>;
+    supabaseBrowserClient = dummy as unknown as ReturnType<typeof createSupabaseClient>;
   } else {
     try {
       console.log('🆕 [SUPABASE] Creating new browser client');
       console.log('🔍 [SUPABASE] URL:', url);
       console.log('🔑 [SUPABASE] Key:', key ? '***DEFINED***' : 'UNDEFINED');
       
-      supabaseBrowserClient = createBrowserClient<Database>(url, key, {
+      supabaseBrowserClient = createSupabaseClient(url, key, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
@@ -122,7 +121,7 @@ export function createClient() {
           'apikey': key
         }
       };
-      return dummy as unknown as ReturnType<typeof createBrowserClient<Database>>;
+      return dummy as unknown as ReturnType<typeof createSupabaseClient>;
     }
   }
   

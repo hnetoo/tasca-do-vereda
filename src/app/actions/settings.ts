@@ -220,7 +220,7 @@ export async function fetchRemoteCategoriesAction(config: any, search?: string):
     if (!config?.url || !config?.key) throw new Error('Configuração Supabase inválida');
     
     const supabase = createClient(config.url, config.key);
-    let query = supabase.from('categories').select('*');
+    let query = supabase.from('menu_categories').select('*');
     
     if (search) {
       query = query.ilike('name', `%${search}%`);
@@ -271,7 +271,7 @@ export async function setupRLSAction(config: any): Promise<{ success: boolean; m
     if (!config?.url || !config?.key) throw new Error('Configuração Supabase inválida');
     
     const supabase = createClient(config.url, config.key);
-    const { error } = await supabase.from('categories').select('id').limit(1);
+    const { error } = await supabase.from('menu_categories').select('id').limit(1);
     
     if (error) {
        if (error.code === 'PGRST301' || error.message.includes('permission')) {
@@ -332,9 +332,9 @@ export async function captureFullStateAction(): Promise<{ success: boolean; data
   try {
     const dbConfig = await getStoredDatabaseConfig();
     
-    if (dbConfig?.type === 'postgres' && dbConfig?.connectionString) {
+    if (dbConfig?.type === 'postgres' && (dbConfig as any)?.connectionString) {
        serverLog('Starting full state capture from Postgres', null, 'BACKUP');
-       const sql = postgres(dbConfig.connectionString, { ssl: { rejectUnauthorized: false } });
+       const sql = postgres((dbConfig as any).connectionString || '', { ssl: { rejectUnauthorized: false } });
        
        try {
            const tablesResult = await sql`
@@ -375,7 +375,7 @@ export async function restoreFullStateAction(state: any): Promise<{ success: boo
   try {
     const dbConfig = await getStoredDatabaseConfig();
     
-    if (dbConfig?.type === 'postgres' && dbConfig?.connectionString) {
+    if ((dbConfig as any)?.type === 'postgres' && (dbConfig as any)?.connectionString) {
         // Restore to Postgres is complex due to FKs.
         // For now, we will log a warning that this is not fully supported via this action yet.
         serverLog('Restore to Postgres requested but not fully implemented', null, 'BACKUP');

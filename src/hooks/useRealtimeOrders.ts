@@ -14,7 +14,7 @@ export function useRealtimeOrders() {
           schema: 'public',
           table: 'orders' // Nome da tabela
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Nova mudança em orders recebida!', payload);
           setOrders((current) => {
             if (payload.eventType === 'INSERT') {

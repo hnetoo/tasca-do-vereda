@@ -20,25 +20,22 @@ export async function saveShiftsAction(shifts: CashShift[]) {
 
 export async function clearFinancialDataAction(userId: UUID, reason: string) {
   try {
-    // We need to implement the logic that was in financeSlice
-    // await executeQuery('DELETE FROM order_items');
-    // await executeQuery('DELETE FROM orders');
-    // ...
+    // Using databaseOperations for raw SQL execution
+    const { supabase } = await import('@/lib/supabase');
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabaseClient = await createClient();
     
-    // Using a transaction would be better, but executeQuery doesn't support it directly across calls easily without a connection object.
-    // However, the original code used sequential executeQuery.
-    
-    await executeQuery('BEGIN TRANSACTION');
+    await executeQuery(supabaseClient, 'BEGIN TRANSACTION');
     try {
-        await executeQuery('DELETE FROM order_items');
-        await executeQuery('DELETE FROM orders');
-        await executeQuery('DELETE FROM expenses');
-        await executeQuery('DELETE FROM revenues');
-        await executeQuery('DELETE FROM payroll_records');
-        await executeQuery('DELETE FROM cash_shifts');
+        await executeQuery(supabaseClient, 'DELETE FROM order_items');
+        await executeQuery(supabaseClient, 'DELETE FROM orders');
+        await executeQuery(supabaseClient, 'DELETE FROM expenses');
+        await executeQuery(supabaseClient, 'DELETE FROM revenues');
+        await executeQuery(supabaseClient, 'DELETE FROM payroll');
+        await executeQuery(supabaseClient, 'DELETE FROM cash_shifts');
         
-        // Log the clearance
-        await executeQuery('INSERT INTO system_logs (id, action, details, user_id, timestamp) VALUES (?, ?, ?, ?, ?)', [
+        // Log clearance
+        await executeQuery(supabaseClient, 'INSERT INTO system_logs (id, action, details, user_id, timestamp) VALUES (?, ?, ?, ?, ?)', [
             `log-${Date.now()}`,
             'FINANCIAL_CLEARANCE',
             `Limpeza de dados financeiros. Motivo: ${reason}`,
@@ -46,10 +43,10 @@ export async function clearFinancialDataAction(userId: UUID, reason: string) {
             new Date().toISOString()
         ]);
         
-        await executeQuery('COMMIT');
+        await executeQuery(supabaseClient, 'COMMIT');
         return { success: true };
     } catch (e) {
-        await executeQuery('ROLLBACK');
+        await executeQuery(supabaseClient, 'ROLLBACK');
         throw e;
     }
   } catch (error: any) {
@@ -60,27 +57,31 @@ export async function clearFinancialDataAction(userId: UUID, reason: string) {
 
 export async function correctPaymentAction(orderId: UUID, userId: UUID, reason: string, newPayments: OrderPayment[]) {
   try {
-    await executeQuery('BEGIN TRANSACTION');
+    const { supabase } = await import('@/lib/supabase');
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabaseClient = await createClient();
+    
+    await executeQuery(supabaseClient, 'BEGIN TRANSACTION');
     try {
         // Delete old payments
-        await executeQuery('DELETE FROM order_payments WHERE order_id = ?', [orderId]);
+        await executeQuery(supabaseClient, 'DELETE FROM order_payments WHERE order_id = ?', [orderId]);
         
         // Insert new payments
         for (const payment of newPayments) {
-            await executeQuery('INSERT INTO order_payments (id, order_id, method, amount, timestamp) VALUES (?, ?, ?, ?, ?)', 
+            await executeQuery(supabaseClient, 'INSERT INTO order_payments (id, order_id, method, amount, timestamp) VALUES (?, ?, ?, ?, ?)', 
                 [payment.id || `pay-${Date.now()}`, orderId, payment.method, payment.amount, payment.timestamp || new Date().toISOString()]
             );
         }
         
         // Log correction
-        await executeQuery('INSERT INTO payment_corrections (id, order_id, user_id, reason, type, timestamp, data) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        await executeQuery(supabaseClient, 'INSERT INTO payment_corrections (id, order_id, user_id, reason, type, timestamp, data) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [`corr-${Date.now()}`, orderId, userId, reason, 'PAYMENT_UPDATE', new Date().toISOString(), JSON.stringify(newPayments)]
         );
         
-        await executeQuery('COMMIT');
+        await executeQuery(supabaseClient, 'COMMIT');
         return { success: true };
     } catch (e) {
-        await executeQuery('ROLLBACK');
+        await executeQuery(supabaseClient, 'ROLLBACK');
         throw e;
     }
   } catch (error: any) {

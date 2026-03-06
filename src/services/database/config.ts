@@ -5,8 +5,8 @@ const stored = getStoredDatabaseConfigSync();
 
 export const dbConfig = {
   type: stored.type,
-  connectionString: stored.connectionString || process.env.DATABASE_URL,
-  database: stored.connectionString || process.env.DATABASE_URL || 'tasca-postgres',
+  connectionString: (stored as any).connectionString || process.env.DATABASE_URL,
+  database: (stored as any).connectionString || process.env.DATABASE_URL || 'tasca-postgres',
   tables: [
     'menu_categories',
     'dishes',

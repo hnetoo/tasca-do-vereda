@@ -27,7 +27,7 @@ export const useTables = () => {
           schema: 'public',
           table: 'tables'
         },
-        (payload) => {
+        (payload: any) => {
           logger.info('Realtime table change', payload, 'DATABASE');
           fetchTables();
         }

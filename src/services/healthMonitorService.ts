@@ -3,7 +3,7 @@ import { dlpAlertService } from './dlpAlertService';
 import { performSelfCheckAction } from '@/app/actions/health';
 import { executeQuery } from '../services/database/operations';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '../database.types';
+import { createClient } from '@/lib/supabase/client';
 
 export interface SystemHealthReport {
   timestamp: string;
@@ -223,7 +223,8 @@ class HealthMonitorService {
         WHERE NOT pg_locks.granted
           AND pg_locks.pid != pg_backend_pid();
       `;
-      const locks = await executeQuery(lockQuery);
+      const supabase = createClient();
+      const locks = await executeQuery(supabase, lockQuery);
 
       if (locks && (locks as any[]).length > 0) {
         logger.warn('Database locks detected:', { locks }, 'HealthMonitorService');
@@ -249,7 +250,7 @@ class HealthMonitorService {
         JOIN pg_stat_activity AS blocking ON blocking_locks.pid = blocking.pid
         WHERE activity.waiting = true;
       `;
-      const deadlocks = await executeQuery(deadlockQuery);
+      const deadlocks = await executeQuery(supabase, deadlockQuery);
 
       if (deadlocks && (deadlocks as any[]).length > 0) {
         logger.error('Potential database deadlocks or severe contention detected:', { deadlocks }, 'HealthMonitorService');

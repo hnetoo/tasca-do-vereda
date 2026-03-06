@@ -18,6 +18,10 @@ if (typeof window === 'undefined' && !supabaseServiceRoleKey) {
 // If not, fallback to Anon Key (Subject to RLS)
 const keyToUse = (typeof window === 'undefined' && supabaseServiceRoleKey) ? supabaseServiceRoleKey : supabaseAnonKey;
 
+// NOTA DO DESENVOLVEDOR: Este é um cliente de administração para fins especiais, para uso no lado do servidor
+// em operações que precisam contornar o RLS (Row Level Security).
+// Para todas as interações normais com a base de dados no lado do cliente,
+// por favor, use o cliente Supabase centralizado exportado de '@/lib/supabase'.
 export const supabaseAdmin = supabaseUrl && keyToUse 
     ? createClient(supabaseUrl, keyToUse, {
         auth: {

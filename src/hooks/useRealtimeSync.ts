@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { RealtimePayload } from '@/types';
 import { useStore } from '@/store/useStore';
+import { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 
 export const useRealtimeSync = <T = any>(
   table: string,
@@ -28,7 +29,7 @@ export const useRealtimeSync = <T = any>(
             table: table,
             filter: `${filter.column}=eq.${filter.value}`,
           },
-          (payload) => {
+          (payload: any) => {
             console.log(`Mudança real-time em ${table} (filtrado por ${filter.column}=${filter.value}):`, payload);
             callback(payload as unknown as RealtimePayload<T>);
           }
@@ -38,15 +39,19 @@ export const useRealtimeSync = <T = any>(
         .channel(`realtime-${table}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: table },
-          (payload) => {
+          { 
+            event: '*',
+            schema: 'public',
+            table: table,
+          },
+          (payload: any) => {
             console.log(`Mudança real-time em ${table}:`, payload);
             callback(payload as unknown as RealtimePayload<T>);
           }
         );
     }
 
-    channel.subscribe((status) => {
+    channel.subscribe((status: REALTIME_SUBSCRIBE_STATES) => {
       if (status === 'SUBSCRIBED') {
         console.log(`Conectado ao Realtime: ${table}${filter ? ` (filtrado por ${filter.column}=${filter.value})` : ''}`);
         setSaveStatus('IDLE');

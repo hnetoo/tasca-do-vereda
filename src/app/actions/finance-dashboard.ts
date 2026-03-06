@@ -1,19 +1,33 @@
 import { createClient } from '@/lib/supabase/client';
 
+interface RevenueRow {
+  amount: number;
+}
+
+interface ExpenseRow {
+  amount: number;
+}
+
+interface TransactionRow {
+  amount: number;
+  description: string;
+  payment_method: string;
+}
+
 export async function getTodayRevenue() {
   try {
   const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('revenues')
-      .select('amount')
-      .eq('date', new Date().toISOString().split('T')[0]); // Assuming date is stored as 'YYYY-MM-DD'
+  const { data, error } = await supabase
+    .from('revenues')
+    .select('amount')
+    .eq('date', new Date().toISOString().split('T')[0]); // Assuming date is stored as 'YYYY-MM-DD'
 
-    if (error) {
-      throw error;
-    }
+  if (error) {
+    throw error;
+  }
 
-    const total = data.reduce((sum, row) => sum + (row.amount || 0), 0);
-    return Number(total);
+  const total = data.reduce((sum: number, row: RevenueRow) => sum + (row.amount || 0), 0);
+  return Number(total);
   } catch (error) {
     console.error('Error fetching today revenue:', error);
     return 0;
@@ -23,17 +37,17 @@ export async function getTodayRevenue() {
 export async function getTodayExpenses() {
   try {
   const supabase = await createClient();
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('amount')
-      .eq('date', new Date().toISOString().split('T')[0]); // Assuming date is stored as 'YYYY-MM-DD'
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('amount')
+    .eq('date', new Date().toISOString().split('T')[0]); // Assuming date is stored as 'YYYY-MM-DD'
 
-    if (error) {
-      throw error;
-    }
+  if (error) {
+    throw error;
+  }
 
-    const total = data.reduce((sum, row) => sum + (row.amount || 0), 0);
-    return Number(total);
+  const total = data.reduce((sum: number, row: ExpenseRow) => sum + (row.amount || 0), 0);
+  return Number(total);
   } catch (error) {
     console.error('Error fetching today expenses:', error);
     return 0;

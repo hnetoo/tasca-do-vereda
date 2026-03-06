@@ -129,9 +129,13 @@ export const adminOperations = {
             pin: employee.pin || null,
             email: employee.email || null,
             phone: employee.phone || null,
-            active: employee.active ?? true,
+            is_active: employee.isActive ?? true,
             updated_at: new Date().toISOString(),
-            permissions: employee.permissions || null
+            // Mapeamento de propriedades camelCase para snake_case
+            permissions: employee.permissions || null,
+            admission_date: employee.admissionDate || (employee as any).admission_date,
+            social_security_number: employee.socialSecurityNumber || (employee as any).social_security_number,
+            bank_account: employee.bankAccount || (employee as any).bank_account
         };
 
         const { error } = await supabaseAdmin
@@ -332,26 +336,27 @@ export const adminOperations = {
   saveTable: async (table: Table): Promise<{ success: boolean; error?: string }> => {
       if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
       try {
-          const { error } = await supabaseAdmin.from('restaurant_tables').upsert({
+          const dbTable = {
               id: table.id,
+              number: table.number,
+              name: table.name,
               label: table.label || `Mesa ${table.number}`,
-              number: table.number || 1,
-              seats: table.seats || 4,
-              x: table.x || 0,
-              y: table.y || 0,
+              seats: table.seats,
+              status: table.status || 'AVAILABLE',
+              x: table.x,
+              y: table.y,
               width: table.width,
               height: table.height,
+              zone: table.zone,
               shape: table.shape,
               rotation: table.rotation,
+              group_id: table.groupId,
               color: table.color,
-              status: table.status || 'AVAILABLE',
-              zone: table.zone,
-              is_active: table.is_active ?? true,
-              group_id: table.group_id,
-              user_id: table.user_id,
-              created_at: table.created_at,
+              user_id: table.userId,
+              is_active: table.isActive ?? true,
               updated_at: new Date().toISOString()
-          });
+          };
+          const { error } = await supabaseAdmin.from('restaurant_tables').upsert(dbTable);
           if (error) throw error;
           return { success: true };
       } catch (error: any) {
@@ -375,15 +380,17 @@ export const adminOperations = {
   saveCustomer: async (customer: Customer): Promise<{ success: boolean; error?: string }> => {
       if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
       try {
-          const { error } = await supabaseAdmin.from('customers').upsert({
+          const dbCustomer = {
               id: customer.id,
               name: customer.name,
               nif: customer.nif || null,
               email: customer.email || null,
               phone: customer.phone || null,
               address: customer.address || null,
+              created_at: customer.createdAt || (customer as any).created_at || new Date().toISOString(),
               updated_at: new Date().toISOString()
-          });
+          };
+          const { error } = await supabaseAdmin.from('customers').upsert(dbCustomer);
           if (error) throw error;
           return { success: true };
       } catch (error: any) {
@@ -610,39 +617,6 @@ export const adminOperations = {
 
       console.log('✅ Order saved successfully:', data);
 
-      // 2. SALVAR OS ITENS DO PEDIDO (OrderItems) - APENAS COLUNAS EXISTENTES
-      if (order.items && order.items.length > 0) {
-        console.log('🛒 Saving order items:', order.items.length);
-        
-        const orderItems = order.items.map((item) => ({
-          id: item.id || uuidv4(),
-          order_id: order.id,
-          dish_id: item.dishId,
-          quantity: item.quantity,
-          unit_price: item.unit_price || item.price,
-          tax_percentage: 0.065, // 6.5%
-          tax_amount: (item.unit_price || item.price || 0) * 0.065 * (item.quantity || 1),
-          tax_code: 'IVA',
-          notes: item.notes || '',
-          status: item.status || 'pending'
-          // REMOVIDAS: created_at, updated_at, sort_order, total_price (não existem)
-        }));
-
-        console.log('📦 OrderItems to save:', orderItems);
-
-        const { data: itemsData, error: itemsError } = await supabaseAdmin
-          .from('order_items')
-          .upsert(orderItems)
-          .select();
-
-        if (itemsError) {
-          console.log('❌ OrderItems insert error:', itemsError);
-          throw itemsError;
-        }
-
-        console.log('✅ OrderItems saved successfully:', itemsData);
-      }
-
       return { success: true };
     } catch (error: any) {
       console.log('❌ Error saving order:', error.message);
@@ -664,7 +638,7 @@ export const adminOperations = {
         return (data || []).map((t: any) => ({
             id: t.id,
             number: t.number,
-            name: t.name || `Mesa ${t.number}`, // Provide default name if missing
+            name: t.name || `Mesa ${t.number}`,
             seats: t.seats,
             x: t.x,
             y: t.y,
@@ -673,14 +647,14 @@ export const adminOperations = {
             shape: t.shape,
             rotation: t.rotation,
             color: t.color,
-            status: t.status || 'LIVRE',
+            status: t.status || 'AVAILABLE',
             zone: t.zone,
-            is_active: t.is_active ?? true,
-            group_id: t.group_id,
+            isActive: t.is_active ?? true,
+            groupId: t.group_id,
             label: t.label,
-            user_id: t.user_id,
-            updated_at: t.updated_at,
-            created_at: t.created_at || t.updated_at || new Date().toISOString(), // Provide fallback
+            userId: t.user_id,
+            updatedAt: t.updated_at,
+            createdAt: t.created_at || t.updated_at || new Date().toISOString(),
             activeOrderIds: []
         }));
     } catch (error: any) {
@@ -697,7 +671,7 @@ export const adminOperations = {
             name: item.name,
             quantity: item.quantity,
             unit: item.unit,
-            min_threshold: item.minThreshold ?? (item as any).min_threshold,
+            min_threshold: item.minThreshold,
             updated_at: new Date().toISOString()
         };
         const { error } = await supabaseAdmin.from('stock_items').upsert(dbItem);
@@ -746,32 +720,32 @@ export const adminOperations = {
     try {
         const dbSettings = {
             id: settings.id,
-            restaurant_name: settings.restaurantName,
+            name: settings.name,
+            restaurant_name: settings.restaurantName || (settings as any).restaurant_name,
             nif: settings.nif,
             address: settings.address,
             phone: settings.phone,
             email: settings.email,
-            tax_percentage: settings.taxPercentage,
+            tax_percentage: settings.taxPercentage || (settings as any).tax_percentage,
             currency: settings.currency,
             timezone: settings.timezone,
             language: settings.language,
-            supabase_config: settings.supabaseConfig,
-            printer_config: settings.printerConfig,
-            backup_config: settings.backupConfig,
-            app_logo_url: settings.appLogoUrl,
-            agt_certificate: settings.agtCertificate,
-            open_drawer_code: settings.openDrawerCode,
-            admin_pin: settings.adminPin,
-            api_token: settings.apiToken,
-            wifi_name: settings.wifi_name,
-            wifi_password: settings.wifi_password,
-            qr_code_title: settings.qr_code_title,
-            qr_code_subtitle: settings.qr_code_subtitle,
-            qr_code_short_code: settings.qr_code_short_code,
-            qr_menu_url: settings.qr_menu_url,
-            qr_menu_cloud_url: settings.qr_menu_cloud_url,
-            logo_url: settings.logo_url,
-            name: settings.name,
+            supabase_config: settings.supabaseConfig || (settings as any).supabase_config,
+            printer_config: settings.printerConfig || (settings as any).printer_config,
+            backup_config: settings.backupConfig || (settings as any).backup_config,
+            app_logo_url: settings.appLogoUrl || (settings as any).app_logo_url,
+            agt_certificate: settings.agtCertificate || (settings as any).agt_certificate,
+            open_drawer_code: settings.openDrawerCode || (settings as any).open_drawer_code,
+            admin_pin: settings.adminPin || (settings as any).admin_pin,
+            api_token: settings.apiToken || (settings as any).api_token,
+            wifi_name: settings.wifi_name || (settings as any).wifi_name,
+            wifi_password: settings.wifi_password || (settings as any).wifi_password,
+            qr_code_title: settings.qr_code_title || (settings as any).qr_code_title,
+            qr_code_subtitle: settings.qr_code_subtitle || (settings as any).qr_code_subtitle,
+            qr_code_short_code: settings.qr_code_short_code || (settings as any).qr_code_short_code,
+            qr_menu_url: settings.qr_menu_url || (settings as any).qr_menu_url,
+            qr_menu_cloud_url: settings.qr_menu_cloud_url || (settings as any).qr_menu_cloud_url,
+            logo_url: settings.logo_url || (settings as any).logo_url,
             updated_at: new Date().toISOString()
         };
 

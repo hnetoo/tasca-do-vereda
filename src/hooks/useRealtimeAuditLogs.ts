@@ -14,7 +14,7 @@ export function useRealtimeAuditLogs() {
           schema: 'public',
           table: 'audit_logs' // Nome da tabela
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Nova mudança em audit_logs recebida!', payload);
           setAuditLogs((current) => {
             // Lógica para atualizar o estado com base no tipo de evento

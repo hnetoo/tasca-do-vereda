@@ -8,6 +8,9 @@ import { MenuCategory, Dish, Order, Expense, Revenue, StockItem, Fornecedor, Use
 
 // We need to define BackupData here or import it from a shared place that is not backupService.ts to avoid circular deps or importing client code.
 // Looking at backupService.ts, BackupData uses types from '@/types'.
+
+// Import server client for executeQuery
+import { createClient } from '@/lib/supabase/server';
 // Let's copy the interface for now to be safe, or check if it's exported from types.
 // The file backupService.ts exports it.
 
@@ -53,8 +56,11 @@ export async function importBackupAction(backup: BackupData): Promise<{ success:
     }
 
     try {
+        // Get server client
+        const supabase = await createClient();
+        
         // Start Transaction
-        await executeQuery('BEGIN TRANSACTION');
+        await executeQuery(supabase, 'BEGIN TRANSACTION');
 
         // 1. Import Categories
         if (backup.data.categories && backup.data.categories.length > 0) {
@@ -116,19 +122,25 @@ export async function importBackupAction(backup: BackupData): Promise<{ success:
         }
 
         // Commit Transaction
-        await executeQuery('COMMIT');
+        await executeQuery(supabase, 'COMMIT');
         
         report.endTime = Date.now();
         logger.info('Backup import completed successfully', report, 'BACKUP');
         
         // Trigger Cloud Sync if enabled - we can't easily access client-side service here.
-        // But we can return a flag to tell the client to sync.
+        // But we can return a flag to tell client to sync.
         
         return { success: true, report };
 
     } catch (error: any) {
-        // Rollback Transaction
-        await executeQuery('ROLLBACK');
+        // Rollback Transaction - need to get client again for catch block
+        try {
+            const supabase = await createClient();
+            await executeQuery(supabase, 'ROLLBACK');
+        } catch (rollbackError: any) {
+            logger.error('Failed to rollback transaction', { error: rollbackError.message }, 'BACKUP');
+        }
+        
         logger.error('Backup import failed, rolled back', { error: error.message }, 'BACKUP');
         report.errors.push(error.message);
         report.endTime = Date.now();

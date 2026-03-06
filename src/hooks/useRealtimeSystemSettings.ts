@@ -14,7 +14,7 @@ export function useRealtimeSystemSettings() {
           schema: 'public',
           table: 'system_settings' // Nome da tabela
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Nova mudança em system_settings recebida!', payload);
           setSystemSettings((current) => {
             if (payload.eventType === 'INSERT') {

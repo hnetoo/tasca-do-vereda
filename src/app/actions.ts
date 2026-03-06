@@ -1,7 +1,6 @@
 'use server';
 
 import { databaseOperations } from '@/services/database/operations';
-import { directOperations } from '@/services/database/directOperations';
 import { adminOperations } from '@/services/database/adminOperations';
 import { SystemSettings, Fornecedor, Employee, AttendanceRecord, Dish, MenuCategory, UUID } from '@/types';
 import { logger } from '@/services/logger';
@@ -136,19 +135,8 @@ export async function saveCategoryAction(category: MenuCategory): Promise<{ succ
       return { success: true };
     }
 
-    logger.warn('Admin saveCategory failed, falling back to direct SQL', { error: result.error, categoryId: category.id }, 'SERVER_ACTION');
-    const directResult = await directOperations.saveCategory(category);
-    if (directResult.success) {
-      return { success: true };
-    }
-
-    const errorToLog = { 
-      message: result.error || directResult.error || 'Operation returned false',
-      adminError: result.error,
-      directError: directResult.error
-    };
-    logger.error('Failed to save category via server action', { error: errorToLog, categoryId: category.id }, 'SERVER_ACTION');
-    return { success: false, error: { message: JSON.stringify(errorToLog) } };
+    logger.warn('Admin saveCategory failed', { error: result.error, categoryId: category.id }, 'SERVER_ACTION');
+    return { success: false, error: result.error ? { message: result.error } : undefined };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     console.error('❌ saveCategoryAction: Exceção:', errorToLog);
@@ -213,20 +201,8 @@ export async function saveDishAction(dish: Dish): Promise<{ success: boolean; er
       return { success: true };
     }
 
-    // 2. Fallback to direct operations (Postgres) if admin fails
-    logger.warn('Admin saveDish failed, falling back to direct SQL', { error: result.error, dishId: dish.id }, 'SERVER_ACTION');
-    const directResult = await directOperations.saveDish(dish);
-    if (directResult.success) {
-      return { success: true };
-    }
-
-    const errorToLog = { 
-      message: result.error || directResult.error || 'Operation returned false',
-      adminError: result.error,
-      directError: directResult.error
-    };
-    logger.error('Failed to save dish via server action (both admin and direct)', { error: errorToLog, dishId: dish.id }, 'SERVER_ACTION');
-    return { success: false, error: { message: JSON.stringify(errorToLog) } };
+    logger.warn('Admin saveDish failed', { error: result.error, dishId: dish.id }, 'SERVER_ACTION');
+    return { success: false, error: result.error ? { message: result.error } : undefined };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     console.error('❌ saveDishAction: Exceção:', errorToLog);
@@ -252,15 +228,8 @@ export async function deleteDishAction(id: UUID): Promise<{ success: boolean; er
       return { success: true };
     }
 
-    logger.warn('Admin deleteDish failed, falling back to direct SQL', { error: result.error }, 'SERVER_ACTION');
-    const directResult = await directOperations.deleteDish(id);
-    if (directResult.success) {
-      return { success: true };
-    }
-
-    const errorToLog = { message: result.error || directResult.error || 'Operation returned false' };
-    logger.error('Failed to delete dish via server action', { error: errorToLog }, 'SERVER_ACTION');
-    return { success: false, error: errorToLog };
+    logger.warn('Admin deleteDish failed', { error: result.error }, 'SERVER_ACTION');
+    return { success: false, error: result.error ? { message: result.error } : undefined };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception deleting dish via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -324,21 +293,13 @@ export async function recreateMenuSchemaAction(): Promise<{ success: boolean; er
 export async function saveCategoriesAction(categories: MenuCategory[]): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
   try {
     // 1. Try admin operations (Supabase Service Role)
-    const success = await adminOperations.saveCategories(categories);
-    if (success) {
+    const result = await adminOperations.saveCategories(categories);
+    if (result) {
       return { success: true };
     }
 
-    // 2. Fallback to direct operations
-    logger.warn('Admin saveCategories failed, falling back to direct SQL', undefined, 'SERVER_ACTION');
-    const directSuccess = await directOperations.saveCategory(categories[0]); // Save first category for now
-    if (directSuccess) {
-      return { success: true };
-    }
-
-    const errorToLog = { message: 'Operation returned false (both admin and direct)' };
-    logger.error('Failed to save categories via server action', { error: errorToLog }, 'SERVER_ACTION');
-    return { success: false, error: errorToLog };
+    logger.warn('Admin saveCategories failed', undefined, 'SERVER_ACTION');
+    return { success: false, error: { message: 'Admin operation failed' } };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception saving categories via server action', { error: errorToLog }, 'SERVER_ACTION');
@@ -354,16 +315,8 @@ export async function saveDishesAction(dishes: Dish[]): Promise<{ success: boole
       return { success: true };
     }
 
-    // 2. Fallback to direct operations
-    logger.warn('Admin saveDishes failed, falling back to direct SQL', undefined, 'SERVER_ACTION');
-    const directSuccess = await directOperations.saveDishes(dishes);
-    if (directSuccess) {
-      return { success: true };
-    }
-
-    const errorToLog = { message: 'Operation returned false (both admin and direct)' };
-    logger.error('Failed to save dishes via server action', { error: errorToLog }, 'SERVER_ACTION');
-    return { success: false, error: errorToLog };
+    logger.warn('Admin saveDishes failed', undefined, 'SERVER_ACTION');
+    return { success: false, error: { message: 'Admin operation failed' } };
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? { message: error.message, stack: error.stack } : { message: String(error) };
     logger.error('Exception saving dishes via server action', { error: errorToLog }, 'SERVER_ACTION');

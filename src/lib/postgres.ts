@@ -16,11 +16,14 @@ if (connectionString) {
   });
 } else {
   // Mock sql for local_storage mode to prevent crash on import
-  // But throw error if used
+  // But throw error if used.
+  // NOTA DO DESENVOLVEDOR: A aplicação agora usa o cliente Supabase JS como única fonte de verdade.
+  // Conexões diretas ao Postgres devem ser evitadas. Utilize o cliente de '@/lib/supabase'.
   sql = ((...args: any[]) => {
     throw new Error('Database not configured. Please set up SQL Driver in Settings.');
   }) as unknown as postgres.Sql<any, any>;
   // Mock methods like begin, etc. if needed
+  // @ts-ignore
   (sql as any).begin = async () => { throw new Error('Database not configured. Please set up SQL Driver in Settings.'); };
 }
 

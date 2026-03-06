@@ -35,13 +35,13 @@ export async function GET(request: Request) {
       .eq('table_schema', 'public')
       .eq('table_name', 'menu_categories');
     
-    // Tentar acessar a tabela 'categories' diretamente
+    // Tentar acessar a tabela 'menu_categories' diretamente
     let categoriesData = null;
     let categoriesDirectError = null;
     
     try {
       const { data, error } = await supabaseAdmin
-        .from('categories')
+        .from('menu_categories')
         .select('*')
         .limit(1);
       
@@ -51,22 +51,6 @@ export async function GET(request: Request) {
       categoriesDirectError = e.message;
     }
     
-    // Tentar acessar a tabela 'menu_categories' diretamente
-    let menuCategoriesData = null;
-    let menuCategoriesDirectError = null;
-    
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('menu_categories')
-        .select('*')
-        .limit(1);
-      
-      menuCategoriesData = data;
-      menuCategoriesDirectError = error;
-    } catch (e: any) {
-      menuCategoriesDirectError = e.message;
-    }
-    
     return NextResponse.json({
       categoryTables: categoryTables || [],
       categoriesTable: categoriesTable || [],
@@ -74,10 +58,6 @@ export async function GET(request: Request) {
       categoriesDirectAccess: {
         data: categoriesData,
         error: categoriesDirectError?.message || categoriesDirectError
-      },
-      menuCategoriesDirectAccess: {
-        data: menuCategoriesData,
-        error: menuCategoriesDirectError?.message || menuCategoriesDirectError
       },
       errors: {
         categoryError: categoryError?.message,
