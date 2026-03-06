@@ -8,13 +8,13 @@ export async function getOwnerMobileData(cacheParam?: string) {
   try {
     console.log('🔍 MOBILE SERVER ACTION: Buscando dados do banco...', cacheParam);
     
-    // CARREGAR REVENUES (TABELA CORRETA PARA VENDAS)
-    const { data: revenuesData, error: revenuesError } = await supabase
-      .from('revenues')
+    // CARREGAR ORDERS - COMO NO PC
+    const { data: ordersData, error: ordersError } = await supabase
+      .from('orders')
       .select('*')
-      .order('date', { ascending: false });
+      .order('created_at', { ascending: false });
 
-    console.log('🔍 MOBILE SERVER ACTION: Revenues encontrados:', revenuesData?.length || 0);
+    console.log('🔍 MOBILE SERVER ACTION: Orders encontrados:', ordersData?.length || 0);
 
     // Carregar expenses - BUSCAR TODOS OS CAMPOS
     const { data: expensesData, error: expensesError } = await supabase
@@ -46,13 +46,13 @@ export async function getOwnerMobileData(cacheParam?: string) {
 
     return {
       success: true,
-      revenues: revenuesData || [],  // TROCAR ORDERS POR REVENUES
+      orders: ordersData || [],  // VOLTAR PARA ORDERS COMO NO PC
       expenses: expensesData || [],
       payroll: payrollData || [],
       dishes: dishesData || [],
       categories: categoriesData || [],
       errors: {
-        revenues: revenuesError ? String(revenuesError) : null,  // TROCAR ORDERS POR REVENUES
+        orders: ordersError ? String(ordersError) : null,  // VOLTAR PARA ORDERS COMO NO PC
         expenses: expensesError ? String(expensesError) : null,
         payroll: payrollError ? String(payrollError) : null,
         dishes: dishesError ? String(dishesError) : null,
@@ -64,7 +64,7 @@ export async function getOwnerMobileData(cacheParam?: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-      revenues: [],  // TROCAR ORDERS POR REVENUES
+      orders: [],  // VOLTAR PARA ORDERS COMO NO PC
       expenses: [],
       payroll: [],
       dishes: [],

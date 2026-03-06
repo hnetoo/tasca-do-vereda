@@ -42,7 +42,7 @@ export default function OwnerMobilePage() {
   const [showAccumulatedSales, setShowAccumulatedSales] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [supabaseData, setSupabaseData] = useState<any>({
-    revenues: [],  // TROCAR ORDERS POR REVENUES
+    orders: [],  // VOLTAR PARA ORDERS COMO NO PC
     expenses: [],
     payroll: [],
     dishes: [],
@@ -88,14 +88,14 @@ export default function OwnerMobilePage() {
   
   // Dados em tempo real do store local
   const { 
-    revenues,  
+    orders,  // VOLTAR PARA ORDERS COMO NO PC
     expenses,
     dishes,
     categories,
     addNotification,
     employees,
     payroll,
-    setRevenues,  
+    setOrders,  // VOLTAR PARA ORDERS COMO NO PC
     setExpenses
   } = useStore();
 
@@ -120,20 +120,20 @@ export default function OwnerMobilePage() {
       const data = await getOwnerMobileData(`?v=${timestamp}`);
       
       console.log('📱 MOBILE: Dados recebidos:', {
-        revenuesCount: data.revenues?.length || 0,  
+        ordersCount: data.orders?.length || 0,  // VOLTAR PARA ORDERS COMO NO PC
         expensesCount: data.expenses?.length || 0,
         payrollCount: data.payroll?.length || 0,
         timestamp: new Date().toISOString(),
-        // Debug detalhado dos revenues - TABELA CORRETA
-        sampleRevenues: data.revenues?.slice(0, 3).map(r => ({
-          id: r.id,
-          amount: r.amount,  
-          date: r.date,
-          description: r.description
+        // Debug detalhado dos orders - COMO NO PC
+        sampleOrders: data.orders?.slice(0, 3).map(o => ({
+          id: o.id,
+          total: o.total,  // COLUNA CORRETA COMO NO PC
+          created_at: o.created_at,
+          status: o.status
         })),
         // Verificar se há valores diferentes de zero
-        hasRevenue: data.revenues?.some(r => (r.amount || 0) > 0),
-        totalRevenue: data.revenues?.reduce((sum, r) => sum + (r.amount || 0), 0)
+        hasRevenue: data.orders?.some(o => (o.total || 0) > 0),
+        totalRevenue: data.orders?.reduce((sum, o) => sum + (o.total || 0), 0)
       });
       
       setSupabaseData(data);
@@ -160,14 +160,14 @@ export default function OwnerMobilePage() {
 
   // Combinar dados locais com dados do Supabase
   const currentData = useMemo(() => {
-    const allRevenues = [...(revenues || []), ...(supabaseData.revenues || [])];  
+    const allOrders = [...(orders || []), ...(supabaseData.orders || [])];  // VOLTAR PARA ORDERS COMO NO PC
     const allExpenses = [...(expenses || []), ...(supabaseData.expenses || [])];
     const allPayroll = [...(payroll || []), ...(supabaseData.payroll || [])];
     
     console.log('🔥 STORE VS API (MOBILE):', { 
-      store: revenues.length,  
-      api: supabaseData.revenues?.length || 0,
-      finalRevenues: allRevenues.length,  
+      store: orders.length,  // VOLTAR PARA ORDERS COMO NO PC
+      api: supabaseData.orders?.length || 0,
+      finalOrders: allOrders.length,  // VOLTAR PARA ORDERS COMO NO PC
       storeExpenses: expenses.length,
       apiExpenses: supabaseData.expenses?.length || 0,
       finalExpenses: allExpenses.length,
@@ -177,11 +177,11 @@ export default function OwnerMobilePage() {
     });
     
     return {
-      revenues: allRevenues,  
+      orders: allOrders,  // VOLTAR PARA ORDERS COMO NO PC
       expenses: allExpenses,
       payroll: allPayroll
     };
-  }, [revenues, expenses, payroll, supabaseData]);  
+  }, [orders, expenses, payroll, supabaseData]);  // VOLTAR PARA ORDERS COMO NO PC
 
   // Cálculos financeiros
   const calculations = useSafeCardCalculations(currentData, period);
@@ -189,7 +189,7 @@ export default function OwnerMobilePage() {
   // Filtrar por período
   const filteredData = useMemo(() => {
     return {
-      revenues: currentData.revenues,  
+      orders: currentData.orders,  // VOLTAR PARA ORDERS COMO NO PC
       expenses: currentData.expenses,
       payroll: currentData.payroll
     };
@@ -198,8 +198,8 @@ export default function OwnerMobilePage() {
   // Cálculos do período
   const periodCalculations = useSafeCardCalculations(filteredData, period);
   
-  // Cálculo manual forçado para garantir valores corretos - USAR REVENUES
-  const manualRevenue = filteredData.revenues.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);  
+  // Cálculo manual forçado para garantir valores corretos - EXATAMENTE COMO NO PC
+  const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);  // VOLTAR PARA ORDERS COMO NO PC
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   
   // Adicionar dados externos ao total
@@ -224,26 +224,26 @@ export default function OwnerMobilePage() {
   todayEnd.setHours(23, 59, 59, 999); // Fim do dia
   
   // REMOVIDO FILTRO DE DATA - MOSTRAR TUDO PARA TESTE
-  // const todayRevenues = filteredData.revenues.filter((revenue: any) => {
-  //   const revenueDate = new Date(revenue.date);
+  // const todayOrders = filteredData.orders.filter((order: any) => {
+  //   const orderDate = new Date(order.created_at);
   //   // Normalizar para timezone de Luanda
-  //   revenueDate.setHours(0, 0, 0, 0);
-  //   return revenueDate.getTime() === today.getTime();
+  //   orderDate.setHours(0, 0, 0, 0);
+  //   return orderDate.getTime() === today.getTime();
   // });
   
-  const todayRevenues = filteredData.revenues; // TODOS OS REVENUES - SEM FILTRO
+  const todayOrders = filteredData.orders; // TODOS OS ORDERS - SEM FILTRO
   
-  const todayRevenue = todayRevenues.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);  
+  const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);  // VOLTAR PARA ORDERS COMO NO PC
   
   // Vendas acumuladas (total desde o início - NUNCA ZERA)
   const accumulatedRevenue = grandTotalRevenue; // Incluir dados externos
   
   // Data do primeiro registro para mostrar "desde quando"
-  const firstRevenueDate = filteredData.revenues.length > 0  
-    ? new Date(Math.min(...filteredData.revenues.map((r: any) => new Date(r.date).getTime())))
+  const firstOrderDate = filteredData.orders.length > 0  // VOLTAR PARA ORDERS COMO NO PC
+    ? new Date(Math.min(...filteredData.orders.map((o: any) => new Date(o.created_at).getTime())))
     : new Date();
   
-  const daysSinceStart = Math.floor((today.getTime() - firstRevenueDate.getTime()) / (1000 * 60 * 60 * 24));  
+  const daysSinceStart = Math.floor((today.getTime() - firstOrderDate.getTime()) / (1000 * 60 * 60 * 24));  // VOLTAR PARA ORDERS COMO NO PC
   
   // Cálculo de impostos (6,5% sobre o total de vendas)
   const taxRate = 0.065; // 6.5%
@@ -263,11 +263,11 @@ export default function OwnerMobilePage() {
     totalTaxes,
     taxRate: `${(taxRate * 100)}%`,
     todayRevenue,
-    todayOrdersCount: todayRevenues.length,
+    todayOrdersCount: todayOrders.length,
     accumulatedRevenue,
     daysSinceStart,
-    firstOrderDate: firstRevenueDate.toLocaleDateString('pt-AO'),
-    revenuesCount: filteredData.revenues.length,  
+    firstOrderDate: firstOrderDate.toLocaleDateString('pt-AO'),
+    ordersCount: filteredData.orders.length,  // VOLTAR PARA ORDERS COMO NO PC
     expensesCount: filteredData.expenses.length,
     payrollCount: filteredData.payroll.length
   });
@@ -295,7 +295,7 @@ export default function OwnerMobilePage() {
       
       if (result.success) {
         addNotification('✅ Dados resetados com sucesso!', 'success');
-        setRevenues([]);  
+        setOrders([]),  // VOLTAR PARA ORDERS COMO NO PC
         setExpenses([]);
         await loadApiData();
       } else {
@@ -415,7 +415,7 @@ export default function OwnerMobilePage() {
           <div className="text-2xl font-bold">{displayValues.revenue}</div>
           <div className="flex items-center gap-1 text-sm text-green-100">
             <ArrowUpRight className="w-4 h-4" />
-            <span>{filteredData.revenues.length} vendas</span>
+            <span>{filteredData.orders.length} vendas</span>
           </div>
         </div>
 
@@ -454,7 +454,7 @@ export default function OwnerMobilePage() {
           <div className="text-2xl font-bold">{displayValues.todayRevenue}</div>
           <div className="flex items-center gap-1 text-sm text-indigo-100">
             <Clock className="w-4 h-4" />
-            <span>{todayRevenues.length} pedidos hoje</span>
+            <span>{todayOrders.length} pedidos hoje</span>
           </div>
         </div>
 
@@ -467,7 +467,7 @@ export default function OwnerMobilePage() {
           <div className="text-2xl font-bold">{displayValues.accumulatedRevenue}</div>
           <div className="flex items-center gap-1 text-sm text-purple-100">
             <TrendingUp className="w-4 h-4" />
-            <span>Desde {firstRevenueDate.toLocaleDateString('pt-AO')}</span>
+            <span>Desde {firstOrderDate.toLocaleDateString('pt-AO')}</span>
           </div>
           <div className="text-xs text-purple-80 mt-1">
             ({daysSinceStart} dias de operação)
@@ -539,20 +539,20 @@ export default function OwnerMobilePage() {
           
           {showHistory && (
             <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
-              {filteredData.revenues.length === 0 ? (
+              {filteredData.orders.length === 0 ? (
                 <div className="text-center text-gray-400 py-4">
                   Nenhuma venda encontrada
                 </div>
               ) : (
-                filteredData.revenues.map((revenue: any, index: number) => (
-                  <div key={revenue.id || index} className="bg-gray-700 p-3 rounded-lg">
+                filteredData.orders.map((order: any, index: number) => (
+                  <div key={order.id || index} className="bg-gray-700 p-3 rounded-lg">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="text-white font-medium">
-                          {revenue.description || `Venda #${index + 1}`}
+                          Pedido #{index + 1}
                         </div>
                         <div className="text-gray-400 text-sm">
-                          {new Date(revenue.date).toLocaleString('pt-AO', {
+                          {new Date(order.created_at).toLocaleString('pt-AO', {
                             day: '2-digit',
                             month: '2-digit',
                             hour: '2-digit',
@@ -560,13 +560,13 @@ export default function OwnerMobilePage() {
                           })}
                         </div>
                         <div className="text-gray-500 text-xs">
-                          Tipo: {revenue.type || 'Venda'}
+                          Mesa: {order.table_id || 'N/A'}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-green-400">{formatKwanza(revenue.amount || 0)}</div>
+                        <div className="text-lg font-bold text-green-400">{formatKwanza(order.total || 0)}</div>
                         <div className="text-gray-400 text-xs">
-                          {revenue.category || 'Receita'}
+                          +{formatKwanza(order.tax_total || 0)} imposto
                         </div>
                       </div>
                     </div>
