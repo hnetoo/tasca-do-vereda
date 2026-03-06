@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { headers } from 'next/headers';
 
 interface DashboardData {
   sales: {
@@ -37,6 +38,13 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
   data?: DashboardData;
   error?: string;
 }> {
+  // Detectar se é mobile vs PC
+  const requestHeaders = await headers();
+  const userAgent = requestHeaders.get('user-agent') || '';
+  const isMobile = userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone');
+  
+  console.log('📱 DETECÇÃO:', { userAgent: userAgent.substring(0, 100), isMobile });
+  
   const supabase = await createClient();
   
   try {
@@ -80,8 +88,12 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     console.log('🔍 Buscando orders com período:', {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      status: ['paid', 'completed']
+      status: ['paid', 'completed'],
+      isMobile: isMobile
     });
+    
+    // FORÇAR CACHE-BUSTING NO MOBILE com timestamp único
+    const cacheBuster = isMobile ? `&_t=${Date.now()}` : '';
     
     const { data: ordersData, error: ordersError } = await supabase
       .from('orders')
