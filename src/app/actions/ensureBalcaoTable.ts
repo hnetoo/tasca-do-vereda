@@ -8,11 +8,11 @@ export async function ensureBalcaoTable() {
   try {
     console.log('🔍 Verificando mesa Balcão...');
     
-    // Verificar se já existe mesa Balcão
+    // Verificar se já existe mesa Balcão (usar 'number' em vez de 'name')
     const { data: existingTable, error: fetchError } = await supabase
       .from('restaurant_tables')
       .select('*')
-      .eq('name', 'Balcão')
+      .eq('number', 999)
       .single();
     
     if (fetchError && fetchError.code !== 'PGRST116') {
@@ -25,20 +25,14 @@ export async function ensureBalcaoTable() {
       return { success: true, table: existingTable };
     }
     
-    // Criar mesa Balcão se não existir
+    // Criar mesa Balcão se não existir (apenas colunas existentes)
     const balcaoTable = {
       id: 'balcao-999',
-      name: 'Balcão',
-      seats: 100,
-      status: 'AVAILABLE',
-      posicao_x: 0,
-      posicao_y: 0,
-      zone: 'INTERIOR',
-      shape: 'RECTANGLE',
-      rotation: 0,
       number: 999,
-      is_active: true,
-      color: '#f59e0b' // orange-500
+      status: 'AVAILABLE',
+      x: 0,
+      y: 0,
+      zone: 'INTERIOR'
     };
     
     const { data: newTable, error: insertError } = await supabase

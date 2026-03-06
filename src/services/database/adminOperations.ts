@@ -577,7 +577,7 @@ export const adminOperations = {
           customer_nif: order.customer_nif || null,
           payment_method: order.payment_method || null,
           sub_account_name: order.sub_account_name || null,
-          shift_id: order.shift_id || order.shiftId || null,
+          // REMOVIDO: shift_id (causa foreign key violation)
           closed_at: order.closed_at || null,
           created_at: order.createdAt || order.created_at || new Date().toISOString(),
           updated_at: new Date().toISOString(),
