@@ -1,5 +1,7 @@
 'use client';
 
+export const revalidate = 0;
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
@@ -190,7 +192,7 @@ export default function OwnerMobilePage() {
   const periodCalculations = useSafeCardCalculations(filteredData, period);
   
   // Cálculo manual forçado para garantir valores corretos
-  const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+  const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total_amount || o.total || 0), 0);
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   
   // Adicionar dados externos ao total
@@ -221,7 +223,7 @@ export default function OwnerMobilePage() {
     return orderDate.getTime() === today.getTime();
   });
   
-  const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+  const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total_amount || o.total || 0), 0);
   
   // Vendas acumuladas (total desde o início - NUNCA ZERA)
   const accumulatedRevenue = grandTotalRevenue; // Incluir dados externos
@@ -552,7 +554,7 @@ export default function OwnerMobilePage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-green-400">{formatKwanza(order.total || 0)}</div>
+                        <div className="text-lg font-bold text-green-400">{formatKwanza(order.total_amount || order.total || 0)}</div>
                         <div className="text-gray-400 text-xs">
                           +{formatKwanza(order.tax_total || 0)} imposto
                         </div>
