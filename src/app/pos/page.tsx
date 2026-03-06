@@ -26,6 +26,7 @@ import { getSQLiteClient, ensureSqliteSchema } from '@/lib/sqlite';
 import { supabaseService } from '@/services/supabaseService';
 import { databaseOperations } from '@/services/database/operations';
 import { ensureBalcaoTable } from '@/app/actions/ensureBalcaoTable';
+import DebugCart from './debug_cart';
 
 
 const POS = () => {
@@ -144,7 +145,7 @@ const POS = () => {
   const GRID_SIZE = 10;
   const GRID_ROWS = 8;
 
-  const currentOrder = activeOrders?.find((o: Order) => o.id === activeOrderId);
+  const currentOrder = activeOrderId ? activeOrders.find((o: Order) => o.id === activeOrderId) : null;
   const activeTable = tables?.find((t: Table) => t.id === activeTableId);
 
   // Validate activeTableId on mount and updates
@@ -1469,7 +1470,7 @@ const POS = () => {
                                         : 'bg-white/10 border-white/10 text-slate-300 hover:border-primary/50 hover:bg-primary/20 hover:text-white'}
                                     `}
                                   >
-                                     <span className="font-black text-xs uppercase tracking-tighter truncate w-full text-center">{table.name}</span>
+                                     <span className="font-black text-xs uppercase tracking-tighter truncate w-full text-center">{table.label}</span>
                                      {isActive && (
                                        <span className="text-[10px] font-mono font-bold text-red-300 bg-red-950/50 px-1.5 py-0.5 rounded">{formatKz(tableTotal)}</span>
                                      )}
@@ -1750,7 +1751,7 @@ const POS = () => {
                                    <td className="p-4 font-mono text-sm text-white">{order.invoiceNumber || 'N/A'}</td>
                                    <td className="p-4 text-sm text-slate-300">{new Date((order as any).createdAt || (order as any).created_at || 0).toLocaleTimeString('pt-AO', {hour: '2-digit', minute:'2-digit'})}</td>
                                    <td className="p-4 text-sm text-slate-300">
-                                      <div className="font-bold text-white">{table?.name || 'Balcão'}</div>
+                                      <div className="font-bold text-white">{table?.label || 'Balcão'}</div>
                                       <div className="text-[10px] opacity-50">{order.subAccountName}</div>
                                    </td>
                                    <td className="p-4 text-sm font-mono font-bold text-primary text-right">{formatKz(order.total || 0)}</td>
@@ -2053,7 +2054,7 @@ const POS = () => {
             <div className="mb-8 p-6 bg-red-500/10 border border-red-500/30 rounded-2xl">
               <p className="text-red-400 text-sm font-bold mb-2">Aviso!</p>
               <p className="text-slate-300 text-sm">
-                Tem a certeza que deseja fechar <strong>{activeTable?.name}</strong>{openOrdersForTable.length > 0 && ` com ${openOrdersForTable.length} ${openOrdersForTable.length === 1 ? 'conta ativa' : 'contas ativas'}`}? A mesa voltará a estar <strong>LIVRE</strong> imediatamente.
+                Tem a certeza que deseja fechar <strong>{activeTable?.label}</strong>{openOrdersForTable.length > 0 && ` com ${openOrdersForTable.length} ${openOrdersForTable.length === 1 ? 'conta ativa' : 'contas ativas'}`}? A mesa voltará a estar <strong>LIVRE</strong> imediatamente.
               </p>
             </div>
 
@@ -2342,9 +2343,17 @@ const POS = () => {
           </div>
         </div>
       )}
+      
+      {/* Debug Cart - apenas em desenvolvimento */}
+      {process.env.NODE_ENV === 'development' && <DebugCart />}
     </div>
   );
 };
+
+// Adicionar componente de debug em desenvolvimento
+if (process.env.NODE_ENV === 'development') {
+  POS.displayName = 'POS';
+}
 
 export default POS;
 
