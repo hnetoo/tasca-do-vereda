@@ -8,7 +8,7 @@ export async function GET() {
     const data = await getOwnerMobileData();
     
     console.log('🔍 DEBUG: Mobile data result:', {
-      orders: data.orders?.length || 0,
+      revenues: data.revenues?.length || 0,
       expenses: data.expenses?.length || 0,
       payroll: data.payroll?.length || 0,
       dishes: data.dishes?.length || 0,
@@ -22,9 +22,9 @@ export async function GET() {
       data,
       timestamp: new Date().toISOString(),
       debug: {
-        ordersCount: data.orders?.length || 0,
+        revenuesCount: data.revenues?.length || 0,
         expensesCount: data.expenses?.length || 0,
-        sampleOrders: data.orders?.slice(0, 3),
+        sampleRevenues: data.revenues?.slice(0, 3),
         sampleExpenses: data.expenses?.slice(0, 3)
       }
     });
