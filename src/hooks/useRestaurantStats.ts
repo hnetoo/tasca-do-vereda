@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getOwnerMobileData } from '@/app/actions/ownerMobile';
 
 interface RestaurantData {
-  orders: any[];
+  revenues: any[];
   expenses: any[];
   payroll: any[];
   dishes: any[];
@@ -15,7 +15,7 @@ interface RestaurantData {
 
 export const useRestaurantStats = () => {
   const [data, setData] = useState<RestaurantData>({
-    orders: [],
+    revenues: [],
     expenses: [],
     payroll: [],
     dishes: [],
@@ -42,7 +42,7 @@ export const useRestaurantStats = () => {
       }
       
       console.log('✅ useRestaurantStats: Data loaded successfully:', {
-        orders: result.orders?.length || 0,
+        revenues: result.revenues?.length || 0,
         expenses: result.expenses?.length || 0,
         payroll: result.payroll?.length || 0,
         dishes: result.dishes?.length || 0,
@@ -50,7 +50,7 @@ export const useRestaurantStats = () => {
       });
       
       setData({
-        orders: result.orders || [],
+        revenues: result.revenues || [],
         expenses: result.expenses || [],
         payroll: result.payroll || [],
         dishes: result.dishes || [],
