@@ -172,24 +172,24 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       console.error('❌ Erro ao buscar expenses:', expensesError);
     }
 
-    // 6. FOLHA SALARIAL - Tabela payroll_records
+    // 6. FOLHA SALARIAL - Tabela payroll (nome real no schema)
     const currentMonth = angolaTime.toISOString().slice(0, 7); // YYYY-MM
     const { data: payrollData, error: payrollError } = await supabase
-      .from('payroll_records')
+      .from('payroll')  // CORRIGIDO: usar 'payroll' em vez de 'payroll_records'
       .select('*')
-      .eq('status', 'paid')
-      .gte('payment_date', startDate.toISOString())
-      .lte('payment_date', endDate.toISOString());
+      .eq('status_pagamento', 'pago')  // CORRIGIDO: usar coluna real 'status_pagamento'
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString());
 
     if (payrollError) {
-      console.error('❌ Erro ao buscar payroll_records:', payrollError);
+      console.error('❌ Erro ao buscar payroll:', payrollError);
     }
 
-    // 7. FOLHA DO MÊS ATUAL - REMOVIDO payment_month (não existe)
+    // 7. FOLHA DO MÊS ATUAL - USAR TABELA CORRETA
     const { data: currentMonthPayroll, error: currentMonthPayrollError } = await supabase
-      .from('payroll_records')
+      .from('payroll')  // CORRIGIDO: usar 'payroll' em vez de 'payroll_records'
       .select('*')
-      .eq('status', 'paid')
+      .eq('status_pagamento', 'pago')  // CORRIGIDO: usar coluna real 'status_pagamento'
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
