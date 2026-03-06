@@ -83,14 +83,14 @@ export default function MenuDigital() {
   }, [categories, isOnline, categoriesLoading, updateCache]);
 
   // Determine which data to use
-  const menuData = isOnline && categories ? { categories } : (offlineMenu || { categories: [] });
+  const menuData = isOnline && categories ? { menu_categories: categories } : (offlineMenu || { menu_categories: [] });
   const loading = isOnline ? categoriesLoading : offlineLoading;
 
   // Extrair produtos das categorias em tempo real
   const products = useMemo(() => {
     const allProducts: Product[] = [];
-    if (menuData && menuData.categories && Array.isArray(menuData.categories)) {
-      menuData.categories.forEach((category: any) => {
+    if (menuData && menuData.menu_categories && Array.isArray(menuData.menu_categories)) {
+      menuData.menu_categories.forEach((category: any) => {
         if (category.dishes) {
           category.dishes.forEach((dish: any) => {
             allProducts.push(mapToProduct(dish));

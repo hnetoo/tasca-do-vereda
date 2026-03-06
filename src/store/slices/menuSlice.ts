@@ -21,18 +21,18 @@ import { generateUUID, isValidUUID } from '@/utils/uuid';
 
 export interface MenuSlice {
   dishes: Dish[];
-  categories: MenuCategory[];
+  menu_categories: MenuCategory[];
   deletedCategoryIds: UUID[];
   isDiagnosing: boolean;
   integrityIssues: IntegrityIssue[];
   
   // Basic CRUD
   setDishes: (dishes: Dish[]) => void;
-  setCategories: (categories: MenuCategory[]) => void;
+  setmenu_categories: (menu_categories: MenuCategory[]) => void;
   
   // Cloud Sync Helpers
   setDishesFromCloud: (dishes: Dish[]) => void;
-  setCategoriesFromCloud: (categories: MenuCategory[]) => void;
+  setmenu_categoriesFromCloud: (menu_categories: MenuCategory[]) => void;
   
   // Category Management
   addCategory: (cat: MenuCategory) => void;
@@ -40,7 +40,7 @@ export interface MenuSlice {
   removeCategory: (id: UUID) => void;
   restoreCategory: (id: UUID) => void;
   recoverDeletedCategory: (category: MenuCategory) => void;
-  scanAndRecoverCategories: () => Promise<void>;
+  scanAndRecovermenu_categories: () => Promise<void>;
   
   // Dish Management
   addDish: (dish: Dish) => Promise<boolean>;
@@ -80,7 +80,7 @@ export const createMenuSlice: StateCreator<
   MenuSlice
 > = (set, get) => ({
   dishes: MOCK_MENU as Dish[],
-  categories: MOCK_CATEGORIES,
+  menu_categories: MOCK_CATEGORIES,
   deletedCategoryIds: [],
   isDiagnosing: false,
   integrityIssues: [],
@@ -115,22 +115,22 @@ export const createMenuSlice: StateCreator<
   },
   
   setDishes: (dishes: Dish[]) => set({ dishes }),
-  setCategories: (categories: MenuCategory[]) => set({ categories }),
+  setmenu_categories: (menu_categories: MenuCategory[]) => set({ menu_categories }),
   
   setDishesFromCloud: (dishes: Dish[]) => {
       set({ dishes });
       get().addIntegrationLog?.({ type: 'cloud.dishes.sync', status: 'INFO', message: 'Pratos atualizados da cloud', details: { count: dishes.length } } as any);
   },
   
-  setCategoriesFromCloud: (categories: MenuCategory[]) => {
-      set({ categories });
-      get().addIntegrationLog?.({ type: 'cloud.categories.sync', status: 'INFO', message: 'Categorias atualizadas da cloud', details: { count: categories.length } } as any);
+  setmenu_categoriesFromCloud: (menu_categories: MenuCategory[]) => {
+      set({ menu_categories });
+      get().addIntegrationLog?.({ type: 'cloud.menu_categories.sync', status: 'INFO', message: 'Categorias atualizadas da cloud', details: { count: menu_categories.length } } as any);
   },
 
   getDishById: (id: UUID) => get().dishes.find((p: Dish) => p.id === id),
   getDishesByCategory: (categoryId: string) => get().dishes.filter((p: Dish) => p.categoryId === categoryId),
-  getCategoryById: (id: UUID) => get().categories.find((c: MenuCategory) => c.id === id),
-  rebuildMenu: (categories: MenuCategory[], dishes: Dish[]) => set({ categories, dishes }),
+  getCategoryById: (id: UUID) => get().menu_categories.find((c: MenuCategory) => c.id === id),
+  rebuildMenu: (menu_categories: MenuCategory[], dishes: Dish[]) => set({ menu_categories, dishes }),
   
   invalidateMenuCache: () => {
     logger.info('Menu cache invalidated', undefined, 'SYSTEM');
