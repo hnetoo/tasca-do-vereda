@@ -41,6 +41,32 @@ export const supabaseAuthService = {
         
         userData = result.data;
         userError = result.error;
+        
+        // LOG DETALHADO DE ERRO PARA DIAGNÓSTICO
+        if (userError) {
+          console.error('❌ [AUTH] SUPABASE QUERY ERROR DETALHADO:', {
+            error: userError,
+            errorCode: userError?.code,
+            errorMessage: userError?.message,
+            errorDetails: userError?.details,
+            errorHint: userError?.hint,
+            query: 'users table with pin, role, status filters',
+            pin: pin ? '***' : 'EMPTY',
+            role: String(role).toLowerCase(),
+            table: 'users',
+            columnsChecked: ['pin', 'role', 'status']
+          });
+          
+          // Verificar se é erro de coluna inexistente
+          if (userError?.message?.includes('column') || userError?.code === '42703') {
+            console.error('🚨 [AUTH] ERRO DE COLUNA INEXISTENTE:', {
+              missingColumn: userError?.message?.match(/column "(\w+)"/)?.[1],
+              fullError: userError?.message,
+              suggestion: 'Verificar estrutura da tabela users no Supabase'
+            });
+          }
+        }
+        
       } catch (error: any) {
         console.log('⚠️ [AUTH] Supabase query failed, trying fallback:', error.message);
         userError = error;
