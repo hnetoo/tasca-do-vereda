@@ -245,7 +245,7 @@ export function useRealtimeTransactions() {
         *,
         orders:order_id (
           order_number,
-          total_amount
+          total
         ),
         employees:processed_by (
           name

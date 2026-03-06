@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import { Product, MenuCategory, SystemSettings } from '@/types';
-import { useRealtimemenu_categoriesWithProducts } from '@/hooks/useSupabaseRealtime';
+import { useRealtimeCategoriesWithProducts } from '@/hooks/useSupabaseRealtime';
 import { useOfflineMenu } from '@/hooks/useOfflineCache';
 
 // Simplified types without Database
@@ -56,7 +56,7 @@ export default function MenuDigital() {
   const { data: offlineMenu, loading: offlineLoading, updateCache, isExpired } = useOfflineMenu();
   
   // Hook de tempo real para categorias e produtos
-  const { menu_categories, loading: menu_categoriesLoading } = useRealtimemenu_categoriesWithProducts();
+  const { categories, loading: categoriesLoading } = useRealtimeCategoriesWithProducts();
 
   useEffect(() => {
     const updateOnlineStatus = () => {
@@ -130,8 +130,8 @@ export default function MenuDigital() {
 
   // Atualizar loading state baseado no hook de tempo real
   useEffect(() => {
-    setIsLoading(menu_categoriesLoading);
-  }, [menu_categoriesLoading]);
+    setIsLoading(categoriesLoading);
+  }, [categoriesLoading]);
 
   // Fetch settings (branding) - mantido separado pois não é crítico para tempo real
   useEffect(() => {

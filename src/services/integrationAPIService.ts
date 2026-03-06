@@ -893,7 +893,7 @@ export class IntegrationAPIService {
       const dishes = dishesResult.data || [];
 
       // Calcular estatísticas do dashboard
-      const totalRevenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+      const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
       const totalOrders = orders.length;
       const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
       

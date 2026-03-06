@@ -1,14 +1,14 @@
 import { StateCreator } from 'zustand';
 import { Dish, MenuCategory, StoreState, IntegrityIssue, UUID, MenuAccessLog, MenuAccessAggregatedStats } from '@/types';
-import { 
-  saveCategoryAction, 
-  deleteCategoryAction, 
-  saveDishAction, 
+import {
+  saveCategoryAction,
+  deleteCategoryAction,
+  saveDishAction,
   deleteDishAction,
   recreateMenuSchemaAction,
-  savemenu_categoriesAction,
+  saveCategoriesAction,
   saveDishesAction,
-  getmenu_categoriesAction,
+  getCategoriesAction,
   getDishesAction
 } from '@/app/actions';
 import { getMenuDataClient } from '@/utils/clientActions';

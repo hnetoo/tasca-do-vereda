@@ -932,24 +932,14 @@ export const databaseOperations = {
         if (error) throw error;
 
         if (order.items && order.items.length > 0) {
-            // Delete existing items to ensure clean state (replace behavior)
-            const { error: delError } = await supabase.from('order_items').delete().eq('order_id', orderId);
-            if (delError) logger.warn('Failed to clear old order items', { error: delError }, 'DATABASE');
-
-            const dbItems = order.items.map(item => ({
-                id: item.id || generateUUID(),
-                order_id: orderId,
-                dish_id: (item as any).dish_id || item.dishId,
-                quantity: item.quantity || 1, // Ensure quantity defaults to 1 if undefined
-                unit_price: (item as any).unit_price || item.unitPrice || item.price || 0,
-                tax_amount: (item as any).tax_amount || item.taxAmount || 0,
-                tax_percentage: (item as any).tax_percentage || item.taxPercentage || 14,
-                tax_code: (item as any).tax_code || item.taxCode || 'NOR',
-                notes: item.notes || null,
-                status: item.status || 'PENDENTE'
-            }));
-
-            const { error: itemsError } = await supabase.from('order_items').upsert(dbItems);
+            // ATENÇÃO: tabela order_items NÃO existe no schema real
+            // Os itens são armazenados em orders.items (JSON)
+            // Atualizar o pedido com os itens em formato JSON
+            const { error: itemsError } = await supabase
+                .from('orders')
+                .update({ items: order.items })
+                .eq('id', orderId);
+            
             if (itemsError) throw itemsError;
         }
         return true;
@@ -1453,7 +1443,7 @@ export const databaseOperations = {
   clearAllData: async (): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         const tables = [
-            'order_items', 'orders', 'dishes', 'menu_menu_categories', 'suppliers', 
+            'orders', 'dishes', 'menu_categories', 'suppliers', 
             'expenses', 'revenues', 'customers', 'employees', 'attendance_records',
             'stock_items', 'cash_shifts', 'reservations', 'deliveries', 'payroll_records'
         ];
