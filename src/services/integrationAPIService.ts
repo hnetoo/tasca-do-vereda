@@ -122,12 +122,12 @@ export class IntegrationAPIService {
         return { success: true, data };
     }
 
-  async syncMenu(categories: MenuCategory[], dishes: Dish[], settings: SystemSettings): Promise<SupabaseResponse<null>> {
+  async syncMenu(menu_categories: MenuCategory[], dishes: Dish[], settings: SystemSettings): Promise<SupabaseResponse<null>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
-    // Sync Categories
-    if (categories.length > 0) {
-        const { error: catError } = await this.client.from('menu_categories').upsert(categories.map(c => ({
+    // Sync menu_categories
+    if (menu_categories.length > 0) {
+        const { error: catError } = await this.client.from('menu_menu_categories').upsert(menu_categories.map(c => ({
             id: c.id,
             name: c.name,
             icon: c.icon,
@@ -139,7 +139,7 @@ export class IntegrationAPIService {
         })), { onConflict: 'id' });
         
         if (catError) {
-             return this._handleSupabaseResponse({ data: null, error: catError }, 'Supabase sync categories', 'IntegrationAPIService');
+             return this._handleSupabaseResponse({ data: null, error: catError }, 'Supabase sync menu_categories', 'IntegrationAPIService');
         }
     }
 
@@ -209,17 +209,17 @@ export class IntegrationAPIService {
     return { success: true, data: null };
   }
 
-  async fetchMenu(): Promise<SupabaseResponse<{ categories: MenuCategory[], dishes: Dish[] }>> {
+  async fetchMenu(): Promise<SupabaseResponse<{ menu_categories: MenuCategory[], dishes: Dish[] }>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
 
     try {
-        const { data: categoriesData, error: catError } = await this.client.from('categories').select('*');
+        const { data: menu_categoriesData, error: catError } = await this.client.from('menu_categories').select('*');
         if (catError) throw catError;
 
         const { data: productsData, error: prodError } = await this.client.from('products').select('*');
         if (prodError) throw prodError;
 
-        const categories: MenuCategory[] = (categoriesData || []).map((c: any) => ({
+        const menu_categories: MenuCategory[] = (menu_categoriesData || []).map((c: any) => ({
             id: c.id,
             name: c.name,
             icon: c.icon,
@@ -250,7 +250,7 @@ export class IntegrationAPIService {
             supplier_id: p.fornecedor_padrao_id
         }));
 
-        return { success: true, data: { categories, dishes } };
+        return { success: true, data: { menu_categories, dishes } };
 
     } catch (error: any) {
          return this._handleSupabaseResponse({ data: null, error }, 'Fetch menu', 'IntegrationAPIService');
@@ -615,7 +615,7 @@ export class IntegrationAPIService {
   async createCategory(category: MenuCategory): Promise<SupabaseResponse<MenuCategory>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('menu_categories').insert({
+          const { data, error } = await this.client.from('menu_menu_categories').insert({
               id: category.id,
               name: category.name,
               icon: category.icon,
@@ -647,7 +647,7 @@ export class IntegrationAPIService {
   async updateCategory(category: MenuCategory): Promise<SupabaseResponse<MenuCategory>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('menu_categories').update({
+          const { data, error } = await this.client.from('menu_menu_categories').update({
               name: category.name,
               icon: category.icon,
               sort_order: category.sort_order,
@@ -678,7 +678,7 @@ export class IntegrationAPIService {
   async deleteCategory(categoryId: string): Promise<SupabaseResponse<null>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { error } = await this.client.from('menu_categories').delete().eq('id', categoryId);
+          const { error } = await this.client.from('menu_menu_categories').delete().eq('id', categoryId);
           if (error) throw error;
           return { success: true, data: null };
       } catch (error: any) {
@@ -687,12 +687,12 @@ export class IntegrationAPIService {
       }
   }
 
-  async fetchCategories(): Promise<SupabaseResponse<MenuCategory[]>> {
+  async fetchmenu_categories(): Promise<SupabaseResponse<MenuCategory[]>> {
       if (!this.client) return { success: false, error: 'Not initialized' };
       try {
-          const { data, error } = await this.client.from('menu_categories').select('*');
+          const { data, error } = await this.client.from('menu_menu_categories').select('*');
           if (error) throw error;
-          const categories = data.map((c: any) => ({
+          const menu_categories = data.map((c: any) => ({
               id: c.id,
               name: c.name,
               icon: c.icon,
@@ -702,9 +702,9 @@ export class IntegrationAPIService {
               is_active: c.is_active ?? true,
               is_available_on_digital_menu: c.is_available_on_digital_menu ?? true
           }));
-          return { success: true, data: categories };
+          return { success: true, data: menu_categories };
       } catch (error: any) {
-          logger.error('Failed to fetch categories', { error: error.message }, 'IntegrationAPIService');
+          logger.error('Failed to fetch menu_categories', { error: error.message }, 'IntegrationAPIService');
           return { success: false, error: error.message };
       }
   }
@@ -975,10 +975,10 @@ export class IntegrationAPIService {
     }
   }
 
-  async fetchCategoriesPaged(params: { page: number; pageSize: number; search?: string }): Promise<SupabaseResponse<MenuCategory[]>> {
+  async fetchmenu_categoriesPaged(params: { page: number; pageSize: number; search?: string }): Promise<SupabaseResponse<MenuCategory[]>> {
     if (!this.client) return { success: false, error: 'Not initialized' };
     try {
-      let query = this.client.from('menu_categories').select('*');
+      let query = this.client.from('menu_menu_categories').select('*');
       if (params.search) {
         query = query.ilike('name', `%${params.search}%`);
       }
@@ -989,7 +989,7 @@ export class IntegrationAPIService {
       
       if (error) throw error;
       
-      const categories: MenuCategory[] = (data || []).map((c: any) => ({
+      const menu_categories: MenuCategory[] = (data || []).map((c: any) => ({
             id: c.id,
             name: c.name,
             icon: c.icon,
@@ -1000,9 +1000,9 @@ export class IntegrationAPIService {
             is_available_on_digital_menu: c.is_available_on_digital_menu
       }));
       
-      return { success: true, data: categories };
+      return { success: true, data: menu_categories };
     } catch (error: any) {
-       return this._handleSupabaseResponse({ data: null, error }, 'Fetch categories paged', 'IntegrationAPIService');
+       return this._handleSupabaseResponse({ data: null, error }, 'Fetch menu_categories paged', 'IntegrationAPIService');
     }
   }
 
@@ -1079,3 +1079,4 @@ export class IntegrationAPIService {
 }
 
 export const integrationAPIService = new IntegrationAPIService(supabaseService);
+

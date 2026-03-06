@@ -6,7 +6,7 @@ import { MenuCategory, Product } from '../types';
 import { logger } from '../services/logger';
 
 export interface RealtimeMenuData {
-  categories: MenuCategory[];
+  menu_categories: MenuCategory[];
   products: Product[];
   loading: boolean;
   error: string | null;
@@ -20,7 +20,7 @@ export interface RealtimeMenuData {
  * - Owner Dashboard: Listens for changes and provides methods to update availability.
  */
 export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [menu_categories, setmenu_categories] = useState<MenuCategory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,9 +30,9 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
     if (!client) return;
 
     try {
-      // Fetch Categories
+      // Fetch menu_categories
       const { data: cats, error: catsError } = await client
-        .from('menu_categories')
+        .from('menu_menu_categories')
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
@@ -76,7 +76,7 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
       } as unknown as Product));
 
       setProducts(mappedProducts);
-      setCategories(cats || []);
+      setmenu_categories(cats || []);
       setError(null);
     } catch (err: any) {
       logger.error('Failed to fetch menu', { error: err.message }, 'MENU_SYNC');
@@ -97,7 +97,7 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
       .channel('realtime_menu')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'menu_categories' },
+        { event: '*', schema: 'public', table: 'menu_menu_categories' },
         (payload) => {
           logger.info('Realtime category update', payload, 'MENU_SYNC');
           fetchMenu();
@@ -146,10 +146,11 @@ export const useRealtimeMenu = (isOwner: boolean = false): RealtimeMenuData => {
   };
 
   return {
-    categories,
+    menu_categories,
     products,
     loading,
     error,
     toggleAvailability
   };
 };
+

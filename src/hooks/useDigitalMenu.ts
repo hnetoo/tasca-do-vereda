@@ -5,7 +5,7 @@ import { supabaseService } from '../services/supabaseService';
 import { MenuCategory, Product } from '../types';
 
 export interface MenuData {
-  categories: MenuCategory[];
+  menu_categories: MenuCategory[];
   products: Product[];
   loading: boolean;
   error: string | null;
@@ -13,7 +13,7 @@ export interface MenuData {
 }
 
 export const useDigitalMenu = (): MenuData => {
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [menu_categories, setmenu_categories] = useState<MenuCategory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export const useDigitalMenu = (): MenuData => {
       }
 
       const { data: cats, error: catsError } = await client
-        .from('menu_categories')
+        .from('menu_menu_categories')
         .select('*')
         .eq('is_active', true)
         .order('sort_order');
@@ -66,7 +66,7 @@ export const useDigitalMenu = (): MenuData => {
         supplierId: p.supplier_id
       } as unknown as Product));
 
-      setCategories(cats || []);
+      setmenu_categories(cats || []);
       setProducts(mappedProducts);
       setError(null);
     } catch (err: any) {
@@ -88,7 +88,7 @@ export const useDigitalMenu = (): MenuData => {
       .channel('digital_menu_changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'menu_categories' },
+        { event: '*', schema: 'public', table: 'menu_menu_categories' },
         (payload) => {
           console.log('Category change detected:', payload);
           fetchData();
@@ -110,10 +110,11 @@ export const useDigitalMenu = (): MenuData => {
   }, [fetchData]);
 
   return {
-    categories,
+    menu_categories,
     products,
     loading,
     error,
     refresh: fetchData
   };
 };
+

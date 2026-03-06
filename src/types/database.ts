@@ -358,7 +358,7 @@ export type Database = {
             foreignKeyName: "dishes_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: "menu_categories"
+            referencedRelation: "menu_menu_categories"
             referencedColumns: ["id"]
           },
           {
@@ -489,7 +489,7 @@ export type Database = {
           },
         ]
       }
-      menu_categories: {
+      menu_menu_categories: {
         Row: {
           created_at: string | null
           deleted_at: string | null
@@ -528,10 +528,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "menu_categories_parent_id_fkey"
+            foreignKeyName: "menu_menu_categories_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
-            referencedRelation: "menu_categories"
+            referencedRelation: "menu_menu_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -1261,4 +1261,5 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
 

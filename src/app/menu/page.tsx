@@ -24,7 +24,7 @@ const fmt = (n: number) => {
 
 export default function PublicMenuPage() {
   const [dishes, setDishes] = useState<DishRow[]>([]);
-  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [menu_categories, setmenu_categories] = useState<CategoryRow[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [ready, setReady] = useState(false);
@@ -53,7 +53,7 @@ export default function PublicMenuPage() {
   const loadAll = async () => {
     const supabase = createClient();
     const [c, d] = await Promise.all([
-      supabase.from('menu_categories').select('*').order('sort_order', { ascending: true }),
+      supabase.from('menu_menu_categories').select('*').order('sort_order', { ascending: true }),
       supabase.from('dishes').select('*')
     ]);
     if (!c.error && c.data) {
@@ -61,7 +61,7 @@ export default function PublicMenuPage() {
         ...cat,
         name: (typeof cat.name === 'string' && cat.name.trim().toLowerCase() === 'grelhoes') ? 'Grelhados' : cat.name
       }));
-      setCategories(mapped);
+      setmenu_categories(mapped);
     }
     if (!d.error && d.data) setDishes(d.data as DishRow[]);
     setReady(true);
@@ -77,7 +77,7 @@ export default function PublicMenuPage() {
     const ch = supabase
       .channel('menu-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'dishes' }, () => loadAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_menu_categories' }, () => loadAll())
       .subscribe();
     return () => {
       ch.unsubscribe();
@@ -144,7 +144,7 @@ export default function PublicMenuPage() {
             >
               Todas
             </button>
-            {categories.map(c => (
+            {menu_categories.map(c => (
               <button
                 key={c.id}
                 onClick={() => setActiveCategory(c.id)}
@@ -232,3 +232,4 @@ export default function PublicMenuPage() {
     </div>
   );
 }
+

@@ -128,7 +128,7 @@ export const directOperations = {
       };
 
       await sql`
-        INSERT INTO menu_categories ${sql(dbCategory)}
+        INSERT INTO menu_menu_categories ${sql(dbCategory)}
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
           icon = EXCLUDED.icon,
@@ -226,7 +226,7 @@ export const directOperations = {
   
   deleteCategory: async (id: string): Promise<{ success: boolean; error?: string }> => {
     try {
-        await sql`DELETE FROM menu_categories WHERE id = ${id}`;
+        await sql`DELETE FROM menu_menu_categories WHERE id = ${id}`;
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
@@ -242,10 +242,10 @@ export const directOperations = {
     }
   },
 
-  saveCategories: async (categories: MenuCategory[]): Promise<boolean> => {
-    if (categories.length === 0) return true;
+  savemenu_categories: async (menu_categories: MenuCategory[]): Promise<boolean> => {
+    if (menu_categories.length === 0) return true;
     try {
-      const dbCategories = categories.map(category => ({
+      const dbmenu_categories = menu_categories.map(category => ({
         id: category.id,
         name: category.name,
         icon: category.icon,
@@ -257,7 +257,7 @@ export const directOperations = {
       }));
 
       await sql`
-        INSERT INTO menu_categories ${sql(dbCategories)}
+        INSERT INTO menu_menu_categories ${sql(dbmenu_categories)}
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
           icon = EXCLUDED.icon,
@@ -269,7 +269,7 @@ export const directOperations = {
       `;
       return true;
     } catch (error: any) {
-      logger.error('Error saving categories (direct)', { error: error.message }, 'DATABASE_DIRECT');
+      logger.error('Error saving menu_categories (direct)', { error: error.message }, 'DATABASE_DIRECT');
       return false;
     }
   },
@@ -330,16 +330,16 @@ export const directOperations = {
     }
   },
 
-  getCategories: async (): Promise<{ success: boolean; data: MenuCategory[]; error?: string }> => {
+  getmenu_categories: async (): Promise<{ success: boolean; data: MenuCategory[]; error?: string }> => {
     try {
-      const categories = await withRetry(async () => {
-          return await sql<any['public']['Tables']['menu_categories']['Row'][]>`
-            SELECT * FROM menu_categories
+      const menu_categories = await withRetry(async () => {
+          return await sql<any['public']['Tables']['menu_menu_categories']['Row'][]>`
+            SELECT * FROM menu_menu_categories
             ORDER BY sort_order ASC
           `;
-      }, 3, 1000, 'fetch categories');
+      }, 3, 1000, 'fetch menu_categories');
       
-      const mappedCategories = categories.map((r: any) => ({
+      const mappedmenu_categories = menu_categories.map((r: any) => ({
         id: r.id,
         name: r.name,
         icon: r.icon,
@@ -349,9 +349,9 @@ export const directOperations = {
         isAvailableOnDigitalMenu: r.is_available_on_digital_menu ?? true
       }));
 
-      return { success: true, data: mappedCategories };
+      return { success: true, data: mappedmenu_categories };
     } catch (error: any) {
-      logger.error('Error fetching categories (direct)', { error: error.message }, 'DATABASE_DIRECT');
+      logger.error('Error fetching menu_categories (direct)', { error: error.message }, 'DATABASE_DIRECT');
       return { success: false, data: [], error: error.message };
     }
   },
@@ -749,3 +749,4 @@ export const directOperations = {
 
 
 };
+

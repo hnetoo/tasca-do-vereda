@@ -17,7 +17,7 @@ import { AVAILABLE_ICONS } from '@/constants/client-constants';
 const InventoryContent = () => {
   const { 
     dishes: products = [], 
-    categories, 
+    menu_categories, 
     stock, 
     suppliers,
     addDish: addProduct, 
@@ -32,7 +32,7 @@ const InventoryContent = () => {
     updateStockQuantity,
     setDishes: setProducts, 
     addNotification, 
-    scanAndRecoverCategories, 
+    scanAndRecovermenu_categories, 
     triggerSync,
     integrityIssues,
     isDiagnosing,
@@ -44,9 +44,9 @@ const InventoryContent = () => {
   const router = useRouter();
   
   // Determine default tab based on URL path if no tab param is present
-  const activeTab = (searchParams.get('tab') || (pathname.includes('categories') ? 'categories' : pathname.includes('stock') ? 'stock' : 'menu')) as 'menu' | 'categories' | 'integrity' | 'stock' | 'orders';
+  const activeTab = (searchParams.get('tab') || (pathname.includes('menu_categories') ? 'menu_categories' : pathname.includes('stock') ? 'stock' : 'menu')) as 'menu' | 'menu_categories' | 'integrity' | 'stock' | 'orders';
 
-  const setActiveTab = (tab: 'menu' | 'categories' | 'integrity' | 'stock' | 'orders') => {
+  const setActiveTab = (tab: 'menu' | 'menu_categories' | 'integrity' | 'stock' | 'orders') => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
     router.push(`${pathname}?${params.toString()}`);
@@ -93,7 +93,7 @@ const InventoryContent = () => {
 
   // Validation for activeTab to prevent disappearance
   useEffect(() => {
-    const validTabs = ['menu', 'categories', 'integrity', 'stock', 'orders'];
+    const validTabs = ['menu', 'menu_categories', 'integrity', 'stock', 'orders'];
     if (!validTabs.includes(activeTab)) {
       logger.warn('Invalid activeTab detected in Inventory', { activeTab }, 'Inventory');
       const params = new URLSearchParams(searchParams.toString());
@@ -126,7 +126,7 @@ const InventoryContent = () => {
       name: '',
       description: '',
       price: 0,
-      categoryId: categories[0]?.id || '',
+      categoryId: menu_categories[0]?.id || '',
       imageUrl: '',
       isAvailableOnDigitalMenu: false,
       isActive: true,
@@ -143,17 +143,17 @@ const InventoryContent = () => {
   useEffect(() => {
     // Fix typo in "Grelhados" category if it exists
     const fixCategoryTypo = async () => {
-      const typoCategory = categories.find(c => c.name.toLowerCase() === 'grelhoe');
+      const typoCategory = menu_categories.find(c => c.name.toLowerCase() === 'grelhoe');
       if (typoCategory) {
         console.log('Fixing category typo: grelhoe -> Grelhados');
         updateCategory({ ...typoCategory, name: 'Grelhados' });
       }
     };
     
-    if (categories.length > 0) {
+    if (menu_categories.length > 0) {
       fixCategoryTypo();
     }
-  }, [categories, updateCategory]);
+  }, [menu_categories, updateCategory]);
 
   const handleOpenProductModal = (product?: Product) => {
     if (product) {
@@ -173,7 +173,7 @@ const InventoryContent = () => {
         name: '',
         description: '',
         price: 0,
-        categoryId: categories[0]?.id || '',
+        categoryId: menu_categories[0]?.id || '',
         imageUrl: '',
         isAvailableOnDigitalMenu: true,
         taxCode: 'NOR',
@@ -220,7 +220,7 @@ const InventoryContent = () => {
        }
     }
 
-    const selectedCat = categories.find((c: MenuCategory) => c.id === productForm.categoryId);
+    const selectedCat = menu_categories.find((c: MenuCategory) => c.id === productForm.categoryId);
     const productData = {
       ...productForm,
       id: editingId, // Se editingId for null, o id será undefined, permitindo ao Supabase gerar um novo.
@@ -283,7 +283,7 @@ const InventoryContent = () => {
       updateCategory({ ...catData, id: editingId } as MenuCategory);
       logger.info('Categoria atualizada', { id: editingId, name: catData.name, parentId: catData.parentId }, 'Inventory');
     } else {
-      // Ensure ID generation for new categories
+      // Ensure ID generation for new menu_categories
       // O id será gerado pelo addCategory no useStore
       addCategory({ ...catData, id: generateUUID() } as MenuCategory);
       logger.info('Nova categoria adicionada', { name: catData.name, parentId: catData.parentId }, 'Inventory');
@@ -397,9 +397,9 @@ const InventoryContent = () => {
     }
   };
 
-  const handleRestoreCategories = async () => {
+  const handleRestoremenu_categories = async () => {
     if (confirm('Esta ação tentará localizar categorias removidas em logs e backups e restaurá-las automaticamente. Deseja continuar?')) {
-      await scanAndRecoverCategories();
+      await scanAndRecovermenu_categories();
     }
   };
 
@@ -425,11 +425,11 @@ const InventoryContent = () => {
       }
 
       // Atualizar store local com dados do Supabase
-      const { categories: cloudCategories, dishes: cloudDishes } = result.data;
+      const { menu_categories: cloudmenu_categories, dishes: cloudDishes } = result.data;
       
       // Sincronizar categorias
-      for (const category of cloudCategories) {
-        const existingCategory = categories.find((c: MenuCategory) => c.id === category.id);
+      for (const category of cloudmenu_categories) {
+        const existingCategory = menu_categories.find((c: MenuCategory) => c.id === category.id);
         if (!existingCategory) {
           await addCategory(category);
         } else {
@@ -447,7 +447,7 @@ const InventoryContent = () => {
         }
       }
 
-      addNotification('success', `Sincronização concluída! ${cloudCategories.length} categorias e ${cloudDishes.length} produtos sincronizados.`);
+      addNotification('success', `Sincronização concluída! ${cloudmenu_categories.length} categorias e ${cloudDishes.length} produtos sincronizados.`);
     } catch (error: any) {
       console.error('❌ Error syncing from cloud:', error);
       addNotification('error', `Falha na sincronização: ${error.message}`);
@@ -476,18 +476,18 @@ const InventoryContent = () => {
       }
 
       // Substituir completamente os dados locais
-      const { categories: cloudCategories, dishes: cloudDishes } = result.data;
+      const { menu_categories: cloudmenu_categories, dishes: cloudDishes } = result.data;
       
       // Limpar dados locais completamente
       setProducts([]);
       // NOTA: Precisamos limpar categorias também, mas não temos função direta
       // Vamos remover todas as categorias uma por uma
-      for (const category of categories) {
+      for (const category of menu_categories) {
         await removeCategory(category.id);
       }
       
       // Restaurar do Supabase
-      for (const category of cloudCategories) {
+      for (const category of cloudmenu_categories) {
         await addCategory(category);
       }
 
@@ -495,7 +495,7 @@ const InventoryContent = () => {
         await addProduct(dish);
       }
 
-      addNotification('success', `Restauração concluída! ${cloudCategories.length} categorias e ${cloudDishes.length} produtos restaurados do Supabase.`);
+      addNotification('success', `Restauração concluída! ${cloudmenu_categories.length} categorias e ${cloudDishes.length} produtos restaurados do Supabase.`);
     } catch (error: any) {
       console.error('❌ Error restoring from cloud:', error);
       addNotification('error', `Falha na restauração: ${error.message}`);
@@ -517,13 +517,13 @@ const InventoryContent = () => {
   };
 
   const handleExportFeed = () => {
-    const feed = buildFeed(categories, products, useStore.getState().settings);
+    const feed = buildFeed(menu_categories, products, useStore.getState().settings);
     downloadFeed(feed, 'menu_feed.json');
     addNotification('success', 'Feed JSON do menu exportado.');
   };
 
   const handlePublishFeed = async () => {
-    const res = await publishFeedHybrid(categories, products, useStore.getState().settings);
+    const res = await publishFeedHybrid(menu_categories, products, useStore.getState().settings);
     if (res.success) {
       addNotification('success', res.path ? `Feed JSON salvo em: ${res.path}` : 'Feed JSON salvo localmente');
     } else {
@@ -595,18 +595,18 @@ const InventoryContent = () => {
           <button 
             onClick={() => {
               if (activeTab === 'menu') handleOpenProductModal();
-              else if (activeTab === 'categories') handleOpenCatModal();
+              else if (activeTab === 'menu_categories') handleOpenCatModal();
               else if (activeTab === 'stock') handleOpenStockModal();
             }}
             className={`bg-primary text-black px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-glow hover:scale-105 transition-all font-black uppercase text-xs tracking-widest ${activeTab === 'orders' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Plus size={18} />
-            {activeTab === 'menu' ? 'Novo Produto' : activeTab === 'categories' ? 'Novo Produto' : 'Novo Item'}
+            {activeTab === 'menu' ? 'Novo Produto' : activeTab === 'menu_categories' ? 'Novo Produto' : 'Novo Item'}
           </button>
           
-          {activeTab === 'categories' && (
+          {activeTab === 'menu_categories' && (
              <button 
-               onClick={handleRestoreCategories}
+               onClick={handleRestoremenu_categories}
                className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all font-bold uppercase text-[10px] tracking-widest border border-yellow-500/20"
                title="Tentar recuperar categorias perdidas"
              >
@@ -621,13 +621,13 @@ const InventoryContent = () => {
         <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
           {[
             { id: 'menu', label: 'Produtos', icon: Utensils },
-            { id: 'categories', label: 'Categorias', icon: Tag },
+            { id: 'menu_categories', label: 'Categorias', icon: Tag },
             { id: 'integrity', label: 'Integridade', icon: Check },
             { id: 'stock', label: 'Estoque', icon: Box }
           ].map(tab => (
             <button 
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'menu' | 'categories' | 'integrity' | 'stock' | 'orders')}
+              onClick={() => setActiveTab(tab.id as 'menu' | 'menu_categories' | 'integrity' | 'stock' | 'orders')}
               className={`pb-2 px-4 flex items-center gap-2 transition-all relative whitespace-nowrap ${activeTab === tab.id ? 'text-primary' : 'text-slate-400 hover:text-white'}`}
             >
               {(() => {
@@ -665,7 +665,7 @@ const InventoryContent = () => {
                 onChange={e => setSelectedCategory(e.target.value)}
               >
                 <option value="TODOS" className="bg-slate-900 text-slate-300">Todas as Categorias</option>
-                {categories.map((cat: MenuCategory) => (
+                {menu_categories.map((cat: MenuCategory) => (
                   <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                 ))}
               </select>
@@ -726,9 +726,9 @@ const InventoryContent = () => {
         </div>
       )}
 
-      {activeTab === 'categories' && (
+      {activeTab === 'menu_categories' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.slice().sort((a: MenuCategory, b: MenuCategory) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.name.localeCompare(b.name)).map((cat: MenuCategory) => {
+          {menu_categories.slice().sort((a: MenuCategory, b: MenuCategory) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.name.localeCompare(b.name)).map((cat: MenuCategory) => {
             const iconObj = AVAILABLE_ICONS.find(i => i.name === cat.icon);
             const IconComp = iconObj ? iconObj.icon : Grid3X3;
             return (
@@ -863,7 +863,7 @@ const InventoryContent = () => {
                     <button 
                       onClick={async () => {
                         if (issue.action === 'FixCategory') {
-                          setActiveTab('categories');
+                          setActiveTab('menu_categories');
                         } else if (issue.action === 'AddImages') {
                           setActiveTab('menu');
                         } else if (issue.action === 'RepairStockRefs') {
@@ -995,7 +995,7 @@ const InventoryContent = () => {
                     <div className="space-y-4">
                       <label htmlFor="productCategory" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoria</label>
                     <select id="productCategory" required className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-white outline-none focus:border-primary appearance-none cursor-pointer" value={productForm.categoryId || ''} onChange={e => setProductForm({...productForm, categoryId: e.target.value})}>
-                      {categories.slice().sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
+                      {menu_categories.slice().sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
                         <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                       ))}
                     </select>
@@ -1164,7 +1164,7 @@ const InventoryContent = () => {
                     onChange={e => setCatForm({...catForm, parentId: e.target.value})}
                   >
                     <option value="" className="bg-slate-900 text-slate-400">-- Sem categoria superior --</option>
-                    {categories.filter((c: MenuCategory) => c.id !== editingId).sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
+                    {menu_categories.filter((c: MenuCategory) => c.id !== editingId).sort((a: MenuCategory, b: MenuCategory) => a.name.localeCompare(b.name)).map((cat: MenuCategory) => (
                       <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                     ))}
                   </select>
@@ -1301,4 +1301,5 @@ const Inventory = () => {
 };
 
 export default Inventory;
+
 

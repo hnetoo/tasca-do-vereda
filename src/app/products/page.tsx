@@ -11,7 +11,7 @@ import { generateUUID } from '@/utils/uuid';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
 const Products = () => {
-  const { dishes, categories, addDish, updateDish, removeDish, setDishes } = useStore();
+  const { dishes, menu_categories, addDish, updateDish, removeDish, setDishes } = useStore();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('TODOS');
@@ -61,7 +61,7 @@ const Products = () => {
         name: '',
         description: '',
         price: 0,
-        categoryId: categories[0]?.id || '',
+        categoryId: menu_categories[0]?.id || '',
         imageUrl: '',
         isAvailableOnDigitalMenu: true,
         taxCode: 'NOR',
@@ -125,7 +125,7 @@ const Products = () => {
        }
     }
 
-    const selectedCat = categories.find((c: MenuCategory) => c.id === productForm.categoryId);
+    const selectedCat = menu_categories.find((c: MenuCategory) => c.id === productForm.categoryId);
     const dishData = {
       ...productForm,
       imageUrl: finalImage,
@@ -285,7 +285,7 @@ const Products = () => {
             onChange={e => setSelectedCategory(e.target.value)}
           >
             <option value="TODOS" className="bg-slate-900 text-slate-300">Todas as Categorias</option>
-            {categories.map((cat: MenuCategory, index: number) => (
+            {menu_categories.map((cat: MenuCategory, index: number) => (
               <option key={`${cat.id}-${index}`} value={cat.id} className="bg-slate-900">{cat.name}</option>
             ))}
           </select>
@@ -424,7 +424,7 @@ const Products = () => {
                           onChange={e => setProductForm({...productForm, categoryId: e.target.value})}
                         >
                           <option value="" disabled>Selecione...</option>
-                          {categories.map((cat: MenuCategory) => (
+                          {menu_categories.map((cat: MenuCategory) => (
                             <option key={cat.id} value={cat.id} className="bg-slate-900">{cat.name}</option>
                           ))}
                         </select>
@@ -476,4 +476,5 @@ const Products = () => {
 };
 
 export default Products;
+
 

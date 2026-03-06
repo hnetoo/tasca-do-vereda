@@ -36,12 +36,12 @@ export const CATEGORY_ICONS: Record<string, any> = {
 };
 
 interface CategoryMenuProps {
-  categories: MenuCategory[];
+  menu_categories: MenuCategory[];
   selectedCategory: string;
   onSelectCategory: (id: string) => void;
 }
 
-export default function CategoryMenu({ categories, selectedCategory, onSelectCategory }: CategoryMenuProps) {
+export default function CategoryMenu({ menu_categories, selectedCategory, onSelectCategory }: CategoryMenuProps) {
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 pt-2 px-4 no-scrollbar">
       <button
@@ -58,7 +58,7 @@ export default function CategoryMenu({ categories, selectedCategory, onSelectCat
         <span className="text-[10px] font-black uppercase tracking-wider">Tudo</span>
       </button>
 
-      {categories.map((cat) => {
+      {menu_categories.map((cat) => {
         const Icon = CATEGORY_ICONS[cat.name] || Utensils;
         const isSelected = selectedCategory === cat.id;
         
@@ -84,3 +84,4 @@ export default function CategoryMenu({ categories, selectedCategory, onSelectCat
     </div>
   );
 }
+

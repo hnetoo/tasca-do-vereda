@@ -7,7 +7,7 @@ import { MenuCategory } from '@/types';
 import { Search, Plus, Trash2, Edit2, X, Save, RefreshCw, Grid3X3, Coffee, Pizza, Beer, IceCream, Utensils } from 'lucide-react';
 import { AVAILABLE_ICONS } from '@/constants/client-constants';
 
-const Categories = () => {
+const CategoriesPage = () => {
   const { categories, addCategory, updateCategory, removeCategory, scanAndRecoverCategories } = useStore();
   
   // Modal states
@@ -20,9 +20,9 @@ const Categories = () => {
   });
 
   useEffect(() => {
-    logger.info('Categories page mounted', null, 'Categories');
+    logger.info('Categories page mounted', null, 'categories');
     return () => {
-      logger.info('Categories page unmounted', null, 'Categories');
+      logger.info('Categories page unmounted', null, 'categories');
     };
   }, []);
 
@@ -44,7 +44,7 @@ const Categories = () => {
     if (editingId) {
       updateCategory({ ...catForm, id: editingId } as MenuCategory);
     } else {
-      // Ensure ID generation for new categories
+      // Ensure ID generation for new menu_categories
       const newCategory = {
         ...catForm,
         id: Math.random().toString(36).substr(2, 9)
@@ -178,5 +178,6 @@ const Categories = () => {
   );
 };
 
-export default Categories;
+export default CategoriesPage;
+
 

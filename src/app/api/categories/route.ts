@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // API para salvar categorias no Supabase
 export async function POST(request: NextRequest) {
-  console.log('📁 CATEGORIES API: Saving category...');
+  console.log('📁 menu_categories API: Saving category...');
   
   try {
     const body = await request.json();
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     
     // Inserir categoria
     const { data, error } = await supabase
-      .from('menu_categories')
+      .from('menu_menu_categories')
       .insert({
         name: name,
         description: description || null,
@@ -48,14 +48,14 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (error) {
-      console.error('❌ CATEGORIES API: Error saving category:', error);
+      console.error('❌ menu_categories API: Error saving category:', error);
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
       );
     }
     
-    console.log('✅ CATEGORIES API: Category saved successfully:', data);
+    console.log('✅ menu_categories API: Category saved successfully:', data);
     
     return NextResponse.json(
       { 
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     );
     
   } catch (error: any) {
-    console.error('❌ CATEGORIES API: Unexpected error:', error);
+    console.error('❌ menu_categories API: Unexpected error:', error);
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
 // API para listar categorias
 export async function GET(request: NextRequest) {
-  console.log('📁 CATEGORIES API: Loading categories...');
+  console.log('📁 menu_categories API: Loading menu_categories...');
   
   try {
     // Validar ambiente
@@ -95,19 +95,19 @@ export async function GET(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     const { data, error } = await supabase
-      .from('menu_categories')
+      .from('menu_menu_categories')
       .select('*')
       .order('sort_order', { ascending: true });
     
     if (error) {
-      console.error('❌ CATEGORIES API: Error loading categories:', error);
+      console.error('❌ menu_categories API: Error loading menu_categories:', error);
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
       );
     }
     
-    console.log('✅ CATEGORIES API: Categories loaded successfully:', data?.length || 0);
+    console.log('✅ menu_categories API: menu_categories loaded successfully:', data?.length || 0);
     
     return NextResponse.json(
       { 
@@ -119,10 +119,11 @@ export async function GET(request: NextRequest) {
     );
     
   } catch (error: any) {
-    console.error('❌ CATEGORIES API: Unexpected error:', error);
+    console.error('❌ menu_categories API: Unexpected error:', error);
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
     );
   }
 }
+

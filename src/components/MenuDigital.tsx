@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import { Product, MenuCategory, SystemSettings } from '@/types';
-import { useRealtimeCategoriesWithProducts } from '@/hooks/useSupabaseRealtime';
+import { useRealtimemenu_categoriesWithProducts } from '@/hooks/useSupabaseRealtime';
 import { useOfflineMenu } from '@/hooks/useOfflineCache';
 
 // Simplified types without Database
@@ -56,7 +56,7 @@ export default function MenuDigital() {
   const { data: offlineMenu, loading: offlineLoading, updateCache, isExpired } = useOfflineMenu();
   
   // Hook de tempo real para categorias e produtos
-  const { categories, loading: categoriesLoading } = useRealtimeCategoriesWithProducts();
+  const { menu_categories, loading: menu_categoriesLoading } = useRealtimemenu_categoriesWithProducts();
 
   useEffect(() => {
     const updateOnlineStatus = () => {
@@ -77,20 +77,20 @@ export default function MenuDigital() {
 
   useEffect(() => {
     // Update cache when realtime data changes
-    if (isOnline && categories && !categoriesLoading) {
-      updateCache(categories);
+    if (isOnline && menu_categories && !menu_categoriesLoading) {
+      updateCache(menu_categories);
     }
-  }, [categories, isOnline, categoriesLoading, updateCache]);
+  }, [menu_categories, isOnline, menu_categoriesLoading, updateCache]);
 
   // Determine which data to use
-  const menuData = isOnline && categories ? { categories } : (offlineMenu || { categories: [] });
-  const loading = isOnline ? categoriesLoading : offlineLoading;
+  const menuData = isOnline && menu_categories ? { menu_categories } : (offlineMenu || { menu_categories: [] });
+  const loading = isOnline ? menu_categoriesLoading : offlineLoading;
 
   // Extrair produtos das categorias em tempo real
   const products = useMemo(() => {
     const allProducts: Product[] = [];
-    if (menuData && menuData.categories && Array.isArray(menuData.categories)) {
-      menuData.categories.forEach((category: any) => {
+    if (menuData && menuData.menu_categories && Array.isArray(menuData.menu_categories)) {
+      menuData.menu_categories.forEach((category: any) => {
         if (category.dishes) {
           category.dishes.forEach((dish: any) => {
             allProducts.push(mapToProduct(dish));
@@ -130,8 +130,8 @@ export default function MenuDigital() {
 
   // Atualizar loading state baseado no hook de tempo real
   useEffect(() => {
-    setIsLoading(categoriesLoading);
-  }, [categoriesLoading]);
+    setIsLoading(menu_categoriesLoading);
+  }, [menu_categoriesLoading]);
 
   // Fetch settings (branding) - mantido separado pois não é crítico para tempo real
   useEffect(() => {
@@ -155,14 +155,14 @@ export default function MenuDigital() {
   useEffect(() => {
     if (!supabase) return;
 
-    // Subscribe to categories changes
-    const categoriesSubscription = supabase
-      .channel('menu-categories-changes')
+    // Subscribe to menu_categories changes
+    const menu_categoriesSubscription = supabase
+      .channel('menu-menu_categories-changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'menu_categories' },
+        { event: '*', schema: 'public', table: 'menu_menu_categories' },
         () => {
-          // As categorias já são atualizadas pelo hook useRealtimeCategoriesWithProducts
-          console.log('Categories updated in real-time');
+          // As categorias já são atualizadas pelo hook useRealtimemenu_categoriesWithProducts
+          console.log('menu_categories updated in real-time');
         }
       )
       .subscribe();
@@ -173,14 +173,14 @@ export default function MenuDigital() {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'dishes' },
         () => {
-          // Os produtos já são atualizados pelo hook useRealtimeCategoriesWithProducts
+          // Os produtos já são atualizados pelo hook useRealtimemenu_categoriesWithProducts
           console.log('Dishes updated in real-time');
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(categoriesSubscription);
+      supabase.removeChannel(menu_categoriesSubscription);
       supabase.removeChannel(dishesSubscription);
     };
   }, [supabase]);
@@ -201,15 +201,15 @@ export default function MenuDigital() {
       return { [selectedCategory]: filteredProducts };
     }
     const grouped: Record<string, Product[]> = {};
-    if (menuData && menuData.categories && Array.isArray(menuData.categories)) {
-      menuData.categories.forEach((cat: any) => {
+    if (menuData && menuData.menu_categories && Array.isArray(menuData.menu_categories)) {
+      menuData.menu_categories.forEach((cat: any) => {
         const catProducts = filteredProducts.filter(p => p.categoryId === cat.id);
         if (catProducts.length > 0) {
           grouped[cat.id] = catProducts;
         }
       });
       // Add products without category or with unknown category
-      const uncategorized = filteredProducts.filter(p => !p.categoryId || !menuData.categories.find((c: any) => c.id === p.categoryId));
+      const uncategorized = filteredProducts.filter(p => !p.categoryId || !menuData.menu_categories.find((c: any) => c.id === p.categoryId));
       if (uncategorized.length > 0) {
         grouped['uncategorized'] = uncategorized;
       }
@@ -284,7 +284,7 @@ export default function MenuDigital() {
             />
           </div>
 
-          {/* Categories Scroller */}
+          {/* menu_categories Scroller */}
           <div className="flex overflow-x-auto pb-1 -mx-4 px-4 gap-2 no-scrollbar">
             <button
               onClick={() => setSelectedCategory('all')}
@@ -296,7 +296,7 @@ export default function MenuDigital() {
             >
               TODOS
             </button>
-            {menuData && menuData.categories && Array.isArray(menuData.categories) && menuData.categories.map((cat: any) => (
+            {menuData && menuData.menu_categories && Array.isArray(menuData.menu_categories) && menuData.menu_categories.map((cat: any) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -316,7 +316,7 @@ export default function MenuDigital() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8 pb-24">
         {Object.entries(productsByCategory).map(([catId, items]) => {
-          const category = menuData && menuData.categories && Array.isArray(menuData.categories) ? menuData.categories.find((c: any) => c.id === catId) : null;
+          const category = menuData && menuData.menu_categories && Array.isArray(menuData.menu_categories) ? menuData.menu_categories.find((c: any) => c.id === catId) : null;
           const categoryName = category ? category.name : (catId === 'uncategorized' ? 'Outros' : '');
           
           if (items.length === 0) return null;
@@ -421,3 +421,4 @@ export default function MenuDigital() {
     </div>
   );
 }
+

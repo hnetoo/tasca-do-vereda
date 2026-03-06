@@ -361,7 +361,7 @@ export const databaseOperations = {
    */
   restoreFullState: async (data: any): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        if (data.categories) await databaseOperations.saveCategories(data.categories);
+        if (data.menu_categories) await databaseOperations.savemenu_categories(data.menu_categories);
         if (data.dishes) await databaseOperations.saveDishes(data.dishes);
         if (data.products) await databaseOperations.saveDishes(data.products);
         if (data.employees) await databaseOperations.saveEmployees(data.employees);
@@ -386,18 +386,18 @@ export const databaseOperations = {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
       // 1. Drop existing tables
       await executeQuery(supabase, 'DROP TABLE IF EXISTS dishes CASCADE');
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu_categories CASCADE');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu_menu_categories CASCADE');
       await executeQuery(supabase, 'DROP TABLE IF EXISTS suppliers CASCADE');
       
       // Also drop old tables if they exist
       await executeQuery(supabase, 'DROP TABLE IF EXISTS products CASCADE');
-      await executeQuery(supabase, 'DROP TABLE IF EXISTS categories CASCADE');
+      await executeQuery(supabase, 'DROP TABLE IF EXISTS menu_categories CASCADE');
       await executeQuery(supabase, 'DROP TABLE IF EXISTS menu CASCADE');
       await executeQuery(supabase, 'DROP TABLE IF EXISTS dishes CASCADE');
       
-      // 2. Recreate Menu Categories Table (Postgres syntax)
+      // 2. Recreate Menu menu_categories Table (Postgres syntax)
       await executeQuery(supabase, `
-        CREATE TABLE IF NOT EXISTS menu_categories (
+        CREATE TABLE IF NOT EXISTS menu_menu_categories (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             icon TEXT,
@@ -408,7 +408,7 @@ export const databaseOperations = {
             deleted_at TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(parent_id) REFERENCES menu_categories(id) ON DELETE SET NULL
+            FOREIGN KEY(parent_id) REFERENCES menu_menu_categories(id) ON DELETE SET NULL
         )
       `);
 
@@ -452,7 +452,7 @@ export const databaseOperations = {
             supplier_id TEXT,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(category_id) REFERENCES menu_categories(id) ON DELETE SET NULL,
+            FOREIGN KEY(category_id) REFERENCES menu_menu_categories(id) ON DELETE SET NULL,
             FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
         )
       `);
@@ -471,10 +471,10 @@ export const databaseOperations = {
   isMenuDataEmpty: async (): Promise<boolean> => {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
         const products = await selectQuery<{count: number}>(supabase, 'SELECT COUNT(*) as count FROM dishes');
-        const categories = await selectQuery<{count: number}>(supabase, 'SELECT COUNT(*) as count FROM menu_categories');
+        const menu_categories = await selectQuery<{count: number}>(supabase, 'SELECT COUNT(*) as count FROM menu_menu_categories');
         
         const pCount = products?.[0]?.count || 0;
-        const cCount = categories?.[0]?.count || 0;
+        const cCount = menu_categories?.[0]?.count || 0;
         
         return pCount === 0 && cCount === 0;
     }, 'check menu data emptiness', 'DATABASE');
@@ -578,23 +578,23 @@ export const databaseOperations = {
     return result.success;
   },
 
-  getCategories: async (): Promise<{ success: boolean; data: MenuCategory[]; error?: string }> => {
+  getmenu_categories: async (): Promise<{ success: boolean; data: MenuCategory[]; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        logger.debug('Fetching categories from Supabase', undefined, 'DATABASE');
+        logger.debug('Fetching menu_categories from Supabase', undefined, 'DATABASE');
         const { data, error } = await supabase
-            .from('menu_categories')
+            .from('menu_menu_categories')
             .select('*')
             .order('sort_order', { ascending: true });
         
         if (error) {
-            logger.error(`Error fetching categories from Supabase`, { error }, 'DATABASE');
+            logger.error(`Error fetching menu_categories from Supabase`, { error }, 'DATABASE');
             throw error;
         }
         
         if (!data || data.length === 0) {
-            logger.debug('No categories found in Supabase.', undefined, 'DATABASE');
+            logger.debug('No menu_categories found in Supabase.', undefined, 'DATABASE');
         } else {
-            logger.debug(`Fetched ${data.length} categories`, undefined, 'DATABASE');
+            logger.debug(`Fetched ${data.length} menu_categories`, undefined, 'DATABASE');
         }
         
         return (data || []).map(r => ({
@@ -606,7 +606,7 @@ export const databaseOperations = {
             parentId: r.parent_id || null,
             isAvailableOnDigitalMenu: r.is_available_on_digital_menu ?? true
         }));
-    }, 'get categories', 'DATABASE') as Promise<{ success: boolean; data: MenuCategory[]; error?: string }>;
+    }, 'get menu_categories', 'DATABASE') as Promise<{ success: boolean; data: MenuCategory[]; error?: string }>;
   },
 
   saveProduct: async (product: Dish, client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
@@ -669,7 +669,7 @@ export const databaseOperations = {
         };
 
         const { error } = await supabase
-            .from('menu_categories')
+            .from('menu_menu_categories')
             .upsert(dbCategory);
 
         if (error) {
@@ -701,7 +701,7 @@ export const databaseOperations = {
       return databaseOperations._handleDatabaseOperation(async (supabase) => {
           logger.debug(`Deleting category ${id}`, undefined, 'DATABASE');
           const { error } = await supabase
-              .from('menu_categories')
+              .from('menu_menu_categories')
               .delete()
               .eq('id', id);
           
@@ -720,20 +720,20 @@ export const databaseOperations = {
       return { success: true };
   },
 
-  saveCategories: async (categories: MenuCategory[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
-      for (const category of categories) {
+  savemenu_categories: async (menu_categories: MenuCategory[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
+      for (const category of menu_categories) {
           const result = await databaseOperations.saveCategory(category, client);
           if (!result.success) return result;
       }
       return { success: true };
   },
 
-  saveMenu: async (dishes: Dish[], categories: MenuCategory[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
+  saveMenu: async (dishes: Dish[], menu_categories: MenuCategory[], client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-      // Use transaction to ensure both dishes and categories are saved together
+      // Use transaction to ensure both dishes and menu_categories are saved together
       return await withTransaction(supabase, async () => {
-        // Save categories first
-        for (const category of categories) {
+        // Save menu_categories first
+        for (const category of menu_categories) {
           const dbCategory = {
               id: category.id,
               name: category.name,
@@ -746,7 +746,7 @@ export const databaseOperations = {
           };
 
           const { error: categoryError } = await supabase
-              .from('menu_categories')
+              .from('menu_menu_categories')
               .upsert(dbCategory);
 
           if (categoryError) throw categoryError;
@@ -1103,10 +1103,10 @@ export const databaseOperations = {
   renameCategoryName: async (oldName: string, newName: string): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       await withTransaction(supabase, async () => {
-        const rows = await selectQuery<{ id: string }>(supabase, `SELECT id FROM menu_categories WHERE LOWER(name) = LOWER('${oldName}')`);
+        const rows = await selectQuery<{ id: string }>(supabase, `SELECT id FROM menu_menu_categories WHERE LOWER(name) = LOWER('${oldName}')`);
         if (rows.length === 0) return;
         for (const r of rows) {
-          await executeQuery(supabase, `UPDATE menu_categories SET name = '${newName}', updated_at = CURRENT_TIMESTAMP WHERE id = '${r.id}'`);
+          await executeQuery(supabase, `UPDATE menu_menu_categories SET name = '${newName}', updated_at = CURRENT_TIMESTAMP WHERE id = '${r.id}'`);
         }
       });
       invalidateCache('SELECT');
@@ -1411,10 +1411,10 @@ export const databaseOperations = {
   
   applyDatabaseOptimizations: async (): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
-        // 1. Indexes for menu_categories
-        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_categories_sort_order ON menu_categories(sort_order)`);
-        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_categories_is_active ON menu_categories(is_active)`);
-        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_categories_parent_id ON menu_categories(parent_id)`);
+        // 1. Indexes for menu_menu_categories
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_menu_categories_sort_order ON menu_menu_categories(sort_order)`);
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_menu_categories_is_active ON menu_menu_categories(is_active)`);
+        await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_menu_menu_categories_parent_id ON menu_menu_categories(parent_id)`);
 
         // 2. Indexes for dishes
         await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_dishes_category_id ON dishes(category_id)`);
@@ -1424,19 +1424,19 @@ export const databaseOperations = {
         await executeQuery(supabase, `CREATE INDEX IF NOT EXISTS idx_dishes_is_available_on_digital_menu ON dishes(is_available_on_digital_menu)`);
 
         // 3. Enable RLS
-        await executeQuery(supabase, `ALTER TABLE menu_categories ENABLE ROW LEVEL SECURITY`);
+        await executeQuery(supabase, `ALTER TABLE menu_menu_categories ENABLE ROW LEVEL SECURITY`);
         await executeQuery(supabase, `ALTER TABLE dishes ENABLE ROW LEVEL SECURITY`);
 
         // 4. RLS Policies (using DO block if supported, otherwise separate statements)
         // Note: 'execute_sql' might not support DO blocks or multi-statement well depending on implementation.
         // We'll use separate statements and ignore 'policy already exists' errors by dropping first.
 
-        // Policies for menu_categories
-        await executeQuery(supabase, `DROP POLICY IF EXISTS "Public categories are viewable by everyone" ON menu_categories`);
-        await executeQuery(supabase, `CREATE POLICY "Public categories are viewable by everyone" ON menu_categories FOR SELECT USING (true)`);
+        // Policies for menu_menu_categories
+        await executeQuery(supabase, `DROP POLICY IF EXISTS "Public menu_categories are viewable by everyone" ON menu_menu_categories`);
+        await executeQuery(supabase, `CREATE POLICY "Public menu_categories are viewable by everyone" ON menu_menu_categories FOR SELECT USING (true)`);
         
-        await executeQuery(supabase, `DROP POLICY IF EXISTS "Authenticated users can modify categories" ON menu_categories`);
-        await executeQuery(supabase, `CREATE POLICY "Authenticated users can modify categories" ON menu_categories FOR ALL USING (auth.role() = 'authenticated')`);
+        await executeQuery(supabase, `DROP POLICY IF EXISTS "Authenticated users can modify menu_categories" ON menu_menu_categories`);
+        await executeQuery(supabase, `CREATE POLICY "Authenticated users can modify menu_categories" ON menu_menu_categories FOR ALL USING (auth.role() = 'authenticated')`);
 
         // Policies for dishes
         await executeQuery(supabase, `DROP POLICY IF EXISTS "Public dishes are viewable by everyone" ON dishes`);
@@ -1453,7 +1453,7 @@ export const databaseOperations = {
   clearAllData: async (): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
         const tables = [
-            'order_items', 'orders', 'dishes', 'menu_categories', 'suppliers', 
+            'order_items', 'orders', 'dishes', 'menu_menu_categories', 'suppliers', 
             'expenses', 'revenues', 'customers', 'employees', 'attendance_records',
             'stock_items', 'cash_shifts', 'reservations', 'deliveries', 'payroll_records'
         ];
@@ -1465,3 +1465,4 @@ export const databaseOperations = {
     }, 'clear all data', 'DATABASE');
   }
 }
+

@@ -17,5 +17,7 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "version": "1.0.0",
+  "cache_busting": "20250305-2246"
 }

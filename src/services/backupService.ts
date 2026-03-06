@@ -17,7 +17,7 @@ export interface BackupData {
     source: 'tasca-do-vereda-system';
     data: {
         menu?: Dish[];
-        categories?: MenuCategory[];
+        menu_categories?: MenuCategory[];
         orders?: Order[];
         expenses?: Expense[];
         revenues?: Revenue[];
@@ -98,30 +98,30 @@ export class BackupService {
     }
 
     /**
-     * Load auto backup categories
+     * Load auto backup menu_categories
      */
-    loadAutoBackup(): { categories: MenuCategory[] } {
+    loadAutoBackup(): { menu_categories: MenuCategory[] } {
         try {
             const raw = localStorage.getItem(AUTO_BACKUP_KEY);
-            if (!raw) return { categories: [] };
+            if (!raw) return { menu_categories: [] };
             const data = JSON.parse(raw);
-            return { categories: data.data || [] };
+            return { menu_categories: data.data || [] };
         } catch {
-            return { categories: [] };
+            return { menu_categories: [] };
         }
     }
 
     /**
-     * Load manual backup categories (fallback)
+     * Load manual backup menu_categories (fallback)
      */
-    loadBackup(): { categories: MenuCategory[] } {
+    loadBackup(): { menu_categories: MenuCategory[] } {
         try {
             const raw = localStorage.getItem(FINANCIAL_BACKUP_KEY);
-            if (!raw) return { categories: [] };
+            if (!raw) return { menu_categories: [] };
             const data = JSON.parse(raw);
-            return { categories: data.menu?.categories || [] };
+            return { menu_categories: data.menu?.menu_categories || [] };
         } catch {
-            return { categories: [] };
+            return { menu_categories: [] };
         }
     }
 
@@ -228,7 +228,7 @@ export class BackupService {
         if (headers.includes('price') && headers.includes('name')) {
             result.data.menu = data as Dish[];
         } else if (headers.includes('icon') && headers.includes('name')) {
-            result.data.categories = data as MenuCategory[];
+            result.data.menu_categories = data as MenuCategory[];
         } else if (headers.includes('amount') && headers.includes('description')) {
             // Could be Expense or Revenue
             result.data.expenses = data as Expense[]; // Default assumption
@@ -341,7 +341,7 @@ export class BackupService {
      * Save full backup to local storage (browser/app cache)
      */
     async saveFullBackup(
-        categories: MenuCategory[],
+        menu_categories: MenuCategory[],
         dishes: Dish[],
         financialData: FinancialBackupData,
         userId: string
@@ -360,7 +360,7 @@ export class BackupService {
                 },
                 financial: financialData,
                 menu: {
-                    categories,
+                    menu_categories,
                     dishes
                 }
             };
@@ -368,7 +368,7 @@ export class BackupService {
             // Generate checksum of content (excluding metadata checksum itself)
             const contentHash = await this.generateChecksum({
                 financial: financialData,
-                menu: { categories, dishes }
+                menu: { menu_categories, dishes }
             });
             
             backupPackage.metadata.checksum = contentHash;
@@ -428,20 +428,20 @@ export class BackupService {
     }
 
     /**
-     * Auto backup for critical menu data (Categories/Dishes)
+     * Auto backup for critical menu data (menu_categories/Dishes)
      */
-    autoBackup(categories: MenuCategory[], dishes: Dish[]): void {
+    autoBackup(menu_categories: MenuCategory[], dishes: Dish[]): void {
         try {
-            if (!categories || categories.length === 0) return;
+            if (!menu_categories || menu_categories.length === 0) return;
 
-            const validCategories = categories.filter(c => c.id && c.name);
+            const validmenu_categories = menu_categories.filter(c => c.id && c.name);
             const validDishes = dishes.filter(d => d.id && d.name);
 
             const backupData = {
                 timestamp: new Date().toISOString(),
-                data: validCategories,
+                data: validmenu_categories,
                 dishes: validDishes,
-                count: validCategories.length
+                count: validmenu_categories.length
             };
 
             localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(backupData));
@@ -451,9 +451,9 @@ export class BackupService {
     }
 
     /**
-     * Check integrity of current categories against backup
+     * Check integrity of current menu_categories against backup
      */
-    checkIntegrity(currentCategories: MenuCategory[], currentDishes: Dish[]): { status: 'OK' | 'EMPTY' | 'CORRUPTED', suggestedCategories?: MenuCategory[] } {
+    checkIntegrity(currentmenu_categories: MenuCategory[], currentDishes: Dish[]): { status: 'OK' | 'EMPTY' | 'CORRUPTED', suggestedmenu_categories?: MenuCategory[] } {
         try {
             const rawBackup = localStorage.getItem(AUTO_BACKUP_KEY);
             if (!rawBackup) {
@@ -461,15 +461,15 @@ export class BackupService {
             }
 
             const backup = JSON.parse(rawBackup);
-            const backupCategories = backup.data || [];
+            const backupmenu_categories = backup.data || [];
 
-            if (currentCategories.length === 0 && backupCategories.length > 0) {
-                return { status: 'EMPTY', suggestedCategories: backupCategories };
+            if (currentmenu_categories.length === 0 && backupmenu_categories.length > 0) {
+                return { status: 'EMPTY', suggestedmenu_categories: backupmenu_categories };
             }
 
-            // Simple heuristic: if we lost more than 80% of categories compared to backup
-            if (backupCategories.length > 5 && currentCategories.length < (backupCategories.length * 0.2)) {
-                return { status: 'CORRUPTED', suggestedCategories: backupCategories };
+            // Simple heuristic: if we lost more than 80% of menu_categories compared to backup
+            if (backupmenu_categories.length > 5 && currentmenu_categories.length < (backupmenu_categories.length * 0.2)) {
+                return { status: 'CORRUPTED', suggestedmenu_categories: backupmenu_categories };
             }
 
             return { status: 'OK' };
@@ -481,3 +481,4 @@ export class BackupService {
 
 
 export const backupService = new BackupService();
+

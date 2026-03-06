@@ -46,7 +46,7 @@ export default function OwnerMobilePage() {
     expenses: [],
     payroll: [],
     dishes: [],
-    categories: []
+    menu_categories: []
   });
   const [loadingSupabase, setLoadingSupabase] = useState(false);
   
@@ -57,8 +57,9 @@ export default function OwnerMobilePage() {
   useEffect(() => {
     const fetchExternalFinance = async () => {
       try {
-        // Adicionar timestamp para evitar cache mobile
+        // Adicionar timestamp para evitar cache mobile + forçar refresh
         const timestamp = Date.now();
+        const cacheBuster = `?_t=${timestamp}&_v=${Date.now()}`;
         const supabase = createClient();
         const { data, error } = await supabase
           .from('external_finance')
@@ -79,6 +80,10 @@ export default function OwnerMobilePage() {
     };
 
     fetchExternalFinance();
+    
+    // Forçar refresh a cada 30 segundos para mobile
+    const interval = setInterval(fetchExternalFinance, 30000);
+    return () => clearInterval(interval);
   }, []);
   
   // Dados em tempo real do store local
@@ -86,7 +91,7 @@ export default function OwnerMobilePage() {
     orders, 
     expenses,
     dishes,
-    categories,
+    menu_categories,
     addNotification,
     settings,
     employees,
@@ -580,3 +585,4 @@ export default function OwnerMobilePage() {
     </div>
   );
 }
+

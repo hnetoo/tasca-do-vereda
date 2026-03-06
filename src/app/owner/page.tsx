@@ -30,7 +30,7 @@ export default function OwnerPage() {
     expenses: [],
     payroll: [],
     dishes: [],
-    categories: []
+    menu_categories: []
   });
   const [loadingSupabase, setLoadingSupabase] = useState(false);
   
@@ -40,7 +40,7 @@ export default function OwnerPage() {
     expenses,
     revenues,
     dishes,
-    categories,
+    menu_categories,
     settings,
     employees,
     setOrders,
@@ -55,8 +55,9 @@ export default function OwnerPage() {
   useEffect(() => {
     const fetchExternalFinance = async () => {
       try {
-        // Adicionar timestamp para evitar cache mobile
+        // Adicionar timestamp para evitar cache mobile + forçar refresh
         const timestamp = Date.now();
+        const cacheBuster = `?_t=${timestamp}&_v=${Date.now()}`;
         const supabase = createClient();
         const { data, error } = await supabase
           .from('external_finance')
@@ -77,6 +78,10 @@ export default function OwnerPage() {
     };
 
     fetchExternalFinance();
+    
+    // Forçar refresh a cada 30 segundos para mobile
+    const interval = setInterval(fetchExternalFinance, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Fallback: Carregar dados da API se store local estiver vazio
@@ -105,7 +110,7 @@ export default function OwnerPage() {
           orders: [],
           expenses: [],
           dishes: supabaseData.dishes || [],
-          categories: supabaseData.categories || []
+          menu_categories: supabaseData.menu_categories || []
         });
         
         // Limpar store local também
@@ -126,14 +131,14 @@ export default function OwnerPage() {
         expenses: result.expenses || [],
         payroll: result.payroll || [],
         dishes: result.dishes || [],
-        categories: result.categories || []
+        menu_categories: result.menu_categories || []
       });
       
       console.log('✅ API data loaded for owner desktop:', {
         orders: result.orders?.length || 0,
         expenses: result.expenses?.length || 0,
         dishes: result.dishes?.length || 0,
-        categories: result.categories?.length || 0
+        menu_categories: result.menu_categories?.length || 0
       });
       
     } catch (error: any) {
@@ -194,7 +199,7 @@ export default function OwnerPage() {
         alert('✅ Produção limpa com sucesso! Backup salvo automaticamente.');
         
         // Recarregar dados
-        setSupabaseData({ orders: [], expenses: [], dishes: [], categories: [] });
+        setSupabaseData({ orders: [], expenses: [], dishes: [], menu_categories: [] });
         await loadApiData();
         
         // Mostrar resumo no console
@@ -216,7 +221,7 @@ export default function OwnerPage() {
     orders: (orders?.length || 0) > 0 ? orders : supabaseData.orders,
     expenses: (expenses?.length || 0) > 0 ? expenses : supabaseData.expenses,
     dishes: (dishes?.length || 0) > 0 ? dishes : supabaseData.dishes,
-    categories: (categories?.length || 0) > 0 ? categories : supabaseData.categories,
+    menu_categories: (menu_categories?.length || 0) > 0 ? menu_categories : supabaseData.menu_categories,
     payroll: supabaseData.payroll || []
   };
 
@@ -230,7 +235,7 @@ export default function OwnerPage() {
       localExpenses: expenses?.length || 0,
       localRevenues: revenues?.length || 0,
       localDishes: dishes?.length || 0,
-      localCategories: categories?.length || 0,
+      localmenu_categories: menu_categories?.length || 0,
       apiOrders: supabaseData.orders.length,
       apiExpenses: supabaseData.expenses.length,
       finalOrders: currentData.orders.length,
@@ -247,7 +252,7 @@ export default function OwnerPage() {
         console.warn('⚠️ CHECK: POS may not be creating revenue records');
       }
     }
-  }, [orders, expenses, revenues, dishes, categories, supabaseData.orders.length, supabaseData.expenses.length, currentData.orders.length, currentData.expenses.length]);
+  }, [orders, expenses, revenues, dishes, menu_categories, supabaseData.orders.length, supabaseData.expenses.length, currentData.orders.length, currentData.expenses.length]);
 
   // Verificar autenticação
   useEffect(() => {
@@ -308,39 +313,13 @@ export default function OwnerPage() {
       orders: orders?.length || 0,
       revenues: revenues?.length || 0,
       dishes: dishes?.length || 0,
-      categories: categories?.length || 0,
+      menu_categories: menu_categories?.length || 0,
       sampleOrders: orders?.slice(0, 2).map(o => ({ id: o.id, total: o.total, itemsCount: o.items?.length || 0 })),
       sampleRevenues: revenues?.slice(0, 2).map(r => ({ id: r.id, amount: r.amount, description: r.description }))
     });
     
-    // PRIORIDADE: Usar revenues se existirem, senão usar orders
-    const hasRevenues = revenues && revenues.length > 0;
-    const hasOrders = orders && orders.length > 0;
-    
-    if (!hasRevenues && !hasOrders) {
-      console.log('📊 No sales data found, returning zeros');
-      return {
-        todaySales: 0,
-        todayOrders: 0,
-        todayRevenue: 0,
-        activeTables: 0,
-        totalRevenue: 0,
-        totalOrders: 0,
-        avgTicket: 0,
-        growth: 0,
-        pendingOrders: 0,
-        averageTicket: 0
-      };
-    }
-
-    try {
-      const today = new Date();
-      // Forçar timezone Africa/Luanda para consistência mobile/desktop
-      today.setHours(0, 0, 0, 0);
-      const luandaOffset = today.getTimezoneOffset(); // Offset em minutos
-      
-      // PRIORIDADE 1: Calcular usando revenues (dados diretos do POS)
-      if (hasRevenues) {
+    // PRIORIDADE 1: Calcular usando revenues (dados diretos do POS)
+      if (revenues && revenues.length > 0) {
         const todayRevenues = revenues.filter((revenue: any) => {
           const revenueDate = new Date(revenue.date instanceof Date ? revenue.date : new Date(revenue.date));
           // Normalizar para timezone de Luanda
@@ -357,10 +336,7 @@ export default function OwnerPage() {
         }, 0);
 
         // Adicionar dados externos ao total
-        const externalTotal = externalFinance.reduce((sum: number, ext: any) => {
-          return sum + (ext.amount || 0);
-        }, 0);
-
+        const externalTotal = externalFinance.reduce((sum: number, ext: any) => sum + (ext.amount || 0), 0);
         const grandTotal = totalRevenue + externalTotal;
         
         console.log('📊 Using revenues + external for calculations:', {
@@ -820,3 +796,4 @@ export default function OwnerPage() {
     </div>
   );
 }
+
