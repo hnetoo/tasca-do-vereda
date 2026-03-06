@@ -614,22 +614,22 @@ export const adminOperations = {
 
       console.log('✅ Order saved successfully:', data);
 
-      // 2. SALVAR OS ITENS DO PEDIDO (OrderItems) - ESTE ERA O PROBLEMA!
+      // 2. SALVAR OS ITENS DO PEDIDO (OrderItems) - APENAS COLUNAS EXISTENTES
       if (order.items && order.items.length > 0) {
         console.log('🛒 Saving order items:', order.items.length);
         
-        const orderItems = order.items.map((item, index) => ({
+        const orderItems = order.items.map((item) => ({
           id: item.id || uuidv4(),
           order_id: order.id,
           dish_id: item.dishId,
           quantity: item.quantity,
           unit_price: item.unit_price || item.price,
-          total_price: (item.unit_price || item.price || 0) * (item.quantity || 1),
+          tax_percentage: 0.065, // 6.5%
+          tax_amount: (item.unit_price || item.price || 0) * 0.065 * (item.quantity || 1),
+          tax_code: 'IVA',
           notes: item.notes || '',
-          status: item.status || 'pending',
-          created_at: item.createdAt || new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          sort_order: index
+          status: item.status || 'pending'
+          // REMOVIDAS: created_at, updated_at, sort_order, total_price (não existem)
         }));
 
         console.log('📦 OrderItems to save:', orderItems);

@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function ensureBalcaoTable() {
   const supabase = await createClient();
@@ -25,9 +26,9 @@ export async function ensureBalcaoTable() {
       return { success: true, table: existingTable };
     }
     
-    // Criar mesa Balcão se não existir (apenas colunas existentes)
+    // Criar mesa Balcão se não existir (apenas colunas existentes + UUID válido)
     const balcaoTable = {
-      id: 'balcao-999',
+      id: uuidv4(), // UUID válido em vez de 'balcao-999'
       number: 999,
       status: 'AVAILABLE',
       x: 0,
