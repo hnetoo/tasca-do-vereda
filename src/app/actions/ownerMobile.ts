@@ -2,11 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server';
 
-export async function getOwnerMobileData() {
+export async function getOwnerMobileData(cacheParam?: string) {
   const supabase = await createClient();
   
   try {
-    console.log('🔍 MOBILE SERVER ACTION: Buscando dados do banco...');
+    console.log('🔍 MOBILE SERVER ACTION: Buscando dados do banco...', cacheParam);
     
     // Carregar orders - BUSCAR TODOS OS CAMPOS
     const { data: ordersData, error: ordersError } = await supabase
@@ -32,19 +32,15 @@ export async function getOwnerMobileData() {
 
     console.log('🔍 MOBILE SERVER ACTION: Payroll encontrados:', payrollData?.length || 0);
 
-    // Carregar dishes - BUSCAR TODOS OS CAMPOS
+    // Carregar dishes e categories - USAR NOMES CORRETOS
     const { data: dishesData, error: dishesError } = await supabase
       .from('dishes')
-      .select('*')
-      .eq('is_active', true);
+      .select('*');
 
-    console.log('🔍 MOBILE SERVER ACTION: Dishes encontrados:', dishesData?.length || 0);
-
-    // Carregar categories - BUSCAR TODOS OS CAMPOS
     const { data: categoriesData, error: categoriesError } = await supabase
       .from('menu_categories')
       .select('*')
-      .eq('is_active', true);
+      .order('sort_order', { ascending: true });
 
     console.log('🔍 MOBILE SERVER ACTION: Categories encontradas:', categoriesData?.length || 0);
 

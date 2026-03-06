@@ -104,10 +104,10 @@ export default function OwnerMobilePage() {
   const loadApiData = useCallback(async () => {
     try {
       setLoadingSupabase(true);
-      console.log('� MOBILE: Carregando dados da API...');
+      console.log('📱 MOBILE: Carregando dados da API...');
       
       // Primeiro, garantir que todas as tabelas existem
-      console.log('� MOBILE: Verificando tabelas...');
+      console.log('📱 MOBILE: Verificando tabelas...');
       const tablesResult = await ensureTables();
       if (!tablesResult.success) {
         console.error('❌ MOBILE: Erro ao verificar tabelas:', tablesResult.error);
@@ -115,9 +115,10 @@ export default function OwnerMobilePage() {
         return;
       }
       
-      // Depois de garantir tabelas, carregar dados
+      // Depois de garantir tabelas, carregar dados com cache busting
       console.log('📊 MOBILE: Carregando dados do Supabase...');
-      const data = await getOwnerMobileData();
+      const timestamp = Date.now();
+      const data = await getOwnerMobileData(`?v=${timestamp}`);
       
       console.log('📱 MOBILE: Dados recebidos:', {
         ordersCount: data.orders?.length || 0,
@@ -299,6 +300,8 @@ export default function OwnerMobilePage() {
       const cookie = document.cookie.split(';').find(c => c.trim().startsWith('owner_authenticated='));
       if (cookie?.split('=')[1] === 'true') {
         setAuthChecking(false);
+        // Redirect para settings se já autenticado
+        router.push('/settings');
       } else {
         router.push('/owner/mobile/login');
       }
