@@ -601,13 +601,13 @@ export const adminOperations = {
         const orderItems = order.items.map((item, index) => ({
           id: item.id || uuidv4(),
           order_id: order.id,
-          dish_id: item.dish_id || item.dishId,
+          dish_id: item.dishId,
           quantity: item.quantity,
           unit_price: item.unit_price || item.price,
           total_price: (item.unit_price || item.price || 0) * (item.quantity || 1),
           notes: item.notes || '',
           status: item.status || 'pending',
-          created_at: item.created_at || new Date().toISOString(),
+          created_at: item.createdAt || new Date().toISOString(),
           updated_at: new Date().toISOString(),
           sort_order: index
         }));

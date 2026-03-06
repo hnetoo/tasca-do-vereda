@@ -84,13 +84,13 @@ export const generateSAFT = async (
       const items = o.items || [];
       for (let j = 0; j < items.length; j++) {
         const item = items[j];
-        const dish = menu.find(m => m.id === item.dish_id);
+        const dish = menu.find(m => m.id === item.dishId);
         const taxCode = dish?.taxCode || 'NOR';
         const taxRate = (settings.taxRate as number) || 14;
         linesXml += `
         <Line>
           <LineNumber>${j + 1}</LineNumber>
-          <ProductCode>${item.dish_id}</ProductCode>
+          <ProductCode>${item.dishId}</ProductCode>
           <ProductDescription>${dish?.name || 'Item Desconhecido'}</ProductDescription>
           <Quantity>${Number(item.quantity || 0)}</Quantity>
           <UnitOfMeasure>Un</UnitOfMeasure>
