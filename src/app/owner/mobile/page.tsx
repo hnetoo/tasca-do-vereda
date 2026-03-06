@@ -42,7 +42,7 @@ export default function OwnerMobilePage() {
   const [showAccumulatedSales, setShowAccumulatedSales] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [supabaseData, setSupabaseData] = useState<any>({
-    orders: [],
+    revenues: [],  // TROCAR ORDERS POR REVENUES
     expenses: [],
     payroll: [],
     dishes: [],
@@ -88,15 +88,14 @@ export default function OwnerMobilePage() {
   
   // Dados em tempo real do store local
   const { 
-    orders, 
+    revenues,  
     expenses,
     dishes,
     categories,
     addNotification,
-    settings,
     employees,
     payroll,
-    setOrders,
+    setRevenues,  
     setExpenses
   } = useStore();
 
@@ -121,20 +120,20 @@ export default function OwnerMobilePage() {
       const data = await getOwnerMobileData(`?v=${timestamp}`);
       
       console.log('📱 MOBILE: Dados recebidos:', {
-        ordersCount: data.orders?.length || 0,
+        revenuesCount: data.revenues?.length || 0,  
         expensesCount: data.expenses?.length || 0,
         payrollCount: data.payroll?.length || 0,
         timestamp: new Date().toISOString(),
-        // Debug detalhado dos orders - EXATAMENTE COMO NO PC
-        sampleOrders: data.orders?.slice(0, 3).map(o => ({
-          id: o.id,
-          total: o.total,  // APENAS TOTAL COMO NO PC
-          created_at: o.created_at,
-          status: o.status
+        // Debug detalhado dos revenues - TABELA CORRETA
+        sampleRevenues: data.revenues?.slice(0, 3).map(r => ({
+          id: r.id,
+          amount: r.amount,  
+          date: r.date,
+          description: r.description
         })),
         // Verificar se há valores diferentes de zero
-        hasRevenue: data.orders?.some(o => (o.total || 0) > 0),
-        totalRevenue: data.orders?.reduce((sum, o) => sum + (o.total || 0), 0)
+        hasRevenue: data.revenues?.some(r => (r.amount || 0) > 0),
+        totalRevenue: data.revenues?.reduce((sum, r) => sum + (r.amount || 0), 0)
       });
       
       setSupabaseData(data);
@@ -161,14 +160,14 @@ export default function OwnerMobilePage() {
 
   // Combinar dados locais com dados do Supabase
   const currentData = useMemo(() => {
-    const allOrders = [...(orders || []), ...(supabaseData.orders || [])];
+    const allRevenues = [...(revenues || []), ...(supabaseData.revenues || [])];  
     const allExpenses = [...(expenses || []), ...(supabaseData.expenses || [])];
     const allPayroll = [...(payroll || []), ...(supabaseData.payroll || [])];
     
     console.log('🔥 STORE VS API (MOBILE):', { 
-      store: orders.length, 
-      api: supabaseData.orders?.length || 0,
-      finalOrders: allOrders.length,
+      store: revenues.length,  
+      api: supabaseData.revenues?.length || 0,
+      finalRevenues: allRevenues.length,  
       storeExpenses: expenses.length,
       apiExpenses: supabaseData.expenses?.length || 0,
       finalExpenses: allExpenses.length,
@@ -178,11 +177,11 @@ export default function OwnerMobilePage() {
     });
     
     return {
-      orders: allOrders,
+      revenues: allRevenues,  
       expenses: allExpenses,
       payroll: allPayroll
     };
-  }, [orders, expenses, payroll, supabaseData]);
+  }, [revenues, expenses, payroll, supabaseData]);  
 
   // Cálculos financeiros
   const calculations = useSafeCardCalculations(currentData, period);
@@ -190,7 +189,7 @@ export default function OwnerMobilePage() {
   // Filtrar por período
   const filteredData = useMemo(() => {
     return {
-      orders: currentData.orders,
+      revenues: currentData.revenues,  
       expenses: currentData.expenses,
       payroll: currentData.payroll
     };
@@ -199,8 +198,8 @@ export default function OwnerMobilePage() {
   // Cálculos do período
   const periodCalculations = useSafeCardCalculations(filteredData, period);
   
-  // Cálculo manual forçado para garantir valores corretos - EXATAMENTE COMO NO PC
-  const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+  // Cálculo manual forçado para garantir valores corretos - USAR REVENUES
+  const manualRevenue = filteredData.revenues.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);  
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   
   // Adicionar dados externos ao total
@@ -224,24 +223,27 @@ export default function OwnerMobilePage() {
   const todayEnd = new Date(today);
   todayEnd.setHours(23, 59, 59, 999); // Fim do dia
   
-  const todayOrders = filteredData.orders.filter((order: any) => {
-    const orderDate = new Date(order.created_at);
-    // Normalizar para timezone de Luanda
-    orderDate.setHours(0, 0, 0, 0);
-    return orderDate.getTime() === today.getTime();
-  });
+  // REMOVIDO FILTRO DE DATA - MOSTRAR TUDO PARA TESTE
+  // const todayRevenues = filteredData.revenues.filter((revenue: any) => {
+  //   const revenueDate = new Date(revenue.date);
+  //   // Normalizar para timezone de Luanda
+  //   revenueDate.setHours(0, 0, 0, 0);
+  //   return revenueDate.getTime() === today.getTime();
+  // });
   
-  const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+  const todayRevenues = filteredData.revenues; // TODOS OS REVENUES - SEM FILTRO
+  
+  const todayRevenue = todayRevenues.reduce((sum: number, r: any) => sum + (r.amount || 0), 0);  
   
   // Vendas acumuladas (total desde o início - NUNCA ZERA)
   const accumulatedRevenue = grandTotalRevenue; // Incluir dados externos
   
   // Data do primeiro registro para mostrar "desde quando"
-  const firstOrderDate = filteredData.orders.length > 0 
-    ? new Date(Math.min(...filteredData.orders.map((o: any) => new Date(o.created_at).getTime())))
+  const firstRevenueDate = filteredData.revenues.length > 0  
+    ? new Date(Math.min(...filteredData.revenues.map((r: any) => new Date(r.date).getTime())))
     : new Date();
   
-  const daysSinceStart = Math.floor((today.getTime() - firstOrderDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysSinceStart = Math.floor((today.getTime() - firstRevenueDate.getTime()) / (1000 * 60 * 60 * 24));  
   
   // Cálculo de impostos (6,5% sobre o total de vendas)
   const taxRate = 0.065; // 6.5%
@@ -261,11 +263,11 @@ export default function OwnerMobilePage() {
     totalTaxes,
     taxRate: `${(taxRate * 100)}%`,
     todayRevenue,
-    todayOrdersCount: todayOrders.length,
+    todayOrdersCount: todayRevenues.length,
     accumulatedRevenue,
     daysSinceStart,
-    firstOrderDate: firstOrderDate.toLocaleDateString('pt-AO'),
-    ordersCount: filteredData.orders.length,
+    firstOrderDate: firstRevenueDate.toLocaleDateString('pt-AO'),
+    revenuesCount: filteredData.revenues.length,  
     expensesCount: filteredData.expenses.length,
     payrollCount: filteredData.payroll.length
   });
@@ -293,7 +295,7 @@ export default function OwnerMobilePage() {
       
       if (result.success) {
         addNotification('✅ Dados resetados com sucesso!', 'success');
-        setOrders([]);
+        setRevenues([]);  
         setExpenses([]);
         await loadApiData();
       } else {
@@ -413,7 +415,7 @@ export default function OwnerMobilePage() {
           <div className="text-2xl font-bold">{displayValues.revenue}</div>
           <div className="flex items-center gap-1 text-sm text-green-100">
             <ArrowUpRight className="w-4 h-4" />
-            <span>{filteredData.orders.length} vendas</span>
+            <span>{filteredData.revenues.length} vendas</span>
           </div>
         </div>
 
@@ -452,7 +454,7 @@ export default function OwnerMobilePage() {
           <div className="text-2xl font-bold">{displayValues.todayRevenue}</div>
           <div className="flex items-center gap-1 text-sm text-indigo-100">
             <Clock className="w-4 h-4" />
-            <span>{todayOrders.length} pedidos hoje</span>
+            <span>{todayRevenues.length} pedidos hoje</span>
           </div>
         </div>
 
@@ -465,7 +467,7 @@ export default function OwnerMobilePage() {
           <div className="text-2xl font-bold">{displayValues.accumulatedRevenue}</div>
           <div className="flex items-center gap-1 text-sm text-purple-100">
             <TrendingUp className="w-4 h-4" />
-            <span>Desde {firstOrderDate.toLocaleDateString('pt-AO')}</span>
+            <span>Desde {firstRevenueDate.toLocaleDateString('pt-AO')}</span>
           </div>
           <div className="text-xs text-purple-80 mt-1">
             ({daysSinceStart} dias de operação)
@@ -537,20 +539,20 @@ export default function OwnerMobilePage() {
           
           {showHistory && (
             <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
-              {filteredData.orders.length === 0 ? (
+              {filteredData.revenues.length === 0 ? (
                 <div className="text-center text-gray-400 py-4">
                   Nenhuma venda encontrada
                 </div>
               ) : (
-                filteredData.orders.map((order: any, index: number) => (
-                  <div key={order.id || index} className="bg-gray-700 p-3 rounded-lg">
+                filteredData.revenues.map((revenue: any, index: number) => (
+                  <div key={revenue.id || index} className="bg-gray-700 p-3 rounded-lg">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="text-white font-medium">
-                          Pedido #{index + 1}
+                          {revenue.description || `Venda #${index + 1}`}
                         </div>
                         <div className="text-gray-400 text-sm">
-                          {new Date(order.created_at).toLocaleString('pt-AO', {
+                          {new Date(revenue.date).toLocaleString('pt-AO', {
                             day: '2-digit',
                             month: '2-digit',
                             hour: '2-digit',
@@ -558,13 +560,13 @@ export default function OwnerMobilePage() {
                           })}
                         </div>
                         <div className="text-gray-500 text-xs">
-                          Mesa: {order.table_id || 'N/A'}
+                          Tipo: {revenue.type || 'Venda'}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-green-400">{formatKwanza(order.total || 0)}</div>
+                        <div className="text-lg font-bold text-green-400">{formatKwanza(revenue.amount || 0)}</div>
                         <div className="text-gray-400 text-xs">
-                          +{formatKwanza(order.tax_total || 0)} imposto
+                          {revenue.category || 'Receita'}
                         </div>
                       </div>
                     </div>
