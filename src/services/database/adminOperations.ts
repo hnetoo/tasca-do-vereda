@@ -31,12 +31,11 @@ export const adminOperations = {
 
       console.log('📋 [ADMIN OPERATIONS] Mesa encontrada:', existingTable);
 
-      // Atualizar o status
+      // Atualizar o status (apenas colunas existentes)
       const { error } = await supabaseAdmin
         .from('restaurant_tables')
         .update({ 
-          status: status, 
-          updated_at: new Date().toISOString() 
+          status: status
         })
         .eq('id', tableId);
 
