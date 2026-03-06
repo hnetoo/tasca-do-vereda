@@ -125,17 +125,16 @@ export default function OwnerMobilePage() {
         expensesCount: data.expenses?.length || 0,
         payrollCount: data.payroll?.length || 0,
         timestamp: new Date().toISOString(),
-        // Debug detalhado dos orders
+        // Debug detalhado dos orders - EXATAMENTE COMO NO PC
         sampleOrders: data.orders?.slice(0, 3).map(o => ({
           id: o.id,
-          total_amount: o.total_amount,
-          total: o.total,
+          total: o.total,  // APENAS TOTAL COMO NO PC
           created_at: o.created_at,
           status: o.status
         })),
         // Verificar se há valores diferentes de zero
-        hasRevenue: data.orders?.some(o => (o.total_amount || o.total || 0) > 0),
-        totalRevenue: data.orders?.reduce((sum, o) => sum + (o.total_amount || o.total || 0), 0)
+        hasRevenue: data.orders?.some(o => (o.total || 0) > 0),
+        totalRevenue: data.orders?.reduce((sum, o) => sum + (o.total || 0), 0)
       });
       
       setSupabaseData(data);
@@ -200,8 +199,8 @@ export default function OwnerMobilePage() {
   // Cálculos do período
   const periodCalculations = useSafeCardCalculations(filteredData, period);
   
-  // Cálculo manual forçado para garantir valores corretos
-  const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total_amount || o.total || 0), 0);
+  // Cálculo manual forçado para garantir valores corretos - EXATAMENTE COMO NO PC
+  const manualRevenue = filteredData.orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
   const manualExpenses = filteredData.expenses.reduce((sum: number, e: any) => sum + (e.amount || 0), 0);
   
   // Adicionar dados externos ao total
@@ -232,7 +231,7 @@ export default function OwnerMobilePage() {
     return orderDate.getTime() === today.getTime();
   });
   
-  const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total_amount || o.total || 0), 0);
+  const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
   
   // Vendas acumuladas (total desde o início - NUNCA ZERA)
   const accumulatedRevenue = grandTotalRevenue; // Incluir dados externos
@@ -563,7 +562,7 @@ export default function OwnerMobilePage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-green-400">{formatKwanza(order.total_amount || order.total || 0)}</div>
+                        <div className="text-lg font-bold text-green-400">{formatKwanza(order.total || 0)}</div>
                         <div className="text-gray-400 text-xs">
                           +{formatKwanza(order.tax_total || 0)} imposto
                         </div>
