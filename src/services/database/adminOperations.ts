@@ -505,7 +505,7 @@ export const adminOperations = {
         product_id: orderItem.productId || orderItem.product_id || orderItem.dishId,
         quantity: orderItem.quantity,
         price: orderItem.price || orderItem.unitPrice || orderItem.unit_price,
-        subtotal: orderItem.subtotal,
+        // REMOVIDO: subtotal (não existe no tipo OrderItem)
         tax: orderItem.tax || orderItem.taxAmount || orderItem.tax_amount,
         total: orderItem.total,
         notes: orderItem.notes,
