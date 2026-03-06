@@ -124,7 +124,18 @@ export default function OwnerMobilePage() {
         ordersCount: data.orders?.length || 0,
         expensesCount: data.expenses?.length || 0,
         payrollCount: data.payroll?.length || 0,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // Debug detalhado dos orders
+        sampleOrders: data.orders?.slice(0, 3).map(o => ({
+          id: o.id,
+          total_amount: o.total_amount,
+          total: o.total,
+          created_at: o.created_at,
+          status: o.status
+        })),
+        // Verificar se há valores diferentes de zero
+        hasRevenue: data.orders?.some(o => (o.total_amount || o.total || 0) > 0),
+        totalRevenue: data.orders?.reduce((sum, o) => sum + (o.total_amount || o.total || 0), 0)
       });
       
       setSupabaseData(data);
