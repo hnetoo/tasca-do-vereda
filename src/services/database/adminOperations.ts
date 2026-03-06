@@ -565,6 +565,21 @@ export const adminOperations = {
     
     if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
     try {
+      // 0. VERIFICAR SHIFT ABERTO ANTES DE SALVAR
+      const { data: openShift, error: shiftError } = await supabaseAdmin
+        .from('cash_shifts')
+        .select('id')
+        .eq('status', 'open')
+        .is('end_time', null)
+        .single();
+      
+      if (shiftError && shiftError.code !== 'PGRST116') {
+        console.log('❌ Erro ao verificar shift aberto:', shiftError);
+      }
+      
+      const shiftId = openShift?.id || null;
+      console.log('🕐 Shift aberto encontrado:', shiftId);
+
       // 1. Save Order com estrutura correta da tabela (apenas colunas existentes)
       const dbOrder = {
           id: order.id,
@@ -577,7 +592,7 @@ export const adminOperations = {
           customer_nif: order.customer_nif || null,
           payment_method: order.payment_method || null,
           sub_account_name: order.sub_account_name || null,
-          // REMOVIDO: shift_id (causa foreign key violation)
+          shift_id: shiftId,                           // ✓ apenas se existir shift aberto
           closed_at: order.closed_at || null,
           created_at: order.createdAt || order.created_at || new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -586,7 +601,12 @@ export const adminOperations = {
 
       console.log('📦 dbOrder structure:', dbOrder);
 
-      const { data, error: orderError } = await supabaseAdmin.from('orders').upsert(dbOrder).select();
+      // FORÇAR NO-CACHE NO SUPABASE
+      const { data, error: orderError } = await supabaseAdmin
+        .from('orders')
+        .upsert(dbOrder)
+        .select();
+
       if (orderError) {
         console.log('❌ Order insert error:', orderError);
         throw orderError;
