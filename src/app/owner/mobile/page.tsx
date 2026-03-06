@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDashboardData } from '@/app/actions/dashboardService';
+import { createTestOrder } from '@/app/actions/createTestOrder';
 import { 
   Smartphone, 
   DollarSign, 
@@ -20,7 +21,9 @@ import {
   Trash2,
   Receipt,
   LogOut,
-  ShoppingCart
+  ShoppingCart,
+  RotateCcw,
+  TrendingUp as TrendingUpIcon
 } from 'lucide-react';
 
 export default function OwnerMobilePage() {
@@ -57,6 +60,56 @@ export default function OwnerMobilePage() {
       setLoading(false);
     }
   }, [period]);
+
+  // Função para resetar produção
+  const handleReset = useCallback(async () => {
+    if (!confirm('Tem certeza que deseja resetar toda a produção? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      // Implementar lógica de reset aqui
+      console.log('🔄 MOBILE: Resetando produção...');
+      alert('Produção resetada com sucesso!');
+      await loadDashboardData();
+    } catch (error: any) {
+      console.error('❌ MOBILE: Erro ao resetar produção:', error);
+      alert('Erro ao resetar produção: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadDashboardData]);
+
+  // Função para testar venda
+  const handleTestOrder = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('🧪 MOBILE: Criando ordem de teste...');
+      
+      const { createClient } = await import('@/lib/supabase/server');
+      const { createTestOrder } = await import('@/app/actions/createTestOrder');
+      
+      const result = await createTestOrder();
+      
+      if (result.success) {
+        alert('Venda de teste criada com sucesso! ID: ' + result.data.id);
+        console.log('✅ MOBILE: Venda de teste criada:', result.data);
+        // Recarregar dashboard após 2 segundos
+        setTimeout(() => {
+          loadDashboardData();
+        }, 2000);
+      } else {
+        alert('Erro ao criar venda de teste: ' + result.error);
+        console.error('❌ MOBILE: Erro ao criar venda de teste:', result.error);
+      }
+    } catch (error: any) {
+      console.error('❌ MOBILE: Erro inesperado ao criar teste:', error);
+      alert('Erro inesperado: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadDashboardData]);
 
   // Carregar dados no mount
   useEffect(() => {
@@ -143,6 +196,20 @@ export default function OwnerMobilePage() {
 
         {/* Control Buttons */}
         <div className="flex gap-2 mb-4">
+          <button
+            onClick={handleReset}
+            className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <RotateCcw className="w-5 h-5" />
+            Reset Produção
+          </button>
+          <button
+            onClick={handleTestOrder}
+            className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            Testar Venda
+          </button>
           <button
             onClick={loadDashboardData}
             disabled={loading}

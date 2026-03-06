@@ -114,6 +114,31 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
       return { success: false, error: `Erro ao buscar vendas: ${ordersError.message}` };
     }
 
+    // DEBUG: Verificar dados das orders
+    if (ordersData && ordersData.length > 0) {
+      console.log('📋 DADOS DAS ORDERS:');
+      ordersData.forEach((order, index) => {
+        console.log(`  Order ${index + 1}:`, {
+          id: order.id,
+          status: order.status,
+          total: order.total,
+          created_at: order.created_at
+        });
+      });
+    } else {
+      console.log('⚠️ NENHUMA ORDER ENCONTRADA! Verificando todas as orders...');
+      const { data: allOrders, error: allOrdersError } = await supabase
+        .from('orders')
+        .select('*')
+        .limit(10);
+      
+      console.log('📋 TODAS AS ORDERS (limit 10):', {
+        count: allOrders?.length || 0,
+        data: allOrders,
+        error: allOrdersError
+      });
+    }
+
     // 2. VENDAS DO DIA (para cálculo de hoje)
     const todayStart = new Date(angolaTime);
     const todayEnd = new Date(angolaTime);
@@ -245,6 +270,22 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     const growthPercentage = salesPosYesterday > 0 
       ? ((salesPosToday - salesPosYesterday) / salesPosYesterday) * 100
       : (salesPosToday > 0 ? 100 : 0);
+
+    // DEBUG: Mostrar todos os cálculos
+    console.log('🧮 CÁLCULOS FINAIS:', {
+      salesPosTotal,
+      salesPosToday,
+      salesPosYesterday,
+      externalRevenueTotal,
+      expensesTotal,
+      payrollTotal,
+      totalSales,
+      totalTaxes,
+      netProfit,
+      growthPercentage,
+      ordersCount: ordersData?.length || 0,
+      todayOrdersCount: todayOrdersData?.length || 0
+    });
 
     const dashboardData: DashboardData = {
       sales: {

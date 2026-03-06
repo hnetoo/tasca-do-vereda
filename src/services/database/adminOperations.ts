@@ -4,6 +4,7 @@ import { logger } from '@/services/logger';
 import { isValidUUID } from '@/utils/uuid';
 import { v4 as uuidv4 } from 'uuid';
 import { MOCK_USERS } from '@/constants/index';
+import { ensureOpenShift } from '@/app/actions/ensureOpenShift';
 
 export const adminOperations = {
   updateTableStatus: async (tableId: string, status: TableStatus): Promise<{ success: boolean; error?: string }> => {
@@ -565,20 +566,15 @@ export const adminOperations = {
     
     if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
     try {
-      // 0. VERIFICAR SHIFT ABERTO ANTES DE SALVAR
-      const { data: openShift, error: shiftError } = await supabaseAdmin
-        .from('cash_shifts')
-        .select('id')
-        .eq('status', 'open')
-        .is('end_time', null)
-        .single();
-      
-      if (shiftError && shiftError.code !== 'PGRST116') {
-        console.log('❌ Erro ao verificar shift aberto:', shiftError);
+      // 0. GARANTIR TURNO ABERTO AUTOMATICAMENTE
+      const shiftResult = await ensureOpenShift();
+      if (!shiftResult.success) {
+        console.error('❌ Erro ao garantir turno aberto:', shiftResult.error);
+        return { success: false, error: `Erro ao garantir turno: ${shiftResult.error}` };
       }
       
-      const shiftId = openShift?.id || null;
-      console.log('🕐 Shift aberto encontrado:', shiftId);
+      const shiftId = shiftResult.shiftId;
+      console.log('🕐 Turno aberto/garantido:', shiftId);
 
       // 1. Save Order com estrutura correta da tabela (apenas colunas existentes)
       const dbOrder = {
