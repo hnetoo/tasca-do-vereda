@@ -287,33 +287,27 @@ export default function OwnerMobilePage() {
               </div>
             </div>
 
-            {/* Histórico de Lucros Card */}
+            {/* Histórico de Lucros Card (Apenas Leitura) */}
             <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-4 rounded-2xl">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-indigo-100">Histórico de Lucros</span>
                 <Calendar className="w-5 h-5 text-indigo-100" />
               </div>
               <div className="text-sm text-indigo-200 mb-2">
-                Registre lucros manuais para manter histórico
+                Lucros de softwares antigos (soma total)
               </div>
-              <button
-                onClick={() => {
-                  const amount = prompt('Valor do lucro (AOA):');
-                  if (amount && !isNaN(parseFloat(amount))) {
-                    // TODO: Implementar salvamento no banco
-                    console.log('Lucro a registrar:', parseFloat(amount));
-                  }
-                }}
-                className="w-full px-3 py-2 bg-indigo-800 text-white rounded-lg hover:bg-indigo-900 text-sm font-medium"
-              >
-                Adicionar Lucro Manual
-              </button>
+              <div className="text-xl font-bold text-white">
+                {formatKwanza(dashboardData.externalRevenue.total)}
+              </div>
+              <div className="text-xs text-indigo-200 mt-1">
+                {dashboardData.externalRevenue.count} registros históricos
+              </div>
             </div>
 
             {/* Reset de Dados Card */}
             <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 rounded-2xl">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-red-100">Reset de Dados</span>
+                <span className="text-red-100">Reset Produção</span>
                 <Trash2 className="w-5 h-5 text-red-100" />
               </div>
               <div className="text-sm text-red-200 mb-2">

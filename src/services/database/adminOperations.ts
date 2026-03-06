@@ -566,14 +566,14 @@ export const adminOperations = {
     
     if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
     try {
-      // 1. Save Order com estrutura correta da tabela
+      // 1. Save Order com estrutura correta da tabela (apenas colunas existentes)
       const dbOrder = {
           id: order.id,
           order_number: order.order_number || `ORD-${Date.now()}`,
           table_id: order.table_id || order.tableId || null,
           status: order.status || 'pending',
-          subtotal: order.subtotal || 0,
-          total: order.total || 0,
+          total: order.total || 0,                    // ✓ existe
+          tax_total: order.tax_total || 0,            // ✓ existe  
           customer_name: order.customerName || order.customer_name || '',
           customer_nif: order.customer_nif || null,
           payment_method: order.payment_method || null,
@@ -581,7 +581,8 @@ export const adminOperations = {
           shift_id: order.shift_id || order.shiftId || null,
           closed_at: order.closed_at || null,
           created_at: order.createdAt || order.created_at || new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          items: order.items || []                     // ✓ existe (jsonb)
       };
 
       console.log('📦 dbOrder structure:', dbOrder);
