@@ -300,8 +300,7 @@ export default function OwnerMobilePage() {
       const cookie = document.cookie.split(';').find(c => c.trim().startsWith('owner_authenticated='));
       if (cookie?.split('=')[1] === 'true') {
         setAuthChecking(false);
-        // Redirect para settings se já autenticado
-        router.push('/settings');
+        // Permanecer na página - NÃO REDIRECIONAR
       } else {
         router.push('/owner/mobile/login');
       }

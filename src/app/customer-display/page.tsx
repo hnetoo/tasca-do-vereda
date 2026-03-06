@@ -138,7 +138,7 @@ const CustomerDisplayContent = () => {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {paymentItems.filter(Boolean).map((item: OrderItem, idx: number) => {
-                const dish = menu.find((d: Dish) => d.id === (item.dishId || item.dish_id));
+                const dish = menu.find((d: Dish) => d.id === item.dishId);
                 const quantity = item.quantity || 0;
                 const unitPrice = item.unitPrice || 0;
                 return (
@@ -256,7 +256,7 @@ const CustomerDisplayContent = () => {
               </div>
             ) : (
               (allItems.filter(Boolean) as OrderItem[]).map((item: OrderItem, idx: number) => {
-                const dish = menu.find((d: Dish) => d.id === (item.dishId || item.dish_id));
+                const dish = menu.find((d: Dish) => d.id === item.dishId);
                 const quantity = item.quantity || 0;
                 const unitPrice = item.unitPrice || 0;
                 return (

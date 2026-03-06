@@ -503,7 +503,7 @@ export const adminOperations = {
       const dbOrderItem = {
         id: orderItem.id,
         order_id: orderItem.orderId || orderItem.order_id,
-        product_id: orderItem.productId || orderItem.product_id || orderItem.dishId || orderItem.dish_id,
+        product_id: orderItem.productId || orderItem.product_id || orderItem.dishId,
         quantity: orderItem.quantity,
         price: orderItem.price || orderItem.unitPrice || orderItem.unit_price,
         subtotal: orderItem.subtotal,
@@ -511,7 +511,7 @@ export const adminOperations = {
         total: orderItem.total,
         notes: orderItem.notes,
         status: orderItem.status,
-        created_at: orderItem.createdAt || orderItem.created_at,
+        created_at: orderItem.createdAt,
         updated_at: new Date().toISOString()
       };
 

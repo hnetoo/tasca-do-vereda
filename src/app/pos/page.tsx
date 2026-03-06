@@ -358,7 +358,7 @@ const POS = () => {
   
   // Fallback: Calcular total diretamente dos itens se o total da order for zero
   const calculatedTotal = currentOrder?.items?.reduce((sum: number, item: any) => {
-    const dish = menu.find((d: Product) => d.id === (item.dishId || item.dish_id));
+    const dish = menu.find((d: Product) => d.id === item.dishId);
     if (!dish) return sum;
     return sum + (dish.price || 0) * (item.quantity || 0);
   }, 0) || 0;
@@ -710,7 +710,7 @@ const POS = () => {
     const customerTaxId = order.customerNif || '999999999';
     
     const itemsHtml = (order.items || []).map(item => {
-      const product = menu.find((p: Product) => p.id === (item.dishId || item.dish_id));
+      const product = menu.find((p: Product) => p.id === item.dishId);
       const name = product?.name || 'Item Desconhecido';
       const unitPrice = formatKzDetailed(item.unitPrice || item.unit_price || 0);
       const subTotal = formatKzDetailed((item.unitPrice || item.unit_price || 0) * (item.quantity || 0));
@@ -1605,7 +1605,7 @@ const POS = () => {
             
             <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-3">
                 {currentOrder?.items?.map((item: OrderItem, idx: number) => { 
-                    const dish = menu.find((d: Product) => d.id === (item.dishId || item.dish_id)); 
+                    const dish = menu.find((p: Product) => p.id === item.dishId); 
                     if (!dish) return null; 
                     return (
                         <div key={idx} className="flex gap-4 items-center p-3 bg-white/5 rounded-2xl border border-white/5 group animate-in slide-in-from-right-4">

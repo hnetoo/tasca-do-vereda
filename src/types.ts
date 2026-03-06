@@ -132,9 +132,8 @@ interface OrderItemRow {
   updated_at: string | null;
 }
 
-export type OrderItem = Partial<OrderItemRow> & {
-  // Runtime / Local DB extensions
-  dish_id?: string;
+export interface OrderItem {
+  id: string;
   dishId?: string; // CamelCase alias
   order_id?: string;
   orderId?: string; // CamelCase alias
@@ -157,6 +156,7 @@ export type OrderItem = Partial<OrderItemRow> & {
   subtotal?: number;
   tax?: number;
   total?: number;
+  total_amount?: number;
   createdAt?: string; // CamelCase alias
   updatedAt?: string; // CamelCase alias
 };

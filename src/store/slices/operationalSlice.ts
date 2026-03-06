@@ -370,8 +370,8 @@ export const createOperationalSlice: StateCreator<
       items: [],
       status: 'ABERTO',
       total: 0,
-      subtotal: 0,
-      tax: 0,
+      total_amount: 0,
+      tax_amount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       isPaid: false,
@@ -417,8 +417,8 @@ export const createOperationalSlice: StateCreator<
 
       // Recalculate order totals
       orderToUpdate.subtotal = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.subtotal || 0), 0);
-      orderToUpdate.tax = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.tax || 0), 0);
-      orderToUpdate.total = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.total || 0), 0);
+      orderToUpdate.tax_amount = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.tax_amount || 0), 0);
+      orderToUpdate.total_amount = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.total_amount || 0), 0);
 
       updatedOrders[orderIndex] = orderToUpdate;
       set({ orders: updatedOrders } as any);
