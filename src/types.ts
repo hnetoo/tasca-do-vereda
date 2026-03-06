@@ -153,9 +153,8 @@ export interface OrderItem {
   status?: string;
 
   // Calculated fields
-  subtotal?: number;
   tax?: number;
-  total?: number;
+  total?: number | null; // Allow null from DB
   total_amount?: number;
   createdAt?: string; // CamelCase alias
   updatedAt?: string; // CamelCase alias
@@ -241,7 +240,6 @@ export type Order = Omit<Partial<any['public']['Tables']['public']['Tables']['or
   customerNif?: string;
   
   // Calculated fields
-  subtotal?: number;
   tax?: number;
   total?: number | null; // Allow null from DB
 
