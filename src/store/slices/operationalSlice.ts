@@ -415,10 +415,12 @@ export const createOperationalSlice: StateCreator<
       
       orderToUpdate.items = [...(orderToUpdate.items || []), newItem];
 
-      // Recalculate order totals
-      orderToUpdate.subtotal = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.subtotal || 0), 0);
-      orderToUpdate.tax_amount = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.tax_amount || 0), 0);
-      orderToUpdate.total_amount = (orderToUpdate.items || []).reduce((sum, oi) => sum + (oi.total_amount || 0), 0);
+      // Recalculate order totals - REMOVIDOS: subtotal, tax_amount (não existem)
+      orderToUpdate.total = (orderToUpdate.items || []).reduce((sum, oi) => {
+        const price = oi.unitPrice || oi.price || 0;
+        const qty = oi.quantity || 1;
+        return sum + (price * qty);
+      }, 0);
 
       updatedOrders[orderIndex] = orderToUpdate;
       set({ orders: updatedOrders } as any);
@@ -452,10 +454,12 @@ export const createOperationalSlice: StateCreator<
         const newItems = items.map((item, idx) => idx === itemToUpdateIndex ? itemToUpdate : item);
         orderToUpdate.items = newItems;
 
-        // Recalculate order totals
-        orderToUpdate.subtotal = newItems.reduce((sum, oi) => sum + (oi.subtotal || 0), 0);
-        orderToUpdate.tax = newItems.reduce((sum, oi) => sum + (oi.tax || 0), 0);
-        orderToUpdate.total = newItems.reduce((sum, oi) => sum + (oi.total || 0), 0);
+        // Recalculate order totals - USAR APENAS CAMPOS EXISTENTES
+      orderToUpdate.total = newItems.reduce((sum, oi) => {
+        const price = oi.unitPrice || oi.price || 0;
+        const qty = oi.quantity || 1;
+        return sum + (price * qty);
+      }, 0);
 
         updatedOrders[orderIndex] = orderToUpdate;
         set({ orders: updatedOrders } as any);
@@ -491,10 +495,12 @@ export const createOperationalSlice: StateCreator<
         const newItems = items.filter(item => item.id !== itemId);
         orderToUpdate.items = newItems;
 
-        // Recalculate order totals
-        orderToUpdate.subtotal = newItems.reduce((sum, oi) => sum + (oi.subtotal || 0), 0);
-        orderToUpdate.tax = newItems.reduce((sum, oi) => sum + (oi.tax || 0), 0);
-        orderToUpdate.total = newItems.reduce((sum, oi) => sum + (oi.total || 0), 0);
+        // Recalculate order totals - USAR APENAS CAMPOS EXISTENTES
+      orderToUpdate.total = newItems.reduce((sum, oi) => {
+        const price = oi.unitPrice || oi.price || 0;
+        const qty = oi.quantity || 1;
+        return sum + (price * qty);
+      }, 0);
 
         updatedOrders[orderIndex] = orderToUpdate;
         set({ orders: updatedOrders } as any);
