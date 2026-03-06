@@ -359,8 +359,8 @@ export default function OwnerPage() {
           growth: 0,
           pendingOrders: 0,
           averageTicket: todayRevenues.length > 0 ? todaySales / todayRevenues.length : 0
-        };
-      }
+        }
+      };
       
       // PRIORIDADE 2: Fallback para orders (se não houver revenues)
       const todayOrders = currentData.orders.filter((order: any) => {

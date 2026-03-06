@@ -77,20 +77,20 @@ export default function MenuDigital() {
 
   useEffect(() => {
     // Update cache when realtime data changes
-    if (isOnline && menu_categories && !menu_categoriesLoading) {
-      updateCache(menu_categories);
+    if (isOnline && categories && !categoriesLoading) {
+      updateCache(categories);
     }
-  }, [menu_categories, isOnline, menu_categoriesLoading, updateCache]);
+  }, [categories, isOnline, categoriesLoading, updateCache]);
 
   // Determine which data to use
-  const menuData = isOnline && menu_categories ? { menu_categories } : (offlineMenu || { menu_categories: [] });
-  const loading = isOnline ? menu_categoriesLoading : offlineLoading;
+  const menuData = isOnline && categories ? { categories } : (offlineMenu || { categories: [] });
+  const loading = isOnline ? categoriesLoading : offlineLoading;
 
   // Extrair produtos das categorias em tempo real
   const products = useMemo(() => {
     const allProducts: Product[] = [];
-    if (menuData && menuData.menu_categories && Array.isArray(menuData.menu_categories)) {
-      menuData.menu_categories.forEach((category: any) => {
+    if (menuData && menuData.categories && Array.isArray(menuData.categories)) {
+      menuData.categories.forEach((category: any) => {
         if (category.dishes) {
           category.dishes.forEach((dish: any) => {
             allProducts.push(mapToProduct(dish));

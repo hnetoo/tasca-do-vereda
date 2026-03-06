@@ -14,25 +14,25 @@ import {
 import { getMenuDataClient } from '@/utils/clientActions';
 import { logger } from '@/services/logger';
 import { integrationAPIService } from '@/services/integrationAPIService';
-import { MOCK_MENU, MOCK_menu_categories } from '@/constants';
+import { MOCK_MENU, MOCK_CATEGORIES } from '@/constants';
 import { validateDishCategory, resolveCategoryId } from '@/services/categoryResolver';
 import { normalizeDishImage } from '@/utils/imageUtils';
 import { generateUUID, isValidUUID } from '@/utils/uuid';
 
 export interface MenuSlice {
   dishes: Dish[];
-  menu_categories: MenuCategory[];
+  categories: MenuCategory[];
   deletedCategoryIds: UUID[];
   isDiagnosing: boolean;
   integrityIssues: IntegrityIssue[];
   
   // Basic CRUD
   setDishes: (dishes: Dish[]) => void;
-  setmenu_categories: (menu_categories: MenuCategory[]) => void;
+  setCategories: (categories: MenuCategory[]) => void;
   
   // Cloud Sync Helpers
   setDishesFromCloud: (dishes: Dish[]) => void;
-  setmenu_categoriesFromCloud: (menu_categories: MenuCategory[]) => void;
+  setCategoriesFromCloud: (categories: MenuCategory[]) => void;
   
   // Category Management
   addCategory: (cat: MenuCategory) => void;
@@ -40,7 +40,7 @@ export interface MenuSlice {
   removeCategory: (id: UUID) => void;
   restoreCategory: (id: UUID) => void;
   recoverDeletedCategory: (category: MenuCategory) => void;
-  scanAndRecovermenu_categories: () => Promise<void>;
+  scanAndRecoverCategories: () => Promise<void>;
   
   // Dish Management
   addDish: (dish: Dish) => Promise<boolean>;
@@ -80,14 +80,14 @@ export const createMenuSlice: StateCreator<
   MenuSlice
 > = (set, get) => ({
   dishes: MOCK_MENU as Dish[],
-  menu_categories: MOCK_menu_categories,
+  categories: MOCK_CATEGORIES,
   deletedCategoryIds: [],
   isDiagnosing: false,
   integrityIssues: [],
   menuAccessLogs: [],
   
   logMenuAccess: (log: MenuAccessLog) => {
-    set((state: MenuSlice) => ({ 
+    set((state) => ({ 
       menuAccessLogs: [log, ...state.menuAccessLogs].slice(0, 1000) 
     }));
   },
@@ -115,23 +115,22 @@ export const createMenuSlice: StateCreator<
   },
   
   setDishes: (dishes: Dish[]) => set({ dishes }),
-  setmenu_categories: (menu_categories: MenuCategory[]) => set({ menu_categories }),
+  setCategories: (categories: MenuCategory[]) => set({ categories }),
   
   setDishesFromCloud: (dishes: Dish[]) => {
       set({ dishes });
-      // Assuming addIntegrationLog is available on StoreState
       get().addIntegrationLog?.({ type: 'cloud.dishes.sync', status: 'INFO', message: 'Pratos atualizados da cloud', details: { count: dishes.length } } as any);
   },
   
-  setmenu_categoriesFromCloud: (menu_categories: MenuCategory[]) => {
-      set({ menu_categories });
-      get().addIntegrationLog?.({ type: 'cloud.menu_categories.sync', status: 'INFO', message: 'Categorias atualizadas da cloud', details: { count: menu_categories.length } } as any);
+  setCategoriesFromCloud: (categories: MenuCategory[]) => {
+      set({ categories });
+      get().addIntegrationLog?.({ type: 'cloud.categories.sync', status: 'INFO', message: 'Categorias atualizadas da cloud', details: { count: categories.length } } as any);
   },
 
   getDishById: (id: UUID) => get().dishes.find((p: Dish) => p.id === id),
   getDishesByCategory: (categoryId: string) => get().dishes.filter((p: Dish) => p.categoryId === categoryId),
-  getCategoryById: (id: UUID) => get().menu_categories.find((c: MenuCategory) => c.id === id),
-  rebuildMenu: (menu_categories: MenuCategory[], dishes: Dish[]) => set({ menu_categories, dishes }),
+  getCategoryById: (id: UUID) => get().categories.find((c: MenuCategory) => c.id === id),
+  rebuildMenu: (categories: MenuCategory[], dishes: Dish[]) => set({ categories, dishes }),
   
   invalidateMenuCache: () => {
     logger.info('Menu cache invalidated', undefined, 'SYSTEM');
