@@ -415,7 +415,7 @@ export const createOperationalSlice: StateCreator<
       
       orderToUpdate.items = [...(orderToUpdate.items || []), newItem];
 
-      // Recalculate order totals - REMOVIDOS: subtotal, tax_amount (não existem)
+      // Recalculate order totals - USAR APENAS CAMPOS EXISTENTES
       orderToUpdate.total = (orderToUpdate.items || []).reduce((sum, oi) => {
         const price = oi.unitPrice || oi.price || 0;
         const qty = oi.quantity || 1;
