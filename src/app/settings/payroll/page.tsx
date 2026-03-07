@@ -54,7 +54,7 @@ export default function SettingsPayrollPage() {
       // Fetch staff members
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select('id, name, position, salary')
+        .select('id, name, position, base_salary')
         .eq('status', 'active');
 
       if (staffError) throw staffError;
@@ -244,7 +244,7 @@ Sistema: Tasca do Vereda v2.0
     setFormData({
       ...formData,
       staff_id: staffId,
-      base_salary: selectedStaff?.salary || 0
+      base_salary: selectedStaff?.base_salary || 0
     });
   };
 
