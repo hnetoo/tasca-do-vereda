@@ -59,8 +59,7 @@ export async function deleteOrderActionClient(orderId: UUID): Promise<{ success:
     // Para deletar, vamos marcar como cancelado em vez de deletar fisicamente
     const cancelOrder = {
       id: orderId,
-      status: 'CANCELADO',
-      updated_at: new Date().toISOString()
+      status: 'CANCELADO'
     } as Order;
     
     const result = await adminOperations.saveOrder(cancelOrder);

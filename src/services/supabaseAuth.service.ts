@@ -329,7 +329,6 @@ export const supabaseAuthService = {
           pin: userData.pin,
           role: userData.role,
           permissions: userData.metadata,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
         .select()

@@ -24,6 +24,7 @@ import { getSQLiteClient, ensureSqliteSchema } from '@/lib/sqlite';
 import { supabaseService } from '@/services/supabaseService';
 import { databaseOperations } from '@/services/database/operations';
 import { ensureBalcaoTable } from '@/app/actions/ensureBalcaoTable';
+import { generateUUID } from '@/utils/uuid';
 
 const POS = () => {
   // Enable realtime table updates
@@ -34,7 +35,7 @@ const POS = () => {
     dishes: menu, categories, activeOrders,
     settings, addNotification,
     currentShiftId, toggleMobileMenu, isSidebarCollapsed, toggleSidebar,
-    addTable, auditLogs
+    addTable, auditLogs, createNewOrder, addOrderItem, removeOrderItem
   } = useStore();
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('TODOS');
@@ -161,11 +162,48 @@ const POS = () => {
 
   // TODO: Implementar funcionalidades quando métodos estiverem disponíveis
   const handleAddToOrder = (dish: Dish, quantity: number = 1) => {
-    addNotification('info', 'Funcionalidade de adicionar ao pedido em desenvolvimento');
+    if (!activeTableId) {
+      addNotification('error', 'Selecione uma mesa primeiro');
+      return;
+    }
+
+    // Encontrar ou criar pedido para a mesa
+    let order = activeOrders.find((o: Order) => o.tableId === activeTableId && o.status === 'ABERTO');
+    
+    if (!order) {
+      // Criar novo pedido
+      const orderId = createNewOrder(activeTableId, `Mesa ${activeTable?.name || activeTableId}`);
+      order = activeOrders.find((o: Order) => o.id === orderId);
+    }
+
+    if (order) {
+      // Adicionar item ao pedido
+      const orderItem: OrderItem = {
+        id: generateUUID(),
+        orderId: order.id,
+        dishId: dish.id,
+        quantity,
+        unitPrice: dish.price,
+        price: dish.price,
+        name: dish.name,
+        status: 'PENDENTE',
+        createdAt: new Date().toISOString()
+      };
+
+      addOrderItem(order.id, orderItem);
+      setLastAddedProduct(dish.name);
+      addNotification('success', `${dish.name} adicionado ao pedido`);
+    }
   };
 
   const handleRemoveFromOrder = (itemId: string) => {
-    addNotification('info', 'Funcionalidade de remover do pedido em desenvolvimento');
+    if (!currentOrder) {
+      addNotification('error', 'Nenhum pedido ativo');
+      return;
+    }
+
+    removeOrderItem(currentOrder.id, itemId);
+    addNotification('success', 'Item removido do pedido');
   };
 
   const handleCheckoutTable = () => {
