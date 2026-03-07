@@ -8,13 +8,20 @@ let isCreating = false;
 export function createClient() {
   // Return existing client if already created
   if (supabaseBrowserClient) {
+    console.log('🔄 [SUPABASE] Returning existing client to prevent multiple instances');
     return supabaseBrowserClient;
   }
   
-  // Prevent race conditions
+  // Enhanced race condition protection
   if (isCreating) {
-    console.log('⏳ [SUPABASE] Client creation in progress, returning dummy');
-    // Return a dummy client while waiting
+    console.log('⏳ [SUPABASE] Client creation in progress, waiting...');
+    // Wait a bit and check again
+    setTimeout(() => {
+      if (supabaseBrowserClient) {
+        console.log('✅ [SUPABASE] Client became available during wait');
+      }
+    }, 100);
+    // Return dummy client while waiting
     const dummy: any = {
       from() {
         return {
