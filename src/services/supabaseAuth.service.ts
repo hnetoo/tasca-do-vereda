@@ -24,15 +24,15 @@ export const supabaseAuthService = {
         } as AuthError;
       }
 
-      console.log('🔍 [AUTH] Querying users table for PIN authentication');
+      console.log('🔍 [AUTH] Querying USERS table for PIN authentication');
       
-      // TENTATIVA 1: Query Supabase normal
+      // TENTATIVA 1: Query Supabase normal na tabela USERS
       let userData = null;
       let userError = null;
       
       try {
         const result = await client
-          .from('users')
+          .from('users')  // CORRIGIDO: voltar para 'users' - employees é para staff/payroll
           .select('*')
           .eq('pin', pin)
           .eq('role', String(role).toLowerCase())
@@ -50,10 +50,10 @@ export const supabaseAuthService = {
             errorMessage: userError?.message,
             errorDetails: userError?.details,
             errorHint: userError?.hint,
-            query: 'users table with pin, role, status filters',
+            query: 'USERS table with pin, role, status filters',
+            table: 'users',
             pin: pin ? '***' : 'EMPTY',
             role: String(role).toLowerCase(),
-            table: 'users',
             columnsChecked: ['pin', 'role', 'status']
           });
           
@@ -62,7 +62,8 @@ export const supabaseAuthService = {
             console.error('🚨 [AUTH] ERRO DE COLUNA INEXISTENTE:', {
               missingColumn: userError?.message?.match(/column "(\w+)"/)?.[1],
               fullError: userError?.message,
-              suggestion: 'Verificar estrutura da tabela users no Supabase'
+              suggestion: 'Verificar estrutura da tabela users no Supabase',
+              action: 'Execute scripts/check_users_table.sql para encontrar tabela correta'
             });
           }
         }
@@ -121,9 +122,9 @@ export const supabaseAuthService = {
       }
 
       console.log('📝 [AUTH] User found, updating last login');
-      // Atualizar último login
+      // Atualizar último login na tabela USERS
       await client
-        .from('users')
+        .from('users')  // CORRIGIDO: voltar para 'users'
         .update({ last_login: new Date().toISOString() })
         .eq('id', userData.id);
 
@@ -191,9 +192,9 @@ export const supabaseAuthService = {
       const client = supabaseService.getClient();
       if (!client) return null;
 
-      // Buscar dados atualizados do usuário
+      // Buscar dados atualizados do usuário da tabela USERS
       const { data: userData, error } = await client
-        .from('users')
+        .from('users')  // CORRIGIDO: voltar para 'users'
         .select('*')
         .eq('id', decoded.id)
         .single();
@@ -221,7 +222,7 @@ export const supabaseAuthService = {
       if (!client) return [];
 
       const { data, error } = await client
-        .from('users')
+        .from('users')  // CORRIGIDO: voltar para 'users'
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -255,7 +256,7 @@ export const supabaseAuthService = {
       if (!client) throw new Error('Serviço indisponível');
 
       const { data, error } = await client
-        .from('users')
+        .from('users')  // CORRIGIDO: voltar para 'users'
         .insert({
           name: userData.name,
           email: userData.email,
@@ -290,7 +291,7 @@ export const supabaseAuthService = {
       if (!client) throw new Error('Serviço indisponível');
 
       const { data, error } = await client
-        .from('users')
+        .from('users')  // CORRIGIDO: voltar para 'users'
         .update({
           name: userData.name,
           email: userData.email,
@@ -326,7 +327,7 @@ export const supabaseAuthService = {
       if (!client) throw new Error('Serviço indisponível');
 
       const { error } = await client
-        .from('users')
+        .from('users')  // CORRIGIDO: voltar para 'users'
         .delete()
         .eq('id', userId);
 
