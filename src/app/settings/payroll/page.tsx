@@ -89,6 +89,7 @@ export default function SettingsPayrollPage() {
       const recordData: any = {
         ...formData,
         funcionario: selectedStaff?.name || '',
+        reference_month: formData.month, // Adicionar para evitar constraint error
         overtime_pay: overtimePay,
         net_salary: netSalary,
         created_at: new Date().toISOString()
