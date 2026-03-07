@@ -213,7 +213,7 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     const { data: payrollData, error: payrollError } = await supabase
       .from(payrollTableName)
       .select('staff_id, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
-      .eq('status_pagamento', 'pago')
+      // REMOVIDO: .eq('status_pagamento', 'pago') - Agora busca TODOS os registros
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
@@ -225,7 +225,7 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     const { data: currentMonthPayroll, error: currentMonthPayrollError } = await supabase
       .from(payrollTableName)
       .select('staff_id, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
-      .eq('status_pagamento', 'pago')
+      // REMOVIDO: .eq('status_pagamento', 'pago') - Agora busca TODOS os registros
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
