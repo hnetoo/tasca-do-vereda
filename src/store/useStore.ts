@@ -371,6 +371,52 @@ export const useStore = create<StoreState>()(
             if (payload.eventType === 'DELETE') state.removeCategory(payload.old.id as string);
             break;
             
+          case 'employees':
+            // Handles realtime updates for the Employees table
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const e = payload.new as any;
+              const employee: Employee = {
+                id: e.id,
+                name: e.name,
+                role: e.role,
+                phone: e.phone,
+                salary: e.salary,
+                status: e.status,
+                color: e.color,
+                workDaysPerMonth: e.work_days_per_month,
+                dailyWorkHours: e.daily_work_hours,
+                externalBioId: e.external_bio_id,
+                bi: e.bi,
+                nif: e.nif,
+              } as Employee;
+
+              // Estas funções (addEmployee, updateEmployee) devem existir no seu staffSlice
+              if (payload.eventType === 'INSERT') get().addEmployee(employee);
+              if (payload.eventType === 'UPDATE') get().updateEmployee(employee.id, employee);
+            }
+            if (payload.eventType === 'DELETE') get().removeEmployee(payload.old.id as string);
+            break;
+
+          case 'expenses':
+            // Handles realtime updates for the Expenses table
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const ex = payload.new as any;
+              const expense = {
+                id: ex.id,
+                description: ex.description,
+                amount: ex.amount,
+                category: ex.category,
+                date: ex.date,
+                supplierId: ex.supplier_id,
+                createdAt: ex.created_at ? new Date(ex.created_at) : new Date(),
+              };
+              // Estas funções (addExpense, updateExpense) devem existir no seu financeSlice
+              if (payload.eventType === 'INSERT') get().addExpense(expense as any);
+              if (payload.eventType === 'UPDATE') get().updateExpense(expense as any);
+            }
+            if (payload.eventType === 'DELETE') get().removeExpense(payload.old.id as string);
+            break;
+
           case 'orders':
             if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
               const o = payload.new as Order;
@@ -402,6 +448,27 @@ export const useStore = create<StoreState>()(
               if (payload.eventType === 'UPDATE') state.updateOrder(order);
             }
             if (payload.eventType === 'DELETE') state.removeOrder(payload.old.id as string);
+            break;
+            
+          case 'payroll':
+            // Handles realtime updates for the Payroll table
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                const p = payload.new as any;
+                const payrollEntry = {
+                    id: p.id,
+                    employeeId: p.employee_id,
+                    paymentDate: p.payment_date,
+                    baseSalary: p.base_salary,
+                    deductions: p.deductions,
+                    netSalary: p.net_salary,
+                    month: p.month,
+                    year: p.year,
+                };
+                // Estas funções (addPayroll, updatePayroll) devem existir no seu financeSlice
+                if (payload.eventType === 'INSERT') get().addPayroll(payrollEntry as any);
+                if (payload.eventType === 'UPDATE') get().updatePayroll(payrollEntry as any);
+            }
+            if (payload.eventType === 'DELETE') get().removePayroll(payload.old.id as string);
             break;
             
           case 'order_items':

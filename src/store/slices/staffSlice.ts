@@ -3,13 +3,14 @@ import { Employee, WorkShift, AttendanceRecord, StoreState, UUID } from '../../t
 import { saveEmployeeAction, deleteEmployeeAction } from '@/app/actions/users';
 import { saveAttendanceAction } from '@/app/actions';
 import { logger } from '../../services/logger';
+import { integrationAPIService } from '@/services/integrationAPIService';
 
 export interface StaffSlice {
   employees: Employee[];
   workShifts: WorkShift[];
   attendance: AttendanceRecord[];
   addEmployee: (emp: Employee) => void;
-  updateEmployee: (emp: Employee) => void;
+  updateEmployee: (id: UUID, emp: Partial<Employee>) => void;
   removeEmployee: (id: UUID) => void;
   addWorkShift: (shift: WorkShift) => void;
   removeWorkShift: (id: UUID) => void;
@@ -79,6 +80,31 @@ export const createStaffSlice: StateCreator<
   
   addEmployee: (emp: Employee) => {
     set((state: StaffSlice) => ({ employees: [...state.employees, emp] }));
+
+    // Sync with Supabase if enabled
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      const { workDaysPerMonth, dailyWorkHours, externalBioId, admissionDate, socialSecurityNumber, bankAccount, ...rest } = emp;
+      const supabaseEmployee = {
+        ...rest,
+        work_days_per_month: workDaysPerMonth,
+        daily_work_hours: dailyWorkHours,
+        external_bio_id: externalBioId,
+        admission_date: admissionDate,
+        social_security_number: socialSecurityNumber,
+        bank_account: bankAccount,
+      };
+      integrationAPIService.syncRecord('employees', supabaseEmployee).then(res => {
+        if (!res.success) {
+          logger.error('Failed to sync new employee to Supabase', { id: emp.id, error: res.error }, 'CLOUD');
+          get().addNotification?.('error', 'Funcionário guardado localmente, mas falhou a sincronização.');
+        } else {
+          logger.info('New employee synced to Supabase', { id: emp.id }, 'CLOUD');
+        }
+      });
+    }
+
+    // Keep local persistence as fallback/offline
     saveEmployeeAction(emp).then(res => {
       if (!res.success) logger.error('Failed to persist new employee to SQL', { id: emp.id, error: res.error }, 'DATABASE');
     }).catch(e => 
@@ -86,15 +112,50 @@ export const createStaffSlice: StateCreator<
     );
   },
   
-  updateEmployee: (emp: Employee) => {
-    set((state: StaffSlice) => ({
-      employees: state.employees.map((e: Employee) => e.id === emp.id ? emp : e)
-    }));
-    saveEmployeeAction(emp).then(res => {
-      if (!res.success) logger.error('Failed to persist updated employee to SQL', { id: emp.id, error: res.error }, 'DATABASE');
-    }).catch(e => 
-      logger.error('Failed to persist updated employee to SQL', { id: emp.id, error: e.message }, 'DATABASE')
-    );
+  updateEmployee: (id: UUID, empUpdate: Partial<Employee>) => {
+    let updatedEmployee: Employee | null = null;
+    set((state: StaffSlice) => {
+      const employees = state.employees.map((e: Employee) => {
+        if (e.id === id) {
+          updatedEmployee = { ...e, ...empUpdate };
+          return updatedEmployee;
+        }
+        return e;
+      });
+      return { employees };
+    });
+
+    if (updatedEmployee) {
+      // Sync with Supabase if enabled
+      const { settings } = get();
+      if (settings.supabaseConfig?.enabled) {
+        const { workDaysPerMonth, dailyWorkHours, externalBioId, admissionDate, socialSecurityNumber, bankAccount, ...rest } = updatedEmployee;
+        const supabaseEmployee = {
+          ...rest,
+          work_days_per_month: workDaysPerMonth,
+          daily_work_hours: dailyWorkHours,
+          external_bio_id: externalBioId,
+          admission_date: admissionDate,
+          social_security_number: socialSecurityNumber,
+          bank_account: bankAccount,
+        };
+        integrationAPIService.syncRecord('employees', supabaseEmployee).then(res => {
+          if (!res.success) {
+            logger.error('Failed to sync updated employee to Supabase', { id, error: res.error }, 'CLOUD');
+            get().addNotification?.('error', 'Funcionário atualizado localmente, mas falhou a sincronização.');
+          } else {
+            logger.info('Employee update synced to Supabase', { id }, 'CLOUD');
+          }
+        });
+      }
+
+      // Keep local persistence
+      saveEmployeeAction(updatedEmployee).then(res => {
+        if (!res.success) logger.error('Failed to persist updated employee to SQL', { id, error: res.error }, 'DATABASE');
+      }).catch(e => 
+        logger.error('Failed to persist updated employee to SQL', { id, error: e.message }, 'DATABASE')
+      );
+    }
   },
   
   removeEmployee: (id: UUID) => {
@@ -103,6 +164,20 @@ export const createStaffSlice: StateCreator<
       workShifts: state.workShifts.filter((s: WorkShift) => s.employeeId !== id),
       attendance: state.attendance.filter((a: AttendanceRecord) => a.employeeId !== id)
     }));
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      integrationAPIService.deleteRecord('employees', id).then(res => {
+        if (!res.success) {
+          logger.error('Failed to delete employee from Supabase', { id, error: res.error }, 'CLOUD');
+          get().addNotification?.('error', 'Falha ao remover funcionário da cloud.');
+        } else {
+          logger.info('Employee deleted from Supabase', { id }, 'CLOUD');
+        }
+      });
+    }
+
     deleteEmployeeAction(id).then(res => {
       if (!res.success) logger.error('Failed to delete employee from SQL', { id, error: res.error }, 'DATABASE');
     }).catch((e: any) => 

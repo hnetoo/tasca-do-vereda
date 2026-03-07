@@ -37,9 +37,9 @@ export interface FinanceSlice {
   addFixedExpense: (expense: FixedExpense) => void;
   updateFixedExpense: (expense: FixedExpense) => void;
   removeFixedExpense: (id: UUID) => void;
-  addPayrollRecord: (record: PayrollRecord) => void;
-  updatePayrollRecord: (record: PayrollRecord) => void;
-  removePayrollRecord: (id: UUID) => void;
+  addPayroll: (record: PayrollRecord) => void;
+  updatePayroll: (record: PayrollRecord) => void;
+  removePayroll: (id: UUID) => void;
   setOrders: (orders: Order[]) => void;
   setExpenses: (expenses: Expense[]) => void;
   setRevenues: (revenues: Revenue[]) => void;
@@ -428,6 +428,25 @@ export const createFinanceSlice: StateCreator<
       details: `Despesa adicionada: ${expense.description} - ${expense.amount}`,
       metadata: { expenseId: expense.id, amount: expense.amount },
     });
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      const supabaseExpense = {
+        ...expense,
+        supplier_id: expense.supplierId,
+      };
+      delete (supabaseExpense as any).supplierId;
+
+      integrationAPIService.syncRecord('expenses', supabaseExpense).then(res => {
+        if (!res.success) {
+          logger.error('Failed to sync expense to Supabase', { id: expense.id, error: res.error }, 'CLOUD');
+          get().addNotification('error', 'Despesa guardada localmente, mas falhou a sincronização.');
+        } else {
+          logger.info('Expense synced to Supabase', { id: expense.id }, 'CLOUD');
+        }
+      });
+    }
   },
   
   updateExpense: (expense: Expense) => {
@@ -439,6 +458,25 @@ export const createFinanceSlice: StateCreator<
       details: `Despesa atualizada: ${expense.description}`,
       metadata: { expenseId: expense.id },
     });
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      const supabaseExpense = {
+        ...expense,
+        supplier_id: expense.supplierId,
+      };
+      delete (supabaseExpense as any).supplierId;
+
+      integrationAPIService.syncRecord('expenses', supabaseExpense).then(res => {
+        if (!res.success) {
+          logger.error('Failed to sync updated expense to Supabase', { id: expense.id, error: res.error }, 'CLOUD');
+          get().addNotification('error', 'Atualização de despesa falhou a sincronização.');
+        } else {
+          logger.info('Expense update synced to Supabase', { id: expense.id }, 'CLOUD');
+        }
+      });
+    }
   },
   
   removeExpense: (id: UUID) => {
@@ -451,6 +489,19 @@ export const createFinanceSlice: StateCreator<
       details: `Despesa removida: ${expense?.description || id}`,
       metadata: { expenseId: id },
     });
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      integrationAPIService.deleteRecord('expenses', id).then(res => {
+        if (!res.success) {
+          logger.error('Failed to delete expense from Supabase', { id, error: res.error }, 'CLOUD');
+          get().addNotification('error', 'Falha ao remover despesa da cloud.');
+        } else {
+          logger.info('Expense deleted from Supabase', { id }, 'CLOUD');
+        }
+      });
+    }
   },
 
   addRevenue: (revenue: Revenue) => {
@@ -486,15 +537,79 @@ export const createFinanceSlice: StateCreator<
     fixedExpenses: state.fixedExpenses.filter((e) => e.id !== id),
   })),
 
-  addPayrollRecord: (record: PayrollRecord) => set((state) => ({ payroll: [...state.payroll, record] })),
+  addPayroll: (record: PayrollRecord) => {
+    set((state) => ({ payroll: [...state.payroll, record] }));
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      const supabaseRecord = {
+        id: record.id,
+        employee_id: record.employeeId,
+        payment_date: record.paymentDate,
+        base_salary: record.baseSalary,
+        deductions: record.deductions,
+        net_salary: record.netSalary,
+        month: record.month,
+        year: record.year,
+        payment_method: record.paymentMethod,
+      };
+
+      integrationAPIService.syncRecord('payroll', supabaseRecord).then(res => {
+        if (!res.success) {
+          logger.error('Failed to sync payroll record to Supabase', { id: record.id, error: res.error }, 'CLOUD');
+          get().addNotification('error', 'Pagamento guardado localmente, mas falhou a sincronização.');
+        } else {
+          logger.info('Payroll record synced to Supabase', { id: record.id }, 'CLOUD');
+        }
+      });
+    }
+  },
   
-  updatePayrollRecord: (record: PayrollRecord) => set((state) => ({
-    payroll: state.payroll.map((r) => (r.id === record.id ? record : r)),
-  })),
+  updatePayroll: (record: PayrollRecord) => {
+    set((state) => ({
+      payroll: state.payroll.map((r) => (r.id === record.id ? record : r)),
+    }));
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      const supabaseRecord = {
+        id: record.id,
+        employee_id: record.employeeId,
+        payment_date: record.paymentDate,
+        base_salary: record.baseSalary,
+        deductions: record.deductions,
+        net_salary: record.netSalary,
+        month: record.month,
+        year: record.year,
+        payment_method: record.paymentMethod,
+      };
+
+      integrationAPIService.syncRecord('payroll', supabaseRecord).then(res => {
+        if (!res.success) {
+          logger.error('Failed to sync updated payroll record to Supabase', { id: record.id, error: res.error }, 'CLOUD');
+          get().addNotification('error', 'Atualização de pagamento falhou a sincronização.');
+        } else {
+          logger.info('Payroll record update synced to Supabase', { id: record.id }, 'CLOUD');
+        }
+      });
+    }
+  },
   
-  removePayrollRecord: (id: UUID) => set((state) => ({
-    payroll: state.payroll.filter((r) => r.id !== id),
-  })),
+  removePayroll: (id: UUID) => {
+    set((state) => ({
+      payroll: state.payroll.filter((r) => r.id !== id),
+    }));
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      integrationAPIService.deleteRecord('payroll', id).then(res => {
+        if (!res.success) logger.error('Failed to delete payroll record from Supabase', { id, error: res.error }, 'CLOUD');
+      });
+    }
+  },
 
   setOrders: (orders: Order[]) => set({ activeOrders: orders }),
   setExpenses: (expenses: Expense[]) => set({ expenses }),
