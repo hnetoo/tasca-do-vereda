@@ -19,11 +19,20 @@ SELECT 'TODOS_USUARIOS' as section,
 FROM users 
 ORDER BY created_at DESC;
 
--- 4. CONTAR USUÁRIOS POR ROLE
-SELECT 'USUARIOS_POR_ROLE' as section, role, COUNT(*) as total
-FROM users 
-GROUP BY role 
-ORDER BY total DESC;
+-- 4. SE NÃO TIVER ADMIN, CRIAR UM AGORA
+INSERT INTO users (id, name, email, pin, role, status, created_at, updated_at)
+SELECT 
+    gen_random_uuid(),
+    'Admin Sistema',
+    'admin@system.com',
+    '1234',
+    'admin',
+    'active',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+WHERE NOT EXISTS (
+    SELECT 1 FROM users WHERE pin = '1234' AND role = 'admin' AND status = 'active'
+);
 
 -- 5. MOSTRAR APENAS USUÁRIOS ATIVOS
 SELECT 'USUARIOS_ATIVOS' as section,

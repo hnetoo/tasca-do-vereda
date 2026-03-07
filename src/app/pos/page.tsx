@@ -1605,7 +1605,7 @@ const POS = () => {
             )}
             
             <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-3">
-                {currentOrder?.items?.map((item: OrderItem, idx: number) => { 
+                {currentOrder && currentOrder.items && currentOrder.items.length > 0 && currentOrder.items.map((item: OrderItem, idx: number) => { 
                     const dish = menu.find((p: Product) => p.id === item.dishId); 
                     if (!dish) return null; 
                     return (
@@ -1642,7 +1642,7 @@ const POS = () => {
                         </div>
                     );
                 })}
-                {(!currentOrder?.items || currentOrder.items.length === 0) && (
+                {(!currentOrder || !currentOrder.items || currentOrder.items.length === 0) && (
                    <div className="h-full flex flex-col items-center justify-center opacity-20 text-center py-20">
                       <ShoppingBasket size={48} className="mb-4" />
                       <p className="text-xs font-black uppercase tracking-widest leading-relaxed">Carrinho vazio.<br/>Adicione produtos.</p>
