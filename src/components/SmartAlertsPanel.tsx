@@ -14,7 +14,7 @@ const SmartAlertsPanel = () => {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 w-80">
-      {activeAlerts.map((alert) => {
+      {activeAlerts.map((alert: any) => {
         if (alert.type === 'success') {
           return (
             <SuccessToast

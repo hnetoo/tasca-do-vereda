@@ -353,12 +353,12 @@ const QRMenuManager = () => {
             </h3>
             <p className="text-xs text-slate-400 mb-4 font-bold uppercase tracking-wider">Controle o que aparece no QR Menu</p>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-              {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(cat => (
+              {categories.slice().sort((a: any, b: any) => a.name.localeCompare(b.name)).map((cat: any) => (
                 <div key={cat.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 group hover:border-primary/30 transition-all">
                   <div className="flex flex-col">
                     <span className="text-xs font-black text-white uppercase">{cat.name}</span>
                     <span className="text-[10px] text-slate-500 font-bold">
-                      {menu.filter(d => d.categoryId === cat.id).length} itens
+                      {menu.filter((d: any) => d.categoryId === cat.id).length} itens
                     </span>
                   </div>
                   <button
@@ -439,7 +439,7 @@ const QRMenuManager = () => {
               <LayoutGrid size={20} className="text-primary" /> Categorias no Menu
             </h3>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-              {categories.map(cat => (
+              {categories.map((cat: any) => (
                 <div key={cat.id} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5">
                   <span className="text-xs font-bold truncate max-w-[120px]">{cat.name}</span>
                   <button

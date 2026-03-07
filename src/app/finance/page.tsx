@@ -42,8 +42,8 @@ export default function FinancePage() {
     const currentOrders = orders || [];
     const currentDishes = dishes || [];
     
-    const completedOrders = currentOrders.filter(o => o.status === 'FECHADO');
-    const currentRevenue = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const completedOrders = currentOrders.filter((o: any) => o.status === 'FECHADO');
+    const currentRevenue = completedOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
     const totalRevenue = currentRevenue + (settings?.legacyTotalRevenue || 0);
     const avgTicket = completedOrders.length > 0 ? currentRevenue / completedOrders.length : 0;
     
@@ -106,12 +106,12 @@ export default function FinancePage() {
         startDate = new Date(now.setHours(0, 0, 0, 0));
     }
 
-    const filteredOrders = (orders || []).filter(order => {
+    const filteredOrders = (orders || []).filter((order: any) => {
       const orderDate = new Date(order.created_at || order.createdAt || 0);
       return orderDate >= startDate && orderDate <= endDate;
     });
 
-    const filteredExpenses = (expenses || []).filter(expense => {
+    const filteredExpenses = (expenses || []).filter((expense: any) => {
       const expenseDate = new Date(expense.date || 0);
       return expenseDate >= startDate && expenseDate <= endDate;
     });
@@ -122,13 +122,13 @@ export default function FinancePage() {
   const { filteredOrders, filteredExpenses, startDate, endDate } = getFilteredData();
 
   // Calculate totals for filtered data
-  const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
-  const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+  const totalRevenue = filteredOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
+  const totalExpenses = filteredExpenses.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0);
   const netProfit = totalRevenue - totalExpenses;
 
   // Get recent transactions
   const recentTransactions = [
-    ...filteredOrders.slice(-5).map(order => ({
+    ...filteredOrders.slice(-5).map((order: any) => ({
       id: order.id,
       type: 'order',
       description: `Pedido #${order.id}`,
@@ -136,7 +136,7 @@ export default function FinancePage() {
       date: order.created_at || order.createdAt,
       status: order.status
     })),
-    ...filteredExpenses.slice(-5).map(expense => ({
+    ...filteredExpenses.slice(-5).map((expense: any) => ({
       id: expense.id,
       type: 'expense',
       description: expense.description || 'Despesa',
@@ -373,7 +373,7 @@ export default function FinancePage() {
               {/* Expenses List */}
               <div className="space-y-4">
                 {filteredExpenses.length > 0 ? (
-                  filteredExpenses.map((expense) => (
+                  filteredExpenses.map((expense: any) => (
                     <div key={expense.id} className="bg-slate-900 p-4 rounded-lg border border-slate-800">
                       <div className="flex items-center justify-between">
                         <div>

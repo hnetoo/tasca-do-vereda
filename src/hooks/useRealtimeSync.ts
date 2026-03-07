@@ -61,7 +61,7 @@ export const useRealtimeSync = <T = any>(
         setSaveStatus('ERROR');
         retryAttempts.current += 1;
         if (retryAttempts.current >= 3) {
-          addNotification('error', 'Conexão em tempo real indisponível; dados atualizados ao recarregar', 10000);
+          addNotification('error', 'Conexão em tempo real indisponível; dados atualizados ao recarregar');
           retryAttempts.current = 0; // Reset after showing notification
         }
       }

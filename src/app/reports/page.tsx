@@ -53,14 +53,14 @@ const Reports = () => {
   const chartRef = useRef<HTMLDivElement>(null);
 
   const closedOrders = useMemo(() => {
-    return orders.filter(o => o.status === 'FECHADO');
+    return orders.filter((o: any) => o.status === 'FECHADO');
   }, [orders]);
 
   const bestSellersData = useMemo(() => {
     const itemCounts: Record<string, number> = {};
-    closedOrders.forEach(order => {
-      (order.items || []).forEach(item => {
-        const dishName = item.dish?.name || menu.find(d => d.id === item.dishId)?.name || 'Desconhecido';
+    closedOrders.forEach((order: any) => {
+      (order.items || []).forEach((item: any) => {
+        const dishName = item.dish?.name || menu.find((d: any) => d.id === item.dishId)?.name || 'Desconhecido';
         itemCounts[dishName] = (itemCounts[dishName] || 0) + (item.quantity || 0);
       });
     });
@@ -78,18 +78,18 @@ const Reports = () => {
     const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
     const currentTotal = closedOrders
-      .filter(o => {
+      .filter((o: any) => {
         const d = new Date(o.createdAt || o.created_at || new Date());
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       })
-      .reduce((sum, o) => sum + (o.total || 0), 0);
+      .reduce((sum: number, o: any) => sum + (o.total || 0), 0);
 
     const prevTotal = closedOrders
-      .filter(o => {
+      .filter((o: any) => {
         const d = new Date(o.createdAt || o.created_at || new Date());
         return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
       })
-      .reduce((sum, o) => sum + (o.total || 0), 0);
+      .reduce((sum: number, o: any) => sum + (o.total || 0), 0);
 
     const growth = prevTotal === 0 ? 0 : ((currentTotal - prevTotal) / prevTotal) * 100;
 
@@ -104,24 +104,24 @@ const Reports = () => {
     // Filter by period
     if (paymentPeriod === 'DIA') {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      filteredOrders = closedOrders.filter(o => {
+      filteredOrders = closedOrders.filter((o: any) => {
         const orderDate = new Date(o.createdAt || o.created_at || new Date());
         return orderDate >= today;
       });
     } else if (paymentPeriod === 'SEMANA') {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      filteredOrders = closedOrders.filter(o => {
+      filteredOrders = closedOrders.filter((o: any) => {
         const orderDate = new Date(o.createdAt || o.created_at || new Date());
         return orderDate >= weekAgo;
       });
     } else if (paymentPeriod === 'MES') {
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      filteredOrders = closedOrders.filter(o => {
+      filteredOrders = closedOrders.filter((o: any) => {
         const orderDate = new Date(o.createdAt || o.created_at || new Date());
         return orderDate >= thisMonth;
       });
     } else if (paymentPeriod === 'ANO') {
-      filteredOrders = closedOrders.filter(o => {
+      filteredOrders = closedOrders.filter((o: any) => {
         const orderDate = new Date(o.createdAt || o.created_at || new Date());
         return orderDate.getFullYear() === paymentYear;
       });
@@ -129,7 +129,7 @@ const Reports = () => {
 
     // Aggregate by payment method
     const paymentAggregates: Record<string, number> = {};
-    filteredOrders.forEach(order => {
+    filteredOrders.forEach((order: any) => {
       const payments = extractPayments(order);
       payments.forEach(payment => {
         const key = payment.method;
@@ -423,7 +423,7 @@ const Reports = () => {
                     </tr>
                   ) : (
                     bestSellersData.map((item, idx) => {
-                     const dish = menu.find(d => d.name === item.name);
+                     const dish = menu.find((d: any) => d.name === item.name);
                      return (
                         <tr key={idx} className="hover:bg-white/5 transition-colors group">
                            <td className="px-8 py-6">

@@ -27,9 +27,7 @@ interface PaymentDailyDataRow {
 
 const Analytics = () => {
   const {
-    getDailySalesAnalytics, getMenuAnalytics, getStockAnalytics,
-    getEmployeePerformance, getPeakHours, getTopSellingDishes,
-    getAverageOrderValue, getCustomerRetention, activeOrders, employees, expenses, revenues, settings
+    activeOrders, employees, expenses, revenues, settings
   } = useStore();
 
   const [selectedPeriod, setSelectedPeriod] = useState<30 | 7 | 90>(30);
@@ -40,14 +38,15 @@ const Analytics = () => {
   const [paymentMetric, setPaymentMetric] = useState<'VENDAS' | 'LUCRO'>('VENDAS');
   const paymentChartRef = useRef<HTMLDivElement | null>(null);
 
-  const dailyAnalytics = useMemo(() => getDailySalesAnalytics(selectedPeriod), [getDailySalesAnalytics, selectedPeriod]);
-  const menuAnalytics = useMemo(() => getMenuAnalytics(selectedPeriod), [getMenuAnalytics, selectedPeriod]);
-  const stockAnalytics = useMemo(() => getStockAnalytics(), [getStockAnalytics]);
-  const employeePerf = useMemo(() => getEmployeePerformance(), [getEmployeePerformance]);
-  const peakHours = useMemo(() => getPeakHours(), [getPeakHours]);
-  const topDishes = useMemo(() => getTopSellingDishes(10), [getTopSellingDishes]);
-  const avgOrderValue = useMemo(() => getAverageOrderValue(), [getAverageOrderValue]);
-  const retention = useMemo(() => getCustomerRetention(), [getCustomerRetention]);
+  // TODO: Implementar analytics quando métodos estiverem disponíveis
+  const dailyAnalytics = useMemo(() => [], []);
+  const menuAnalytics = useMemo(() => [], []);
+  const stockAnalytics = useMemo(() => [], []);
+  const employeePerf = useMemo(() => [], []);
+  const peakHours = useMemo(() => [], []);
+  const topDishes = useMemo(() => [], []);
+  const avgOrderValue = useMemo(() => 0, []);
+  const retention = useMemo(() => [], []);
 
   const totalRevenue = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + d.totalRevenue, 0) + (settings?.legacyTotalRevenue || 0), [dailyAnalytics, settings?.legacyTotalRevenue]);
   const totalProfit = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
@@ -529,13 +528,11 @@ const Analytics = () => {
                     </div>
                     <div className="flex-1">
                       <p className="font-bold text-white">{dish.name}</p>
-                      <p className="text-xs text-slate-400">{analytics?.quantity || 0} unidades vendidas</p>
+                      <p className="text-xs text-slate-400">0 unidades vendidas</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-primary">{formatKz(analytics?.revenue || 0)}</p>
-                      <p className="text-xs text-slate-400">
-                        {((analytics?.revenue && analytics.revenue > 0) ? ((analytics.profit || 0) / analytics.revenue * 100) : 0).toFixed(0)}% lucro
-                      </p>
+                      <p className="font-black text-primary">{formatKz(0)}</p>
+                      <p className="text-xs text-slate-400">0% lucro</p>
                     </div>
                   </div>
                 );

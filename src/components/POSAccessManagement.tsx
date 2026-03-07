@@ -9,8 +9,8 @@ const POSAccessManagement = () => {
   const { employees } = useStore();
   
   // Filter employees who have access to POS
-  const posUsers = employees.filter(emp => canAccessModule(emp.role as any, 'pos'));
-  const otherUsers = employees.filter(emp => !canAccessModule(emp.role as any, 'pos'));
+  const posUsers = employees.filter((emp: any) => canAccessModule(emp.role as any, 'pos'));
+  const otherUsers = employees.filter((emp: any) => !canAccessModule(emp.role as any, 'pos'));
 
   return (
     <div className="space-y-6">
@@ -32,7 +32,7 @@ const POSAccessManagement = () => {
         <div className="space-y-4">
           <h4 className="font-bold text-sm uppercase text-slate-500 tracking-wider">Utilizadores com Acesso ({posUsers.length})</h4>
           <div className="grid gap-3">
-            {posUsers.map(emp => (
+            {posUsers.map((emp: any) => (
               <div key={emp.id} className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg border border-slate-600">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-slate-600 rounded-full">
@@ -68,7 +68,7 @@ const POSAccessManagement = () => {
           <div className="space-y-4 mt-6">
             <h4 className="font-bold text-sm uppercase text-slate-500 tracking-wider">Outros Utilizadores ({otherUsers.length})</h4>
             <div className="grid gap-3 opacity-75">
-              {otherUsers.map(emp => (
+              {otherUsers.map((emp: any) => (
                 <div key={emp.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-slate-800 rounded-full">

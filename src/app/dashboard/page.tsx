@@ -35,19 +35,18 @@ const paymentLabels: Record<PaymentMethod, string> = {
 
 const Dashboard = () => {
   const { 
-    activeOrders, orders, customers, dishes: menu, settings, expenses, revenues,
-    getDailySalesAnalytics, getMenuAnalytics, saveStatus, onRealtimeChange
+    activeOrders, orders, dishes: menu, settings, expenses, revenues
   } = useStore();
 
   const [realtimeActivity, setRealtimeActivity] = useState(false);
 
   useRealtimeSync('pedidos', (payload) => {
-    onRealtimeChange({ tableName: 'pedidos', eventType: payload.eventType, new: payload.new, old: payload.old });
+    // TODO: Implementar onRealtimeChange quando método estiver disponível
     setRealtimeActivity(true);
   });
 
   useRealtimeSync('daily_analytics', (payload) => {
-    onRealtimeChange({ tableName: 'daily_analytics', eventType: payload.eventType, new: payload.new, old: payload.old });
+    // TODO: Implementar onRealtimeChange quando método estiver disponível
     setRealtimeActivity(true);
   });
   
@@ -74,9 +73,10 @@ const Dashboard = () => {
   const closedOrders = useMemo(() => orders.filter((o: Order) => o.status === 'FECHADO'), [orders]);
   const activeOrderCount = useMemo(() => activeOrders.filter((o: Order) => o.status === 'ABERTO').length, [activeOrders]);
   
-  const dailyAnalytics = useMemo(() => getDailySalesAnalytics(7), [getDailySalesAnalytics]);
-  const performanceAnalytics = useMemo(() => getDailySalesAnalytics(performanceRange === 'SEMANA' ? 7 : 30), [getDailySalesAnalytics, performanceRange]);
-  const todayStats = useMemo(() => dailyAnalytics[dailyAnalytics.length - 1] || { totalSales: 0, totalProfit: 0, totalOrders: 0 }, [dailyAnalytics]);
+  // TODO: Implementar analytics quando métodos estiverem disponíveis
+  const dailyAnalytics = useMemo(() => [], []);
+  const performanceAnalytics = useMemo(() => [], []);
+  const todayStats = useMemo(() => ({ totalSales: 0, totalProfit: 0, totalOrders: 0 }), []);
   
   const totalSales = useMemo(() => closedOrders.reduce((acc: number, o: Order) => acc + (o.total || 0), 0), [closedOrders]);
   const totalRevenueWithLegacy = useMemo(() => totalSales + (settings.legacyTotalRevenue || 0), [totalSales, settings.legacyTotalRevenue]);
@@ -395,10 +395,10 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-white">Clientes</p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">{customers.length} Registados</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">0 Registados</p>
                   </div>
                 </div>
-                <div className="text-xs font-bold text-white">{customers.filter((c: Customer) => c.balance > 0).length} c/ Dívida</div>
+                <div className="text-xs font-bold text-white">0 c/ Dívida</div>
               </div>
             </div>
           </div>

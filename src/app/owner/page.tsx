@@ -39,9 +39,7 @@ export default function OwnerPage() {
     categories, 
     addNotification, 
     employees, 
-    payroll, 
-    setOrders, 
-    setExpenses 
+    payroll 
   } = useStore();
 
   // Função para carregar dados do dashboard

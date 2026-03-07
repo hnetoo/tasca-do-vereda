@@ -125,7 +125,7 @@ export const ApiManager = () => {
         </div>
 
         <div className="space-y-3">
-          {apiKeys.map(key => (
+          {apiKeys.map((key: any) => (
             <div key={key.id} className="bg-slate-900/50 p-4 rounded-2xl border border-white/5 group hover:border-purple-500/30 transition-all">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
@@ -199,7 +199,7 @@ export const ApiManager = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {webhooks.map(hook => (
+          {webhooks.map((hook: any) => (
             <div key={hook.id} className="bg-slate-900/50 p-4 rounded-2xl border border-white/5 hover:border-blue-500/30 transition-all">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
@@ -217,7 +217,7 @@ export const ApiManager = () => {
               </div>
               
               <div className="flex flex-wrap gap-1 mt-2">
-                {hook.events.map(event => (
+                {hook.events.map((event: any) => (
                   <span key={event} className="px-2 py-1 bg-white/5 rounded-md text-[9px] text-slate-400 uppercase font-bold tracking-wider">
                     {event.split('.')[0]}
                   </span>

@@ -34,7 +34,7 @@ const Encomendas = () => {
   const deliveryOrders = useMemo(() => {
     // Filter orders that are deliveries (assuming tableId 'DELIVERY' or similar logic, 
     // but for now using a mock filter or just all active orders for demo)
-    return activeOrders.filter(o => o.status !== 'FECHADO');
+    return activeOrders.filter((o: any) => o.status !== 'FECHADO');
   }, [activeOrders]);
 
   return (

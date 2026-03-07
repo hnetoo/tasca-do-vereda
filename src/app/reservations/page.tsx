@@ -267,7 +267,7 @@ const Reservations = () => {
                                 onChange={e => setForm({...form, tableId: e.target.value})}
                             >
                                 <option value="">-- Selecionar --</option>
-                                {tables.map(t => (
+                                {tables.map((t: any) => (
                                     <option key={t.id} value={t.id}>{t.name} ({t.seats} lug)</option>
                                 ))}
                             </select>

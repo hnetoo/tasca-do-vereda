@@ -34,7 +34,7 @@ export default function TestDatabasePage() {
       addLog('✅ Categoria adicionada ao store');
       
       // Verificar se está na lista
-      const found = categories.find(c => c.id === newCategory.id);
+      const found = categories.find((c: any) => c.id === newCategory.id);
       if (found) {
         addLog('✅ Categoria encontrada na lista');
       } else {
@@ -80,7 +80,7 @@ export default function TestDatabasePage() {
       }
       
       // Verificar se está na lista
-      const found = dishes.find(d => d.id === newDish.id);
+      const found = dishes.find((d: any) => d.id === newDish.id);
       if (found) {
         addLog('✅ Produto encontrado na lista');
       } else {
@@ -145,7 +145,7 @@ export default function TestDatabasePage() {
             <div className="bg-gray-900 p-4 rounded-xl">
               <h3 className="font-bold mb-2">Categorias ({categories.length})</h3>
               <div className="max-h-32 overflow-y-auto">
-                {categories.slice(0, 5).map(c => (
+                {categories.slice(0, 5).map((c: any) => (
                   <div key={c.id} className="text-sm text-gray-400">{c.name}</div>
                 ))}
               </div>
@@ -154,7 +154,7 @@ export default function TestDatabasePage() {
             <div className="bg-gray-900 p-4 rounded-xl">
               <h3 className="font-bold mb-2">Produtos ({dishes.length})</h3>
               <div className="max-h-32 overflow-y-auto">
-                {dishes.slice(0, 5).map(d => (
+                {dishes.slice(0, 5).map((d: any) => (
                   <div key={d.id} className="text-sm text-gray-400">{d.name}</div>
                 ))}
               </div>

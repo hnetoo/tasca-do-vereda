@@ -97,7 +97,7 @@ const CustomerDisplayContent = () => {
   const formatKz = (val: number) => val.toLocaleString('pt-AO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' AKZ';
 
   // Get payment order items
-  const paymentOrder = paymentOrderId ? activeOrders.find(o => o.id === paymentOrderId) : null;
+  const paymentOrder = paymentOrderId ? activeOrders.find((o: any) => o.id === paymentOrderId) : null;
   const paymentItems = paymentOrder?.items || [];
   const paymentTotal = paymentOrder?.total || 0;
 

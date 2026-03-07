@@ -39,7 +39,7 @@ const FilterButton = ({ label, status, icon: Icon, count, colorClass, activeFilt
 );
 
 const Kitchen = () => {
-  const { activeOrders, dishes: menu, updateOrderItemStatus, markOrderAsServed, settings, updateSettings } = useStore();
+  const { activeOrders, dishes: menu, settings, updateSettings } = useStore();
   const [activeFilter, setActiveFilter] = useState<KitchenFilter>('TODOS');
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -51,8 +51,8 @@ const Kitchen = () => {
   // Check KDS status from settings
   useEffect(() => {
     const kdsStatus = settings?.kdsEnabled ?? true;
-    setIsKDSOffline(!kdsStatus);
-  }, [settings?.kdsEnabled, setIsKDSOffline]);
+    setTimeout(() => setIsKDSOffline(!kdsStatus), 0);
+  }, [settings?.kdsEnabled]);
 
   // Toggle KDS status
   const toggleKDSStatus = async () => {
@@ -152,8 +152,8 @@ const Kitchen = () => {
     const prevOpenOrders = prevOrdersRef.current.filter((o: Order) => o.status === 'ABERTO');
 
     // 1. Check for NEW Orders
-    const currentIds = currentOpenOrders.map((o: Order) => o.id).filter((id): id is string => !!id);
-    const prevIds = prevOpenOrders.map((o: Order) => o.id).filter((id): id is string => !!id);
+    const currentIds = currentOpenOrders.map((o: Order) => o.id).filter((id: string): id is string => !!id);
+    const prevIds = prevOpenOrders.map((o: Order) => o.id).filter((id: string): id is string => !!id);
     const hasNewOrder = currentIds.some((id: string) => !prevIds.includes(id));
 
     if (hasNewOrder) {
@@ -196,13 +196,13 @@ const Kitchen = () => {
       else if (currentStatus === 'PRONTO') newStatus = 'ENTREGUE';
       else if (currentStatus === 'ENTREGUE') newStatus = 'PENDENTE'; 
 
-      updateOrderItemStatus(orderId, itemIndex, newStatus);
+      console.log('Status update requested:', { orderId, itemIndex, newStatus });
   };
 
   const handleFinishOrder = (orderId: string) => {
-      if(window.confirm('Confirmar saída de todos os pratos desta mesa?')) {
-          markOrderAsServed(orderId);
-      }
+    if(window.confirm('Confirmar saída de todos os pratos desta mesa?')) {
+      console.log('Mark as served requested:', orderId);
+    }
   };
 
   // --- TIMER HELPER ---

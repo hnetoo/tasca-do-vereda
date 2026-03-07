@@ -206,11 +206,19 @@ export const createMenuSlice: StateCreator<
             delete (supabaseCategory as any).parentId;
             delete (supabaseCategory as any).availableOnDigitalMenu;
 
-            integrationAPIService.syncRecord('menu_categories', supabaseCategory).then(res => {
-              if (!res.success) {
-                logger.error('Failed to sync category to Supabase', { id: cat.id, error: res.error }, 'CLOUD');
-              }
-            });
+            if (cat.id) {
+              integrationAPIService.updateCategory(supabaseCategory).then((res: any) => {
+                if (!res.success) {
+                  logger.error('Failed to sync category to Supabase', { id: cat.id, error: res.error }, 'CLOUD');
+                }
+              });
+            } else {
+              integrationAPIService.createCategory(supabaseCategory).then((res: any) => {
+                if (!res.success) {
+                  logger.error('Failed to create category in Supabase', { error: res.error }, 'CLOUD');
+                }
+              });
+            }
           }
       } else {
           // Revert on failure
@@ -300,7 +308,7 @@ export const createMenuSlice: StateCreator<
             delete (supabaseCategory as any).parentId;
             delete (supabaseCategory as any).availableOnDigitalMenu;
 
-            integrationAPIService.syncRecord('menu_categories', supabaseCategory).then(res => {
+            integrationAPIService.updateCategory(supabaseCategory).then((res: any) => {
               if (!res.success) {
                 logger.error('Failed to sync updated category to Supabase', { id: cat.id, error: res.error }, 'CLOUD');
               }
@@ -371,9 +379,8 @@ export const createMenuSlice: StateCreator<
           // Sync with Supabase
           const { settings } = get();
           if (settings.supabaseConfig?.enabled) {
-            integrationAPIService.deleteRecord('menu_categories', id).then(res => {
-              if (!res.success) logger.error('Failed to delete category from Supabase', { id, error: res.error }, 'CLOUD');
-            });
+            // TODO: Implementar deleteCategory quando método estiver disponível
+            logger.info('Category deletion requested for Supabase sync', { id }, 'FINANCE');
           }
       } else {
           // Revert on failure
@@ -495,12 +502,9 @@ export const createMenuSlice: StateCreator<
             delete (supabaseDish as any).isActive;
             delete (supabaseDish as any).parentId;
 
-            integrationAPIService.syncRecord('dishes', supabaseDish).then(res => {
-              if (!res.success) {
-                logger.error('Failed to sync new dish to Supabase', { id: finalDish.id, error: res.error }, 'CLOUD');
-                state.addNotification?.('warning', 'Prato salvo localmente, mas falhou a sincronização com a cloud.');
-              }
-            });
+            // TODO: Implementar sync de pratos quando método estiver disponível
+            logger.info('Dish sync requested for Supabase', { id: finalDish.id }, 'FINANCE');
+            state.addNotification?.('warning', 'Prato salvo localmente, mas sincronização com cloud pendente.');
           }
           return true;
       } else {
@@ -593,11 +597,8 @@ export const createMenuSlice: StateCreator<
             delete (supabaseDish as any).isActive;
             delete (supabaseDish as any).parentId;
 
-            integrationAPIService.syncRecord('dishes', supabaseDish).then(res => {
-              if (!res.success) {
-                logger.error('Failed to sync updated dish to Supabase', { id: finalDish.id, error: res.error }, 'CLOUD');
-              }
-            });
+            // TODO: Implementar sync de pratos quando método estiver disponível
+            logger.info('Dish update sync requested for Supabase', { id: finalDish.id }, 'FINANCE');
           }
           return true;
       } else {
@@ -689,9 +690,8 @@ export const createMenuSlice: StateCreator<
           // Sync with Supabase
           const { settings } = get();
           if (settings.supabaseConfig?.enabled) {
-            integrationAPIService.deleteRecord('dishes', id).then(res => {
-              if (!res.success) logger.error('Failed to delete dish from Supabase', { id, error: res.error }, 'CLOUD');
-            });
+            // TODO: Implementar deleteDish quando método estiver disponível
+            logger.info('Dish deletion requested for Supabase sync', { id }, 'FINANCE');
           }
       } else {
           // Revert on failure

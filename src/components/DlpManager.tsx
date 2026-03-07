@@ -62,7 +62,7 @@ export const DlpManager = () => {
         // Find changed products
         const updates = fixedMenu
             .filter(fixed => {
-                const original = products.find(p => p.id === fixed.id);
+                const original = products.find((p: any) => p.id === fixed.id);
                 return original && original.categoryId !== fixed.categoryId;
             })
             .map(fixed => ({
@@ -81,7 +81,7 @@ export const DlpManager = () => {
                  // Fallback if batchUpdateDishes is not available (should not happen)
                  let successCount = 0;
                  for (const update of updates) {
-                      const original = products.find(p => p.id === update.id);
+                      const original = products.find((p: any) => p.id === update.id);
                       if (original) {
                           await updateDish({ ...original, ...update.changes });
                           successCount++;

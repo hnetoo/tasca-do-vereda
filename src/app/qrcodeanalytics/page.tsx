@@ -51,8 +51,8 @@ const QRCodeAnalytics = () => {
   const maxHourly = Math.max(...hourlyData.map(d => d.count), 1);
 
   const tableAccessData = menuAccessLogs
-    .filter(log => log.tableId)
-    .reduce((acc, log) => {
+    .filter((log: any) => log.tableId)
+    .reduce((acc: any, log: any) => {
       if (log.tableId) {
         acc[log.tableId] = (acc[log.tableId] || 0) + 1;
       }
@@ -74,7 +74,7 @@ const QRCodeAnalytics = () => {
   const handleExportData = () => {
     const csv = [
       ['Tipo', 'Data/Hora', 'IP', 'User Agent', 'Tabela'],
-      ...filteredLogs.map(log => [
+      ...filteredLogs.map((log: any) => [
         log.type,
         new Date(log.timestamp).toLocaleString('pt-PT'),
         log.ip || 'N/A',
@@ -82,7 +82,7 @@ const QRCodeAnalytics = () => {
         log.tableId || 'N/A'
       ])
     ]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .map(row => row.map((cell: any) => `"${cell}"`).join(','))
       .join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -275,7 +275,7 @@ const QRCodeAnalytics = () => {
                 </tr>
               </thead>
               <tbody className="space-y-2">
-                {filteredLogs.slice(-20).reverse().map((log, idx) => (
+                {filteredLogs.slice(-20).reverse().map((log: any, idx: any) => (
                   <tr key={idx} className="border-b border-white/5 hover:bg-white/5 transition-all">
                     <td className="py-3">
                       <span className={`px-2 py-1 rounded text-xs font-bold ${

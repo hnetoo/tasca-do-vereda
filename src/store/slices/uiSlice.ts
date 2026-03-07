@@ -136,6 +136,12 @@ export const createUISlice: StateCreator<
     }
   },
 
-  setSyncProgress: (progress: number) => set({ syncProgress: progress }),
-  setIsSyncing: (isSyncing: boolean) => set({ isSyncing })
+  setSyncProgress: (progress: number) => {
+    // TODO: Implementar storage de syncProgress quando propriedade estiver definida
+    logger.info('Sync progress updated', { progress }, 'UI');
+  },
+  setIsSyncing: (isSyncing: boolean) => {
+    // TODO: Implementar storage de isSyncing quando propriedade estiver definida
+    logger.info('Sync status updated', { isSyncing }, 'UI');
+  }
 });

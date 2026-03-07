@@ -95,7 +95,7 @@ export const BiometricManager = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {biometricDevices.map(device => (
+        {biometricDevices.map((device: any) => (
           <div key={device.id} className="bg-slate-900/50 p-4 rounded-2xl border border-white/5 group hover:border-blue-500/30 transition-all">
             <div className="flex justify-between items-start mb-3">
               <div className="flex items-center gap-3">

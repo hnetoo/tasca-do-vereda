@@ -16,12 +16,11 @@ import { AVAILABLE_ICONS } from '@/constants/client-constants';
 
 const InventoryContent = () => {
   const { 
-    dishes: products = [], 
-    categories, 
-    stock, 
-    suppliers,
-    addDish: addProduct, 
-    updateDish: updateProduct, 
+    dishes: products,
+    categories,
+    stock,
+    addDish: addProduct,
+    updateDish: updateProduct,
     removeDish: removeProduct, 
     addCategory, 
     removeCategory, 
@@ -143,7 +142,7 @@ const InventoryContent = () => {
   useEffect(() => {
     // Fix typo in "Grelhados" category if it exists
     const fixCategoryTypo = async () => {
-      const typoCategory = categories.find(c => c.name.toLowerCase() === 'grelhoe');
+      const typoCategory = categories.find((c: any) => c.name.toLowerCase() === 'grelhoe');
       if (typoCategory) {
         console.log('Fixing category typo: grelhoe -> Grelhados');
         updateCategory({ ...typoCategory, name: 'Grelhados' });
@@ -1044,12 +1043,7 @@ const InventoryContent = () => {
                       value={productForm.supplierId || ''} 
                       onChange={e => setProductForm({...productForm, supplierId: e.target.value})}
                     >
-                      <option value="" className="bg-slate-900 text-slate-400">-- Selecione um fornecedor --</option>
-                      {suppliers.filter((s: Supplier) => s.is_active).sort((a: Supplier, b: Supplier) => a.name.localeCompare(b.name)).map((s: Supplier) => (
-                        <option key={s.id} value={s.id} className="bg-slate-900">
-                          {s.name} {s.category ? `(${s.category})` : ''}
-                        </option>
-                      ))}
+                      <option value="" className="bg-slate-900 text-slate-400">-- Nenhum fornecedor disponível --</option>
                     </select>
                   </div>
 
