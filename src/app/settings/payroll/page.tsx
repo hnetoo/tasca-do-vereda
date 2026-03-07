@@ -28,7 +28,7 @@ interface PayrollRecord {
   bonuses: number;
   subsidios: number;
   net_salary: number;
-  net_total: number;
+  // Removido net_total porque é coluna gerada automaticamente
   status: 'pending' | 'processed' | 'paid';
   status_pagamento: string;
   payment_date?: string;
@@ -110,7 +110,7 @@ export default function SettingsPayrollPage() {
         bonuses: formData.bonuses,
         subsidios: formData.bonuses,
         net_salary: netSalary,
-        net_total: netSalary,
+        // Removido net_total porque é coluna gerada automaticamente
         status: formData.status,
         status_pagamento: formData.status === 'paid' ? 'pago' : formData.status === 'processed' ? 'processado' : 'pendente',
         payment_date: formData.status === 'paid' ? new Date().toISOString() : null,
