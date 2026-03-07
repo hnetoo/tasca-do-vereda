@@ -185,7 +185,6 @@ const POS = () => {
         quantity,
         unitPrice: dish.price,
         price: dish.price,
-        name: dish.name,
         status: 'PENDENTE',
         createdAt: new Date().toISOString()
       };
