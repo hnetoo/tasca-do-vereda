@@ -612,6 +612,22 @@ export const adminOperations = {
 
       if (orderError) {
         console.log('❌ Order insert error:', orderError);
+        console.error('🚨 SUPABASE ERROR DETALHADO:', {
+          error: orderError,
+          message: orderError.message,
+          details: orderError.details,
+          hint: orderError.hint,
+          code: orderError.code,
+          orderId: order.id,
+          tableId: order.table_id,
+          timestamp: new Date().toISOString()
+        });
+        
+        // ALERT CLARO PARA O UTILIZADOR
+        if (typeof window !== 'undefined') {
+          alert(`ERRO AO GRAVAR VENDA: ${orderError.message}\n\nCódigo: ${orderError.code || 'N/A'}\n\nVerifique o console para mais detalhes.`);
+        }
+        
         throw orderError;
       }
 
