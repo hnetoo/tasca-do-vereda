@@ -212,7 +212,7 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     const currentMonth = angolaTime.toISOString().slice(0, 7); // YYYY-MM
     const { data: payrollData, error: payrollError } = await supabase
       .from(payrollTableName)
-      .select('staff_id, staff_name, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
+      .select('staff_id, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
       .eq('status_pagamento', 'pago')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
@@ -224,7 +224,7 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     // 7. FOLHA DO MÊS ATUAL
     const { data: currentMonthPayroll, error: currentMonthPayrollError } = await supabase
       .from(payrollTableName)
-      .select('staff_id, staff_name, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
+      .select('staff_id, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
       .eq('status_pagamento', 'pago')
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
