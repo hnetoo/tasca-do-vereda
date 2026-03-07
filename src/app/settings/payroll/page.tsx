@@ -13,7 +13,18 @@ const supabase = createClient(
 interface PayrollRecord {
   id: string;
   staff_id: string;
+  staff_name: string;
+  month: string;
+  year: number;
   base_salary: number;
+  overtime_hours: number;
+  overtime_rate: number;
+  overtime_pay: number;
+  deductions: number;
+  bonuses: number;
+  net_salary: number;
+  status: 'pending' | 'processed' | 'paid';
+  payment_date?: string;
   created_at: string;
 }
 
@@ -24,7 +35,14 @@ export default function SettingsPayrollPage() {
   const [editingRecord, setEditingRecord] = useState<PayrollRecord | null>(null);
   const [formData, setFormData] = useState({
     staff_id: '',
-    base_salary: 0
+    month: new Date().toISOString().slice(0, 7),
+    year: new Date().getFullYear(),
+    base_salary: 0,
+    overtime_hours: 0,
+    overtime_rate: 0,
+    deductions: 0,
+    bonuses: 0,
+    status: 'pending'
   });
 
   useEffect(() => {
@@ -62,9 +80,16 @@ export default function SettingsPayrollPage() {
     e.preventDefault();
     
     try {
+      const selectedStaff = staff.find(s => s.id === formData.staff_id);
+      const overtimePay = formData.overtime_hours * formData.overtime_rate;
+      const grossSalary = formData.base_salary + overtimePay + formData.bonuses;
+      const netSalary = grossSalary - formData.deductions;
+
       const recordData = {
-        staff_id: formData.staff_id,
-        base_salary: formData.base_salary,
+        ...formData,
+        staff_name: selectedStaff?.name || '',
+        overtime_pay: overtimePay,
+        net_salary: netSalary,
         created_at: new Date().toISOString()
       };
 
@@ -91,7 +116,14 @@ export default function SettingsPayrollPage() {
       // Reset form and refresh data
       setFormData({
         staff_id: '',
-        base_salary: 0
+        month: new Date().toISOString().slice(0, 7),
+        year: new Date().getFullYear(),
+        base_salary: 0,
+        overtime_hours: 0,
+        overtime_rate: 0,
+        deductions: 0,
+        bonuses: 0,
+        status: 'pending' as const
       });
       setEditingRecord(null);
       fetchData();
@@ -104,8 +136,32 @@ export default function SettingsPayrollPage() {
     setEditingRecord(record);
     setFormData({
       staff_id: record.staff_id,
-      base_salary: record.base_salary
+      month: record.month,
+      year: record.year,
+      base_salary: record.base_salary,
+      overtime_hours: record.overtime_hours,
+      overtime_rate: record.overtime_rate,
+      deductions: record.deductions,
+      bonuses: record.bonuses,
+      status: record.status
     });
+  };
+
+  const handleProcessPayment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('payroll')
+        .update({
+          status: 'paid',
+          payment_date: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error('Error processing payment:', err);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -130,8 +186,67 @@ export default function SettingsPayrollPage() {
     setEditingRecord(null);
     setFormData({
       staff_id: '',
-      base_salary: 0
+      month: new Date().toISOString().slice(0, 7),
+      year: new Date().getFullYear(),
+      base_salary: 0,
+      overtime_hours: 0,
+      overtime_rate: 0,
+      deductions: 0,
+      bonuses: 0,
+      status: 'pending' as const
     });
+  };
+
+  const handleStaffChange = (staffId: string) => {
+    const selectedStaff = staff.find(s => s.id === staffId);
+    setFormData({
+      ...formData,
+      staff_id: staffId,
+      base_salary: selectedStaff?.base_salary || 0
+    });
+  };
+
+  const calculateNetSalary = () => {
+    const overtimePay = formData.overtime_hours * formData.overtime_rate;
+    const grossSalary = formData.base_salary + overtimePay + formData.bonuses;
+    const netSalary = grossSalary - formData.deductions;
+    return netSalary;
+  };
+
+  const generatePDF = (record: PayrollRecord) => {
+    const pdfContent = `
+RECIBO DE PAGAMENTO - FOLHA SALARIAL
+=====================================
+Funcionário: ${record.staff_name}
+Mês/Ano: ${record.month}/${record.year}
+Data de Pagamento: ${record.payment_date ? new Date(record.payment_date).toLocaleDateString('pt-AO') : 'Pendente'}
+
+DETALHES DO PAGAMENTO:
+---------------------
+Salário Base: ${record.base_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+Horas Extra: ${record.overtime_hours}h
+Taxa Hora Extra: ${record.overtime_rate.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+Pagamento Extra: ${record.overtime_pay.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+Bônus: ${record.bonuses.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+Deduções: ${record.deductions.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+SALÁRIO LÍQUIDO: ${record.net_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+
+Status: ${record.status === 'paid' ? 'PAGO' : record.status === 'processed' ? 'PROCESSADO' : 'PENDENTE'}
+
+---
+Gerado em: ${new Date().toLocaleString('pt-AO')}
+Sistema: Tasca do Vereda v2.0
+    `;
+
+    const blob = new Blob([pdfContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `folha_${record.staff_name}_${record.month}_${record.year}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
 
