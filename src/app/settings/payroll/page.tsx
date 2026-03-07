@@ -14,16 +14,23 @@ interface PayrollRecord {
   id: string;
   staff_id: string;
   staff_name: string;
+  funcionario: string;
   month: string;
+  reference_month: string;
   year: number;
   base_salary: number;
+  salario_base: number;
   overtime_hours: number;
   overtime_rate: number;
   overtime_pay: number;
   deductions: number;
+  descontos: number;
   bonuses: number;
+  subsidios: number;
   net_salary: number;
+  net_total: number;
   status: 'pending' | 'processed' | 'paid';
+  status_pagamento: string;
   payment_date?: string;
   created_at: string;
 }
@@ -85,24 +92,30 @@ export default function SettingsPayrollPage() {
       const grossSalary = formData.base_salary + overtimePay + formData.bonuses;
       const netSalary = grossSalary - formData.deductions;
 
-      // Usar 'funcionario' em vez de 'staff_name' para evitar erro de constraint
+      // Usar campos corretos da tabela real para evitar erro de constraint
       const recordData: any = {
-        ...formData,
+        staff_id: selectedStaff?.id || '',
         funcionario: selectedStaff?.name || '',
-        reference_month: formData.month, // Adicionar para evitar constraint error
+        staff_name: selectedStaff?.name || '',
+        reference_month: formData.month,
+        month: formData.month,
+        year: formData.year,
+        base_salary: formData.base_salary,
+        salario_base: formData.base_salary,
+        overtime_hours: formData.overtime_hours,
+        overtime_rate: formData.overtime_rate,
         overtime_pay: overtimePay,
+        deductions: formData.deductions,
+        descontos: formData.deductions,
+        bonuses: formData.bonuses,
+        subsidios: formData.bonuses,
         net_salary: netSalary,
+        net_total: netSalary,
+        status: formData.status,
+        status_pagamento: formData.status === 'paid' ? 'pago' : formData.status === 'processed' ? 'processado' : 'pendente',
+        payment_date: formData.status === 'paid' ? new Date().toISOString() : null,
         created_at: new Date().toISOString()
       };
-
-      // Remover campos que não existem na tabela para evitar erro
-      delete recordData.staff_name;
-      delete recordData.status_pagamento;
-      delete recordData.mes_referencia;
-      delete recordData.salario_base;
-      delete recordData.subsidios;
-      delete recordData.descontos;
-      delete recordData.net_total;
 
       if (editingRecord) {
         // Update existing record
