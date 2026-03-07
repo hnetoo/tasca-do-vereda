@@ -37,7 +37,7 @@ export const supabaseAuthService = {
           .eq('pin', pin)
           .eq('role', String(role).toLowerCase())
           .eq('status', 'active')
-          .single();
+          .maybeSingle();  // CORRIGIDO: usar maybeSingle() em vez de single() - pode retornar múltiplos ou nenhum
         
         userData = result.data;
         userError = result.error;
@@ -65,6 +65,37 @@ export const supabaseAuthService = {
               suggestion: 'Verificar estrutura da tabela users no Supabase',
               action: 'Execute scripts/check_users_table.sql para encontrar tabela correta'
             });
+          }
+          
+          // Verificar se é erro de múltiplos resultados
+          if (userError?.code === 'PGRST116' || userError?.message?.includes('Cannot coerce the result to a single JSON object')) {
+            console.error('🚨 [AUTH] ERRO DE MÚLTIPLOS RESULTADOS:', {
+              errorCode: userError?.code,
+              fullError: userError?.message,
+              details: userError?.details,
+              suggestion: 'Existem múltiplos usuários com o mesmo PIN e role',
+              action: 'Usar .limit(1) ou .maybeSingle() para lidar com múltiplos resultados'
+            });
+          }
+        }
+        
+        // Se não houver erro mas userData for null, tentar com limit(1)
+        if (!userError && !userData) {
+          console.log('🔄 [AUTH] Tentando com limit(1) devido a múltiplos resultados...');
+          const limitResult = await client
+            .from('users')
+            .select('*')
+            .eq('pin', pin)
+            .eq('role', String(role).toLowerCase())
+            .eq('status', 'active')
+            .limit(1)
+            .single();
+          
+          userData = limitResult.data;
+          userError = limitResult.error;
+          
+          if (userData) {
+            console.log('✅ [AUTH] Usuário encontrado com limit(1)');
           }
         }
         
