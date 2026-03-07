@@ -5,8 +5,8 @@
 SELECT 
     'CONNECTION_TEST' as test_name,
     'SUCCESS' as status,
-    NOW() as timestamp,
-    version() as postgresql_version;
+    NOW as timestamp,
+    version as postgresql_version;
 
 -- 2. VERIFICAR SE PODE ACESSAR INFORMATION_SCHEMA
 SELECT 
@@ -78,10 +78,10 @@ END $$;
 -- 5. VERIFICAR VARIÁVEIS DE AMBIENTE DO SUPABASE
 SELECT 
     'ENVIRONMENT_CHECK' as test_name,
-    current_database() as database_name,
-    current_schema() as current_schema,
-    session_user() as session_user,
-    current_user() as current_user;
+    current_database as database_name,
+    current_schema as current_schema,
+    session_user as session_user,
+    current_user as current_user;
 
 -- 6. TESTAR LIMPEZA DE CACHE
 DO $$
@@ -99,9 +99,9 @@ END $$;
 SELECT 
     'PING_TEST' as test_name,
     'ACTIVE' as connection_status,
-    pg_backend_pid() as backend_pid,
-    inet_server_addr() as server_address,
-    inet_server_port() as server_port;
+    pg_backend_pid as backend_pid,
+    inet_server_addr as server_address,
+    inet_server_port as server_port;
 
 -- 8. TESTAR OPERAÇÃO BÁSICA DE ESCRITA (TEMPORÁRIO)
 DO $$
@@ -112,7 +112,7 @@ BEGIN
     BEGIN
         CREATE TEMP TABLE connection_test (
             id SERIAL PRIMARY KEY,
-            test_time TIMESTAMP DEFAULT NOW(),
+            test_time TIMESTAMP DEFAULT NOW,
             message TEXT
         );
         
@@ -149,10 +149,10 @@ END $$;
 SELECT 
     'CONNECTION_SUMMARY' as test_name,
     CASE 
-        WHEN pg_backend_pid() > 0 THEN 'FULLY_FUNCTIONAL'
+        WHEN pg_backend_pid > 0 THEN 'FULLY_FUNCTIONAL'
         ELSE 'PROBLEM_DETECTED'
     END as overall_status,
-    NOW() as test_completed_at;
+    NOW as test_completed_at;
 
 -- RESULTADO ESPERADO:
 -- ✅ Conexão básica funcional
