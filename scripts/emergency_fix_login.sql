@@ -69,6 +69,7 @@ BEGIN
     DECLARE
         test_count INTEGER;
         user_record RECORD;
+        counter INTEGER := 0;
     BEGIN
         -- Contar quantos usuários com PIN 1234
         SELECT COUNT(*) INTO test_count
@@ -82,7 +83,6 @@ BEGIN
         IF test_count > 0 THEN
             -- Mostrar detalhes dos usuários encontrados
             RAISE NOTICE '👥 Detalhes dos usuários encontrados:';
-            counter := 0;
             FOR user_record IN 
                 SELECT * FROM users 
                 WHERE pin = '1234' 
