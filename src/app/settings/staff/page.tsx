@@ -323,7 +323,7 @@ export default function SettingsStaffPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold text-white">{staffMember.name}</h3>
+                            <h3 className="text-lg font-semibold text-white">{staffMember.name || 'Nome não definido'}</h3>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               staffMember.status === 'active' 
                                 ? 'bg-green-500/20 text-green-400' 
@@ -344,11 +344,11 @@ export default function SettingsStaffPage() {
                             </div>
                             <div className="flex items-center gap-2 text-slate-400">
                               <Users className="w-4 h-4" />
-                              {staffMember.position}
+                              {staffMember.position || 'Não definido'}
                             </div>
                             <div className="flex items-center gap-2 text-slate-400">
                               <DollarSign className="w-4 h-4" />
-                              {staffMember.salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                              {staffMember.salary ? staffMember.salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' }) : 'Não definido'}
                             </div>
                             <div className="flex items-center gap-2 text-slate-400">
                               <Calendar className="w-4 h-4" />
