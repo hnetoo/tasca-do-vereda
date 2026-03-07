@@ -13,11 +13,9 @@ const supabase = createClient(
 interface StaffMember {
   id: string;
   name: string;
-  email: string;
   phone: string;
   position: string;
-  salary: number;
-  hire_date: string;
+  base_salary: number;
   status: 'active' | 'inactive';
   created_at: string;
 }
@@ -28,11 +26,9 @@ export default function SettingsStaffPage() {
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
     position: '',
-    salary: 0,
-    hire_date: '',
+    base_salary: 0,
     status: 'active' as 'active' | 'inactive'
   });
 
@@ -91,11 +87,9 @@ export default function SettingsStaffPage() {
       // Reset form and refresh data
       setFormData({
         name: '',
-        email: '',
         phone: '',
         position: '',
-        salary: 0,
-        hire_date: '',
+        base_salary: 0,
         status: 'active'
       });
       setEditingStaff(null);
@@ -109,11 +103,9 @@ export default function SettingsStaffPage() {
     setEditingStaff(staffMember);
     setFormData({
       name: staffMember.name,
-      email: staffMember.email,
       phone: staffMember.phone,
       position: staffMember.position,
-      salary: staffMember.salary,
-      hire_date: staffMember.hire_date,
+      base_salary: staffMember.base_salary,
       status: staffMember.status
     });
   };
@@ -138,11 +130,9 @@ export default function SettingsStaffPage() {
     setEditingStaff(null);
     setFormData({
       name: '',
-      email: '',
       phone: '',
       position: '',
-      salary: 0,
-      hire_date: '',
+      base_salary: 0,
       status: 'active'
     });
   };
@@ -196,18 +186,6 @@ export default function SettingsStaffPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-orange-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
                     Telefone
                   </label>
                   <input
@@ -247,21 +225,8 @@ export default function SettingsStaffPage() {
                     type="number"
                     required
                     min="0"
-                    value={formData.salary}
-                    onChange={(e) => setFormData({...formData, salary: parseFloat(e.target.value)})}
-                    className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-orange-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
-                    Data de Admissão
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.hire_date}
-                    onChange={(e) => setFormData({...formData, hire_date: e.target.value})}
+                    value={formData.base_salary}
+                    onChange={(e) => setFormData({...formData, base_salary: parseFloat(e.target.value)})}
                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-orange-500 focus:outline-none"
                   />
                 </div>
@@ -336,7 +301,7 @@ export default function SettingsStaffPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                             <div className="flex items-center gap-2 text-slate-400">
                               <Mail className="w-4 h-4" />
-                              {staffMember.email || 'Não informado'}
+                              {staffMember.phone || 'Não informado'}
                             </div>
                             <div className="flex items-center gap-2 text-slate-400">
                               <Phone className="w-4 h-4" />
@@ -348,11 +313,11 @@ export default function SettingsStaffPage() {
                             </div>
                             <div className="flex items-center gap-2 text-slate-400">
                               <DollarSign className="w-4 h-4" />
-                              {staffMember.salary ? staffMember.salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' }) : 'Não definido'}
+                              {staffMember.base_salary ? staffMember.base_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' }) : 'Não definido'}
                             </div>
                             <div className="flex items-center gap-2 text-slate-400">
                               <Calendar className="w-4 h-4" />
-                              {new Date(staffMember.hire_date).toLocaleDateString('pt-AO')}
+                              {new Date().toLocaleDateString('pt-AO')}
                             </div>
                           </div>
                         </div>
