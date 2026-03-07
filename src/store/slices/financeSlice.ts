@@ -137,6 +137,40 @@ export const createFinanceSlice: StateCreator<
       details: `Novo pedido criado: ${order.order_number || order.id}`,
       metadata: { orderId: order.id, total: order.total },
     });
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      // Convert to snake_case for Supabase
+      const { 
+        tableId, 
+        userId, 
+        userName, 
+        customerNif, 
+        customerId, 
+        shiftId, 
+        subAccountName, 
+        invoiceNumber, 
+        previousHash, 
+        jwsPayload, 
+        isSyncedAgt, 
+        agtSubmissionUuid, 
+        createdAt, 
+        updatedAt, 
+        closedAt, 
+        paymentMethod, 
+        splitPayments, 
+        customerName, 
+        ...rest } = order;
+      const supabaseOrder = { ...rest, table_id: tableId, user_id: userId, user_name: userName, customer_nif: customerNif, customer_id: customerId, shift_id: shiftId, sub_account_name: subAccountName, invoice_number: invoiceNumber, previous_hash: previousHash, jws_payload: jwsPayload, is_synced_agt: isSyncedAgt, agt_submission_uuid: agtSubmissionUuid, created_at: createdAt, updated_at: updatedAt, closed_at: closedAt, payment_method: paymentMethod, split_payments: splitPayments, customer_name: customerName };
+      
+      integrationAPIService.syncRecord('orders', supabaseOrder).then(res => {
+        if (!res.success) {
+          logger.error('Failed to sync new order to Supabase', { id: order.id, error: res.error }, 'CLOUD');
+          get().addNotification('error', 'Pedido guardado localmente, mas falhou a sincronização.');
+        }
+      });
+    }
   },
 
   updateOrder: (order: Order) => {
@@ -156,6 +190,39 @@ export const createFinanceSlice: StateCreator<
         action: 'ORDER_STATUS_CHANGE',
         details: `Status do pedido ${order.order_number || order.id} alterado para ${order.status}`,
         metadata: { orderId: order.id, oldStatus: prevOrder.status, newStatus: order.status },
+      });
+    }
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      // Convert to snake_case for Supabase
+      const { 
+        tableId, 
+        userId, 
+        userName, 
+        customerNif, 
+        customerId, 
+        shiftId, 
+        subAccountName, 
+        invoiceNumber, 
+        previousHash, 
+        jwsPayload, 
+        isSyncedAgt, 
+        agtSubmissionUuid, 
+        createdAt, 
+        updatedAt, 
+        closedAt, 
+        paymentMethod, 
+        splitPayments, 
+        customerName, 
+        ...rest } = order;
+      const supabaseOrder = { ...rest, table_id: tableId, user_id: userId, user_name: userName, customer_nif: customerNif, customer_id: customerId, shift_id: shiftId, sub_account_name: subAccountName, invoice_number: invoiceNumber, previous_hash: previousHash, jws_payload: jwsPayload, is_synced_agt: isSyncedAgt, agt_submission_uuid: agtSubmissionUuid, created_at: createdAt, updated_at: updatedAt, closed_at: closedAt, payment_method: paymentMethod, split_payments: splitPayments, customer_name: customerName };
+
+      integrationAPIService.syncRecord('orders', supabaseOrder).then(res => {
+        if (!res.success) {
+          logger.error('Failed to sync updated order to Supabase', { id: order.id, error: res.error }, 'CLOUD');
+        }
       });
     }
   },
@@ -414,10 +481,24 @@ export const createFinanceSlice: StateCreator<
     }
   },
 
-  removeOrder: (id: UUID) => set((state) => ({
-    orders: state.orders.filter((o) => o.id !== id),
-    activeOrders: state.activeOrders.filter((o) => o.id !== id)
-  })),
+  removeOrder: (id: UUID) => {
+    set((state) => ({
+      orders: state.orders.filter((o) => o.id !== id),
+      activeOrders: state.activeOrders.filter((o) => o.id !== id)
+    }));
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      integrationAPIService.deleteRecord('orders', id).then(res => {
+        if (!res.success) {
+          logger.error('Failed to delete order from Supabase', { id, error: res.error }, 'CLOUD');
+        } else {
+          logger.info('Order deleted from Supabase', { id }, 'CLOUD');
+        }
+      });
+    }
+  },
   
   addExpense: (expense: Expense) => {
     const exists = get().expenses.some(e => e.id === expense.id);
@@ -513,6 +594,24 @@ export const createFinanceSlice: StateCreator<
       details: `Receita adicionada: ${revenue.description} - ${revenue.amount}`,
       metadata: { revenueId: revenue.id, amount: revenue.amount },
     });
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      const supabaseRevenue = {
+        ...revenue,
+        payment_method: revenue.paymentMethod,
+        order_id: revenue.orderId,
+      };
+      delete (supabaseRevenue as any).paymentMethod;
+      delete (supabaseRevenue as any).orderId;
+
+      integrationAPIService.syncRecord('revenues', supabaseRevenue).then(res => {
+        if (!res.success) {
+          logger.error('Failed to sync revenue to Supabase', { id: revenue.id, error: res.error }, 'CLOUD');
+        }
+      });
+    }
   },
   
   removeRevenue: (id: UUID) => {
@@ -525,6 +624,16 @@ export const createFinanceSlice: StateCreator<
       details: `Receita removida: ${revenue?.description || id}`,
       metadata: { revenueId: id },
     });
+
+    // Sync with Supabase
+    const { settings } = get();
+    if (settings.supabaseConfig?.enabled) {
+      integrationAPIService.deleteRecord('revenues', id).then(res => {
+        if (!res.success) {
+          logger.error('Failed to delete revenue from Supabase', { id, error: res.error }, 'CLOUD');
+        }
+      });
+    }
   },
 
   addFixedExpense: (expense: FixedExpense) => set((state) => ({ fixedExpenses: [...state.fixedExpenses, expense] })),
@@ -548,6 +657,7 @@ export const createFinanceSlice: StateCreator<
         employee_id: record.employeeId,
         payment_date: record.paymentDate,
         base_salary: record.baseSalary,
+        bonus: (record as any).bonus || 0,
         deductions: record.deductions,
         net_salary: record.netSalary,
         month: record.month,
@@ -579,6 +689,7 @@ export const createFinanceSlice: StateCreator<
         employee_id: record.employeeId,
         payment_date: record.paymentDate,
         base_salary: record.baseSalary,
+        bonus: (record as any).bonus || 0,
         deductions: record.deductions,
         net_salary: record.netSalary,
         month: record.month,
@@ -606,7 +717,12 @@ export const createFinanceSlice: StateCreator<
     const { settings } = get();
     if (settings.supabaseConfig?.enabled) {
       integrationAPIService.deleteRecord('payroll', id).then(res => {
-        if (!res.success) logger.error('Failed to delete payroll record from Supabase', { id, error: res.error }, 'CLOUD');
+        if (!res.success) {
+          logger.error('Failed to delete payroll record from Supabase', { id, error: res.error }, 'CLOUD');
+          get().addNotification('error', 'Falha ao remover pagamento da cloud.');
+        } else {
+          logger.info('Payroll record deleted from Supabase', { id }, 'CLOUD');
+        }
       });
     }
   },
@@ -1020,8 +1136,9 @@ export const createFinanceSlice: StateCreator<
      
      get().updateOrder(updatedOrder);
 
-     // Persist to Supabase
-     await saveOrderActionClient(updatedOrder);
+     // The call to updateOrder above now handles the Supabase sync.
+     // The explicit call below is now redundant but kept as a fallback.
+     saveOrderActionClient(updatedOrder).catch(err => logger.error('Failed to sync checkout', err));
      
      // Add revenue
      payments.forEach(p => {

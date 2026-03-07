@@ -9,12 +9,16 @@ export interface UISlice {
   notifications: Notification[];
   isSidebarCollapsed: boolean;
   isMobileMenuOpen: boolean;
+  syncProgress: number;
+  isSyncing: boolean;
   addNotification: (type: Notification['type'], message: string) => void;
   removeNotification: (id: string) => void;
   updateSettings: (settings: Partial<SystemSettings>) => void;
   toggleSidebar: () => void;
   toggleMobileMenu: () => void;
   triggerSync: () => Promise<void>;
+  setSyncProgress: (progress: number) => void;
+  setIsSyncing: (isSyncing: boolean) => void;
 }
 
 export const createUISlice: StateCreator<
@@ -64,6 +68,8 @@ export const createUISlice: StateCreator<
   notifications: [],
   isSidebarCollapsed: false,
   isMobileMenuOpen: false,
+  syncProgress: 0,
+  isSyncing: false,
   
   addNotification: (type, message) => {
     const id = Math.random().toString(36).substring(7);
@@ -128,5 +134,8 @@ export const createUISlice: StateCreator<
     } else {
       logger.warn('Sincronização manual ignorada: Supabase não configurado ou desativado.', undefined, 'CLOUD');
     }
-  }
+  },
+
+  setSyncProgress: (progress: number) => set({ syncProgress: progress }),
+  setIsSyncing: (isSyncing: boolean) => set({ isSyncing })
 });

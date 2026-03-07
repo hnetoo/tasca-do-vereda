@@ -124,7 +124,7 @@ export const createIntegrationsSlice: StateCreator<
           // Update webhook stats
           const updatedWebhook = {
              ...webhook,
-             lastTriggered: new Date(),
+             lastTriggered: new Date().toISOString(),
              failureCount: response.ok ? 0 : (webhook.failureCount || 0) + 1
           };
           state.updateWebhook(updatedWebhook);

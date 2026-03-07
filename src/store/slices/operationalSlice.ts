@@ -81,6 +81,7 @@ export const createOperationalSlice: StateCreator<
   OperationalSlice
 > = (set, get) => ({
   tables: [],
+  orders: [], // Initialize orders to avoid undefined access
   activeTableId: null,
   saveStatus: 'IDLE',
   setSaveStatus: (status) => set({ saveStatus: status }),

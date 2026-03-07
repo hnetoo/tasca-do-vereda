@@ -92,7 +92,7 @@ export const createStaffSlice: StateCreator<
         external_bio_id: externalBioId,
         admission_date: admissionDate,
         social_security_number: socialSecurityNumber,
-        bank_account: bankAccount,
+        bank_account: bankAccount
       };
       integrationAPIService.syncRecord('employees', supabaseEmployee).then(res => {
         if (!res.success) {
@@ -137,7 +137,7 @@ export const createStaffSlice: StateCreator<
           external_bio_id: externalBioId,
           admission_date: admissionDate,
           social_security_number: socialSecurityNumber,
-          bank_account: bankAccount,
+          bank_account: bankAccount
         };
         integrationAPIService.syncRecord('employees', supabaseEmployee).then(res => {
           if (!res.success) {

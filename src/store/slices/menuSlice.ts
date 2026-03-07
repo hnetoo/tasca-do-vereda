@@ -195,8 +195,23 @@ export const createMenuSlice: StateCreator<
             details: { message: `Categoria adicionada: ${cat.name}` } 
           } as any);
 
-          // Auto-sync to cloud if configured
-          get().triggerSync?.();
+          // Sync with Supabase
+          const { settings } = get();
+          if (settings.supabaseConfig?.enabled) {
+            const supabaseCategory = {
+              ...cat,
+              parent_id: cat.parentId,
+              is_available_on_digital_menu: cat.availableOnDigitalMenu,
+            };
+            delete (supabaseCategory as any).parentId;
+            delete (supabaseCategory as any).availableOnDigitalMenu;
+
+            integrationAPIService.syncRecord('menu_categories', supabaseCategory).then(res => {
+              if (!res.success) {
+                logger.error('Failed to sync category to Supabase', { id: cat.id, error: res.error }, 'CLOUD');
+              }
+            });
+          }
       } else {
           // Revert on failure
           set((state: MenuSlice) => ({ 
@@ -274,7 +289,23 @@ export const createMenuSlice: StateCreator<
             details: { message: `Categoria atualizada: ${cat.name}` } 
           } as any);
           
-          get().triggerSync?.();
+          // Sync with Supabase
+          const { settings } = get();
+          if (settings.supabaseConfig?.enabled) {
+            const supabaseCategory = {
+              ...cat,
+              parent_id: cat.parentId,
+              is_available_on_digital_menu: cat.availableOnDigitalMenu,
+            };
+            delete (supabaseCategory as any).parentId;
+            delete (supabaseCategory as any).availableOnDigitalMenu;
+
+            integrationAPIService.syncRecord('menu_categories', supabaseCategory).then(res => {
+              if (!res.success) {
+                logger.error('Failed to sync updated category to Supabase', { id: cat.id, error: res.error }, 'CLOUD');
+              }
+            });
+          }
       } else {
           // Revert on failure
           set({ categories: previouscategories });
@@ -336,7 +367,14 @@ export const createMenuSlice: StateCreator<
           } as any);
 
           get().invalidateMenuCache();
-          get().triggerSync?.();
+          
+          // Sync with Supabase
+          const { settings } = get();
+          if (settings.supabaseConfig?.enabled) {
+            integrationAPIService.deleteRecord('menu_categories', id).then(res => {
+              if (!res.success) logger.error('Failed to delete category from Supabase', { id, error: res.error }, 'CLOUD');
+            });
+          }
       } else {
           // Revert on failure
           set({ 
@@ -440,7 +478,30 @@ export const createMenuSlice: StateCreator<
             details: { message: `Prato adicionado: ${finalDish.name}`, categoryId: finalDish.categoryId } 
           } as any);
           
-          get().triggerSync?.();
+          // Sync with Supabase
+          const { settings } = get();
+          if (settings.supabaseConfig?.enabled) {
+            const supabaseDish = {
+              ...finalDish,
+              category_id: finalDish.categoryId,
+              image_url: finalDish.imageUrl,
+              tax_code: finalDish.taxCode,
+              is_active: finalDish.isActive,
+              parent_id: finalDish.parentId,
+            };
+            delete (supabaseDish as any).categoryId;
+            delete (supabaseDish as any).imageUrl;
+            delete (supabaseDish as any).taxCode;
+            delete (supabaseDish as any).isActive;
+            delete (supabaseDish as any).parentId;
+
+            integrationAPIService.syncRecord('dishes', supabaseDish).then(res => {
+              if (!res.success) {
+                logger.error('Failed to sync new dish to Supabase', { id: finalDish.id, error: res.error }, 'CLOUD');
+                state.addNotification?.('warning', 'Prato salvo localmente, mas falhou a sincronização com a cloud.');
+              }
+            });
+          }
           return true;
       } else {
           // Revert on failure
@@ -515,7 +576,29 @@ export const createMenuSlice: StateCreator<
             details: { message: `Prato atualizado: ${finalDish.name}` } 
           } as any);
           
-          get().triggerSync?.();
+          // Sync with Supabase
+          const { settings } = get();
+          if (settings.supabaseConfig?.enabled) {
+            const supabaseDish = {
+              ...finalDish,
+              category_id: finalDish.categoryId,
+              image_url: finalDish.imageUrl,
+              tax_code: finalDish.taxCode,
+              is_active: finalDish.isActive,
+              parent_id: finalDish.parentId,
+            };
+            delete (supabaseDish as any).categoryId;
+            delete (supabaseDish as any).imageUrl;
+            delete (supabaseDish as any).taxCode;
+            delete (supabaseDish as any).isActive;
+            delete (supabaseDish as any).parentId;
+
+            integrationAPIService.syncRecord('dishes', supabaseDish).then(res => {
+              if (!res.success) {
+                logger.error('Failed to sync updated dish to Supabase', { id: finalDish.id, error: res.error }, 'CLOUD');
+              }
+            });
+          }
           return true;
       } else {
           // Revert on failure
@@ -602,7 +685,14 @@ export const createMenuSlice: StateCreator<
             entityId: id, 
             details: { message: `Prato removido: ${dishToRemove.name}`, dishName: dishToRemove.name } 
           } as any);
-          get().triggerSync?.();
+          
+          // Sync with Supabase
+          const { settings } = get();
+          if (settings.supabaseConfig?.enabled) {
+            integrationAPIService.deleteRecord('dishes', id).then(res => {
+              if (!res.success) logger.error('Failed to delete dish from Supabase', { id, error: res.error }, 'CLOUD');
+            });
+          }
       } else {
           // Revert on failure
           set({ dishes: previousDishes });

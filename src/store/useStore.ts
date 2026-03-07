@@ -310,6 +310,185 @@ export const useStore = create<StoreState>()(
         set((state: StoreState) => ({ suppliers: (state.suppliers || []).filter((s: Fornecedor) => s.id !== id) }));
       },
 
+      forceFullSync: async () => {
+        const { settings, addNotification, dishes, categories, employees, expenses, payroll, orders, setIsSyncing, setSyncProgress } = get();
+
+        if (!settings.supabaseConfig?.enabled) {
+            addNotification('error', 'Sincronização falhou: Supabase não está configurado.');
+            return;
+        }
+
+        setIsSyncing(true);
+        setSyncProgress(0);
+        addNotification('info', 'Iniciando sincronização completa com a cloud...');
+        logger.info('Forcing full sync to Supabase...', {}, 'CLOUD');
+
+        try {
+            let totalErrors = 0;
+            const errorDetails: string[] = [];
+            const totalSteps = 7; // Categories, Dishes, Employees, Expenses, Payroll, Orders, OrderItems
+            let currentStep = 0;
+            const incrementProgress = () => {
+                currentStep++;
+                setSyncProgress(Math.round((currentStep / totalSteps) * 100));
+            };
+
+            // Helper to process batch sync with individual error handling
+            const processBatch = async (label: string, items: any[], tableName: string, transformFn: (item: any) => any, maxRetries = 3) => {
+                if (items.length === 0) return;
+                
+                let successCount = 0;
+                let failCount = 0;
+
+                const promises = items.map(async (item) => {
+                    try {
+                        let attempts = 0;
+                        let synced = false;
+                        let lastError;
+
+                        while (attempts < maxRetries && !synced) {
+                            try {
+                                const record = transformFn(item);
+                                const res = await integrationAPIService.syncRecord(tableName, record);
+                                if (res.success) {
+                                    synced = true;
+                                    successCount++;
+                                } else {
+                                    throw new Error(res.error || 'Unknown error');
+                                }
+                            } catch (err: any) {
+                                lastError = err;
+                                attempts++;
+                                if (attempts < maxRetries) await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+                            }
+                        }
+
+                        if (!synced) {
+                            failCount++;
+                            totalErrors++;
+                            const itemId = item.id || 'unknown';
+                            logger.error(`Failed to sync ${label} after ${maxRetries} attempts`, { id: itemId, error: lastError?.message }, 'CLOUD');
+                            errorDetails.push(`${label}: ${itemId}`);
+                        }
+                    } catch (err: any) {
+                         // Should be caught by inner loop, but safety net
+                         failCount++;
+                         totalErrors++;
+                         errorDetails.push(`${label}: ${item.id || 'unknown'}`);
+                    }
+                });
+
+                await Promise.all(promises);
+                
+                if (failCount > 0) {
+                    logger.warn(`Sync ${label}: ${successCount} success, ${failCount} failed`, {}, 'CLOUD');
+                } else {
+                    logger.info(`Sync ${label}: ${successCount} success`, {}, 'CLOUD');
+                }
+            };
+
+            // 1. Sync Categories
+            await processBatch(
+                'Categories', 
+                categories, 
+                'menu_categories', 
+                (cat) => {
+                    const { parentId, availableOnDigitalMenu, ...rest } = cat;
+                    return { ...rest, parent_id: parentId, is_available_on_digital_menu: availableOnDigitalMenu };
+                }
+            );
+            incrementProgress();
+
+            // 2. Sync Dishes
+            await processBatch(
+                'Dishes',
+                dishes,
+                'dishes',
+                (dish) => {
+                    const { categoryId, imageUrl, taxCode, isActive, parentId, ...rest } = dish;
+                    return { ...rest, category_id: categoryId, image_url: imageUrl, tax_code: taxCode, is_active: isActive, parent_id: parentId };
+                }
+            );
+            incrementProgress();
+
+            // 3. Sync Employees
+            await processBatch(
+                'Employees',
+                employees,
+                'employees',
+                (emp) => {
+                    const { workDaysPerMonth, dailyWorkHours, externalBioId, admissionDate, socialSecurityNumber, bankAccount, ...rest } = emp;
+                    return { ...rest, work_days_per_month: workDaysPerMonth, daily_work_hours: dailyWorkHours, external_bio_id: externalBioId, admission_date: admissionDate, social_security_number: socialSecurityNumber, bank_account: bankAccount };
+                }
+            );
+            incrementProgress();
+
+            // 4. Sync Expenses
+            await processBatch(
+                'Expenses',
+                expenses,
+                'expenses',
+                (expense) => {
+                    const { supplierId, ...rest } = expense;
+                    return { ...rest, supplier_id: supplierId };
+                }
+            );
+            incrementProgress();
+
+            // 5. Sync Payroll
+            await processBatch(
+                'Payroll',
+                payroll,
+                'payroll',
+                (record) => ({
+                    id: record.id, employee_id: record.employeeId, payment_date: record.paymentDate, base_salary: record.baseSalary, bonus: (record as any).bonus || 0,
+                    deductions: record.deductions, net_salary: record.netSalary, month: record.month, year: record.year, payment_method: record.paymentMethod,
+                })
+            );
+            incrementProgress();
+
+            // 6. Sync Orders and Order Items
+            await processBatch(
+                'Orders',
+                orders,
+                'orders',
+                (order) => {
+                    const { tableId, userId, userName, customerNif, customerId, shiftId, subAccountName, invoiceNumber, previousHash, jwsPayload, isSyncedAgt, agtSubmissionUuid, createdAt, updatedAt, closedAt, paymentMethod, splitPayments, customerName, items, ...rest } = order;
+                    return { ...rest, table_id: tableId, user_id: userId, user_name: userName, customer_nif: customerNif, customer_id: customerId, shift_id: shiftId, sub_account_name: subAccountName, invoice_number: invoiceNumber, previous_hash: previousHash, jws_payload: jwsPayload, is_synced_agt: isSyncedAgt, agt_submission_uuid: agtSubmissionUuid, created_at: createdAt, updated_at: updatedAt, closed_at: closedAt, payment_method: paymentMethod, split_payments: splitPayments, customer_name: customerName };
+                }
+            );
+            incrementProgress();
+
+            const allOrderItems = orders.flatMap(order => (order.items || []).map(item => ({ ...item, order_id: order.id })));
+            await processBatch(
+                'Order Items',
+                allOrderItems,
+                'order_items',
+                (oi) => {
+                    const { productId, ...rest } = oi;
+                    return { ...rest, product_id: productId };
+                }
+            );
+            incrementProgress();
+
+            if (totalErrors === 0) {
+                addNotification('success', 'Sincronização completa finalizada com sucesso!');
+                logger.info('Full sync to Supabase completed successfully.', {}, 'CLOUD');
+            } else {
+                addNotification('warning', `Sincronização finalizada com ${totalErrors} erros. Verifique os logs.`);
+                logger.warn('Full sync completed with errors', { totalErrors, details: errorDetails }, 'CLOUD');
+            }
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            addNotification('error', `Erro crítico durante a sincronização: ${errorMessage}`);
+            logger.error('Critical error during forceFullSync', { error: errorMessage }, 'CLOUD');
+        } finally {
+            setIsSyncing(false);
+            setTimeout(() => setSyncProgress(0), 2000); // Reset progress after 2 seconds
+        }
+      },
+
       onRealtimeChange: (payload: { eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new: Record<string, unknown>; old: Record<string, unknown>; tableName: string }) => {
         logger.info(`Realtime change received for table: ${payload.tableName}, event: ${payload.eventType}`, payload, 'STORE');
         // Add a specific log for orders to confirm reception
@@ -408,7 +587,11 @@ export const useStore = create<StoreState>()(
                 category: ex.category,
                 date: ex.date,
                 supplierId: ex.supplier_id,
+                paymentMethod: ex.payment_method,
+                status: ex.status,
+                notes: ex.notes,
                 createdAt: ex.created_at ? new Date(ex.created_at) : new Date(),
+                updatedAt: ex.updated_at ? new Date(ex.updated_at) : undefined,
               };
               // Estas funções (addExpense, updateExpense) devem existir no seu financeSlice
               if (payload.eventType === 'INSERT') get().addExpense(expense as any);
@@ -425,7 +608,7 @@ export const useStore = create<StoreState>()(
                 tableId: o.table_id ?? undefined,
                 userId: o.user_id ?? undefined,
                 userName: o.user_name ?? undefined,
-                customerNif: o.customer_nif ?? undefined,
+                customerNif: o.customer_nif ?? null,
                 customerId: o.customer_id ?? undefined,
                 shiftId: o.shift_id ?? undefined,
                 subAccountName: o.sub_account_name ?? undefined,
@@ -459,10 +642,12 @@ export const useStore = create<StoreState>()(
                     employeeId: p.employee_id,
                     paymentDate: p.payment_date,
                     baseSalary: p.base_salary,
+                    bonus: p.bonus || 0,
                     deductions: p.deductions,
                     netSalary: p.net_salary,
                     month: p.month,
                     year: p.year,
+                    paymentMethod: p.payment_method,
                 };
                 // Estas funções (addPayroll, updatePayroll) devem existir no seu financeSlice
                 if (payload.eventType === 'INSERT') get().addPayroll(payrollEntry as any);
