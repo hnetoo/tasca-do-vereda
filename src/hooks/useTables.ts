@@ -25,7 +25,7 @@ export const useTables = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'tables'
+          table: 'restaurant_tables'
         },
         (payload: any) => {
           logger.info('Realtime table change', payload, 'DATABASE');

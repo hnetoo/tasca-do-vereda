@@ -10,14 +10,35 @@ const nextConfig = {
     unoptimized: true 
   },
   
-  // ESTABILIZAÇÃO - Configurações para evitar erros de chunks
+  // Configuração para resolver problemas de Server Actions com proxy
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
   
-  // PWA Configuration
+  serverExternalPackages: [],
+  
+  // Permitir requisições de diferentes origins para desenvolvimento
+  allowedDevOrigins: ['127.0.0.1:57309', 'localhost:3000'],
+  
   async headers() {
     return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+        ],
+      },
       {
         source: '/sw.js',
         headers: [

@@ -654,7 +654,7 @@ export const adminOperations = {
         return (data || []).map((t: any) => ({
             id: t.id,
             number: t.number,
-            name: t.name || `Mesa ${t.number}`,
+            name: t.label || `Mesa ${t.number}`,
             seats: t.seats,
             x: t.x,
             y: t.y,
