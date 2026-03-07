@@ -7,7 +7,7 @@ import { ArrowLeft, DollarSign, Plus, Edit, Trash2, Save, Download, Calendar, Us
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 interface PayrollRecord {
@@ -85,27 +85,17 @@ export default function SettingsPayrollPage() {
       const grossSalary = formData.base_salary + overtimePay + formData.bonuses;
       const netSalary = grossSalary - formData.deductions;
 
-      // Check table structure to see if 'funcionario' column exists
-      const { data: tableStructure } = await supabase
-        .from('information_schema.columns')
-        .select('column_name')
-        .eq('table_name', 'payroll');
-      
-      const hasFuncionarioColumn = tableStructure?.some((col: any) => col.column_name === 'funcionario');
-      
-      // Use appropriate field name based on table structure
-      const staffNameField = hasFuncionarioColumn ? 'funcionario' : 'staff_name';
-      
+      // Usar 'funcionario' em vez de 'staff_name' para evitar erro de constraint
       const recordData: any = {
         ...formData,
-        [staffNameField]: selectedStaff?.name || '',
+        funcionario: selectedStaff?.name || '',
         overtime_pay: overtimePay,
         net_salary: netSalary,
         created_at: new Date().toISOString()
       };
 
       // Remover campos que não existem na tabela para evitar erro
-      delete recordData.funcionario;
+      delete recordData.staff_name;
       delete recordData.status_pagamento;
       delete recordData.mes_referencia;
       delete recordData.salario_base;
