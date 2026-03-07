@@ -1060,7 +1060,7 @@ const POS = () => {
         }
         
         // Limpar mesa ativa se não tiver mais pedidos abertos
-        const remainingOrders = activeOrders.filter(o => 
+        const remainingOrders = activeOrders.filter((o: Order) => 
           o.tableId === activeTableId && o.status === 'ABERTO'
         );
         if (remainingOrders.length === 0) {
