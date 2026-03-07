@@ -36,7 +36,6 @@ export async function ensureOpenShift() {
       start_time: new Date().toISOString(),
       end_time: null,
       opening_amount: 0,
-      closing_amount: null,
       user_id: null, // Pode ser null para turno automático
       notes: 'Turno aberto automaticamente pelo sistema'
     };
