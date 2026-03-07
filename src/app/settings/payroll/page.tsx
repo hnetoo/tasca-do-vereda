@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
 import { ArrowLeft, DollarSign, Plus, Edit, Trash2, Save, Download, Calendar, Users, FileText, Calculator } from 'lucide-react';
 
 const supabase = createClient(
@@ -58,7 +58,6 @@ export default function SettingsPayrollPage() {
         .eq('status', 'active');
 
       if (staffError) throw staffError;
-      setStaff(staffData || []);
 
       // Fetch payroll records
       const { data: payrollData, error: payrollError } = await supabase
@@ -67,6 +66,8 @@ export default function SettingsPayrollPage() {
         .order('created_at', { ascending: false });
 
       if (payrollError) throw payrollError;
+
+      setStaff(staffData || []);
       setPayrollRecords(payrollData || []);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -74,7 +75,6 @@ export default function SettingsPayrollPage() {
       setLoading(false);
     }
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,22 +85,33 @@ export default function SettingsPayrollPage() {
       const grossSalary = formData.base_salary + overtimePay + formData.bonuses;
       const netSalary = grossSalary - formData.deductions;
 
-      const recordData = {
+      // Check table structure to see if 'funcionario' column exists
+      const { data: tableStructure } = await supabase
+        .from('information_schema.columns')
+        .select('column_name')
+        .eq('table_name', 'payroll');
+      
+      const hasFuncionarioColumn = tableStructure?.some((col: any) => col.column_name === 'funcionario');
+      
+      // Use appropriate field name based on table structure
+      const staffNameField = hasFuncionarioColumn ? 'funcionario' : 'staff_name';
+      
+      const recordData: any = {
         ...formData,
-        staff_name: selectedStaff?.name || '',
+        [staffNameField]: selectedStaff?.name || '',
         overtime_pay: overtimePay,
         net_salary: netSalary,
         created_at: new Date().toISOString()
       };
 
       // Remover campos que não existem na tabela para evitar erro
-      delete (recordData as any).funcionario;
-      delete (recordData as any).status_pagamento;
-      delete (recordData as any).mes_referencia;
-      delete (recordData as any).salario_base;
-      delete (recordData as any).subsidios;
-      delete (recordData as any).descontos;
-      delete (recordData as any).net_total;
+      delete recordData.funcionario;
+      delete recordData.status_pagamento;
+      delete recordData.mes_referencia;
+      delete recordData.salario_base;
+      delete recordData.subsidios;
+      delete recordData.descontos;
+      delete recordData.net_total;
 
       if (editingRecord) {
         // Update existing record
@@ -132,7 +143,7 @@ export default function SettingsPayrollPage() {
         overtime_rate: 0,
         deductions: 0,
         bonuses: 0,
-        status: 'pending' as const
+        status: 'pending'
       });
       setEditingRecord(null);
       fetchData();
@@ -189,8 +200,6 @@ export default function SettingsPayrollPage() {
     }
   };
 
-
-
   const handleCancel = () => {
     setEditingRecord(null);
     setFormData({
@@ -202,7 +211,7 @@ export default function SettingsPayrollPage() {
       overtime_rate: 0,
       deductions: 0,
       bonuses: 0,
-      status: 'pending' as const
+      status: 'pending'
     });
   };
 
@@ -258,7 +267,6 @@ Sistema: Tasca do Vereda v2.0
     window.URL.revokeObjectURL(url);
   };
 
-
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
@@ -268,159 +276,159 @@ Sistema: Tasca do Vereda v2.0
             <div className="flex items-center gap-4">
               <Link
                 href="/settings"
-                className="p-2 rounded-lg hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                Voltar
               </Link>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-6 h-6 text-orange-500" />
-                <h1 className="text-xl font-semibold">Folha Salarial</h1>
-              </div>
+              <h1 className="text-xl font-semibold flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-orange-500" />
+                Folha Salarial
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-slate-400">
+                {new Date().toLocaleDateString('pt-AO')}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Form */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800">
-              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                {editingRecord ? <Edit className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+            <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
+              <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                {editingRecord ? <Edit className="w-5 h-5 text-orange-500" /> : <Plus className="w-5 h-5 text-orange-500" />}
                 {editingRecord ? 'Editar Registro' : 'Novo Registro'}
               </h2>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Staff Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
                     Funcionário
                   </label>
                   <select
-                    required
                     value={formData.staff_id}
                     onChange={(e) => handleStaffChange(e.target.value)}
                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                    required
                   >
                     <option value="">Selecione um funcionário</option>
-                    {staff.map((member) => (
-                      <option key={member.id} value={member.id}>
-                        {member.name} - {member.position}
+                    {staff.map((staffMember) => (
+                      <option key={staffMember.id} value={staffMember.id}>
+                        {staffMember.name} - {staffMember.position}
                       </option>
                     ))}
                   </select>
                 </div>
 
+                {/* Month and Year */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
                       Mês
                     </label>
                     <input
                       type="month"
-                      required
                       value={formData.month}
-                      onChange={(e) => setFormData({...formData, month: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, month: e.target.value })}
                       className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
                       Ano
                     </label>
                     <input
                       type="number"
-                      required
-                      min="2020"
-                      max="2030"
                       value={formData.year}
-                      onChange={(e) => setFormData({...formData, year: parseInt(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
                       className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                      required
                     />
                   </div>
                 </div>
 
+                {/* Salary */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
                     Salário Base (AOA)
                   </label>
                   <input
                     type="number"
-                    required
-                    min="0"
-                    step="0.01"
                     value={formData.base_salary}
-                    onChange={(e) => setFormData({...formData, base_salary: parseFloat(e.target.value)})}
+                    onChange={(e) => setFormData({ ...formData, base_salary: parseFloat(e.target.value) || 0 })}
                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                    required
                   />
                 </div>
 
+                {/* Overtime */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
                       Horas Extra
                     </label>
                     <input
                       type="number"
-                      min="0"
                       step="0.5"
                       value={formData.overtime_hours}
-                      onChange={(e) => setFormData({...formData, overtime_hours: parseFloat(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, overtime_hours: parseFloat(e.target.value) || 0 })}
                       className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">
-                      Taxa Hora Extra
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Taxa Hora Extra (AOA)
                     </label>
                     <input
                       type="number"
-                      min="0"
-                      step="0.01"
                       value={formData.overtime_rate}
-                      onChange={(e) => setFormData({...formData, overtime_rate: parseFloat(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, overtime_rate: parseFloat(e.target.value) || 0 })}
                       className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
+                {/* Deductions and Bonuses */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">
-                      Bônus (AOA)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.bonuses}
-                      onChange={(e) => setFormData({...formData, bonuses: parseFloat(e.target.value)})}
-                      className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
                       Deduções (AOA)
                     </label>
                     <input
                       type="number"
-                      min="0"
-                      step="0.01"
                       value={formData.deductions}
-                      onChange={(e) => setFormData({...formData, deductions: parseFloat(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, deductions: parseFloat(e.target.value) || 0 })}
+                      className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Bônus (AOA)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.bonuses}
+                      onChange={(e) => setFormData({ ...formData, bonuses: parseFloat(e.target.value) || 0 })}
                       className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                     />
                   </div>
                 </div>
 
+                {/* Status */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
                     Status
                   </label>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData({...formData, status: e.target.value as 'pending' | 'processed' | 'paid'})}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                   >
                     <option value="pending">Pendente</option>
@@ -429,158 +437,153 @@ Sistema: Tasca do Vereda v2.0
                   </select>
                 </div>
 
-                {/* Salary Calculation Preview */}
-                <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                  <h4 className="text-sm font-medium text-slate-400 mb-2">Pré-visualização</h4>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Salário Base:</span>
-                      <span>{formData.base_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Extra:</span>
-                      <span>{(formData.overtime_hours * formData.overtime_rate).toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Bônus:</span>
-                      <span>{formData.bonuses.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</span>
-                    </div>
-                    <div className="flex justify-between text-red-400">
-                      <span>Deduções:</span>
-                      <span>-{formData.deductions.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</span>
-                    </div>
-                    <div className="border-t border-slate-600 pt-1 mt-2">
-                      <div className="flex justify-between font-bold text-green-400">
-                        <span>Salário Líquido:</span>
-                        <span>{calculateNetSalary().toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}</span>
-                      </div>
-                    </div>
+                {/* Net Salary Display */}
+                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300">Salário Líquido:</span>
+                    <span className="text-2xl font-bold text-green-400">
+                      {calculateNetSalary().toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-4">
-                  {editingRecord && (
-                    <button
-                      type="button"
-                      onClick={handleCancel}
-                      className="flex-1 px-4 py-3 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  )}
+                {/* Buttons */}
+                <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                   >
                     <Save className="w-4 h-4" />
                     {editingRecord ? 'Atualizar' : 'Salvar'}
                   </button>
+                  {editingRecord && (
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
           </div>
 
-          {/* Payroll Records */}
+          {/* Records List */}
           <div className="lg:col-span-2">
-            <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Registros de Folha</h2>
-                <button
-                  onClick={() => {
-                    const recordsText = payrollRecords.map(record => 
-                      `${record.staff_name} - ${record.month}/${record.year} - ${record.net_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })} - ${record.status}`
-                    ).join('\n');
-                    
-                    const blob = new Blob([`RELATÓRIO DE FOLHA SALARIAL\n============================\n\n${recordsText}\n\nGerado em: ${new Date().toLocaleString('pt-AO')}`], { type: 'text/plain' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `relatorio_folha_${new Date().toISOString().split('T')[0]}.txt`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Exportar Tudo
-                </button>
-              </div>
-              
+            <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
+              <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-orange-500" />
+                Registros de Folha
+              </h2>
+
               {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-r-2 border-t-2 border-l-2 border-orange-500"></div>
+                  <p className="mt-4 text-slate-400">Carregando registros...</p>
                 </div>
               ) : payrollRecords.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-4" />
                   <p className="text-slate-400">Nenhum registro de folha encontrado</p>
+                  <p className="text-sm text-slate-500 mt-2">
+                    Crie seu primeiro registro de folha salarial usando o formulário ao lado.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {payrollRecords.map((record) => (
-                    <div key={record.id} className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                      <div className="flex items-start justify-between">
+                    <div
+                      key={record.id}
+                      className="bg-slate-800 rounded-lg p-4 border border-slate-700 hover:border-orange-500/50 transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold text-white">{record.staff_name}</h3>
+                            <h3 className="font-semibold text-white">
+                              {record.staff_name}
+                            </h3>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              record.status === 'paid' 
-                                ? 'bg-green-500/20 text-green-400' 
+                              record.status === 'paid'
+                                ? 'bg-green-900 text-green-300'
                                 : record.status === 'processed'
-                                ? 'bg-blue-500/20 text-blue-400'
-                                : 'bg-yellow-500/20 text-yellow-400'
+                                ? 'bg-blue-900 text-blue-300'
+                                : 'bg-yellow-900 text-yellow-300'
                             }`}>
                               {record.status === 'paid' ? 'Pago' : record.status === 'processed' ? 'Processado' : 'Pendente'}
                             </span>
                           </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-3">
-                            <div className="flex items-center gap-2 text-slate-400">
-                              <Calendar className="w-4 h-4" />
-                              {record.month}/{record.year}
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <span className="text-slate-400">Período:</span>
+                              <p className="text-white font-medium">{record.month}/{record.year}</p>
                             </div>
-                            <div className="flex items-center gap-2 text-slate-400">
-                              <DollarSign className="w-4 h-4" />
-                              Base: {record.base_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                            <div>
+                              <span className="text-slate-400">Salário Base:</span>
+                              <p className="text-white font-medium">
+                                {record.base_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2 text-slate-400">
-                              <Calculator className="w-4 h-4" />
-                              Extra: {record.overtime_pay.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                            <div>
+                              <span className="text-slate-400">Salário Líquido:</span>
+                              <p className="text-green-400 font-semibold">
+                                {record.net_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2 text-green-400 font-semibold">
-                              <DollarSign className="w-4 h-4" />
-                              Líquido: {record.net_salary.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
-                            </div>
+                            {record.overtime_hours > 0 && (
+                              <div>
+                                <span className="text-slate-400">Horas Extra:</span>
+                                <p className="text-orange-400 font-medium">
+                                  {record.overtime_hours}h × {record.overtime_rate.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                                </p>
+                              </div>
+                            )}
+                            {record.bonuses > 0 && (
+                              <div>
+                                <span className="text-slate-400">Bônus:</span>
+                                <p className="text-blue-400 font-medium">
+                                  {record.bonuses.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                                </p>
+                              </div>
+                            )}
+                            {record.deductions > 0 && (
+                              <div>
+                                <span className="text-slate-400">Deduções:</span>
+                                <p className="text-red-400 font-medium">
+                                  -{record.deductions.toLocaleString('pt-AO', { style: 'currency', currency: 'AOA' })}
+                                </p>
+                              </div>
+                            )}
+                            {record.payment_date && (
+                              <div>
+                                <span className="text-slate-400">Data Pagamento:</span>
+                                <p className="text-green-400 font-medium">
+                                  {new Date(record.payment_date).toLocaleDateString('pt-AO')}
+                                </p>
+                              </div>
+                            )}
                           </div>
-
-                          {record.payment_date && (
-                            <div className="text-sm text-slate-400 mb-2">
-                              Data de Pagamento: {new Date(record.payment_date).toLocaleDateString('pt-AO')}
-                            </div>
-                          )}
                         </div>
-                        
                         <div className="flex gap-2 ml-4">
                           <button
-                            onClick={() => generatePDF(record)}
-                            className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
-                            title="Download Recibo"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          <button
                             onClick={() => handleEdit(record)}
-                            className="p-2 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30 transition-colors"
+                            className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                             title="Editar"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={() => generatePDF(record)}
+                            className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                            title="Baixar Recibo"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
                           {record.status !== 'paid' && (
                             <button
                               onClick={() => handleProcessPayment(record.id)}
-                              className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
+                              className="p-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
                               title="Marcar como Pago"
                             >
                               <DollarSign className="w-4 h-4" />
@@ -588,8 +591,8 @@ Sistema: Tasca do Vereda v2.0
                           )}
                           <button
                             onClick={() => handleDelete(record.id)}
-                            className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-                            title="Remover"
+                            className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                            title="Excluir"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
