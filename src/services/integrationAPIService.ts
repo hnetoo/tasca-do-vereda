@@ -90,7 +90,13 @@ export class IntegrationAPIService {
     }
 
     private get client(): SupabaseClient | null {
-        return this.supabase.getClient();
+        const client = this.supabase.getClient();
+        if (!client) {
+            console.error('❌ [INTEGRATION API] Supabase client not available');
+            logger.error('Supabase client not initialized', {}, 'IntegrationAPIService');
+            return null;
+        }
+        return client;
     }
 
     async initialize(
