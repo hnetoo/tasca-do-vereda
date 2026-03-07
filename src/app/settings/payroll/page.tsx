@@ -93,6 +93,15 @@ export default function SettingsPayrollPage() {
         created_at: new Date().toISOString()
       };
 
+      // Remover campos que não existem na tabela para evitar erro
+      delete (recordData as any).funcionario;
+      delete (recordData as any).status_pagamento;
+      delete (recordData as any).mes_referencia;
+      delete (recordData as any).salario_base;
+      delete (recordData as any).subsidios;
+      delete (recordData as any).descontos;
+      delete (recordData as any).net_total;
+
       if (editingRecord) {
         // Update existing record
         const { error } = await supabase
