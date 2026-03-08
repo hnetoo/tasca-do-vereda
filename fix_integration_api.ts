@@ -1,18 +1,27 @@
-// FIX INTEGRATION API - Resolver Supabase client initialization
-const { supabaseAdmin } = require('./fix_supabase_client.cjs');
+// FIX INTEGRATION API - Versão final TypeScript sem erros
+import { supabaseAdmin } from './fix_supabase_client_final.cjs';
 
-console.log('🔧 FIXING INTEGRATION API CLIENT INITIALIZATION');
+console.log('🔧 FIXING INTEGRATION API - TypeScript errors resolved');
 
-// Classe IntegrationAPIService melhorada
-class IntegrationAPIService {
+// Interface para tipagem forte
+interface IIntegrationAPIService {
+  getClient(): any;
+  syncOrders(orders: any[]): Promise<{ success: boolean; results?: any[]; error?: string }>;
+}
+
+// Classe IntegrationAPIServiceRobust com propriedades declaradas e tipadas
+class IntegrationAPIServiceRobust implements IIntegrationAPIService {
+  private client: any = null;
+  private initializationAttempts: number = 0;
+  private readonly maxRetries: number = 3;
+
   constructor() {
     this.client = null;
     this.initializationAttempts = 0;
-    this.maxRetries = 3;
   }
 
   // Getter robusto para o cliente
-  getClient() {
+  public getClient(): any {
     console.log('🔍 getClient() called, current client:', !!this.client);
     
     // Se já temos cliente, retornar
@@ -25,7 +34,7 @@ class IntegrationAPIService {
   }
 
   // Inicialização com retry
-  async initializeClient() {
+  private async initializeClient(): Promise<any> {
     this.initializationAttempts++;
     console.log(`🔄 Initializing client attempt ${this.initializationAttempts}/${this.maxRetries}`);
     
@@ -40,8 +49,8 @@ class IntegrationAPIService {
       console.log('✅ Supabase client initialized successfully');
       return this.client;
       
-    } catch (error) {
-      console.error(`❌ Initialization attempt ${this.initializationAttempts} failed:`, error.message);
+    } catch (error: any) {
+      console.error(`❌ Initialization attempt ${this.initializationAttempts} failed:`, (error as Error).message);
       
       if (this.initializationAttempts >= this.maxRetries) {
         console.log('❌ Max initialization attempts reached, using fallback mode');
@@ -56,11 +65,11 @@ class IntegrationAPIService {
   }
 
   // Cliente mock para fallback
-  createMockClient() {
+  private createMockClient(): any {
     console.log('🛡️ Creating mock Supabase client');
     
     return {
-      from: (table) => ({
+      from: (table: string) => ({
         select: () => ({
           data: [],
           error: null
@@ -75,20 +84,21 @@ class IntegrationAPIService {
     };
   }
 
-  // Método syncOrders com retry
-  async syncOrders(orders) {
+  // Método syncOrders com retry e tipagem forte
+  public async syncOrders(orders: any[]): Promise<{ success: boolean; results?: any[]; error?: string }> {
     console.log('🔄 syncOrders called with', orders.length, 'orders');
     
     const client = this.getClient();
     
     if (!client) {
-      console.log('❌ Cannot sync orders - no client available');
-      return { success: false, error: 'No Supabase client' };
+      const error = 'No Supabase client available';
+      console.log('❌ Cannot sync orders -', error);
+      return { success: false, error };
     }
     
     try {
       const results = await Promise.all(
-        orders.map(async (order) => {
+        orders.map(async (order: any) => {
           try {
             const result = await client
               .from('orders')
@@ -96,31 +106,33 @@ class IntegrationAPIService {
               .select();
             
             return { success: true, data: result.data, order: order.id };
-          } catch (error) {
-            console.log(`❌ Order ${order.id} sync failed:`, error.message);
-            return { success: false, error: error.message, order: order.id };
+          } catch (error: any) {
+            const errorMessage = (error as Error).message;
+            console.log(`❌ Order ${order.id} sync failed:`, errorMessage);
+            return { success: false, error: errorMessage, order: order.id };
           }
         })
       );
       
-      const successCount = results.filter(r => r.success).length;
-      const errorCount = results.filter(r => !r.success).length;
+      const successCount = results.filter((r: any) => r.success).length;
+      const errorCount = results.filter((r: any) => !r.success).length;
       
       console.log(`📊 Sync results: ${successCount} success, ${errorCount} errors`);
       
       return {
         success: successCount > 0,
-        results: results
+        results
       };
       
-    } catch (error) {
-      console.log('❌ Critical error in syncOrders:', error.message);
-      return { success: false, error: error.message };
+    } catch (error: any) {
+      const errorMessage = (error as Error).message;
+      console.log('❌ Critical error in syncOrders:', errorMessage);
+      return { success: false, error: errorMessage };
     }
   }
 }
 
-// Singleton pattern
-const integrationAPI = new IntegrationAPIService();
+// Singleton pattern - evitar redeclaração
+const integrationAPI = new IntegrationAPIServiceRobust();
 
-module.exports = integrationAPI;
+module.exports = { integrationAPI: integrationAPI };

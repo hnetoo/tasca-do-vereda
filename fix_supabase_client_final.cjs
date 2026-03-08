@@ -1,7 +1,9 @@
-// FIX SUPABASE CLIENT - Versão robusta com fallbacks
-import { createClient } from '@supabase/supabase-js';
+// FIX SUPABASE CLIENT - Versão final sem erros de TypeScript
+const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
 
-console.log('🔧 FIXING SUPABASE CLIENT INITIALIZATION');
+console.log('🔧 FINAL FIXING SUPABASE CLIENT INITIALIZATION');
 
 // Tentar múltiplas fontes para as variáveis
 const getSupabaseConfig = () => {
@@ -13,11 +15,9 @@ const getSupabaseConfig = () => {
   // 2. Tentar .env.local
   if (!supabaseUrl) {
     try {
-      const fs = require('fs');
-      const path = require('path');
       const envLocal = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8');
       
-      envLocal.split('\n').forEach(line => {
+      envLocal.split('\n').forEach((line) => {
         const [key, value] = line.split('=');
         if (key && value) {
           if (key.includes('SUPABASE_URL')) supabaseUrl = value.trim();
@@ -55,7 +55,7 @@ const getSupabaseConfig = () => {
 const createRobustSupabaseClient = () => {
   const { supabaseUrl, serviceKey, anonKey } = getSupabaseConfig();
   
-  console.log('📊 Supabase config:', {
+  console.log('📊 Final Supabase config:', {
     hasUrl: !!supabaseUrl,
     hasServiceKey: !!serviceKey,
     hasAnonKey: !!anonKey,
@@ -80,20 +80,21 @@ const createRobustSupabaseClient = () => {
     }
   });
   
-  console.log('✅ Supabase client created successfully');
+  console.log('✅ Final Supabase client created successfully');
   return client;
 };
 
-// Exportar cliente robusto
-export const supabaseAdmin = createRobustSupabaseClient();
+// Testar criação do cliente
+try {
+  const client = createRobustSupabaseClient();
+  console.log('🎉 Final Supabase client test successful!');
+  console.log('📋 Client methods available:', Object.getOwnPropertyNames(client).filter((name) => typeof client[name] === 'function'));
+} catch (error) {
+  console.error('❌ Final Supabase client test failed:', error.message);
+  process.exit(1);
+}
 
-// Exportar função para recriar cliente se necessário
-export const recreateSupabaseClient = () => {
-  console.log('🔄 Recreating Supabase client...');
-  try {
-    return createRobustSupabaseClient();
-  } catch (error) {
-    console.error('❌ Error recreating client:', error.message);
-    throw error;
-  }
+module.exports = {
+  supabaseAdmin: createRobustSupabaseClient(),
+  recreateSupabaseClient: createRobustSupabaseClient
 };

@@ -1,6 +1,6 @@
 'use server';
 
-import { adminOperations_crash_safe } from '@/services/database/adminOperations_crash_safe';
+import { adminOperations_fixed } from '@/services/database/adminOperations_fixed';
 import { adminOperations } from '@/services/database/adminOperations';
 import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID, Order, OrderItem, TableStatus } from '@/types';
 import { logger } from '@/services/logger';
@@ -22,7 +22,7 @@ export async function updateTableStatusAction(tableId: string, status: TableStat
 
 export async function saveOrderAction(order: Order): Promise<{ success: boolean; error?: string | Error }> {
   try {
-    const result = await adminOperations_crash_safe.saveOrder(order);
+    const result = await adminOperations_fixed.saveOrder(order);
     if (!result.success) {
       logger.error('Failed to save order via server action', { orderId: order.id, error: result.error }, 'SERVER_ACTION');
       return { success: false, error: result.error };

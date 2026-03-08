@@ -17,7 +17,7 @@ const getSupabaseConfig = () => {
     try {
       const envLocal = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8');
       
-      envLocal.split('\n').forEach(line => {
+      envLocal.split('\n').forEach((line: string) => {
         const [key, value] = line.split('=');
         if (key && value) {
           if (key.includes('SUPABASE_URL')) supabaseUrl = value.trim();
