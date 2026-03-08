@@ -12,7 +12,7 @@ export async function saveOrderAction(order: Order) {
       total: Number(order.total) || 0, // Garante que total seja Number
       total_amount: Number(order.total_amount) || 0, // Garante que total_amount seja Number
       paidAmount: Number(order.paidAmount) || 0, // Garante que paidAmount seja Number
-      closedAt: new Date().toISOString(), // Data de fechamento do pedido
+      closed_at: new Date().toISOString(), // Data de fechamento do pedido (snake_case como no banco)
     };
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
