@@ -99,6 +99,7 @@ export const useStore = create<any>()(
       ...createIntegrationsSlice(set, get, {} as any),
       
       // Legacy state that doesn't break the build
+      cartItems: [], // ✅ Adicionar cartItems ao estado principal
       supabaseSyncStatus: {
         isConnected: false,
         status: 'disconnected',
