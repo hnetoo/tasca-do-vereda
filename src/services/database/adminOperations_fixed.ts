@@ -10,7 +10,7 @@ export const adminOperations_fixed = {
       
       // Objeto limpo para insert direto
       const cleanData = {
-        table_id: order.tableId,
+        table_id: order.tableId === 'balcao-999' ? null : order.tableId, // UUID ou null
         total: order.total,
         items: order.items,
         status: order.status || 'ABERTO',

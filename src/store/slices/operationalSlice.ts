@@ -82,6 +82,7 @@ export const createOperationalSlice: StateCreator<
 > = (set, get) => ({
   tables: [],
   orders: [], // Initialize orders to avoid undefined access
+  cartItems: [], // ✅ ADICIONAR cartItems para o carrinho lateral
   activeTableId: null,
   saveStatus: 'IDLE',
   setSaveStatus: (status) => set({ saveStatus: status }),
@@ -497,6 +498,7 @@ export const createOperationalSlice: StateCreator<
     const state = get();
     const activeOrderId = (state as any).activeOrderId;
     const orders = (state as any).orders as Order[];
+    const cartItems = (state as any).cartItems || [];
     
     if (!activeOrderId) {
       console.error('❌ [addToCart] Nenhum pedido ativo');
@@ -559,8 +561,18 @@ export const createOperationalSlice: StateCreator<
       return order;
     });
     
-    set({ orders: updatedOrders } as any);
+    // ✅ ATUALIZAR CART ITEMS para o carrinho lateral
+    const updatedCartItems = updatedOrders
+      .filter((order: any) => order.id === activeOrderId)
+      .flatMap((order: any) => order.items || []);
+    
+    set({ 
+      orders: updatedOrders,
+      cartItems: updatedCartItems // ✅ Atualizar carrinho lateral
+    } as any);
+    
     console.log('✅ [addToCart] Produto adicionado ao carrinho!');
+    console.log('🛒 [addToCart] CartItems atualizados:', updatedCartItems.length);
   },
 
   // FUNÇÃO AUSENTE - Adicionar addToOrder para o carrinho funcionar

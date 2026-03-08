@@ -41,7 +41,7 @@ const POS = () => {
     settings, addNotification,
     currentShiftId, openShift, toggleMobileMenu, isSidebarCollapsed, toggleSidebar,
     addTable, auditLogs,
-    addToCart  // ✅ ADICIONAR addToCart
+    addToCart, cartItems  // ✅ ADICIONAR cartItems
   } = useStore();
   const user = useSelector(selectUser);
 
