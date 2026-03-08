@@ -51,6 +51,9 @@ import {
 // Custom storage implementation to handle localStorage errors
 class SafeLocalStorageStorage implements StateStorage {
   getItem(name: string): string | null {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return null;
+    
     try {
       return localStorage.getItem(name);
     } catch (error) {
@@ -60,6 +63,9 @@ class SafeLocalStorageStorage implements StateStorage {
   }
 
   setItem(name: string, value: string): void {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return;
+    
     try {
       localStorage.setItem(name, value);
     } catch (error) {
@@ -68,6 +74,9 @@ class SafeLocalStorageStorage implements StateStorage {
   }
 
   removeItem(name: string): void {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return;
+    
     try {
       localStorage.removeItem(name);
     } catch (error) {
