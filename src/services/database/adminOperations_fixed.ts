@@ -5,7 +5,7 @@ import { logger } from '@/services/logger';
 import { ensureOpenShift } from '@/app/actions/ensureOpenShift';
 
 export const adminOperations_fixed = {
-  saveOrder: async (order: Order): Promise<{ success: boolean; error?: string }> => {
+  saveOrder: async (order: Order): Promise<{ success: boolean; error?: string; data?: any }> => {
     console.log('🚀 [FIXED] saveOrder called with order:', order);
     
     if (!supabaseAdmin) {
@@ -28,14 +28,14 @@ export const adminOperations_fixed = {
         console.log('⚠️ [FIXED] Shift error, continuing:', (shiftError as Error).message);
       }
       
-      // 1. ESTRUTURA MÍNIMA E SEGURA - APENAS COLUNAS QUE EXISTEM E SÃO NECESSÁRIAS
+      // 1. ESTRUTURA LIMPA E CORRETA - APENAS COLUNAS ESSENCIAIS
       const dbOrder = {
-        // REMOVER ID - Deixar Supabase gerar automaticamente se for UUID auto-generated
+        // REMOVER ID - Deixar Supabase gerar automaticamente
         // id: order.id,  // ❌ REMOVIDO - Era a causa do erro!
         
         // Campos essenciais que existem na tabela
         order_number: order.order_number || `ORD-${Date.now()}`,
-        table_id: order.table_id || order.tableId || null,
+        table_id: order.table_id || order.tableId || null,  // ✅ Mapeamento correto
         status: order.status || 'pending',
         total: order.total || 0,
         tax_total: order.tax_total || 0,
@@ -50,20 +50,22 @@ export const adminOperations_fixed = {
         items: order.items || []
       };
 
-      console.log('📦 [FIXED] dbOrder structure (sem id):', dbOrder);
+      console.log('📦 [FINAL] dbOrder structure (limpa):', dbOrder);
 
-      // 2. TENTATIVA DE INSERT SEM ID
+      // 2. UPSERT CORRETO - Usar order_number em vez de id
       try {
-        console.log('🔄 [FIXED] Attempting insert without id...');
+        console.log('🔄 [FINAL] Attempting upsert with order_number conflict resolution...');
         
         const { data, error: orderError } = await supabaseAdmin
           .from('orders')
-          .insert(dbOrder)  // INSERT em vez de UPSERT
+          .upsert(dbOrder, { 
+            onConflict: 'order_number'  // ✅ Usar order_number em vez de id (corrigido para onConflict)
+          })
           .select();
 
         if (orderError) {
-          console.log('❌ [FIXED] Order insert error:', orderError);
-          console.log('🔍 [FIXED] Error details:', {
+          console.log('❌ [FINAL] Order upsert error:', orderError);
+          console.log('🔍 [FINAL] Error details:', {
             message: orderError.message,
             details: orderError.details,
             hint: orderError.hint,
@@ -73,30 +75,31 @@ export const adminOperations_fixed = {
           throw orderError;
         }
 
-        console.log('✅ [FIXED] Order saved successfully:', data);
-        return { success: true };
+        console.log('✅ [FINAL] Order saved successfully:', data);
+        console.log('📊 [FINAL] Status: Order registered with ID:', data[0]?.id);
+        console.log('📋 [FINAL] Response Status: 200 OK');
         
-      } catch (insertError: any) {
-        console.log('❌ [FIXED] Insert failed, trying upsert...');
+        return { success: true, data: data };
         
-        // Se INSERT falhar, tentar UPSERT com ID gerado
-        const dbOrderWithId = {
-          ...dbOrder,
-          id: order.id  // Adicionar ID apenas se INSERT falhar
-        };
+      } catch (upsertError: any) {
+        console.log('❌ [FINAL] Upsert failed completely:', upsertError.message);
         
-        const { data, error: upsertError } = await supabaseAdmin
+        // ÚLTIMO RECURSO: Insert simples se upsert falhar
+        const { data, error: insertError } = await supabaseAdmin
           .from('orders')
-          .upsert(dbOrderWithId)
+          .insert(dbOrder)
           .select();
           
-        if (upsertError) {
-          console.log('❌ [FIXED] Even upsert failed:', upsertError);
-          throw upsertError;
+        if (insertError) {
+          console.log('❌ [FINAL] Even insert failed:', insertError);
+          throw insertError;
         }
         
-        console.log('✅ [FIXED] Order saved with upsert:', data);
-        return { success: true };
+        console.log('✅ [FINAL] Order saved with insert fallback:', data);
+        console.log('📊 [FINAL] Status: Order registered with ID:', data[0]?.id);
+        console.log('📋 [FINAL] Response Status: 201 Created');
+        
+        return { success: true, data: data };
       }
       
     } catch (error: any) {
