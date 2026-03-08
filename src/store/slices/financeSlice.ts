@@ -2,7 +2,7 @@ import { StateCreator } from 'zustand';
 import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Dish, OrderItemDetail, User } from '@/types';
 import { logger } from '@/services/logger';
 import { backupService } from '@/services/backupService';
-import { integrationAPIService } from '@/services/integrationAPIService';
+import { adminOperations_fixed } from '@/services/database/adminOperations_fixed';
 import { getAngolaToday } from '@/utils/date';
 
 import { 
@@ -123,11 +123,13 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
       customer_name: customerName || null 
     };
     
-    // Usar método existente em vez de syncRecord
-    integrationAPIService.syncOrders([supabaseOrder]).then((res: any) => {
+    // Usar adminOperations_fixed em vez de integrationAPIService
+    adminOperations_fixed.saveOrder(supabaseOrder).then((res: any) => {
       if (!res.success) {
         logger.error('Failed to sync new order to Supabase', { id: order.id, error: res.error }, 'CLOUD');
         get().addNotification('error', 'Pedido guardado localmente, mas falhou a sincronização.');
+      } else {
+        logger.info('Order saved successfully to Supabase', { id: order.id, data: res.data }, 'CLOUD');
       }
     });
   },
@@ -138,11 +140,13 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
       activeOrders: state.activeOrders.map((o) => o.id === order.id ? order : o),
     }));
     
-    // Sync with Supabase
-    integrationAPIService.syncOrders([order]).then((res: any) => {
+    // Sync with Supabase usando adminOperations_fixed
+    adminOperations_fixed.saveOrder(order).then((res: any) => {
       if (!res.success) {
         logger.error('Failed to sync updated order to Supabase', { id: order.id, error: res.error }, 'CLOUD');
         get().addNotification('error', 'Pedido atualizado localmente, mas falhou a sincronização.');
+      } else {
+        logger.info('Order updated successfully to Supabase', { id: order.id, data: res.data }, 'CLOUD');
       }
     });
   },
@@ -167,11 +171,27 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
     }));
   },
 
-  syncOrders: async (orders: Order[]) => {
+  syncOrders: async (orders: Order[]): Promise<void> => {
     try {
-      const result = await integrationAPIService.syncOrders(orders);
-      if (!result.success) {
-        logger.error('Failed to sync orders', { error: result.error }, 'FINANCE');
+      // Sincronizar cada pedido individualmente com adminOperations_fixed
+      const results = await Promise.all(
+        orders.map(async (order) => {
+          const result = await adminOperations_fixed.saveOrder(order);
+          return { orderId: order.id, success: result.success, error: result.error };
+        })
+      );
+      
+      const successCount = results.filter(r => r.success).length;
+      const errorCount = results.filter(r => !r.success).length;
+      
+      if (errorCount > 0) {
+        logger.error('Failed to sync some orders', { 
+          total: orders.length, 
+          success: successCount, 
+          errors: errorCount 
+        }, 'FINANCE');
+      } else {
+        logger.info('All orders synced successfully', { count: orders.length }, 'FINANCE');
       }
     } catch (error: any) {
       logger.error('Error syncing orders', { error: error.message }, 'FINANCE');
