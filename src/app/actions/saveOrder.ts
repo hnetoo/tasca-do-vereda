@@ -1,13 +1,24 @@
 import { Order } from '@/types';
-import { supabaseService } from '@/services/supabaseService';
+import { supabase } from '@/lib/supabase';
 
 export async function saveOrderAction(order: Order) {
   try {
     console.log('💾 [saveOrderAction] Salvando pedido:', order);
     
-    const { data, error } = await supabaseService
+    // GARANTIR STATUS CONCLUIDO e TOTAL COMO NÚMERO
+    const orderToSave = {
+      ...order,
+      status: 'CONCLUIDO', // Força status CONCLUIDO
+      total: Number(order.total) || 0, // Garante que total seja Number
+      total_amount: Number(order.total_amount) || 0, // Garante que total_amount seja Number
+      paidAmount: Number(order.paidAmount) || 0, // Garante que paidAmount seja Number
+    };
+    
+    console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
+    
+    const { data, error } = await supabase
       .from('orders')
-      .upsert(order)
+      .upsert(orderToSave)
       .select();
 
     if (error) {
@@ -15,7 +26,11 @@ export async function saveOrderAction(order: Order) {
       return { success: false, error: error.message };
     }
 
-    console.log('✅ [saveOrderAction] Pedido salvo com sucesso:', data);
+    console.log('✅ [saveOrderAction] SUCESSO! Pedido salvo no Supabase:', data);
+    console.log('✅ [saveOrderAction] Status:', data?.[0]?.status);
+    console.log('✅ [saveOrderAction] Total:', data?.[0]?.total, '(Tipo:', typeof data?.[0]?.total, ')');
+    console.log('✅ [saveOrderAction] Resposta Supabase:', { status: 201, data: data });
+    
     return { success: true, data };
     
   } catch (error) {
