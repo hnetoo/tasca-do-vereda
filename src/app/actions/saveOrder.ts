@@ -27,8 +27,8 @@ export async function saveOrderAction(order: Order) {
     }
 
     console.log('✅ [saveOrderAction] SUCESSO! Pedido salvo no Supabase:', data);
-    console.log('✅ [saveOrderAction] Status:', data?.[0]?.status);
-    console.log('✅ [saveOrderAction] Total:', data?.[0]?.total, '(Tipo:', typeof data?.[0]?.total, ')');
+    console.log('✅ [saveOrderAction] Status:', (data as any)?.[0]?.status);
+    console.log('✅ [saveOrderAction] Total:', (data as any)?.[0]?.total, '(Tipo:', typeof (data as any)?.[0]?.total, ')');
     console.log('✅ [saveOrderAction] Resposta Supabase:', { status: 201, data: data });
     
     return { success: true, data };
