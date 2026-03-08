@@ -41,7 +41,7 @@ const POS = () => {
     settings, addNotification,
     currentShiftId, openShift, toggleMobileMenu, isSidebarCollapsed, toggleSidebar,
     addTable, auditLogs,
-    addToCart, cartItems  // ✅ ADICIONAR cartItems
+    addToCart, cartItems, setCartItems  // ✅ ADICIONAR setCartItems
   } = useStore();
   const user = useSelector(selectUser);
 
@@ -87,12 +87,14 @@ const POS = () => {
   useEffect(() => {
     const ensureBalcao = async () => {
       try {
-        const result = await ensureBalcaoTable();
-        if (result.success) {
-          console.log('✅ Mesa Balcão garantida no Supabase');
-        } else {
-          console.error('❌ Erro ao garantir mesa Balcão:', result.error);
-        }
+        // TEMPORARIAMENTE DESABILITADO - FOCO NO CARRINHO LOCAL
+        // const result = await ensureBalcaoTable();
+        // if (result.success) {
+        //   console.log('✅ Mesa Balcão garantida no Supabase');
+        // } else {
+        //   console.error('❌ Erro ao garantir mesa Balcão:', result.error);
+        // }
+        console.log('🛒 [POS] Supabase desabilitado temporariamente - foco no carrinho local');
       } catch (error) {
         console.error('❌ Erro ao verificar mesa Balcão:', error);
       }
@@ -183,44 +185,7 @@ const POS = () => {
   }, [activeTableId, activeOrders, activeOrderId]);
 
   const fetchClosedOrdersForShift = useCallback(async () => {
-    try {
-      const client = supabaseService.getClient();
-      if (!client) {
-        logger.warn('Supabase client não disponível para carregar histórico.', undefined, 'POS');
-        return;
-      }
-      let query = client
-        .from('orders')
-        .select('*')
-        .in('status', ['FECHADO', 'PAGO', 'CLOSED', 'PAID'])
-        .order('created_at', { ascending: false });
-      if (currentShiftId) {
-        query = query.eq('shift_id', currentShiftId);
-      }
-      const { data, error } = await query;
-      if (error) {
-        logger.error('Falha ao carregar histórico de pedidos', { error: error.message }, 'POS');
-        return;
-      }
-      const mapped: Order[] = (data || []).map((o: any) => ({
-        ...o,
-        tableId: o.table_id,
-        createdAt: o.created_at,
-        updatedAt: o.updated_at,
-        shiftId: o.shift_id,
-        paymentMethod: o.payment_method,
-        invoiceNumber: o.invoice_number,
-      }));
-      const state = useStore.getState();
-      const existing = state.activeOrders || [];
-      const mergedById: Record<string, Order> = {};
-      [...existing, ...mapped].forEach((ord: any) => {
-        if (ord?.id) mergedById[String(ord.id)] = ord as Order;
-      });
-      state.setOrders(Object.values(mergedById));
-    } catch (e: any) {
-      logger.error('Exceção ao carregar histórico', { error: e?.message || String(e) }, 'POS');
-    }
+    console.log('🛒 [POS] Busca de histórico desabilitada - foco no carrinho local');
   }, [currentShiftId]);
 
   const normalizeClosedOrdersShift = useCallback(async () => {
@@ -347,16 +312,13 @@ const POS = () => {
 
 
   
-  const totalWithTax = currentOrder?.total || 0;
-  
-  // Fallback: Calcular total diretamente dos itens se o total da order for zero
-  const calculatedTotal = currentOrder?.items?.reduce((sum: number, item: any) => {
-    const dish = menu.find((d: Product) => d.id === item.dishId);
-    if (!dish) return sum;
-    return sum + (dish.price || 0) * (item.quantity || 0);
+  // Calculate total from cartItems
+  const cartTotal = cartItems?.reduce((sum: number, item: OrderItem) => {
+    const dish = menu.find((p: Product) => p.id === item.dishId);
+    return sum + ((dish?.price || 0) * (item.quantity || 0));
   }, 0) || 0;
   
-  const displayTotal = totalWithTax > 0 ? totalWithTax : calculatedTotal;
+  const displayTotal = cartTotal > 0 ? cartTotal : (currentOrder?.total || 0);
 
   const getExportConfig = () => {
     const shiftOrders = activeOrders.filter((o: Order) => {
@@ -1509,8 +1471,8 @@ const POS = () => {
       </div>
 
       {/* Cart Sidebar */}
-      <div className={`w-96 border-l border-white/5 flex flex-col h-full z-30 bg-slate-950 shadow-2xl transition-all duration-500 ${isImmersive ? 'fixed right-0 top-0 h-screen' : ''} ${(!activeTableId && (!activeOrderId || !currentOrder || !currentOrder.items || currentOrder.items.length === 0)) ? 'translate-x-full' : ''}`}>
-        {(activeTableId || (currentOrder && currentOrder.items && currentOrder.items.length > 0)) ? (
+      <div className={`w-96 border-l border-white/5 flex flex-col h-full z-30 bg-slate-950 shadow-2xl transition-all duration-500 ${isImmersive ? 'fixed right-0 top-0 h-screen' : ''} ${(!activeTableId && (!activeOrderId || !currentOrder || !currentOrder.items || currentOrder.items.length === 0) && (!cartItems || cartItems.length === 0)) ? 'translate-x-full' : ''}`}>
+        {(activeTableId || (currentOrder && currentOrder.items && currentOrder.items.length > 0) || (cartItems && cartItems.length > 0)) ? (
           <>
             {activeTableId ? (
               <div className="p-8 pb-4 h-fit flex flex-col border-b border-white/5 shrink-0">
@@ -1597,7 +1559,8 @@ const POS = () => {
             )}
             
             <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-3">
-                {currentOrder?.items?.map((item: OrderItem, idx: number) => { 
+                {cartItems && cartItems.length > 0 ? (
+                  cartItems.map((item: OrderItem, idx: number) => { 
                     const dish = menu.find((p: Product) => p.id === item.dishId); 
                     if (!dish) return null; 
                     return (
@@ -1617,12 +1580,15 @@ const POS = () => {
                                     <span className="text-[10px] font-mono font-bold text-primary/80">{formatKz((dish.price || 0) * (item.quantity || 0))}</span>
                                     <div className="flex items-center gap-2">
                                       <div className="flex items-center gap-3 bg-black/40 p-1 rounded-lg">
-                                          <button onClick={() => activeTableId && addToOrder(activeTableId, dish, -1, '', currentOrder.id!, user?.id)} className="w-6 h-6 rounded-md bg-white/5 text-slate-400 flex items-center justify-center hover:bg-white/10"><Minus size={12}/></button>
+                                          <button onClick={() => activeTableId && addToCart(dish, -1)} className="w-6 h-6 rounded-md bg-white/5 text-slate-400 flex items-center justify-center hover:bg-white/10"><Minus size={12}/></button>
                                           <span className="text-[10px] font-black text-white w-4 text-center">{item.quantity || 0}</span>
-                                          <button onClick={() => activeTableId && addToOrder(activeTableId, dish, 1, '', currentOrder.id!, user?.id)} className="w-6 h-6 rounded-md bg-primary text-black flex items-center justify-center"><Plus size={12}/></button>
+                                          <button onClick={() => activeTableId && addToCart(dish, 1)} className="w-6 h-6 rounded-md bg-primary text-black flex items-center justify-center"><Plus size={12}/></button>
                                       </div>
                                       <button 
-                                        onClick={() => removeFromOrder(currentOrder.id!, idx, user?.id)} 
+                                        onClick={() => {
+                                          const updatedCartItems = cartItems.filter((_: any, index: number) => index !== idx);
+                                          setCartItems(updatedCartItems);
+                                        }} 
                                         className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all"
                                         title="Remover Item"
                                       >
@@ -1633,8 +1599,8 @@ const POS = () => {
                             </div>
                         </div>
                     );
-                })}
-                {(!currentOrder?.items || currentOrder.items.length === 0) && (
+                })
+                ) : (
                    <div className="h-full flex flex-col items-center justify-center opacity-20 text-center py-20">
                       <ShoppingBasket size={48} className="mb-4" />
                       <p className="text-xs font-black uppercase tracking-widest leading-relaxed">Carrinho vazio.<br/>Adicione produtos.</p>
@@ -1657,9 +1623,9 @@ const POS = () => {
                       onClick={() => {
                         setIsPaymentModalOpen(true);
                         // Emit payment event to customer display
-                        emitPaymentEvent('PAYMENT_STARTED', { orderId: currentOrder?.id });
+                        emitPaymentEvent('PAYMENT_STARTED', { cartItems });
                       }} 
-                      disabled={!currentOrder || currentOrder.items?.length === 0}
+                      disabled={!cartItems || cartItems.length === 0}
                       className="col-span-3 py-4 rounded-2xl bg-primary text-black font-black uppercase text-xs tracking-widest shadow-glow hover:brightness-110 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
                     >
                       <CreditCard size={18} /> PAGAMENTO
@@ -2348,4 +2314,3 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export default POS;
-

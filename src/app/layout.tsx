@@ -6,6 +6,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { ReduxProvider } from "@/providers/ReduxProvider";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { CartProvider } from "@/contexts/CartContext";
 
 export const metadata: Metadata = {
   title: "Tasca do Vereda",
@@ -45,11 +46,13 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-background text-foreground">
         <ReduxProvider>
-          <AppShell>
-            {children}
-            <PWAInstallPrompt />
-            <ServiceWorkerRegister />
-          </AppShell>
+          <CartProvider>
+            <AppShell>
+              {children}
+              <PWAInstallPrompt />
+              <ServiceWorkerRegister />
+            </AppShell>
+          </CartProvider>
         </ReduxProvider>
       </body>
     </html>

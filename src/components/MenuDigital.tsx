@@ -7,6 +7,8 @@ import { Search, UtensilsCrossed, Plus, ShoppingBag, ChevronRight, Star, Wifi, W
 import { Product, MenuCategory, SystemSettings } from '@/types';
 import { useRealtimeCategoriesWithProducts } from '@/hooks/useSupabaseRealtime';
 import { useOfflineMenu } from '@/hooks/useOfflineCache';
+import { useCart } from '@/contexts/CartContext';
+import OrderSidebar from '@/components/OrderSidebar';
 
 // Simplified types without Database
 interface MenuCategoryRow {
@@ -51,6 +53,9 @@ export default function MenuDigital() {
   const [settings, setSettings] = useState<Partial<SystemSettings> | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  
+  // Cart functionality
+  const { addItem, itemCount, setIsOpen } = useCart();
 
   // Offline cache hook
   const { data: offlineMenu, loading: offlineLoading, updateCache, isExpired } = useOfflineMenu();
@@ -220,6 +225,24 @@ export default function MenuDigital() {
   const formatCurrency = (val: number) => 
     val.toLocaleString('pt-AO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' AKZ';
 
+  const handleAddToCart = (product: Product) => {
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image_url: product.imageUrl,
+      description: product.description
+    });
+    // Show brief feedback
+    const button = document.getElementById(`add-to-cart-${product.id}`);
+    if (button) {
+      button.classList.add('scale-110', 'bg-emerald-400');
+      setTimeout(() => {
+        button.classList.remove('scale-110', 'bg-emerald-400');
+      }, 200);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
@@ -263,7 +286,21 @@ export default function MenuDigital() {
                 <p className="text-xs text-slate-400 max-w-md truncate">{(settings?.description || 'Vitrine Digital').slice(0, 150)}</p>
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center gap-3">
+              {/* Cart Button */}
+              <button
+                onClick={() => setIsOpen(true)}
+                className="relative p-3 rounded-lg bg-emerald-500 text-white hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/30"
+                aria-label="Abrir carrinho"
+                title="Abrir carrinho"
+              >
+                <ShoppingBag size={20} />
+                {itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    {itemCount}
+                  </span>
+                )}
+              </button>
               <a href="tel:976825520" className="px-3 py-2 rounded-lg bg-emerald-600 text-white font-bold text-[16px] hover:bg-emerald-500 transition-colors">
                 976 825 520
               </a>
@@ -394,7 +431,13 @@ export default function MenuDigital() {
                              <span className="text-[10px] font-bold text-slate-300">4.8</span>
                              <span className="text-[10px] text-slate-600">(120)</span>
                           </div>
-                          <button className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 active:scale-90 transition-transform hover:bg-emerald-400" title="Adicionar ao carrinho" aria-label="Adicionar ao carrinho">
+                          <button 
+                            id={`add-to-cart-${product.id}`}
+                            onClick={() => handleAddToCart(product)}
+                            className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 active:scale-90 transition-all hover:bg-emerald-400" 
+                            title="Adicionar ao carrinho" 
+                            aria-label="Adicionar ao carrinho"
+                          >
                              <Plus size={18} />
                           </button>
                        </div>
@@ -418,6 +461,9 @@ export default function MenuDigital() {
           </div>
         )}
       </main>
+      
+      {/* Order Sidebar */}
+      <OrderSidebar />
     </div>
   );
 }

@@ -72,6 +72,7 @@ export interface OperationalSlice {
   addAuditLog: (log: any) => void;
   auditLogs: any[];
   settleCustomerDebt: (customerId: UUID, amount: number) => void;
+  setCartItems: (items: OrderItem[]) => void;
 }
 
 export const createOperationalSlice: StateCreator<
@@ -496,16 +497,52 @@ export const createOperationalSlice: StateCreator<
     console.log('🛒 [addToCart] Produto:', product.name, 'Quantidade:', quantity);
     
     const state = get();
-    const activeOrderId = (state as any).activeOrderId;
+    let activeOrderId = (state as any).activeOrderId;
     const orders = (state as any).orders as Order[];
     const cartItems = (state as any).cartItems || [];
     
+    // Se não houver pedido ativo, criar um automaticamente no Balcão
     if (!activeOrderId) {
-      console.error('❌ [addToCart] Nenhum pedido ativo');
-      return;
+      console.log('🛒 [addToCart] Nenhum pedido ativo, criando pedido no Balcão...');
+      
+      // Verificar se já existe um pedido aberto para o Balcão
+      const balcaoOrder = orders.find(o => o.tableId === 'balcao-999' && o.status === 'ABERTO');
+      
+      if (balcaoOrder) {
+        activeOrderId = balcaoOrder.id;
+        console.log('🛒 [addToCart] Usando pedido existente do Balcão:', activeOrderId);
+      } else {
+        // Criar novo pedido para o Balcão
+        const newOrderId = generateUUID();
+        const newOrder: Order = {
+          id: newOrderId,
+          tableId: 'balcao-999',
+          customerName: 'Balcão',
+          items: [],
+          status: 'ABERTO',
+          total: 0,
+          total_amount: 0,
+          tax_amount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isPaid: false,
+          subAccountName: 'Balcão',
+          shiftId: (state as any).currentShiftId || null,
+          shift_id: (state as any).currentShiftId || null
+        } as unknown as Order;
+        
+        // Adicionar pedido aos orders
+        const updatedOrders = [...orders, newOrder];
+        (set as any)({ orders: updatedOrders, activeOrderId: newOrderId });
+        activeOrderId = newOrderId;
+        
+        console.log('🛒 [addToCart] Pedido criado para Balcão:', activeOrderId);
+      }
     }
     
-    const targetOrder = orders.find(o => o.id === activeOrderId);
+    const targetOrder = orders.find(o => o.id === activeOrderId) || 
+                      (state as any).orders.find((o: Order) => o.id === activeOrderId);
+    
     if (!targetOrder) {
       console.error('❌ [addToCart] Pedido não encontrado:', activeOrderId);
       return;
@@ -568,7 +605,8 @@ export const createOperationalSlice: StateCreator<
     
     set({ 
       orders: updatedOrders,
-      cartItems: updatedCartItems // ✅ Atualizar carrinho lateral
+      cartItems: updatedCartItems, // ✅ Atualizar carrinho lateral
+      activeOrderId: activeOrderId // ✅ Manter activeOrderId atualizado
     } as any);
     
     console.log('✅ [addToCart] Produto adicionado ao carrinho!');
@@ -796,5 +834,9 @@ export const createOperationalSlice: StateCreator<
         ...state.auditLogs
       ].slice(0, 50) 
     }));
+  },
+  setCartItems: (items: OrderItem[]) => {
+    console.log('🛒 [setCartItems] Atualizando carrinho com', items.length, 'itens');
+    set({ cartItems: items });
   }
 });
