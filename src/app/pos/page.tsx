@@ -1053,8 +1053,9 @@ const POS = () => {
       
       // Limpar carrinho e estado
       setCartItems([]);
-      setActiveOrderId(null);
-      set({ orders: updatedOrders });
+      
+      // Atualizar orders no store
+      useStore.setState({ orders: updatedOrders });
       
       // Limpar estado do POS
       setCurrentPayments([]);
