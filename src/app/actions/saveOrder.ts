@@ -10,9 +10,21 @@ export async function saveOrderAction(order: Order) {
       ...order,
       status: 'CONCLUIDO', // Força status CONCLUIDO
       total: Number(order.total) || 0, // Garante que total seja Number
-      total_amount: Number(order.total_amount) || 0, // Garante que total_amount seja Number
+      totalAmount: Number(order.total_amount) || 0, // CAMELCASE: total_amount → totalAmount
       paidAmount: Number(order.paidAmount) || 0, // Garante que paidAmount seja Number
-      // REMOVIDO: closedAt - está causando erro de coluna inexistente
+      customerName: order.customer_name || null, // CAMELCASE: customer_name → customerName
+      tableName: order.table_id || null, // CAMELCASE: table_id → tableName
+      orderNumber: order.order_number || null, // CAMELCASE: order_number → orderNumber
+      shiftId: order.shift_id || null, // CAMELCASE: shift_id → shiftId
+      invoiceNumber: order.invoice_number || null, // CAMELCASE: invoice_number → invoiceNumber
+      taxTotal: order.tax_total || null, // CAMELCASE: tax_total → taxTotal
+      subAccountName: order.sub_account_name || null, // CAMELCASE: sub_account_name → subAccountName
+      userId: order.user_id || null, // CAMELCASE: user_id → userId
+      userName: order.user_name || null, // CAMELCASE: user_name → userName
+      customerId: order.customer_id || null, // CAMELCASE: customer_id → customerId
+      createdAt: order.created_at || null, // CAMELCASE: created_at → createdAt
+      updatedAt: order.updated_at || null, // CAMELCASE: updated_at → updatedAt
+      // SEMPRE USAR CAMELCASE PARA SUPABASE
     };
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
