@@ -24,8 +24,8 @@ export async function saveOrderAction(order: Order) {
       customer_id: order.customerId || null, // SNAKE_CASE: customerId → customer_id
       created_at: order.createdAt || null, // SNAKE_CASE: createdAt → created_at
       updated_at: order.updatedAt || null, // SNAKE_CASE: updatedAt → updated_at
-      closed_at: new Date().toISOString(), // SNAKE_CASE: coluna existe no schema como closed_at
-      // SEMPRE USAR SNAKE_CASE CONFORME SCHEMA SUPABASE
+      // REMOVIDO: closed_at - NÃO EXISTE NO BANCO OU DÁ ERRO
+      // USAR APENAS CAMPOS QUE EXISTEM NO SCHEMA
     };
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
