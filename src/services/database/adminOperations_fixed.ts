@@ -68,19 +68,27 @@ export const adminOperations_fixed = {
       // DEBUG APÓS LIMPEZA
       console.log('🔍 [DEBUG] DADOS FINAIS:', JSON.stringify(dbOrder, null, 2));
 
-      // 2. UPSERT CORRETO - Usar order_number em vez de id
+      // 3. MAPA DE COLUNAS - Remover campo id para evitar erro "column id does not exist"
+      let dataToSave = { ...dbOrder };
+      if ('id' in dataToSave) {
+        const { id, ...dataWithoutId } = dataToSave;
+        dataToSave = dataWithoutId;
+        console.log('🗑️ [MAPA DE COLUNAS] Campo id removido, enviando apenas:', JSON.stringify(dataToSave, null, 2));
+      } else {
+        console.log('✅ [MAPA DE COLUNAS] Sem campo id para remover, enviando:', JSON.stringify(dataToSave, null, 2));
+      }
+
+      // 2. INSERT SIMPLES - Sem on_conflict para evitar erro 42P10
       try {
-        console.log('🔄 [FINAL] Attempting upsert with order_number conflict resolution...');
+        console.log('🔄 [FINAL] Attempting simple insert...');
         
         const { data, error: orderError } = await supabaseAdmin
           .from('orders')
-          .upsert(dbOrder, { 
-            onConflict: 'order_number'  // ✅ Usar order_number em vez de id (corrigido para onConflict)
-          })
+          .insert(dataToSave)
           .select();
 
         if (orderError) {
-          console.log('❌ [FINAL] Order upsert error:', orderError);
+          console.log('❌ [FINAL] Order insert error:', orderError);
           console.log('🔍 [FINAL] Error details:', {
             message: orderError.message,
             details: orderError.details,

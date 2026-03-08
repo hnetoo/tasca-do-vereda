@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID, OrderItem, Order, TableStatus } from '../../types';
+import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID, OrderItem, Order, TableStatus, Dish } from '../../types';
 import { 
   saveTableAction, 
   deleteTableAction, 
@@ -490,6 +490,83 @@ export const createOperationalSlice: StateCreator<
     }
   },
 
+  // FUNÇÃO AUSENTE - Adicionar addToOrder para o carrinho funcionar
+  addToOrder: (tableId: string, product: Dish, quantity: number = 1, notes: string = '', orderId?: string, userId?: string) => {
+    const state = get();
+    const orders = (state as any).orders as Order[];
+    
+    // Find or create order
+    let targetOrder: Order | undefined;
+    if (orderId) {
+      targetOrder = orders.find(o => o.id === orderId);
+    } else {
+      // Find active order for this table
+      targetOrder = orders.find(o => o.tableId === tableId && o.status === 'ABERTO');
+    }
+    
+    if (!targetOrder) {
+      console.error('❌ [addToOrder] No order found for table:', tableId);
+      return;
+    }
+    
+    // Create order item
+    const orderItem: OrderItem = {
+      id: generateUUID(),
+      orderId: targetOrder.id,
+      dishId: product.id,
+      price: product.price || 0,
+      unitPrice: product.price || 0,
+      quantity,
+      notes,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Add to order
+    const updatedOrders = orders.map(order => {
+      if (order.id === targetOrder!.id) {
+        const existingItemIndex = order.items?.findIndex(item => item.dishId === product.id);
+        
+        if (existingItemIndex !== undefined && existingItemIndex !== -1) {
+          // Update existing item
+          const updatedItems = [...(order.items || [])];
+          updatedItems[existingItemIndex] = {
+            ...updatedItems[existingItemIndex],
+            quantity: (updatedItems[existingItemIndex].quantity || 1) + quantity,
+            updatedAt: new Date().toISOString()
+          };
+          
+          return {
+            ...order,
+            items: updatedItems,
+            total: updatedItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
+            updatedAt: new Date().toISOString()
+          };
+        } else {
+          // Add new item
+          const newItems = [...(order.items || []), orderItem];
+          
+          return {
+            ...order,
+            items: newItems,
+            total: newItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
+            updatedAt: new Date().toISOString()
+          };
+        }
+      }
+      return order;
+    });
+    
+    set({ orders: updatedOrders } as any);
+    
+    // Persist to Supabase
+    saveOrderAction(targetOrder).then(res => {
+      if (!res.success) {
+        console.error('❌ [addToOrder] Failed to persist order:', res.error);
+      }
+    });
+  },
+
   removeOrderItem: (orderId: UUID, itemId: UUID) => {
     const state = get();
     const orders = (state as any).orders as Order[];
@@ -503,11 +580,10 @@ export const createOperationalSlice: StateCreator<
       const itemToRemove = items.find(item => item.id === itemId);
 
       if (itemToRemove) {
-        const newItems = items.filter(item => item.id !== itemId);
-        orderToUpdate.items = newItems;
+        orderToUpdate.items = items.filter(item => item.id !== itemId);
 
         // Recalculate order totals - USAR APENAS CAMPOS EXISTENTES
-      orderToUpdate.total = newItems.reduce((sum, oi) => {
+      orderToUpdate.total = orderToUpdate.items.reduce((sum, oi) => {
         const price = oi.unitPrice || oi.price || 0;
         const qty = oi.quantity || 1;
         return sum + (price * qty);
@@ -532,7 +608,7 @@ export const createOperationalSlice: StateCreator<
       logger.warn(`Order with ID ${orderId} not found when trying to remove item.`, undefined, 'OPERATIONAL');
     }
   },
-  
+
   closeTableWithoutOrders: (tableId: string) => {
     if (tableId !== 'balcao-999') {
       get().updateTableStatus(tableId, 'AVAILABLE');
