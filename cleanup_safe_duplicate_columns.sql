@@ -4,7 +4,6 @@
 
 DO $do$
 DECLARE
-    t_name TEXT;
     pt_term TEXT;
     en_term TEXT;
     pairs TEXT[][];
@@ -31,7 +30,6 @@ BEGIN
     RAISE NOTICE '=== INICIANDO LIMPEZA DE COLUNAS DUPLICADAS SEGURAS ===';
 
     -- Loop através de todas as tabelas do schema public
-    FOR r IN 
     FOR t_name IN 
         SELECT table_name 
         FROM information_schema.tables 
@@ -39,7 +37,6 @@ BEGIN
           AND table_type = 'BASE TABLE' 
         ORDER BY table_name 
     LOOP
-        t_name := r.table_name;
         
         -- Loop em cada par de tradução
         FOREACH pair SLICE 1 IN ARRAY pairs LOOP
