@@ -5,27 +5,27 @@ export async function saveOrderAction(order: Order) {
   try {
     console.log('💾 [saveOrderAction] Salvando pedido:', order);
     
-    // GARANTIR STATUS CONCLUIDO e TOTAL COMO NÚMERO
+    // GARANTIR STATUS CONCLUIDO e TOTAL COMO NÚMERO - SNAKE_CASE OBRIGATÓRIO
     const orderToSave: any = {
       ...order,
       status: 'CONCLUIDO', // Força status CONCLUIDO
       total: Number(order.total) || 0, // Garante que total seja Number
-      total_amount: Number(order.total_amount) || 0, // SNAKE_CASE: totalAmount → total_amount
-      paid_amount: Number(order.paidAmount) || 0, // SNAKE_CASE: paidAmount → paid_amount
-      customer_name: order.customerName || null, // SNAKE_CASE: customerName → customer_name
-      table_id: order.tableName || null, // SNAKE_CASE: tableName → table_id
-      order_number: order.orderNumber || null, // SNAKE_CASE: orderNumber → order_number
-      shift_id: order.shiftId || null, // SNAKE_CASE: shiftId → shift_id
-      invoice_number: order.invoiceNumber || null, // SNAKE_CASE: invoiceNumber → invoice_number
-      tax_total: order.taxTotal || null, // SNAKE_CASE: taxTotal → tax_total
-      sub_account_name: order.subAccountName || null, // SNAKE_CASE: subAccountName → sub_account_name
-      user_id: order.userId || null, // SNAKE_CASE: userId → user_id
-      user_name: order.userName || null, // SNAKE_CASE: userName → user_name
-      customer_id: order.customerId || null, // SNAKE_CASE: customerId → customer_id
-      created_at: order.createdAt || null, // SNAKE_CASE: createdAt → created_at
-      updated_at: order.updatedAt || null, // SNAKE_CASE: updatedAt → updated_at
-      // REMOVIDO: closed_at - NÃO EXISTE NO BANCO OU DÁ ERRO
-      // USAR APENAS CAMPOS QUE EXISTEM NO SCHEMA
+      total_amount: Number(order.total_amount) || 0, // SNAKE_CASE
+      paid_amount: Number(order.paidAmount) || 0, // SNAKE_CASE
+      customer_name: order.customer_name || null, // SNAKE_CASE DIRETO
+      table_id: order.table_id || null, // SNAKE_CASE DIRETO
+      order_number: order.order_number || null, // SNAKE_CASE DIRETO
+      shift_id: order.shift_id || null, // SNAKE_CASE DIRETO
+      invoice_number: order.invoice_number || null, // SNAKE_CASE DIRETO
+      tax_total: order.tax_total || null, // SNAKE_CASE DIRETO
+      sub_account_name: order.sub_account_name || null, // SNAKE_CASE DIRETO
+      user_id: order.user_id || null, // SNAKE_CASE DIRETO
+      user_name: order.user_name || null, // SNAKE_CASE DIRETO
+      customer_id: order.customer_id || null, // SNAKE_CASE DIRETO
+      created_at: order.created_at || new Date().toISOString(), // SNAKE_CASE OBRIGATÓRIO
+      updated_at: order.updated_at || new Date().toISOString(), // SNAKE_CASE OBRIGATÓRIO
+      // REMOVIDOS TODOS CAMELCASE: closedAt, createdAt, updatedAt, etc.
+      // USAR APENAS CAMPOS SNAKE_CASE QUE EXISTEM NO SCHEMA
     };
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
