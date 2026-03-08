@@ -381,17 +381,27 @@ export const createOperationalSlice: StateCreator<
       shift_id: get().currentShiftId || null
     } as unknown as Order;
     
-    if ('addOrder' in get()) {
-      (get() as any).addOrder(newOrder);
-      
-      // Persist to Supabase
-      saveOrderAction(newOrder).then(res => {
-        if (!res.success) {
-           logger.error('Failed to persist new order', { id: orderId, error: res.error }, 'OPERATIONAL');
-        }
-      }).catch(err => {
-         logger.error('Exception persisting new order', { id: orderId, error: err }, 'OPERATIONAL');
-      });
+    // Verificar se addOrder existe antes de chamar (fix para 'u is not a function')
+    try {
+      const state = get();
+      if (typeof (state as any).addOrder === 'function') {
+        (state as any).addOrder(newOrder);
+        
+        // Persist to Supabase
+        saveOrderAction(newOrder).then(res => {
+          if (!res.success) {
+             logger.error('Failed to persist new order', { id: orderId, error: res.error }, 'OPERATIONAL');
+          }
+        }).catch(err => {
+           logger.error('Exception persisting new order', { id: orderId, error: err }, 'OPERATIONAL');
+        });
+      } else {
+        console.error('❌ [createNewOrder] addOrder function not available');
+        logger.error('addOrder function not available in state', { tableId, name }, 'OPERATIONAL');
+      }
+    } catch (error) {
+      console.error('❌ [createNewOrder] Error creating order:', error);
+      logger.error('Error in createNewOrder', { error, tableId, name }, 'OPERATIONAL');
     }
     
     return orderId;

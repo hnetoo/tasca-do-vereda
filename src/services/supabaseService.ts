@@ -381,6 +381,25 @@ export class SupabaseService {
   }
 
   getClient(): SupabaseClient | null {
+    // Se o cliente não existir, tentar inicializar automaticamente
+    if (!this.client) {
+      console.log('🔄 [SUPABASE SERVICE] Client not initialized, attempting auto-initialization...');
+      
+      // Tentar inicializar com as variáveis de ambiente
+      const targetUrl = supabaseUrl;
+      const targetKey = supabaseAnonKey;
+      
+      if (targetUrl && targetKey) {
+        console.log('✅ [SUPABASE SERVICE] Auto-initializing client...');
+        this.client = supabase;
+        console.log('✅ [SUPABASE SERVICE] Client initialized successfully');
+        logger.info('Supabase client auto-initialized', {}, 'SupabaseService');
+      } else {
+        console.log('❌ [SUPABASE SERVICE] Cannot auto-initialize - missing URL or Key');
+        logger.error('Cannot auto-initialize Supabase client - missing configuration', {}, 'SupabaseService');
+      }
+    }
+    
     return this.client;
   }
 
