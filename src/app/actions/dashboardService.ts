@@ -212,7 +212,7 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     const currentMonth = angolaTime.toISOString().slice(0, 7); // YYYY-MM
     const { data: payrollData, error: payrollError } = await supabase
       .from(payrollTableName)
-      .select('staff_id, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
+      .select('staff_id, base_salary, subsidios, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
       // REMOVIDO: .eq('status_pagamento', 'pago') - Agora busca TODOS os registros
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
@@ -224,7 +224,7 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
     // 7. FOLHA DO MÊS ATUAL
     const { data: currentMonthPayroll, error: currentMonthPayrollError } = await supabase
       .from(payrollTableName)
-      .select('staff_id, base_salary, subsidies, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
+      .select('staff_id, base_salary, subsidios, deductions, net_total, reference_month, status_pagamento, metadata, created_at')
       // REMOVIDO: .eq('status_pagamento', 'pago') - Agora busca TODOS os registros
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
@@ -273,8 +273,8 @@ export async function getDashboardData(period: 'HOJE' | 'SEMANA' | 'MES' | 'ANO'
         total = payroll.base_salary;
         
         // Adicionar subsidios tradicionais
-        if (payroll.subsidies) {
-          total += payroll.subsidies;
+        if (payroll.subsidios) {
+          total += payroll.subsidios;
         }
         
         // Adicionar valores do metadata
