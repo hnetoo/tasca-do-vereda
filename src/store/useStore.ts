@@ -99,7 +99,6 @@ export const useStore = create<any>()(
       ...createIntegrationsSlice(set, get, {} as any),
       
       // Legacy state that doesn't break the build
-      cartItems: [], // ✅ Adicionar cartItems ao estado principal
       supabaseSyncStatus: {
         isConnected: false,
         status: 'disconnected',
@@ -124,6 +123,9 @@ export const useStore = create<any>()(
       
       auditLogs: [],
       addAuditLog: (log: AuditLog) => set((state: any) => ({ auditLogs: [log, ...state.auditLogs].slice(0, 1000) })),
+      
+      cartItems: [], // ✅ Adicionar cartItems ao estado principal
+      setCartItems: (items: OrderItem[]) => set({ cartItems: items }),
       
       integrationLogs: [],
       addIntegrationLog: (log: any) => set((state: any) => ({ integrationLogs: [log, ...state.integrationLogs].slice(0, 1000) })),
