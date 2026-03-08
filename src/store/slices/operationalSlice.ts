@@ -609,7 +609,6 @@ export const createOperationalSlice: StateCreator<
     } as any);
     
     console.log('✅ [addToCart] Produto adicionado ao carrinho!');
-    console.log('🛒 [addToCart] CartItems atualizados:', updatedCartItems.length);
   },
 
   // FUNÇÃO AUSENTE - Adicionar addToOrder para o carrinho funcionar

@@ -45,15 +45,6 @@ const POS = () => {
   } = useStore();
   const user = useSelector(selectUser);
 
-  // Adicionar log simples no início do componente
-  console.log('🔍 [POS DEBUG] Estado atual:', {
-    cartItemsLength: cartItems?.length || 0,
-    menuLength: menu?.length || 0,
-    hasCartItems: !!cartItems,
-    cartItems: cartItems,
-    activeOrderId: activeOrderId
-  });
-
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -1568,20 +1559,11 @@ const POS = () => {
             )}
             
             <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-3">
-                {/* DEBUG LOG */}
-                {console.log('🔍 [CART] cartItems:', cartItems)}
-                {console.log('🔍 [CART] menu:', menu)}
-                {console.log('🔍 [CART] cartItems.length:', cartItems?.length || 0)}
-                
                 {cartItems && cartItems.length > 0 ? (
                   cartItems.map((item: OrderItem, idx: number) => { 
-                    console.log('🔍 [CART] Processando item:', item, 'idx:', idx);
                     const dish = menu.find((p: Product) => p.id === item.dishId); 
-                    console.log('🔍 [CART] dish encontrado:', dish, 'para dishId:', item.dishId);
-                    if (!dish) {
-                      console.log('🔍 [CART] Dish NÃO encontrado para item:', item);
-                      return null; 
-                    }
+                    if (!dish) return null; // Silently skip if dish not found
+                    
                     return (
                         <div key={idx} className="flex gap-4 items-center p-3 bg-white/5 rounded-2xl border border-white/5 group animate-in slide-in-from-right-4">
                             <div className="relative w-12 h-12 rounded-xl overflow-hidden">
