@@ -26,6 +26,8 @@ import { getSQLiteClient, ensureSqliteSchema } from '@/lib/sqlite';
 import { supabaseService } from '@/services/supabaseService';
 import { databaseOperations } from '@/services/database/operations';
 import { ensureBalcaoTable } from '@/app/actions/ensureBalcaoTable';
+import { saveOrderAction } from '@/app/actions/saveOrder';
+import { generateUUID } from '@/utils/uuid';
 
 
 const POS = () => {
@@ -1014,6 +1016,7 @@ const POS = () => {
       const orderTotal = displayTotal || 0;
       
       console.log('💳 [handlePayment] Total pedido:', orderTotal, 'Total pago:', totalPaid);
+      console.log('💳 [handlePayment] activeOrderId:', activeOrderId);
       
       if (Math.abs(totalPaid - orderTotal) > 0.01) {
         console.error('❌ [handlePayment] Valores não conferem');
@@ -1021,17 +1024,38 @@ const POS = () => {
         return;
       }
 
-      // Encontrar pedido atual
-      const currentOrder = activeOrders.find((o: Order) => o.id === activeOrderId);
+      // VERIFICAÇÃO DE ID: Se activeOrderId for inválido, gerar novo
+      let finalOrderId = activeOrderId;
+      let currentOrder = activeOrders.find((o: Order) => o.id === activeOrderId);
+      
       if (!currentOrder) {
-        console.error('❌ [handlePayment] Pedido não encontrado:', activeOrderId);
-        addNotification('error', 'Pedido não encontrado para finalizar.');
-        return;
+        console.log('💳 [handlePayment] Pedido não encontrado localmente, criando novo...');
+        
+        // Gerar novo pedido com itens do carrinho
+        finalOrderId = generateUUID();
+        currentOrder = {
+          id: finalOrderId,
+          tableId: activeTableId || 'balcao-999',
+          customerName: activeTableId ? `Mesa ${activeTableId}` : 'Balcão',
+          items: cartItems,
+          status: 'ABERTO' as const,
+          total: orderTotal,
+          total_amount: orderTotal,
+          tax_amount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isPaid: false,
+          subAccountName: activeTableId ? `Mesa ${activeTableId}` : 'Balcão',
+          shiftId: currentShiftId || null,
+          shift_id: currentShiftId || null
+        } as Order;
+        
+        console.log('💳 [handlePayment] Novo pedido criado:', currentOrder);
       }
 
-      console.log('💳 [handlePayment] Pedido encontrado:', currentOrder.id);
-
-      // ATUALIZAR PEDIDO para status CONCLUIDO
+      // UPSERT OBRIGATÓRIO: Tentar salvar/atualizar pedido no Supabase
+      console.log('💳 [handlePayment] Tentando UPSERT no Supabase...');
+      
       const finalOrder: Order = { 
         ...currentOrder, 
         status: 'CONCLUIDO' as const, 
@@ -1044,40 +1068,54 @@ const POS = () => {
         closedAt: new Date().toISOString()
       };
       
-      console.log('💳 [handlePayment] Pedido finalizado:', finalOrder);
+      console.log('💳 [handlePayment] Pedido para UPSERT:', finalOrder);
 
-      // Atualizar pedido no estado
-      const updatedOrders = activeOrders.map((o: Order) => 
-        o.id === activeOrderId ? finalOrder : o
-      );
+      // Usar saveOrderAction para UPSERT
+      const saveResult = await saveOrderAction(finalOrder);
       
-      // Limpar carrinho e estado
-      setCartItems([]);
-      
-      // Atualizar orders no store
-      useStore.setState({ orders: updatedOrders });
-      
-      // Limpar estado do POS
-      setCurrentPayments([]);
-      setCustomerNif('');
-      setIsPaymentModalOpen(false);
-      
-      // Se for mesa diferente de Balcão, liberar mesa
-      if (activeTableId && activeTableId !== 'balcao-999') {
-        const remainingOrders = activeOrders.filter((o: Order) => 
-          o.tableId === activeTableId && o.status === 'ABERTO'
+      if (saveResult.success) {
+        console.log('✅ [handlePayment] Pedido salvo com sucesso no Supabase!');
+        
+        // ATUALIZAR ESTADO LOCAL apenas após sucesso no Supabase
+        const updatedOrders = activeOrders.map((o: Order) => 
+          o.id === finalOrderId ? finalOrder : o
         );
-        if (remainingOrders.length === 0) {
-          setActiveTable(null);
+        
+        // Se foi um pedido novo, adicionar à lista
+        if (!activeOrders.find((o: Order) => o.id === finalOrderId)) {
+          updatedOrders.push(finalOrder);
         }
+        
+        // LIMPEZA PÓS-VENDA: Carrinho e estado
+        setCartItems([]);
+        useStore.setState({ orders: updatedOrders });
+        
+        // Limpar estado do POS
+        setCurrentPayments([]);
+        setCustomerNif('');
+        setIsPaymentModalOpen(false);
+        
+        // Se for mesa diferente de Balcão, liberar mesa
+        if (activeTableId && activeTableId !== 'balcao-999') {
+          const remainingOrders = updatedOrders.filter((o: Order) => 
+            o.tableId === activeTableId && o.status === 'ABERTO'
+          );
+          if (remainingOrders.length === 0) {
+            setActiveTable(null);
+          }
+        }
+        
+        addNotification('success', 'Venda finalizada com sucesso!');
+        console.log('✅ [handlePayment] Venda finalizada e carrinho limpo!');
+        
+        // Abrir modal de impressão
+        setPendingOrderForPrint(finalOrder);
+        setIsPrintModalOpen(true);
+        
+      } else {
+        console.error('❌ [handlePayment] Erro ao salvar pedido:', saveResult.error);
+        addNotification('error', `Erro ao salvar pedido: ${saveResult.error}`);
       }
-      
-      addNotification('success', 'Venda finalizada com sucesso!');
-      console.log('✅ [handlePayment] Venda finalizada e carrinho limpo!');
-      
-      // Abrir modal de impressão
-      setPendingOrderForPrint(finalOrder);
-      setIsPrintModalOpen(true);
       
     } catch (error) {
       console.error('❌ [handlePayment] Erro ao finalizar venda:', error);
