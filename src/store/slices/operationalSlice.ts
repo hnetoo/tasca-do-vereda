@@ -490,6 +490,79 @@ export const createOperationalSlice: StateCreator<
     }
   },
 
+  // FUNÇÃO addToCart SIMPLES - PRIORIDADE MÁXIMA
+  addToCart: (product: Dish, quantity: number = 1) => {
+    console.log('🛒 [addToCart] Produto:', product.name, 'Quantidade:', quantity);
+    
+    const state = get();
+    const activeOrderId = (state as any).activeOrderId;
+    const orders = (state as any).orders as Order[];
+    
+    if (!activeOrderId) {
+      console.error('❌ [addToCart] Nenhum pedido ativo');
+      return;
+    }
+    
+    const targetOrder = orders.find(o => o.id === activeOrderId);
+    if (!targetOrder) {
+      console.error('❌ [addToCart] Pedido não encontrado:', activeOrderId);
+      return;
+    }
+    
+    // Create order item
+    const orderItem: OrderItem = {
+      id: generateUUID(),
+      orderId: activeOrderId,
+      dishId: product.id,
+      price: product.price || 0,
+      unitPrice: product.price || 0,
+      quantity,
+      notes: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log('🛒 [addToCart] Item criado:', orderItem);
+    
+    // Add to order
+    const updatedOrders = orders.map(order => {
+      if (order.id === activeOrderId) {
+        const existingItemIndex = order.items?.findIndex(item => item.dishId === product.id);
+        
+        if (existingItemIndex !== undefined && existingItemIndex !== -1) {
+          // Update existing item
+          const updatedItems = [...(order.items || [])];
+          updatedItems[existingItemIndex] = {
+            ...updatedItems[existingItemIndex],
+            quantity: (updatedItems[existingItemIndex].quantity || 1) + quantity,
+            updatedAt: new Date().toISOString()
+          };
+          
+          return {
+            ...order,
+            items: updatedItems,
+            total: updatedItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
+            updatedAt: new Date().toISOString()
+          };
+        } else {
+          // Add new item
+          const newItems = [...(order.items || []), orderItem];
+          
+          return {
+            ...order,
+            items: newItems,
+            total: newItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
+            updatedAt: new Date().toISOString()
+          };
+        }
+      }
+      return order;
+    });
+    
+    set({ orders: updatedOrders } as any);
+    console.log('✅ [addToCart] Produto adicionado ao carrinho!');
+  },
+
   // FUNÇÃO AUSENTE - Adicionar addToOrder para o carrinho funcionar
   addToOrder: (tableId: string, product: Dish, quantity: number = 1, notes: string = '', orderId?: string, userId?: string) => {
     const state = get();

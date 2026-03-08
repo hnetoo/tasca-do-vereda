@@ -40,7 +40,8 @@ const POS = () => {
     updateTableStatus,
     settings, addNotification,
     currentShiftId, openShift, toggleMobileMenu, isSidebarCollapsed, toggleSidebar,
-    addTable, auditLogs
+    addTable, auditLogs,
+    addToCart  // ✅ ADICIONAR addToCart
   } = useStore();
   const user = useSelector(selectUser);
 
@@ -249,16 +250,15 @@ const POS = () => {
     }
   }, [isHistoryModalOpen, currentShiftId, fetchClosedOrdersForShift, normalizeClosedOrdersShift]);
 
-  // Handle Product Click (SIMPLIFICADO - FIX CARRINHO)
+  // Handle Product Click (SIMPLIFICADO MÁXIMO - PRIORIDADE)
   const handleProductClick = (product: Dish) => {
-    console.log('🛒 [CARRINHO] Produto clicado:', product.name);
+    console.log('🛒 [CLICK] Produto clicado:', product.name);
     
     let targetTableId = activeTableId;
     
     // Auto-select Balcão logic
     if (!targetTableId) {
-      console.log('🪑 [CARRINHO] Sem mesa ativa, selecionando Balcão...');
-      // Find or create Balcão table
+      console.log('🪑 [CLICK] Sem mesa ativa, selecionando Balcão...');
       let balcao = tables.find((t: Table) => t.label?.toLowerCase().includes('balcão') || t.id === 'balcao-999');
       
       if (!balcao) {
@@ -276,53 +276,39 @@ const POS = () => {
         } as Table;
         addTable(newTable);
         balcao = newTable;
-        console.log('🪑 [CARRINHO] Mesa Balcão criada');
       }
       
       if (balcao) {
         setActiveTable(balcao.id);
         targetTableId = balcao.id;
-        console.log('🪑 [CARRINHO] Mesa Balcão selecionada:', targetTableId);
       }
     }
 
     if (targetTableId) {
-       console.log('🛒 [CARRINHO] Mesa ativa:', targetTableId);
-       
-       // Check for active order or create one
-       let targetOrderId = activeOrderId;
-       const tableOrders = activeOrders.filter((o: Order) => o.tableId === targetTableId && o.status === 'ABERTO');
-       console.log('🛒 [CARRINHO] Pedidos da mesa:', tableOrders.length);
-       
-       if (tableOrders.length > 0) {
-          targetOrderId = tableOrders[0].id || null;
-          console.log('🛒 [CARRINHO] Usando pedido existente:', targetOrderId);
-       } else {
-          // Create new order
-          const tableName = tables.find((t: Table) => t.id === targetTableId)?.label || 'Mesa';
-          console.log('🛒 [CARRINHO] Criando novo pedido para:', tableName);
-          targetOrderId = createNewOrder(targetTableId!, tableName);
-          console.log('🛒 [CARRINHO] Novo pedido criado:', targetOrderId);
-       }
-       
-       // Now add to order
-       if (targetOrderId) {
-         console.log('🛒 [CARRINHO] Adicionando produto ao pedido:', targetOrderId);
-         console.log('🛒 [CARRINHO] Produto:', product.name, 'Preço:', product.price);
-         
-         addToOrder(targetTableId!, product, 1, '', targetOrderId!, user?.id);
-         
-         // Visual feedback
-         setLastAddedProduct(product.id);
-         setTimeout(() => setLastAddedProduct(null), 300);
-         
-         addNotification('success', `${product.name} adicionado ao pedido`);
-         console.log('✅ [CARRINHO] Produto adicionado com sucesso!');
-       } else {
-         console.error('❌ [CARRINHO] Erro: targetOrderId é null!');
-       }
-    } else {
-      console.error('❌ [CARRINHO] Erro: targetTableId é null!');
+      // Check for active order or create one
+      let targetOrderId = activeOrderId;
+      const tableOrders = activeOrders.filter((o: Order) => o.tableId === targetTableId && o.status === 'ABERTO');
+      
+      if (tableOrders.length > 0) {
+        targetOrderId = tableOrders[0].id || null;
+      } else {
+        // Create new order
+        const tableName = tables.find((t: Table) => t.id === targetTableId)?.label || 'Mesa';
+        targetOrderId = createNewOrder(targetTableId!, tableName);
+      }
+      
+      // Adicionar ao carrinho com addToCart simples
+      if (targetOrderId) {
+        console.log('🛒 [CLICK] Adicionando ao carrinho...');
+        addToCart(product, 1);
+        
+        // Visual feedback
+        setLastAddedProduct(product.id);
+        setTimeout(() => setLastAddedProduct(null), 300);
+        
+        addNotification('success', `${product.name} adicionado ao pedido`);
+        console.log('✅ [CLICK] Produto adicionado com sucesso!');
+      }
     }
   };
 
