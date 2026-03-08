@@ -585,7 +585,7 @@ export const adminOperations = {
 
       // 1. Save Order com estrutura correta da tabela (apenas colunas existentes)
       const dbOrder = {
-          id: order.id,
+          // id: order.id, // ❌ REMOVER ID - Deixa Supabase gerar
           order_number: order.order_number || `ORD-${Date.now()}`,
           table_id: order.table_id || order.tableId || null,
           status: order.status || 'pending',
@@ -607,8 +607,7 @@ export const adminOperations = {
       // FORÇAR NO-CACHE NO SUPABASE
       const { data, error: orderError } = await supabaseAdmin
         .from('orders')
-        .upsert(dbOrder)
-        .select();
+        .upsert(dbOrder); // ❌ REMOVER .select() - CAUSA URL ERRADA
 
       if (orderError) {
         console.log('❌ Order insert error:', orderError);
