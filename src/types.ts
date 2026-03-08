@@ -211,6 +211,7 @@ export type Order = Omit<Partial<any['public']['Tables']['public']['Tables']['or
   timestamp?: string | Date;
   created_at?: string | Date | null;
   updated_at?: string | Date | null;
+  closed_at?: string | Date | null;
   customer_name?: string | null;
   customer_id?: UUID | null;
   order_number?: string | number | null;
