@@ -249,12 +249,15 @@ const POS = () => {
     }
   }, [isHistoryModalOpen, currentShiftId, fetchClosedOrdersForShift, normalizeClosedOrdersShift]);
 
-  // Handle Product Click (Auto-select Balcão if no table active)
+  // Handle Product Click (SIMPLIFICADO - FIX CARRINHO)
   const handleProductClick = (product: Dish) => {
+    console.log('🛒 [CARRINHO] Produto clicado:', product.name);
+    
     let targetTableId = activeTableId;
     
     // Auto-select Balcão logic
     if (!targetTableId) {
+      console.log('🪑 [CARRINHO] Sem mesa ativa, selecionando Balcão...');
       // Find or create Balcão table
       let balcao = tables.find((t: Table) => t.label?.toLowerCase().includes('balcão') || t.id === 'balcao-999');
       
@@ -273,44 +276,53 @@ const POS = () => {
         } as Table;
         addTable(newTable);
         balcao = newTable;
+        console.log('🪑 [CARRINHO] Mesa Balcão criada');
       }
       
       if (balcao) {
         setActiveTable(balcao.id);
         targetTableId = balcao.id;
+        console.log('🪑 [CARRINHO] Mesa Balcão selecionada:', targetTableId);
       }
     }
 
     if (targetTableId) {
+       console.log('🛒 [CARRINHO] Mesa ativa:', targetTableId);
+       
        // Check for active order or create one
        let targetOrderId = activeOrderId;
        const tableOrders = activeOrders.filter((o: Order) => o.tableId === targetTableId && o.status === 'ABERTO');
+       console.log('🛒 [CARRINHO] Pedidos da mesa:', tableOrders.length);
        
        if (tableOrders.length > 0) {
-          // If we have an active order but it's not for this table (shouldn't happen due to effect, but safety check)
-          // or if activeOrderId is null
-          if (!targetOrderId || !tableOrders.find((o: Order) => o.id === targetOrderId)) {
-             targetOrderId = tableOrders[0].id || null;
-             // setActiveOrder(targetOrderId || null);
-          }
+          targetOrderId = tableOrders[0].id || null;
+          console.log('🛒 [CARRINHO] Usando pedido existente:', targetOrderId);
        } else {
           // Create new order
           const tableName = tables.find((t: Table) => t.id === targetTableId)?.label || 'Mesa';
+          console.log('🛒 [CARRINHO] Criando novo pedido para:', tableName);
           targetOrderId = createNewOrder(targetTableId!, tableName);
-          // setActiveOrder(targetOrderId || null);
+          console.log('🛒 [CARRINHO] Novo pedido criado:', targetOrderId);
        }
        
        // Now add to order
-       // Pass specificOrderId to avoid race conditions
        if (targetOrderId) {
+         console.log('🛒 [CARRINHO] Adicionando produto ao pedido:', targetOrderId);
+         console.log('🛒 [CARRINHO] Produto:', product.name, 'Preço:', product.price);
+         
          addToOrder(targetTableId!, product, 1, '', targetOrderId!, user?.id);
+         
          // Visual feedback
          setLastAddedProduct(product.id);
          setTimeout(() => setLastAddedProduct(null), 300);
+         
          addNotification('success', `${product.name} adicionado ao pedido`);
+         console.log('✅ [CARRINHO] Produto adicionado com sucesso!');
        } else {
-         console.error('❌ No targetOrderId available!');
+         console.error('❌ [CARRINHO] Erro: targetOrderId é null!');
        }
+    } else {
+      console.error('❌ [CARRINHO] Erro: targetTableId é null!');
     }
   };
 

@@ -94,13 +94,40 @@ export const adminOperations_fixed = {
         console.log('✅ [VERIFICAÇÃO FINAL] Objeto limpo, sem campo id');
       }
 
+      // 4. LIMPEZA COMPLETA DO OBJETO - Apenas campos essenciais
+      console.log('🧹 [LIMPEZA] Iniciando limpeza completa do objeto...');
+      
+      const cleanData = {
+        table_id: dataToSave.table_id,
+        total: dataToSave.total,
+        items: dataToSave.items,
+        status: dataToSave.status || 'ABERTO',
+        payment_method: dataToSave.payment_method || 'PENDING',
+        customer_name: dataToSave.customer_name,
+        customer_nif: dataToSave.customer_nif,
+        order_number: dataToSave.order_number,
+        created_at: dataToSave.created_at,
+        updated_at: dataToSave.updated_at
+      };
+      
+      console.log('🧹 [LIMPEZA] Objeto limpo:', JSON.stringify(cleanData, null, 2));
+      console.log('🧹 [LIMPEZA] Chaves do objeto limpo:', Object.keys(cleanData));
+      
+      // VERIFICAÇÃO FINAL ABSOLUTA
+      if ('id' in cleanData) {
+        console.error('❌ [CRÍTICO] ID ainda presente no objeto limpo!');
+        throw new Error('ID ainda presente - abortando para evitar erro');
+      } else {
+        console.log('✅ [VERIFICAÇÃO FINAL] Objeto 100% limpo, sem campo id');
+      }
+
       // 2. INSERT SIMPLES - Sem on_conflict para evitar erro 42P10
       try {
         console.log('🔄 [FINAL] Attempting simple insert...');
         
         const { data, error: orderError } = await supabaseAdmin
           .from('orders')
-          .insert(dataToSave)
+          .insert([cleanData])
           .select();
 
         if (orderError) {
