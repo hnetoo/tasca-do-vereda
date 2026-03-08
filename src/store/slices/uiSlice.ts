@@ -73,8 +73,18 @@ export const createUISlice: StateCreator<
   
   addNotification: (type, message) => {
     const id = Math.random().toString(36).substring(7);
-    set((state: StoreState) => ({ notifications: [...state.notifications, { id, type, message }] }));
-    setTimeout(() => get().removeNotification(id), 2500);
+    set((state: StoreState) => {
+      // LIMITE DE EMPILHAMENTO: manter apenas as 3 mais recentes
+      const maxNotifications = 3;
+      const recentNotifications = state.notifications.slice(-maxNotifications);
+      
+      return { 
+        notifications: [...recentNotifications, { id, type, message }] 
+      };
+    });
+    
+    // AUTO-DISMISS: desaparece após 3 segundos
+    setTimeout(() => get().removeNotification(id), 3000);
   },
   
   removeNotification: (id) => set((state: StoreState) => ({
