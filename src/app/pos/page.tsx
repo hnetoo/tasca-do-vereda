@@ -1056,16 +1056,12 @@ const POS = () => {
       // UPSERT OBRIGATÓRIO: Tentar salvar/atualizar pedido no Supabase
       console.log('💳 [handlePayment] Tentando UPSERT no Supabase...');
       
-      const finalOrder: Order = { 
-        ...currentOrder, 
-        status: 'CONCLUIDO' as const, 
-        payments: currentPayments,
-        paymentMethod: currentPayments.length === 1 ? currentPayments[0].method : 'SPLIT',
-        invoiceNumber: `INV-${Date.now()}`,
+      const finalOrder = {
+        ...currentOrder,
         customerNif: customerNif.trim() || undefined,
         total: orderTotal,
         paidAmount: totalPaid,
-        closedAt: new Date().toISOString()
+        // REMOVIDO: closedAt - coluna não existe no banco
       };
       
       console.log('💳 [handlePayment] Pedido para UPSERT:', finalOrder);
