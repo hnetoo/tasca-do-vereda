@@ -6,7 +6,7 @@ export async function saveOrderAction(order: Order) {
     console.log('💾 [saveOrderAction] Salvando pedido:', order);
     
     // GARANTIR STATUS CONCLUIDO e TOTAL COMO NÚMERO
-    const orderToSave = {
+    const orderToSave: any = {
       ...order,
       status: 'CONCLUIDO', // Força status CONCLUIDO
       total: Number(order.total) || 0, // Garante que total seja Number
