@@ -72,7 +72,6 @@ export interface OperationalSlice {
   addAuditLog: (log: any) => void;
   auditLogs: any[];
   settleCustomerDebt: (customerId: UUID, amount: number) => void;
-  setCartItems: (items: OrderItem[]) => void;
 }
 
 export const createOperationalSlice: StateCreator<
@@ -834,9 +833,5 @@ export const createOperationalSlice: StateCreator<
         ...state.auditLogs
       ].slice(0, 50) 
     }));
-  },
-  setCartItems: (items: OrderItem[]) => {
-    console.log('🛒 [setCartItems] Atualizando carrinho com', items.length, 'itens');
-    set({ cartItems: items });
   }
 });
