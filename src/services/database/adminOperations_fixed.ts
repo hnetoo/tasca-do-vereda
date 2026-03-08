@@ -69,13 +69,29 @@ export const adminOperations_fixed = {
       console.log('🔍 [DEBUG] DADOS FINAIS:', JSON.stringify(dbOrder, null, 2));
 
       // 3. MAPA DE COLUNAS - Remover campo id para evitar erro "column id does not exist"
+      console.log('🔍 [DEBUG ANTES] dbOrder completo:', JSON.stringify(dbOrder, null, 2));
+      console.log('🔍 [DEBUG ANTES] Chaves do dbOrder:', Object.keys(dbOrder));
+      
       let dataToSave = { ...dbOrder };
       if ('id' in dataToSave) {
+        console.log('🗑️ [DEBUG] ENCONTRADO ID - Removendo...');
         const { id, ...dataWithoutId } = dataToSave;
         dataToSave = dataWithoutId;
-        console.log('🗑️ [MAPA DE COLUNAS] Campo id removido, enviando apenas:', JSON.stringify(dataToSave, null, 2));
+        console.log('🗑️ [DEBUG] ID removido:', JSON.stringify(dataToSave, null, 2));
+        console.log('🗑️ [DEBUG] Chaves após remoção:', Object.keys(dataToSave));
       } else {
-        console.log('✅ [MAPA DE COLUNAS] Sem campo id para remover, enviando:', JSON.stringify(dataToSave, null, 2));
+        console.log('✅ [DEBUG] Sem campo id para remover');
+        console.log('✅ [DEBUG] Enviando diretamente:', JSON.stringify(dataToSave, null, 2));
+        console.log('✅ [DEBUG] Chaves finais:', Object.keys(dataToSave));
+      }
+      
+      // VERIFICAÇÃO FINAL - Garantir que não há id
+      if ('id' in dataToSave) {
+        console.error('❌ [CRÍTICO] ID ainda presente após remoção!');
+        console.error('❌ [CRÍTICO] dataToSave com id:', JSON.stringify(dataToSave, null, 2));
+        throw new Error('ID ainda presente no objeto - abortando para evitar erro');
+      } else {
+        console.log('✅ [VERIFICAÇÃO FINAL] Objeto limpo, sem campo id');
       }
 
       // 2. INSERT SIMPLES - Sem on_conflict para evitar erro 42P10
