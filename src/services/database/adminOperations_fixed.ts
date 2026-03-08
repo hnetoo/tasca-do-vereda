@@ -121,14 +121,14 @@ export const adminOperations_fixed = {
         console.log('✅ [VERIFICAÇÃO FINAL] Objeto 100% limpo, sem campo id');
       }
 
-      // 2. INSERT SIMPLES - Sem on_conflict para evitar erro 42P10
+      // 2. INSERT PURO - Sem select(), sem array, sem nada
       try {
-        console.log('🔄 [FINAL] Attempting simple insert...');
+        console.log('🔄 [FINAL] Attempting PURE insert...');
+        console.log('🔍 [FINAL] Enviando objeto:', JSON.stringify(cleanData, null, 2));
         
         const { data, error: orderError } = await supabaseAdmin
           .from('orders')
-          .insert([cleanData])
-          .select();
+          .insert(cleanData);
 
         if (orderError) {
           console.log('❌ [FINAL] Order insert error:', orderError);
@@ -142,14 +142,18 @@ export const adminOperations_fixed = {
           throw orderError;
         }
 
-        console.log('✅ [FINAL] Order saved successfully:', data);
-        console.log('📊 [FINAL] Status: Order registered with ID:', data[0]?.id);
-        console.log('📋 [FINAL] Response Status: 200 OK');
+        console.log(' [FINAL] Order saved successfully!');
+        console.log(' [FINAL] Response data:', data);
         
-        return { success: true, data: data };
+        return { 
+          success: true, 
+          data: data || null
+        };
+
+        console.log(' [FINAL] Response Status: 200 OK');
         
       } catch (upsertError: any) {
-        console.log('❌ [FINAL] Upsert failed completely:', upsertError.message);
+        console.log(' [FINAL] Upsert failed completely:', upsertError.message);
         
         // ÚLTIMO RECURSO: Insert simples se upsert falhar
         const { data, error: insertError } = await supabaseAdmin
