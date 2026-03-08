@@ -12,6 +12,7 @@ export async function saveOrderAction(order: Order) {
       total: Number(order.total) || 0, // Garante que total seja Number
       total_amount: Number(order.total_amount) || 0, // Garante que total_amount seja Number
       paidAmount: Number(order.paidAmount) || 0, // Garante que paidAmount seja Number
+      // REMOVIDO: closedAt não existe no banco de dados
     };
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
