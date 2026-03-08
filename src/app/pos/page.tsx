@@ -1000,26 +1000,69 @@ const POS = () => {
   };
 
   const handlePayment = async () => {
-    if (activeOrderId && currentPayments.length > 0 && currentOrder) {
+    console.log('💳 [handlePayment] Iniciando finalização de venda...');
+    
+    if (!activeOrderId || cartItems.length === 0) {
+      console.error('❌ [handlePayment] Sem pedido ativo ou carrinho vazio');
+      addNotification('error', 'Não há pedido ativo para finalizar.');
+      return;
+    }
+
+    try {
+      // Calcular totais
       const totalPaid = currentPayments.reduce((sum, p) => sum + p.amount, 0);
-      if (Math.abs(totalPaid - (displayTotal || 0)) > 0.01) {
+      const orderTotal = displayTotal || 0;
+      
+      console.log('💳 [handlePayment] Total pedido:', orderTotal, 'Total pago:', totalPaid);
+      
+      if (Math.abs(totalPaid - orderTotal) > 0.01) {
+        console.error('❌ [handlePayment] Valores não conferem');
         addNotification('error', 'O valor total pago deve ser igual ao total do pedido.');
         return;
       }
 
-      const normalizedNif = customerNif.trim();
-      checkoutTable(activeOrderId, currentPayments, undefined, normalizedNif || undefined, user?.id);
+      // Encontrar pedido atual
+      const currentOrder = activeOrders.find((o: Order) => o.id === activeOrderId);
+      if (!currentOrder) {
+        console.error('❌ [handlePayment] Pedido não encontrado:', activeOrderId);
+        addNotification('error', 'Pedido não encontrado para finalizar.');
+        return;
+      }
+
+      console.log('💳 [handlePayment] Pedido encontrado:', currentOrder.id);
+
+      // ATUALIZAR PEDIDO para status CONCLUIDO
+      const finalOrder: Order = { 
+        ...currentOrder, 
+        status: 'CONCLUIDO' as const, 
+        payments: currentPayments,
+        paymentMethod: currentPayments.length === 1 ? currentPayments[0].method : 'SPLIT',
+        invoiceNumber: `INV-${Date.now()}`,
+        customerNif: customerNif.trim() || undefined,
+        total: orderTotal,
+        paidAmount: totalPaid,
+        closedAt: new Date().toISOString()
+      };
       
-      // Garantir que mesa fique disponível e limpar estado ativo
-      if (activeTableId && currentOrder) {
-        const tableId = currentOrder.table_id || (currentOrder as any).tableId;
-        
-        // Se for Balcão, não tentar atualizar status no Supabase
-        if (tableId && tableId !== 'balcao-999') {
-          await updateTableStatus(String(tableId), 'AVAILABLE');
-        }
-        
-        // Limpar mesa ativa se não tiver mais pedidos abertos
+      console.log('💳 [handlePayment] Pedido finalizado:', finalOrder);
+
+      // Atualizar pedido no estado
+      const updatedOrders = activeOrders.map((o: Order) => 
+        o.id === activeOrderId ? finalOrder : o
+      );
+      
+      // Limpar carrinho e estado
+      setCartItems([]);
+      setActiveOrderId(null);
+      set({ orders: updatedOrders });
+      
+      // Limpar estado do POS
+      setCurrentPayments([]);
+      setCustomerNif('');
+      setIsPaymentModalOpen(false);
+      
+      // Se for mesa diferente de Balcão, liberar mesa
+      if (activeTableId && activeTableId !== 'balcao-999') {
         const remainingOrders = activeOrders.filter((o: Order) => 
           o.tableId === activeTableId && o.status === 'ABERTO'
         );
@@ -1028,21 +1071,16 @@ const POS = () => {
         }
       }
       
-      const finalOrder: Order = { 
-        ...currentOrder, 
-        status: 'FECHADO' as const, 
-        payments: currentPayments,
-        paymentMethod: currentPayments.length === 1 ? currentPayments[0].method : 'SPLIT',
-        invoiceNumber: 'A PROCESSAR...',
-        customerNif: normalizedNif || undefined
-      };
+      addNotification('success', 'Venda finalizada com sucesso!');
+      console.log('✅ [handlePayment] Venda finalizada e carrinho limpo!');
       
+      // Abrir modal de impressão
       setPendingOrderForPrint(finalOrder);
       setIsPrintModalOpen(true);
-      setIsPaymentModalOpen(false);
-      setCurrentPayments([]);
-      setCustomerNif('');
-      handleOpenDrawer();
+      
+    } catch (error) {
+      console.error('❌ [handlePayment] Erro ao finalizar venda:', error);
+      addNotification('error', 'Erro ao finalizar venda. Tente novamente.');
     }
   };
 
