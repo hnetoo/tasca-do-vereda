@@ -52,6 +52,22 @@ export const adminOperations_fixed = {
 
       console.log('📦 [FINAL] dbOrder structure (limpa):', dbOrder);
 
+      // DEBUG DO OBJETO - Mostrar dados exatos antes do upsert
+      console.log('🔍 [DEBUG] DADOS A ENVIAR:', JSON.stringify(dbOrder, null, 2));
+
+      // FORCE UUID - Eliminar ID se for nulo ou pedido novo
+      if (!order.id || order.id === 'null' || order.id === '') {
+        console.log('🗑️ [FORCE UUID] Removendo campo ID (pedido novo)');
+        // dbOrder não tem campo id, então não precisa remover
+      } else {
+        console.log('✅ [FORCE UUID] Mantendo campo ID (pedido existente):', order.id);
+        // Adicionar ID apenas se existir e for válido
+        (dbOrder as any).id = order.id;
+      }
+
+      // DEBUG APÓS LIMPEZA
+      console.log('🔍 [DEBUG] DADOS FINAIS:', JSON.stringify(dbOrder, null, 2));
+
       // 2. UPSERT CORRETO - Usar order_number em vez de id
       try {
         console.log('🔄 [FINAL] Attempting upsert with order_number conflict resolution...');
