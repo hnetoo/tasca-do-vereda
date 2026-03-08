@@ -45,6 +45,15 @@ const POS = () => {
   } = useStore();
   const user = useSelector(selectUser);
 
+  // Adicionar log simples no início do componente
+  console.log('🔍 [POS DEBUG] Estado atual:', {
+    cartItemsLength: cartItems?.length || 0,
+    menuLength: menu?.length || 0,
+    hasCartItems: !!cartItems,
+    cartItems: cartItems,
+    activeOrderId: activeOrderId
+  });
+
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
