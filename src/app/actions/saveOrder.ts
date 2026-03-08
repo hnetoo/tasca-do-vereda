@@ -10,7 +10,7 @@ export async function saveOrderAction(order: Order) {
       ...order,
       status: 'CONCLUIDO', // Força status CONCLUIDO
       total: Number(order.total) || 0, // Garante que total seja Number
-      total_amount: Number(order.totalAmount) || 0, // SNAKE_CASE: totalAmount → total_amount
+      total_amount: Number(order.total_amount) || 0, // SNAKE_CASE: totalAmount → total_amount
       paid_amount: Number(order.paidAmount) || 0, // SNAKE_CASE: paidAmount → paid_amount
       customer_name: order.customerName || null, // SNAKE_CASE: customerName → customer_name
       table_id: order.tableName || null, // SNAKE_CASE: tableName → table_id
@@ -24,7 +24,8 @@ export async function saveOrderAction(order: Order) {
       customer_id: order.customerId || null, // SNAKE_CASE: customerId → customer_id
       created_at: order.createdAt || null, // SNAKE_CASE: createdAt → created_at
       updated_at: order.updatedAt || null, // SNAKE_CASE: updatedAt → updated_at
-      // SEMPRE USAR SNAKE_CASE PARA POSTGRESQL/SUPABASE
+      closed_at: new Date().toISOString(), // SNAKE_CASE: coluna existe no schema como closed_at
+      // SEMPRE USAR SNAKE_CASE CONFORME SCHEMA SUPABASE
     };
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
