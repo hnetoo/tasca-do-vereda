@@ -539,8 +539,12 @@ export const createOperationalSlice: StateCreator<
       }
     }
     
-    const targetOrder = orders.find(o => o.id === activeOrderId) || 
-                      (state as any).orders.find((o: Order) => o.id === activeOrderId);
+    // Recarregar estado para pegar activeOrderId atualizado
+    const updatedState = get();
+    activeOrderId = (updatedState as any).activeOrderId;
+    const currentOrders = (updatedState as any).orders as Order[];
+    
+    const targetOrder = currentOrders.find(o => o.id === activeOrderId);
     
     if (!targetOrder) {
       console.error('❌ [addToCart] Pedido não encontrado:', activeOrderId);
@@ -563,7 +567,7 @@ export const createOperationalSlice: StateCreator<
     console.log('🛒 [addToCart] Item criado:', orderItem);
     
     // Add to order
-    const updatedOrders = orders.map(order => {
+    const finalOrders = currentOrders.map(order => {
       if (order.id === activeOrderId) {
         const existingItemIndex = order.items?.findIndex(item => item.dishId === product.id);
         
@@ -598,12 +602,12 @@ export const createOperationalSlice: StateCreator<
     });
     
     // ✅ ATUALIZAR CART ITEMS para o carrinho lateral
-    const updatedCartItems = updatedOrders
+    const updatedCartItems = finalOrders
       .filter((order: any) => order.id === activeOrderId)
       .flatMap((order: any) => order.items || []);
     
     set({ 
-      orders: updatedOrders,
+      orders: finalOrders,
       cartItems: updatedCartItems, // ✅ Atualizar carrinho lateral
       activeOrderId: activeOrderId // ✅ Manter activeOrderId atualizado
     } as any);
