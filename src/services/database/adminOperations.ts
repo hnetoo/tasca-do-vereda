@@ -189,9 +189,9 @@ export const adminOperations = {
             track_stock: dish.trackStock ?? false,
             stock_quantity: dish.stockQuantity || 0,
             min_stock_quantity: dish.minStockQuantity || 0,
-            max_stock_quantity: dish.max_stock_quantity || null,
+            max_stock_quantity: (dish as any).maxStockQuantity || null,
             unit: dish.unit || 'unidade',
-            supplier_id: dish.supplierId && isValidUUID(dish.supplierId) ? dish.supplierId : null,
+            // REMOVIDO: supplier_id - tabela pode não existir ainda
             updated_at: new Date().toISOString()
         };
 
