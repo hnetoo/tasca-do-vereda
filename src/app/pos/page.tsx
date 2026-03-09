@@ -154,12 +154,10 @@ const POS = () => {
 
   // Validate activeTableId on mount and updates
   useEffect(() => {
-    // FORCE RESET on mount per user request: "Open without open tables"
-    // This ensures we start in product view with no table active
-    setActiveTable(null);
-    setShowMap(false);
-    setShowTableBar(false);
-  }, []); // REMOVIDO: setActiveTable dependency para evitar loop infinito
+    // REMOVIDO: FORCE RESET para não limpar activeOrderId
+    // O usuário precisa poder adicionar produtos sem perder o pedido
+    console.log('🪑 [POS] Montagem concluída - mantendo estado atual');
+  }, []);
 
   useEffect(() => {
     // Only clear activeTableId if we have tables loaded and the ID is invalid
@@ -1003,10 +1001,15 @@ const POS = () => {
 
   const handlePayment = async () => {
     console.log('💳 [handlePayment] Iniciando finalização de venda...');
+    console.log('💳 [handlePayment] activeOrderId:', activeOrderId);
+    console.log('💳 [handlePayment] cartItems.length:', cartItems.length);
+    console.log('💳 [handlePayment] currentPayments.length:', currentPayments.length);
     
     if (!activeOrderId || cartItems.length === 0) {
       console.error('❌ [handlePayment] Sem pedido ativo ou carrinho vazio');
-      addNotification('error', 'Não há pedido ativo para finalizar.');
+      console.log('❌ [handlePayment] activeOrderId existe?', !!activeOrderId);
+      console.log('❌ [handlePayment] cartItems tem itens?', cartItems.length > 0);
+      addNotification('error', 'Adicione produtos ao carrinho antes de finalizar.');
       return;
     }
 
