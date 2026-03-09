@@ -369,7 +369,7 @@ export const createOperationalSlice: StateCreator<
       id: order_id,
       tableId,
       customerName: name || 'Balcão', // 🎯 DEFEITO 'Balcão' quando não há nome
-      items: [],
+      items: [], // Array em memória
       status: 'ABERTO',
       total: 0,
       total_amount: 0,
@@ -383,14 +383,24 @@ export const createOperationalSlice: StateCreator<
       shift_id: get().currentShiftId || null
     } as unknown as Order;
     
+    // 🎯 CORRIGIDO: Converter items para JSONB antes de persistir
+    const orderToSave = {
+      ...newOrder,
+      items: JSON.stringify(newOrder.items) // 🔥 CONVERTER ARRAY PARA JSONB STRING
+    };
+    
+    console.log('🔧 createNewOrder: Convertendo items para JSONB');
+    console.log('🔧 items array:', newOrder.items);
+    console.log('🔧 items JSONB:', orderToSave.items);
+    
     // 🎯 CORRIGIDO: Usar saveOrderAction que mapeia corretamente
     try {
       const state = get();
       if (typeof (state as any).addOrder === 'function') {
         (state as any).addOrder(newOrder);
         
-        // 🎯 PERSISTIR CORRETAMENTE COM saveOrderAction (que mapeia items e total)
-        saveOrderAction(newOrder).then(res => {
+        // 🎯 PERSISTIR COM ITEMS JSONB
+        saveOrderAction(orderToSave as any).then(res => {
           if (!res.success) {
              logger.error('Failed to persist new order', { id: order_id, error: res.error }, 'OPERATIONAL');
           } else {
