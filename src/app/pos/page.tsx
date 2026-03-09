@@ -1000,126 +1000,118 @@ const POS = () => {
   };
 
   const handlePayment = async () => {
-    console.log('💳 [handlePayment] Iniciando finalização de venda...');
-    console.log('💳 [handlePayment] activeOrderId:', activeOrderId);
-    console.log('💳 [handlePayment] cartItems.length:', cartItems.length);
-    console.log('💳 [handlePayment] currentPayments.length:', currentPayments.length);
+    console.log(' [handlePayment] ESTRATÉGIA HÍBRIDA - Finalização Local + Background Sync');
+    console.log(' [handlePayment] activeOrderId:', activeOrderId);
+    console.log(' [handlePayment] cartItems.length:', cartItems.length);
+    console.log(' [handlePayment] currentPayments.length:', currentPayments.length);
     
     if (!activeOrderId || cartItems.length === 0) {
-      console.error('❌ [handlePayment] Sem pedido ativo ou carrinho vazio');
-      console.log('❌ [handlePayment] activeOrderId existe?', !!activeOrderId);
-      console.log('❌ [handlePayment] cartItems tem itens?', cartItems.length > 0);
+      console.error(' [handlePayment] Sem pedido ativo ou carrinho vazio');
       addNotification('error', 'Adicione produtos ao carrinho antes de finalizar.');
       return;
     }
 
-    try {
-      // Calcular totais
-      const totalPaid = currentPayments.reduce((sum, p) => sum + p.amount, 0);
-      const orderTotal = displayTotal || 0;
-      
-      console.log('💳 [handlePayment] Total pedido:', orderTotal, 'Total pago:', totalPaid);
-      console.log('💳 [handlePayment] activeOrderId:', activeOrderId);
-      
-      if (Math.abs(totalPaid - orderTotal) > 0.01) {
-        console.error('❌ [handlePayment] Valores não conferem');
-        addNotification('error', 'O valor total pago deve ser igual ao total do pedido.');
-        return;
-      }
-
-      // VERIFICAÇÃO DE ID: Se activeOrderId for inválido, gerar novo
-      let finalOrderId = activeOrderId;
-      let currentOrder = activeOrders.find((o: Order) => o.id === activeOrderId);
-      
-      if (!currentOrder) {
-        console.log('💳 [handlePayment] Pedido não encontrado localmente, criando novo...');
-        
-        // Gerar novo pedido com itens do carrinho
-        finalOrderId = generateUUID();
-        currentOrder = {
-          id: finalOrderId,
-          tableId: activeTableId || 'balcao-999',
-          customerName: activeTableId ? `Mesa ${activeTableId}` : 'Balcão',
-          items: cartItems,
-          status: 'ABERTO' as const,
-          total: orderTotal,
-          total_amount: orderTotal,
-          tax_amount: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          isPaid: false,
-          subAccountName: activeTableId ? `Mesa ${activeTableId}` : 'Balcão',
-          shiftId: currentShiftId || null,
-          shift_id: currentShiftId || null
-        } as Order;
-        
-        console.log('💳 [handlePayment] Novo pedido criado:', currentOrder);
-      }
-
-      // UPSERT OBRIGATÓRIO: Tentar salvar/atualizar pedido no Supabase
-      console.log('💳 [handlePayment] Tentando UPSERT no Supabase...');
-      
-      const finalOrder = {
-        ...currentOrder,
-        customerNif: customerNif.trim() || undefined,
-        total: orderTotal,
-        paidAmount: totalPaid,
-        // REMOVIDO: closedAt - coluna não existe no banco
-      };
-      
-      console.log('💳 [handlePayment] Pedido para UPSERT:', finalOrder);
-
-      // Usar saveOrderAction para UPSERT
-      const saveResult = await saveOrderAction(finalOrder);
-      
-      if (saveResult.success) {
-        console.log('✅ [handlePayment] Pedido salvo com sucesso no Supabase!');
-        
-        // ATUALIZAR ESTADO LOCAL apenas após sucesso no Supabase
-        const updatedOrders = activeOrders.map((o: Order) => 
-          o.id === finalOrderId ? finalOrder : o
-        );
-        
-        // Se foi um pedido novo, adicionar à lista
-        if (!activeOrders.find((o: Order) => o.id === finalOrderId)) {
-          updatedOrders.push(finalOrder);
-        }
-        
-        // LIMPEZA PÓS-VENDA: Carrinho e estado
-        setCartItems([]);
-        useStore.setState({ orders: updatedOrders });
-        
-        // Limpar estado do POS
-        setCurrentPayments([]);
-        setCustomerNif('');
-        setIsPaymentModalOpen(false);
-        
-        // Se for mesa diferente de Balcão, liberar mesa
-        if (activeTableId && activeTableId !== 'balcao-999') {
-          const remainingOrders = updatedOrders.filter((o: Order) => 
-            o.tableId === activeTableId && o.status === 'ABERTO'
-          );
-          if (remainingOrders.length === 0) {
-            setActiveTable(null);
-          }
-        }
-        
-        addNotification('success', 'Venda finalizada com sucesso!');
-        console.log('✅ [handlePayment] Venda finalizada e carrinho limpo!');
-        
-        // Abrir modal de impressão
-        setPendingOrderForPrint(finalOrder);
-        setIsPrintModalOpen(true);
-        
-      } else {
-        console.error('❌ [handlePayment] Erro ao salvar pedido:', saveResult.error);
-        addNotification('error', `Erro ao salvar pedido: ${saveResult.error}`);
-      }
-      
-    } catch (error) {
-      console.error('❌ [handlePayment] Erro ao finalizar venda:', error);
-      addNotification('error', 'Erro ao finalizar venda. Tente novamente.');
+    // Calcular totais
+    const totalPaid = currentPayments.reduce((sum, p) => sum + p.amount, 0);
+    const orderTotal = displayTotal || 0;
+    
+    if (Math.abs(totalPaid - orderTotal) > 0.01) {
+      console.error(' [handlePayment] Valores não conferem');
+      addNotification('error', 'O valor total pago deve ser igual ao total do pedido.');
+      return;
     }
+
+    // FINALIZAÇÃO LOCAL IMEDIATA
+    console.log(' [handlePayment] FINALIZAÇÃO LOCAL IMEDIATA...');
+    const currentOrder = activeOrders.find((o: Order) => o.id === activeOrderId);
+    
+    if (!currentOrder) {
+      console.error(' [handlePayment] Pedido não encontrado');
+      addNotification('error', 'Pedido não encontrado.');
+      return;
+    }
+
+    // Preparar pedido finalizado SEM created_at/updated_at
+    const finalOrder = {
+      ...currentOrder,
+      status: 'CONCLUIDO' as const,
+      total: orderTotal,
+      total_amount: orderTotal,
+      tax_amount: 0,
+      customer_name: currentOrder.customerName || 'Balcão',
+      table_id: currentOrder.tableId || 'balcao-999',
+      order_number: currentOrder.orderNumber || activeOrderId,
+      payment_method: currentPayments[0]?.method || 'CASH',
+      split_payments: currentPayments,
+      // REMOVIDO: created_at e updated_at - Supabase usa DEFAULT NOW()
+    };
+
+    // 1 LIMPAR ESTADO LOCAL IMEDIATAMENTE
+    console.log(' [handlePayment] LIMPANDO ESTADO LOCAL...');
+    useStore.getState().set({ 
+      cartItems: [], 
+      activeOrderId: null,
+      activeOrders: activeOrders.map((o: Order) => 
+        o.id === activeOrderId ? { ...o, status: 'CONCLUIDO' as const } : o
+      )
+    } as any);
+    
+    // 2 FECHAR MODAL IMEDIATAMENTE
+    setIsPaymentModalOpen(false);
+    setCurrentPayments([]);
+    setShowTableBar(false);
+    
+    // 3 MOSTRAR SUCESSO IMEDIATO
+    addNotification('success', 'Venda finalizada com sucesso!');
+    console.log(' [handlePayment] VENDA FINALIZADA LOCALMENTE - SUCESSO!');
+
+    // 4 BACKGROUND SYNC - SEM BLOQUEAR UI
+    console.log(' [handlePayment] INICIANDO BACKGROUND SYNC...');
+    setTimeout(() => {
+      saveOrderInBackground(finalOrder, activeOrderId);
+    }, 100); // Executar após 100ms para não bloquear UI
+  };
+
+  const saveOrderInBackground = async (order: Order, orderId: string) => {
+    console.log('🔄 [saveOrderInBackground] Tentando salvar pedido no Supabase...');
+    
+    try {
+      const result = await saveOrderAction(order);
+      
+      if (result.success) {
+        console.log('✅ [saveOrderInBackground] Pedido sincronizado com sucesso!');
+        addNotification('success', 'Pedido sincronizado com o servidor.');
+      } else {
+        console.error('❌ [saveOrderInBackground] Falha na sincronização:', result.error);
+        addToPendingSync(order, orderId, result.error || 'Erro desconhecido');
+      }
+    } catch (error: any) {
+      console.error('❌ [saveOrderInBackground] Exceção na sincronização:', error);
+      addToPendingSync(order, orderId, error.message);
+    }
+  };
+
+  // 💾 FUNÇÃO PARA ADICIONAR À FILA DE PENDENTES
+  const addToPendingSync = (order: Order, orderId: string, error: string) => {
+    console.log('💾 [addToPendingSync] Adicionando pedido à fila de sincronização...');
+    
+    // Obter fila atual do LocalStorage
+    const pendingSync = JSON.parse(localStorage.getItem('pending_sync_orders') || '[]');
+    
+    // Adicionar novo pedido à fila
+    pendingSync.push({
+      order,
+      orderId,
+      error,
+      timestamp: new Date().toISOString(),
+      retryCount: 0
+    });
+    
+    // Salvar no LocalStorage
+    localStorage.setItem('pending_sync_orders', JSON.stringify(pendingSync));
+    
+    addNotification('warning', 'Venda salva localmente. Sincronização pendente.');
+    console.log('💾 [addToPendingSync] Pedido adicionado à fila de sincronização');
   };
 
   const handleCorrection = async () => {
