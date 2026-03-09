@@ -222,7 +222,7 @@ export const adminOperations = {
             updated_at: new Date().toISOString()
         };
 
-        console.log('🔧 SALVANDO EM menu_categories:', dbCategory);
+        console.log('🔧 SALVANDO EM menu_categories (snake_case):', dbCategory);
 
         const { error } = await supabaseAdmin
             .from('menu_categories')
