@@ -451,8 +451,17 @@ const POS = () => {
     try {
       const win = await WebviewWindow.getByLabel('customer-display');
       if (win) {
-        await win.emit('customer-display-event', { type, data });
-        logger.info('DISPLAY: evento de pagamento emitido', { type, data }, 'DISPLAY');
+        // 🎯 CORRIGIDO: Verificar se win.emit existe antes de chamar
+        if (typeof win.emit === 'function') {
+          await win.emit('customer-display-event', { type, data });
+          logger.info('DISPLAY: evento de pagamento emitido', { type, data }, 'DISPLAY');
+        } else {
+          console.warn('DISPLAY: win.emit não está disponível');
+          logger.warn('DISPLAY: win.emit não está disponível', { type }, 'DISPLAY');
+        }
+      } else {
+        console.warn('DISPLAY: Janela customer-display não encontrada');
+        logger.warn('DISPLAY: Janela customer-display não encontrada', { type }, 'DISPLAY');
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
