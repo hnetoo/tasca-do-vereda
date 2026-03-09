@@ -1021,26 +1021,69 @@ const POS = () => {
       return;
     }
 
-    // FINALIZAÇÃO LOCAL IMEDIATA
-    console.log(' [handlePayment] FINALIZAÇÃO LOCAL IMEDIATA...');
-    const currentOrder = activeOrders.find((o: Order) => o.id === activeOrderId);
+    // 🚀 SAVE BEFORE PAY - Garantir pedido no LocalStorage
+    console.log(' [handlePayment] SAVE BEFORE PAY - Verificando pedido no LocalStorage...');
+    let currentOrder = activeOrders.find((o: Order) => o.id === activeOrderId);
     
     if (!currentOrder) {
-      console.error(' [handlePayment] Pedido não encontrado');
-      addNotification('error', 'Pedido não encontrado.');
-      return;
+      console.log(' [handlePayment] Pedido não encontrado - CRIANDO ON-THE-FLY...');
+      // 🎯 CRIAÇÃO ON-THE-FLY - Criar pedido na hora com dados do carrinho
+      currentOrder = {
+        id: activeOrderId,
+        status: 'ABERTO' as const,
+        total: orderTotal,
+        total_amount: orderTotal,
+        tax_amount: 0,
+        customer_name: 'Balcão',
+        table_id: 'balcao-999',
+        order_number: activeOrderId,
+        payment_method: currentPayments[0]?.method || 'CASH',
+        items: cartItems.map((item: OrderItem) => ({
+          ...item,
+          order_id: activeOrderId,
+          dish_id: item.dish_id || item.id,
+          unit_price: item.unit_price || item.price,
+          quantity: item.quantity,
+          notes: item.notes || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_name: user?.name || 'System',
+        customer_id: null,
+        shift_id: currentShiftId || null,
+        notes: ''
+      };
+      
+      // Adicionar ao estado local imediatamente
+      useStore.getState().set({ 
+        activeOrders: [...activeOrders, currentOrder]
+      } as any);
+      
+      console.log(' [handlePayment] Pedido criado ON-THE-FLY:', currentOrder);
+    } else {
+      console.log(' [handlePayment] Pedido encontrado no estado local:', currentOrder);
     }
 
-    // Preparar pedido finalizado SEM created_at/updated_at
+    // 💾 Salvar pedido localmente ANTES do pagamento
+    try {
+      localStorage.setItem(`order_${activeOrderId}`, JSON.stringify(currentOrder));
+      console.log(' [handlePayment] Pedido salvo no LocalStorage com sucesso');
+    } catch (error) {
+      console.error(' [handlePayment] Erro ao salvar no LocalStorage:', error);
+    }
+
+    // 🎯 FECHO FORÇADO - Preparar pedido finalizado
     const finalOrder = {
       ...currentOrder,
       status: 'CONCLUIDO' as const,
       total: orderTotal,
       total_amount: orderTotal,
       tax_amount: 0,
-      customer_name: currentOrder.customerName || 'Balcão',
-      table_id: currentOrder.tableId || 'balcao-999',
-      order_number: currentOrder.orderNumber || activeOrderId,
+      customer_name: currentOrder.customer_name || 'Balcão',
+      table_id: currentOrder.table_id || 'balcao-999',
+      order_number: currentOrder.order_number || activeOrderId,
       payment_method: currentPayments[0]?.method || 'CASH',
       split_payments: currentPayments,
       // REMOVIDO: created_at e updated_at - Supabase usa DEFAULT NOW()
@@ -1061,11 +1104,41 @@ const POS = () => {
     setCurrentPayments([]);
     setShowTableBar(false);
     
-    // 3 MOSTRAR SUCESSO IMEDIATO
+    // 3 EMITIR EVENTO DE VENDA CONCLUÍDA
+    console.log(' [handlePayment] EMITINDO EVENTO DE VENDA CONCLUÍDA...');
+    try {
+      // 🎯 VERIFICAÇÃO DO EVENTO - Garantir que o evento é disparado
+      const event = new CustomEvent('vendaConcluida', {
+        detail: {
+          orderId: activeOrderId,
+          total: orderTotal,
+          timestamp: new Date().toISOString()
+        }
+      });
+      window.dispatchEvent(event);
+      
+      // Também usar BroadcastChannel para outras abas/janelas
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel('tasca-sales');
+        channel.postMessage({
+          type: 'vendaConcluida',
+          orderId: activeOrderId,
+          total: orderTotal,
+          timestamp: new Date().toISOString()
+        });
+        channel.close();
+      }
+      
+      console.log(' [handlePayment] Evento de venda concluída disparado com sucesso');
+    } catch (error) {
+      console.error(' [handlePayment] Erro ao emitir evento:', error);
+    }
+    
+    // 4 MOSTRAR SUCESSO IMEDIATO
     addNotification('success', 'Venda finalizada com sucesso!');
     console.log(' [handlePayment] VENDA FINALIZADA LOCALMENTE - SUCESSO!');
 
-    // 4 BACKGROUND SYNC - SEM BLOQUEAR UI
+    // 5 BACKGROUND SYNC - SEM BLOQUEAR UI
     console.log(' [handlePayment] INICIANDO BACKGROUND SYNC...');
     setTimeout(() => {
       saveOrderInBackground(finalOrder, activeOrderId);
