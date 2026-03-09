@@ -382,16 +382,18 @@ export const createOperationalSlice: StateCreator<
       shift_id: get().currentShiftId || null
     } as unknown as Order;
     
-    // Verificar se addOrder existe antes de chamar (fix para 'u is not a function')
+    // 🎯 CORRIGIDO: Usar saveOrderAction que mapeia corretamente
     try {
       const state = get();
       if (typeof (state as any).addOrder === 'function') {
         (state as any).addOrder(newOrder);
         
-        // Persist to Supabase
+        // 🎯 PERSISTIR CORRETAMENTE COM saveOrderAction (que mapeia items e total)
         saveOrderAction(newOrder).then(res => {
           if (!res.success) {
              logger.error('Failed to persist new order', { id: order_id, error: res.error }, 'OPERATIONAL');
+          } else {
+            console.log('✅ [createNewOrder] Pedido persistido com sucesso:', (res as any).data);
           }
         }).catch(err => {
            logger.error('Exception persisting new order', { id: order_id, error: err }, 'OPERATIONAL');
