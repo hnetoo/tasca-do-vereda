@@ -195,15 +195,22 @@ export const adminOperations = {
             updated_at: new Date().toISOString()
         };
 
+        console.log('🔧 SALVANDO PRATO EM dishes:', dbDish);
+        console.log('🔧 category_id enviado:', dbDish.category_id);
+        console.log('🔧 categoryId original:', dish.categoryId);
+
         const { error } = await supabaseAdmin
             .from('dishes')
             .upsert(dbDish);
 
-        if (error) throw error;
+        if (error) {
+            console.error('ERRO REAL DO SUPABASE:', error.message, error.details, error.hint);
+            throw error;
+        }
         return { success: true };
     } catch (error: any) {
-        logger.error('Error saving dish (admin)', { dish, error: error.message }, 'DATABASE_ADMIN');
-        return { success: false, error: error.message };
+        console.error('ERRO REAL DO SUPABASE:', error.message, error.details, error.hint);
+        throw error;
     }
   },
 
