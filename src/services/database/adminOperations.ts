@@ -518,7 +518,7 @@ export const adminOperations = {
         total: orderItem.total,
         notes: orderItem.notes,
         status: orderItem.status,
-        created_at: orderItem.createdAt,
+        created_at: orderItem.created_at,
         updated_at: new Date().toISOString()
       };
 
