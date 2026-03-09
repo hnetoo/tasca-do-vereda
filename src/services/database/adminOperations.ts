@@ -208,6 +208,7 @@ export const adminOperations = {
   },
 
   saveCategory: async (category: MenuCategory): Promise<{ success: boolean; error?: string }> => {
+    console.log('--- CLIQUE DETETADO ADMIN ---', category);
     if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
 
     try {
@@ -223,10 +224,16 @@ export const adminOperations = {
         };
 
         const { error } = await supabaseAdmin
-            .from('menu_categories')
+            .from('categories')
             .upsert(dbCategory);
 
-        if (error) throw error;
+        if (error) {
+            console.error('❌ ERRO SUPABASE:', error);
+            alert(`ERRO SUPABASE: ${error.message}`);
+            throw error;
+        }
+        console.log('✅ SUCESSO SUPABASE: Categoria salva');
+        alert('✅ SUCESSO: Categoria salva com sucesso!');
         return { success: true };
     } catch (error: any) {
         logger.error('Error saving category (admin)', { error: error.message }, 'DATABASE_ADMIN');
@@ -256,7 +263,7 @@ export const adminOperations = {
 
     try {
         const { error } = await supabaseAdmin
-            .from('menu_categories')
+            .from('categories')
             .delete()
             .eq('id', id);
 
@@ -272,7 +279,7 @@ export const adminOperations = {
     if (!supabaseAdmin) return { success: false, data: [], error: 'Supabase Service Role Key not configured.' };
     try {
       const { data, error } = await supabaseAdmin
-        .from('menu_categories')
+        .from('categories')
         .select('*')
         .order('sort_order', { ascending: true });
       

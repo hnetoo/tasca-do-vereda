@@ -108,6 +108,7 @@ export async function saveAttendanceAction(attendanceRecords: AttendanceRecord[]
 }
 
 export async function saveCategoryAction(category: MenuCategory): Promise<{ success: boolean; error?: { message: string; stack?: string } }> {
+  console.log('--- CLIQUE DETETADO ---', category);
   try {
     console.log('🔧 saveCategoryAction: Iniciando...', { categoryId: category.id, name: category.name });
     

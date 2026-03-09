@@ -105,7 +105,7 @@ export class SupabaseService {
       .from('dishes')
       .select(`
         *,
-        menu_categories:category_id (
+        categories:category_id (
           name,
           color
         )
@@ -337,7 +337,7 @@ export class SupabaseService {
   private async setupSubscriptions(handler: (payload: any) => void) {
     const tables = [
       'dishes', 
-      'menu_categories', 
+      'categories', 
       'orders', 
       'order_items',
       'audit_logs',
@@ -624,7 +624,7 @@ export class SupabaseService {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
       let query = this.client
-        .from('menu_categories')
+        .from('categories')
         .select('*', { count: 'exact' })
         .range(from, to);
       
@@ -676,7 +676,7 @@ export class SupabaseService {
     if (!this.client) return { success: false, error: 'Client not initialized' };
     try {
       const categories = await exponentialBackoff(async () => {
-           const { data, error } = await this.client!.from('menu_categories').select('*').order('sort_order');
+           const { data, error } = await this.client!.from('categories').select('*').order('sort_order');
            if (error) throw error;
            return data;
       }, 3, 1000);
