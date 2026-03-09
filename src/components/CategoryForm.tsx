@@ -35,15 +35,12 @@ export default function CategoryForm({ isOpen, onClose, category }: CategoryForm
       
       if (result.success) {
         console.log('✅ SUCESSO FORM: Categoria salva');
-        alert('✅ SUCESSO: Categoria salva com sucesso!');
         onClose();
       } else {
         console.error('❌ ERRO FORM:', result.error);
-        alert(`❌ ERRO: ${result.error?.message || 'Erro ao salvar categoria'}`);
       }
     } catch (error) {
       console.error('❌ ERRO CATCH FORM:', error);
-      alert(`❌ ERRO: ${(error as Error).message}`);
     } finally {
       setIsSubmitting(false);
     }

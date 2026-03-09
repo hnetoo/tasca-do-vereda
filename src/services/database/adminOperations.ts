@@ -219,7 +219,7 @@ export const adminOperations = {
             sort_order: category.sortOrder || 0,
             is_active: category.isActive ?? true,
             parent_id: category.parentId || null,
-            is_available_on_digital_menu: category.isAvailableOnDigitalMenu ?? true,
+            "isAvailableOnDigitalMenu": category.isAvailableOnDigitalMenu ?? true,
             updated_at: new Date().toISOString()
         };
 
@@ -229,11 +229,9 @@ export const adminOperations = {
 
         if (error) {
             console.error('❌ ERRO SUPABASE:', error);
-            alert(`ERRO SUPABASE: ${error.message}`);
             throw error;
         }
         console.log('✅ SUCESSO SUPABASE: Categoria salva');
-        alert('✅ SUCESSO: Categoria salva com sucesso!');
         return { success: true };
     } catch (error: any) {
         logger.error('Error saving category (admin)', { error: error.message }, 'DATABASE_ADMIN');
