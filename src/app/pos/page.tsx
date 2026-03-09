@@ -159,7 +159,7 @@ const POS = () => {
     setActiveTable(null);
     setShowMap(false);
     setShowTableBar(false);
-  }, [setActiveTable]);
+  }, []); // REMOVIDO: setActiveTable dependency para evitar loop infinito
 
   useEffect(() => {
     // Only clear activeTableId if we have tables loaded and the ID is invalid
