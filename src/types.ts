@@ -75,8 +75,8 @@ export type Dish = Omit<Partial<DishRow>,
   costPrice?: number;
   available?: boolean;
   parentId?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
   status?: string;
 };
 
@@ -115,8 +115,8 @@ export type MenuCategory = Omit<Partial<MenuCategoryRow>,
   sortOrder?: number;
   isActive?: boolean;
   deletedAt?: string | Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 };
 export type Category = MenuCategory;
 // Simplified types without any
@@ -156,8 +156,8 @@ export interface OrderItem {
   tax?: number;
   total?: number | null; // Allow null from DB
   total_amount?: number;
-  createdAt?: string; // CamelCase alias
-  updatedAt?: string; // CamelCase alias
+  created_at?: string; // Snake_case alias
+  updated_at?: string; // Snake_case alias
 };
 
 export type OrderItemDetail = OrderItem & {
@@ -237,7 +237,6 @@ export type Order = Omit<Partial<any['public']['Tables']['public']['Tables']['or
   userName?: string;
   customerName?: string;
   orderNumber?: string | number;
-  createdAt?: string | Date;
   splitPayments?: { method: PaymentMethod; amount: number }[];
   customerNif?: string;
   

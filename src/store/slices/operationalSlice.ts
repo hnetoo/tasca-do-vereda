@@ -374,8 +374,8 @@ export const createOperationalSlice: StateCreator<
       total: 0,
       total_amount: 0,
       tax_amount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       isPaid: false,
       subAccountName: name,
       shiftId: get().currentShiftId || null,
@@ -421,8 +421,8 @@ export const createOperationalSlice: StateCreator<
         ...item, 
         id: item.id || generateUUID(), 
         orderId, 
-        createdAt: new Date().toISOString(), 
-        updatedAt: new Date().toISOString() 
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString() 
       };
       
       orderToUpdate.items = [...(orderToUpdate.items || []), newItem];
@@ -462,7 +462,7 @@ export const createOperationalSlice: StateCreator<
       const itemToUpdateIndex = items.findIndex(item => item.id === itemId);
 
       if (itemToUpdateIndex !== -1) {
-        const itemToUpdate = { ...items[itemToUpdateIndex], ...updatedItem, updatedAt: new Date().toISOString() };
+        const itemToUpdate = { ...items[itemToUpdateIndex], ...updatedItem, updated_at: new Date().toISOString() };
         const newItems = items.map((item, idx) => idx === itemToUpdateIndex ? itemToUpdate : item);
         orderToUpdate.items = newItems;
 
@@ -509,26 +509,26 @@ export const createOperationalSlice: StateCreator<
       unitPrice: product.price || 0,
       quantity,
       notes: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
     
     // Adicionar ao cartItems IMEDIATAMENTE
     const updatedCartItems = [...cartItems, orderItem];
     (set as any)({ cartItems: updatedCartItems });
     
-    console.log('✅ [addToCart] Item adicionado ao cartItems local!');
+    console.log(' [addToCart] Item adicionado ao cartItems local!');
     
     // AGORA SIM processar pedido para Supabase (background)
     if (!activeOrderId) {
-      console.log('🛒 [addToCart] Criando pedido no Balcão...');
+      console.log(' [addToCart] Criando pedido no Balcão...');
       
       // Verificar se já existe um pedido aberto para o Balcão
       const balcaoOrder = orders.find(o => o.tableId === 'balcao-999' && o.status === 'ABERTO');
       
       if (balcaoOrder) {
         activeOrderId = balcaoOrder.id;
-        console.log('🛒 [addToCart] Usando pedido existente do Balcão:', activeOrderId);
+        console.log(' [addToCart] Usando pedido existente do Balcão:', activeOrderId);
       } else {
         // Criar novo pedido para o Balcão COM O ITEM
         const newOrderId = generateUUID();
@@ -536,13 +536,13 @@ export const createOperationalSlice: StateCreator<
           id: newOrderId,
           tableId: 'balcao-999',
           customerName: 'Balcão',
-          items: [orderItem], // ✅ NÃO VAZIO - COM O ITEM!
+          items: [orderItem], //  NÃO VAZIO - COM O ITEM!
           status: 'ABERTO',
           total: (product.price || 0) * quantity,
           total_amount: (product.price || 0) * quantity,
           tax_amount: 0,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
           isPaid: false,
           subAccountName: 'Balcão',
           shiftId: (state as any).currentShiftId || null,
@@ -554,7 +554,7 @@ export const createOperationalSlice: StateCreator<
         (set as any)({ orders: updatedOrders, activeOrderId: newOrderId, cartItems: updatedCartItems });
         activeOrderId = newOrderId;
         
-        console.log('🛒 [addToCart] Pedido criado para Balcão COM ITEM:', activeOrderId);
+        console.log(' [addToCart] Pedido criado para Balcão COM ITEM:', activeOrderId);
       }
     }
     
@@ -570,14 +570,14 @@ export const createOperationalSlice: StateCreator<
           updatedItems[existingItemIndex] = {
             ...updatedItems[existingItemIndex],
             quantity: (updatedItems[existingItemIndex].quantity || 1) + quantity,
-            updatedAt: new Date().toISOString()
+            updated_at: new Date().toISOString()
           };
           
           const updatedOrder = {
             ...targetOrder,
             items: updatedItems,
             total: updatedItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
-            updatedAt: new Date().toISOString()
+            updated_at: new Date().toISOString()
           };
           
           const updatedOrders = orders.map(o => o.id === activeOrderId ? updatedOrder : o);
@@ -588,7 +588,7 @@ export const createOperationalSlice: StateCreator<
             cartItems: finalCartItems
           } as any);
           
-          console.log('✅ [addToCart] Item atualizado no pedido existente!');
+          console.log(' [addToCart] Item atualizado no pedido existente!');
           return;
         }
         
@@ -598,7 +598,7 @@ export const createOperationalSlice: StateCreator<
           ...targetOrder,
           items: newItems,
           total: newItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
-          updatedAt: new Date().toISOString()
+          updated_at: new Date().toISOString()
         };
         
         const updatedOrders = orders.map(o => o.id === activeOrderId ? updatedOrder : o);
@@ -608,12 +608,12 @@ export const createOperationalSlice: StateCreator<
           cartItems: newItems
         } as any);
         
-        console.log('✅ [addToCart] Item adicionado ao pedido existente!');
+        console.log(' [addToCart] Item adicionado ao pedido existente!');
         return;
       }
     }
     
-    console.log('❌ [addToCart] Nenhum pedido válido encontrado');
+    console.log(' [addToCart] Nenhum pedido válido encontrado');
   },
 
   // FUNÇÃO AUSENTE - Adicionar addToOrder para o carrinho funcionar
@@ -631,7 +631,7 @@ export const createOperationalSlice: StateCreator<
     }
     
     if (!targetOrder) {
-      console.error('❌ [addToOrder] No order found for table:', tableId);
+      console.error(' [addToOrder] No order found for table:', tableId);
       return;
     }
     
@@ -644,8 +644,8 @@ export const createOperationalSlice: StateCreator<
       unitPrice: product.price || 0,
       quantity,
       notes,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
     
     // Add to order
@@ -659,14 +659,14 @@ export const createOperationalSlice: StateCreator<
           updatedItems[existingItemIndex] = {
             ...updatedItems[existingItemIndex],
             quantity: (updatedItems[existingItemIndex].quantity || 1) + quantity,
-            updatedAt: new Date().toISOString()
+            updated_at: new Date().toISOString()
           };
           
           return {
             ...order,
             items: updatedItems,
             total: updatedItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
-            updatedAt: new Date().toISOString()
+            updated_at: new Date().toISOString()
           };
         } else {
           // Add new item
@@ -676,7 +676,7 @@ export const createOperationalSlice: StateCreator<
             ...order,
             items: newItems,
             total: newItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
-            updatedAt: new Date().toISOString()
+            updated_at: new Date().toISOString()
           };
         }
       }
