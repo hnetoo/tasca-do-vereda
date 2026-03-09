@@ -217,14 +217,15 @@ export const adminOperations = {
             name: category.name,
             icon: category.icon,
             sort_order: category.sortOrder || 0,
-            is_active: category.isActive ?? true,
             parent_id: category.parentId || null,
             "isAvailableOnDigitalMenu": category.isAvailableOnDigitalMenu ?? true,
             updated_at: new Date().toISOString()
         };
 
+        console.log('🔧 SALVANDO EM menu_categories:', dbCategory);
+
         const { error } = await supabaseAdmin
-            .from('categories')
+            .from('menu_categories')
             .upsert(dbCategory);
 
         if (error) {
@@ -261,7 +262,7 @@ export const adminOperations = {
 
     try {
         const { error } = await supabaseAdmin
-            .from('categories')
+            .from('menu_categories')
             .delete()
             .eq('id', id);
 
@@ -277,7 +278,7 @@ export const adminOperations = {
     if (!supabaseAdmin) return { success: false, data: [], error: 'Supabase Service Role Key not configured.' };
     try {
       const { data, error } = await supabaseAdmin
-        .from('categories')
+        .from('menu_categories')
         .select('*')
         .order('sort_order', { ascending: true });
       
