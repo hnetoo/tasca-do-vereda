@@ -6,10 +6,7 @@ export const supabaseAuthService = {
     try {
       console.log('🔐 [AUTH] Starting login with PIN', { pin: pin ? '***' : 'EMPTY', role });
       
-      // Garantir que o SupabaseService está inicializado
-      console.log('🔧 [AUTH] Initializing SupabaseService...');
-      await supabaseService.initialize();
-      
+      // 🎯 EVITAR MÚLTIPLAS INSTÂNCIAS - Usar cliente existente
       const client = supabaseService.getClient();
       console.log('🔍 [AUTH] Supabase client status:', { 
         hasClient: !!client, 
@@ -282,7 +279,7 @@ export const supabaseAuthService = {
     permissions?: any;
   }): Promise<User> {
     try {
-      await supabaseService.initialize();
+      // 🎯 EVITAR MÚLTIPLAS INSTÂNCIAS - Usar cliente existente
       const client = supabaseService.getClient();
       if (!client) throw new Error('Serviço indisponível');
 

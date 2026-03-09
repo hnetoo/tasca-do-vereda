@@ -31,29 +31,6 @@ import { generateUUID } from '@/utils/uuid';
 
 
 const POS = () => {
-  // 🎯 INICIALIZAR SUPABASE SERVICE PRIMEIRO (ORDEM DO USUÁRIO)
-  useEffect(() => {
-    console.log('🚀 [POS] Inicializando Supabase Service...');
-    supabaseService.getClient(); // Garante que cliente está inicializado
-    
-    // Inicializar completamente se necessário
-    supabaseService.initialize(
-      undefined, // usar defaults do ambiente
-      undefined,
-      (payload) => {
-        console.log('📡 [POS] Realtime event:', payload);
-        // Handler para eventos em tempo real
-      },
-      (status) => {
-        console.log('📊 [POS] Supabase status:', status);
-      }
-    ).then(() => {
-      console.log('✅ [POS] Supabase Service inicializado com sucesso');
-    }).catch(error => {
-      console.error('❌ [POS] Erro ao inicializar Supabase Service:', error);
-    });
-  }, []);
-
   // Enable realtime table updates
   useTables();
 
