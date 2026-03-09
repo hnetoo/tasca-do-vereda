@@ -9,6 +9,12 @@ export async function saveOrderAction(order: Order) {
     const { cartItems } = await import('@/store/useStore').then(m => m.useStore.getState());
     console.log('💾 [saveOrderAction] cartItems do estado:', cartItems);
     
+    // 🎯 VALIDAÇÃO CRÍTICA: Se não há itens, erro
+    if (!cartItems || cartItems.length === 0) {
+      console.error('❌ [saveOrderAction] ERRO: Carrinho vazio! Nenhum item para salvar.');
+      return { success: false, error: 'Carrinho vazio! Adicione itens antes de salvar.' };
+    }
+    
     // 🎯 CALCULAR TOTAL CORRETO A PARTIR DO CARTITEMS REAL
     const calculatedTotal = cartItems.reduce((sum: number, item: any) => {
       const price = item.unit_price || item.price || 0;
@@ -17,6 +23,12 @@ export async function saveOrderAction(order: Order) {
     }, 0);
     
     console.log('💾 [saveOrderAction] Total calculado do cartItems:', calculatedTotal);
+    
+    // 🎯 VALIDAÇÃO CRÍTICA: Se total é 0, erro
+    if (calculatedTotal <= 0) {
+      console.error('❌ [saveOrderAction] ERRO: Total calculado é 0! Verifique preços dos itens.');
+      return { success: false, error: 'Total do pedido é 0! Verifique os preços dos itens.' };
+    }
     
     // 🎯 MAPEAR ITENS DO CARTITEMS CONFORME SCHEMA ORDER_ITEMS
     const mappedItems = cartItems.map((item: any) => ({
@@ -34,6 +46,12 @@ export async function saveOrderAction(order: Order) {
     }));
     
     console.log('💾 [saveOrderAction] Itens mapeados:', mappedItems);
+    
+    // 🎯 VALIDAÇÃO FINAL: Garantir que temos itens mapeados
+    if (!mappedItems || mappedItems.length === 0) {
+      console.error('❌ [saveOrderAction] ERRO: Falha ao mapear itens do carrinho!');
+      return { success: false, error: 'Falha ao processar itens do carrinho!' };
+    }
     
     // GARANTIR STATUS CONCLUIDO e TOTAL CORRETO - SNAKE_CASE OBRIGATÓRIO
     const orderToSave: any = {
@@ -61,6 +79,7 @@ export async function saveOrderAction(order: Order) {
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
     console.log('💾 [saveOrderAction] TOTAL FINAL:', calculatedTotal, 'ITENS:', mappedItems.length);
+    console.log('💾 [saveOrderAction] ENVIANDO PARA SUPABASE...');
     
     // 🎯 SALVAR NO LOCALSTORAGE PRIMEIRO (RESILIÊNCIA HÍBRIDA)
     try {
@@ -70,9 +89,10 @@ export async function saveOrderAction(order: Order) {
       console.warn('💾 [saveOrderAction] Erro ao salvar no LocalStorage:', error);
     }
     
+    // 🎯 INSERT DIRETO COM VALIDAÇÃO
     const { data, error } = await supabase
       .from('orders')
-      .upsert(orderToSave)
+      .insert(orderToSave)
       .select();
 
     if (error) {
@@ -83,6 +103,7 @@ export async function saveOrderAction(order: Order) {
     console.log('✅ [saveOrderAction] SUCESSO! Pedido salvo no Supabase:', data);
     console.log('✅ [saveOrderAction] Status:', (data as any)?.[0]?.status);
     console.log('✅ [saveOrderAction] Total:', (data as any)?.[0]?.total, '(Tipo:', typeof (data as any)?.[0]?.total, ')');
+    console.log('✅ [saveOrderAction] Items salvos:', (data as any)?.[0]?.items?.length);
     console.log('✅ [saveOrderAction] Resposta Supabase:', { status: 201, data: data });
     
     // 🎯 LIMPAR LOCALSTORAGE APÓS SUCESSO
