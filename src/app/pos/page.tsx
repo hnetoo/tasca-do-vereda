@@ -47,6 +47,30 @@ const POS = () => {
   } = useStore();
   const user = useSelector(selectUser);
 
+  // 🔄 REIDRATAÇÃO DO LOCAL STORAGE
+  useEffect(() => {
+    console.log(' [POS] Reidratando estado do LocalStorage...');
+    
+    try {
+      // Recuperar carrinho do LocalStorage
+      const savedCart = localStorage.getItem('cartItems');
+      if (savedCart) {
+        const cartItems = JSON.parse(savedCart);
+        console.log(' [POS] Carrinho reidratado:', cartItems.length, 'itens');
+        setCartItems(cartItems);
+      }
+      
+      // Recuperar activeOrderId do LocalStorage
+      const savedActiveOrderId = localStorage.getItem('activeOrderId');
+      if (savedActiveOrderId) {
+        console.log(' [POS] ActiveOrderId reidratado:', savedActiveOrderId);
+        // TODO: Recuperar pedido correspondente se necessário
+      }
+    } catch (error) {
+      console.error(' [POS] Erro na reidratação do LocalStorage:', error);
+    }
+  }, [setCartItems]);
+
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -1028,11 +1052,15 @@ const POS = () => {
     if (!currentOrder) {
       console.log(' [handlePayment] Pedido não encontrado - CRIANDO ON-THE-FLY...');
       // 🎯 CRIAÇÃO ON-THE-FLY - Criar pedido na hora com dados do carrinho
+      const calculatedTotal = cartItems.reduce((sum: number, item: OrderItem) => 
+        sum + (item.unit_price || item.price || 0) * item.quantity, 0
+      );
+      
       currentOrder = {
         id: activeOrderId,
         status: 'ABERTO' as const,
-        total: orderTotal,
-        total_amount: orderTotal,
+        total: calculatedTotal,
+        total_amount: calculatedTotal,
         tax_amount: 0,
         customer_name: 'Balcão',
         table_id: 'balcao-999',
@@ -1057,11 +1085,13 @@ const POS = () => {
       };
       
       // Adicionar ao estado local imediatamente
-      useStore.getState().set({ 
+      const store = useStore.getState();
+      const storeSet = useStore.setState;
+      storeSet((state: any) => ({ 
         activeOrders: [...activeOrders, currentOrder]
-      } as any);
+      }));
       
-      console.log(' [handlePayment] Pedido criado ON-THE-FLY:', currentOrder);
+      console.log(' [handlePayment] Pedido criado ON-THE-FLY com total:', calculatedTotal, 'items:', cartItems.length);
     } else {
       console.log(' [handlePayment] Pedido encontrado no estado local:', currentOrder);
     }
@@ -1091,13 +1121,19 @@ const POS = () => {
 
     // 1 LIMPAR ESTADO LOCAL IMEDIATAMENTE
     console.log(' [handlePayment] LIMPANDO ESTADO LOCAL...');
-    useStore.getState().set({ 
-      cartItems: [], 
+    const store = useStore.getState();
+    const storeSet = useStore.setState;
+    
+    // 🎯 CORRIGIDO: Usar funções disponíveis do store
+    store.setCartItems([]);
+    
+    // Para activeOrderId e activeOrders, usar o setState do Zustand
+    storeSet((state: any) => ({ 
       activeOrderId: null,
       activeOrders: activeOrders.map((o: Order) => 
         o.id === activeOrderId ? { ...o, status: 'CONCLUIDO' as const } : o
       )
-    } as any);
+    }));
     
     // 2 FECHAR MODAL IMEDIATAMENTE
     setIsPaymentModalOpen(false);
