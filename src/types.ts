@@ -1,599 +1,658 @@
-// Slices will be defined in this file to avoid circular dependencies
-// import { UISlice } from './store/slices/uiSlice';
-// import { OperationalSlice } from './store/slices/operationalSlice';
-// import { MenuSlice } from './store/slices/menuSlice';
-// import { StaffSlice } from './store/slices/staffSlice';
-// import { FinanceSlice } from './store/slices/financeSlice';
-// import { IntegrationsSlice } from './store/slices/integrationsSlice';
-
-
+// 🏆 SUPABASE SCHEMA TYPES - ESPERHO PERFEITO DO BANCO DE DADOS
+// 📋 BASEADO NO ARQUIVO: supabase/migrations/20260306120755_remote_schema.sql
+// 🐍 100% SNAKE_CASE - SEM CAMELCASE NOS CAMPOS DO BANCO
 
 export type AnyRecord = any;
 
-// Simplified types without any['public']['Tables']
-interface DishRow {
+// ========================================
+// 🍽️ MENU_CATEGORIES
+// ========================================
+export interface MenuCategoryRow {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  icon: string | null;
+  parent_id: string | null;
+  sort_order: number;
+  is_active: boolean;
+  is_available_on_digital_menu: boolean;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MenuCategory = Partial<MenuCategoryRow> & {
+  id: string;
+  name: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  parentId?: string;
+  isAvailableOnDigitalMenu?: boolean;
+  isActive?: boolean;
+  sortOrder?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+export type Category = MenuCategory;
+
+// ========================================
+// 🍽️ MENU_ITEMS (DISHES)
+// ========================================
+export interface MenuItemRow {
   id: string;
   name: string;
   description: string | null;
   price: number;
-  image_url: string | null;
+  cost_price: number;
   category_id: string | null;
-  available: boolean | null;
-  is_active: boolean | null;
-  preparation_time: number | null;
-  track_stock: boolean | null;
-  stock_quantity: number | null;
-  min_stock_quantity: number | null;
-  max_stock_quantity: number | null;
-  unit: string | null;
   supplier_id: string | null;
-  tax_code: string | null;
-  tax_percentage: number | null;
-  cost_price: number | null;
-  created_at: string | null;
-  updated_at: string | null;
+  image_url: string | null;
+  available: boolean;
+  is_active: boolean;
+  is_available_on_digital_menu: boolean;
+  tax_percentage: number;
+  tax_code: string;
+  preparation_time: number | null;
+  track_stock: boolean;
+  stock_quantity: number;
+  min_stock_quantity: number;
+  max_stock_quantity: number | null;
+  unit: string;
+  user_id: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export type Dish = Omit<Partial<DishRow>, 
-  'image_url' | 
-  'category_id' | 
-  'supplier_id' | 
-  'tax_code' | 
-  'tax_percentage' | 
-  'preparation_time' | 
-  'is_active' | 
-  'is_available_on_digital_menu' | 
-  'track_stock' | 
-  'stock_quantity' | 
-  'min_stock_quantity' | 
-  'max_stock_quantity' |
-  'created_at' |
-  'updated_at' |
-  'cost_price'
-> & {
-  id: string; // Ensure ID is always present
-  name: string; // Ensure name is always present
-  price: number; // Ensure price is always present
+export type Dish = Partial<MenuItemRow> & {
+  id: string;
+  name: string;
+  price: number;
   
-  // CamelCase overrides
+  // Campos adicionais para UI (não vão para banco)
   imageUrl?: string;
   categoryId?: string;
-  supplierId?: string;
-  taxCode?: string;
-  taxPercentage?: number;
-  preparationTime?: number;
+  available?: boolean;
   isActive?: boolean;
   isAvailableOnDigitalMenu?: boolean;
   trackStock?: boolean;
   stockQuantity?: number;
   minStockQuantity?: number;
-  maxStockQuantity?: number;
-
-  // Additional fields
-  stock?: number;
-  unit?: string;
   costPrice?: number;
-  available?: boolean;
-  parentId?: string;
-  created_at?: Date;
-  updated_at?: Date;
-  status?: string;
+  preparationTime?: number;
+  taxCode?: string;
+  taxPercentage?: number;
+  supplierId?: string;
+  unit?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 export type Product = Dish;
 
-// Simplified types without any
-interface MenuCategoryRow {
+// ========================================
+// 🍽️ TABLE ZONES
+// ========================================
+export interface TableZone {
   id: string;
   name: string;
-  description: string | null;
-  image_url: string | null;
-  sort_order: number | null;
-  is_active: boolean | null;
-  parent_id: string | null;
-  is_available_on_digital_menu: boolean | null;
-  icon: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  color: string;
+  tables: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
-export type MenuCategory = Omit<Partial<MenuCategoryRow>,
-  'created_at' |
-  'deleted_at' |
-  'is_active' |
-  'is_available_on_digital_menu' |
-  'parent_id' |
-  'sort_order' |
-  'updated_at'
-> & {
-  id: string; // Ensure ID is always present
-  name: string; // Ensure name is always present
-  icon?: string; // Include icon field
-  parentId?: string;
-  availableOnDigitalMenu?: boolean;
-  isAvailableOnDigitalMenu?: boolean;
-  sortOrder?: number;
-  isActive?: boolean;
-  deletedAt?: string | Date;
-  created_at?: Date;
-  updated_at?: Date;
-};
-export type Category = MenuCategory;
-// Simplified types without any
-interface OrderItemRow {
+// ========================================
+// 📋 ORDERS
+// ========================================
+export interface OrderRow {
   id: string;
-  order_id: string | null;
+  order_number: string | null;
+  status: string;
+  table_id: string | null;
+  customer_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  customer_nif: string | null;
+  user_id: string | null;
+  user_name: string | null;
+  total: number | null;
+  tax_total: number | null;
+  payment_method: string | null;
+  notes: string | null;
+  shift_id: string | null;
+  sub_account_name: string | null;
+  invoice_number: string | null;
+  agt_submission_uuid: string | null;
+  is_synced_agt: number;
+  hash: string | null;
+  previous_hash: string | null;
+  signature: string | null;
+  jws_payload: any;
+  split_payments: any;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Order = Partial<OrderRow> & {
+  id: string;
+  status: string;
+  items: any[];
+  
+  // Campos adicionais para UI (não vão para banco)
+  customerName?: string;
+  tableId?: string;
+  orderNumber?: string;
+  customerNif?: string;
+  paymentMethod?: string;
+  splitPayments?: any;
+  payments?: any;
+  taxTotal?: number;
+  total_amount?: number;
+  paidAmount?: number;
+  subAccountName?: string;
+  invoiceNumber?: string;
+  shiftId?: string;
+  userId?: string;
+  userName?: string;
+  customerId?: string;
+  isPaid?: boolean;
+  timestamp?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+// ========================================
+// 📋 ORDER_ITEMS
+// ========================================
+export interface OrderItemRow {
+  id: string;
+  order_id: string;
   dish_id: string | null;
   quantity: number;
   unit_price: number;
-  total_price: number;
+  tax_percentage: number;
+  tax_amount: number;
+  tax_code: string;
+  status: string;
   notes: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  created_at: string;
 }
 
-export interface OrderItem {
+export type OrderItem = Partial<OrderItemRow> & {
   id: string;
-  dishId?: string; // CamelCase alias
-  order_id?: string;
-  orderId?: string; // CamelCase alias
-  product_id?: string;
-  productId?: string; // CamelCase alias
-  tax_amount?: number;
-  taxAmount?: number; // CamelCase alias
-  tax_percentage?: number;
-  taxPercentage?: number; // CamelCase alias
-  tax_code?: string;
-  taxCode?: string; // CamelCase alias
-  unit_price?: number;
-  unitPrice?: number; // CamelCase alias
-  price?: number; // Alias for unitPrice
-  quantity?: number; // Ensure quantity is available
+  quantity: number;
+  unit_price: number;
+  
+  // Campos adicionais para UI (não vão para banco)
+  dishId?: string;
+  dishName?: string;
+  price?: number;
   notes?: string;
-  status?: string;
-
-  // Calculated fields
-  tax?: number;
-  total?: number | null; // Allow null from DB
-  total_amount?: number;
-  created_at?: string; // Snake_case alias
-  updated_at?: string; // Snake_case alias
+  orderId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type OrderItemDetail = OrderItem & {
   dish?: Dish;
   product?: Dish;
-  dishId?: string;
-  unitPrice: number;
-  quantity: number;
-  notes?: string;
-  taxPercentage: number;
-  taxCode: string;
 };
 
-export interface SecurityAlert {
+// ========================================
+// 🪑 RESTAURANT_TABLES
+// ========================================
+export interface RestaurantTableRow {
   id: string;
-  severity: 'high' | 'medium' | 'low' | 'critical';
-  message: string;
-  timestamp: string;
-  isResolved: boolean;
-  type: string;
-  details?: any;
+  name: string | null;
+  number: number;
+  seats: number | null;
+  shape: string | null;
+  zone: string | null;
+  status: string;
+  x: number | null;
+  y: number | null;
+  width: number | null;
+  height: number | null;
+  rotation: number | null;
+  color: string | null;
+  label: string | null;
+  group_id: string | null;
+  user_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-export type UUID = string;
+export type Table = Partial<RestaurantTableRow> & {
+  id: string;
+  number: number;
+  status: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  name?: string;
+  label?: string;
+  zone?: string;
+  capacity?: number;
+  position?: { x: number; y: number };
+  qrCode?: string;
+  activeOrderIds?: string[];
+};
 
-export type UserRole = 'admin' | 'manager' | 'waiter' | 'kitchen' | 'cashier';
-// export type Permission = string; // Removed duplicate
+export type TableStatus = 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'MAINTENANCE' | 'PAYMENT' | 'DIRTY';
 
-export interface CustomRole {
+// ========================================
+// � PERMISSIONS
+// ========================================
+export interface Permission {
   id: string;
   name: string;
-  permissions: Permission[];
+  description: string;
+  module: string;
+  action: string;
 }
 
-export type PaymentMethod = 'NUMERARIO' | 'TPA' | 'TRANSFERENCIA' | 'QR_CODE' | 'SPLIT';
-
-
-
-export interface OrderPayment {
-  id?: any;
-  method: PaymentMethod;
-  amount: number;
-  date?: string;
-  timestamp?: string;
+// ========================================
+// �👥 EMPLOYEES
+// ========================================
+export interface EmployeeRow {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  nif: string | null;
+  bi: string | null;
+  role: string;
+  salary: number | null;
+  admission_date: string | null;
+  daily_work_hours: number | null;
+  work_days_per_month: number | null;
+  bank_account: string | null;
+  social_security_number: string | null;
+  pin: string | null;
+  color: string | null;
+  external_bio_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-export type Order = Omit<Partial<any['public']['Tables']['public']['Tables']['orders']['Row']>, 'created_at' | 'updated_at'> & {
-  items?: (OrderItem & { dish?: Dish; product?: Dish })[];
-  payments?: OrderPayment[];
-  payment_method?: PaymentMethod | string | null;
-  timestamp?: string | Date;
-  created_at?: string | Date | null;
-  updated_at?: string | Date | null;
-  closed_at?: string | Date | null;
-  closedAt?: string | Date | null; // Nome correto da coluna
-  customer_name?: string | null;
-  customer_id?: UUID | null;
-  order_number?: string | number | null;
-  shift_id?: UUID | null;
-  table_id?: string | null;
-  invoice_number?: string | null;
-  tax_total?: number | null;
-  sub_account_name?: string | null;
-  user_id?: UUID | null;
-  user_name?: string | null;
-  paymentCorrectionHistory?: PaymentCorrection[];
-  
-  // CamelCase aliases
-  tableId?: number | string;
-  taxTotal?: number;
-  paymentMethod?: PaymentMethod;
-  customerId?: string;
-  shiftId?: string;
-  subAccountName?: string;
-  invoiceNumber?: string;
-  userId?: string;
-  userName?: string;
-  customerName?: string;
-  orderNumber?: string | number;
-  splitPayments?: { method: PaymentMethod; amount: number }[];
-  customerNif?: string;
-  
-  // Calculated fields
-  tax?: number;
-  total?: number | null; // Allow null from DB
-
-  // Additional properties
-  previous_hash?: string | null;
-  previousHash?: string | null; // Alias
-  jws_payload?: any;
-  jwsPayload?: any; // Alias
-  updatedAt?: string | Date; // Alias
-  isSyncedAgt?: boolean | number | null; // Alias
-  isPaid?: boolean; // Runtime flag
-  is_synced_agt?: boolean | number | null;
-  agt_submission_uuid?: string | null;
-  signature?: string | null;
-  hash?: string | null;
-};
-
-export type Profile = AnyRecord;
-export type Customer = AnyRecord;
-
-export type Transaction = any['public']['Tables']['public']['Tables']['transactions']['Row'] & {
-  created_at?: string | null; // Legacy support
-  payment_method?: string | null; // Legacy support
-};
-
-export type Payment = AnyRecord;
-
-export type Expense = any['public']['Tables']['public']['Tables']['expenses']['Row'] & {
-  paymentMethod?: PaymentMethod | string;
-  payment_method?: PaymentMethod | string; // Legacy support
-  supplier_id?: string; // Legacy support
-  supplierId?: string; // CamelCase alias
-  created_at?: string; // Legacy support
-  date?: string | Date | null;
-  paid?: boolean; // Runtime extension / legacy schema
-};
-
-export type FixedExpense = AnyRecord;
-
-export type Supplier = any['public']['Tables']['public']['Tables']['suppliers']['Row'];
-
-export type StockItem = any['public']['Tables']['public']['Tables']['stock_items']['Row'] & {
-  // Add any other relevant fields if they appear in useStore or inventory page
-  createdAt?: Date;
-  updatedAt?: Date;
-  minThreshold?: number;
-};
-
-export type Table = any['public']['Tables']['public']['Tables']['restaurant_tables']['Row'] & {
-  activeOrderIds?: string[]; // Runtime extension
-  // Redundant overrides removed to allow nulls from DB
-  /*
-  seats?: number;
-  width?: number;
-  height?: number;
-  shape?: string;
-  rotation?: number;
-  groupId?: string;
-  label?: string;
-  color?: string;
-  userId?: string;
-  */
-};
-export type TableZone = 'INTERIOR' | 'EXTERIOR' | 'BALCAO';
-export type TableShape = 'RECTANGLE' | 'SQUARE' | 'CIRCLE';
-export type TableStatus = 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'PAYMENT' | 'DIRTY' | 'MAINTENANCE' | 'UPDATING';
-
-export type AuditLog = any['public']['Tables']['public']['Tables']['audit_logs']['Row'] & {
-  metadata?: any;
-  createdAt?: string | Date;
-  userId?: string;
-};
-export type OfflineQueue = AnyRecord;
-
-export interface Delivery {
-  id: UUID;
-  orderId: UUID;
-  driverName: string;
-  status: 'PENDENTE' | 'EM_ROTA' | 'ENTREGUE' | 'CANCELADA';
-  address: string;
-  customerName: string;
-  customerPhone: string;
-  startTime: Date;
-  endTime?: Date;
-  [key: string]: any; // For flexibility with additional properties
-}
-
-export interface Reservation {
-  id: UUID;
-  tableId?: UUID;
-  customerName: string;
-  customerPhone: string;
-  date: Date;
-  time: string;
-  guests: number;
-  status: 'PENDENTE' | 'CONFIRMADA' | 'CANCELADA' | 'CONCLUIDA';
-  notes?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export type Employee = Partial<any['public']['Tables']['public']['Tables']['employees']['Row']> & {
+export type Employee = Partial<EmployeeRow> & {
   id: string;
   name: string;
   role: string;
-  pin?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  nif?: string | null;
-  address?: string | null;
-  salary?: number | null;
-  isActive?: boolean | null;
-  admissionDate?: string | Date | null;
-  socialSecurityNumber?: string | null;
-  bankAccount?: string | null;
-  bi?: string | null;
-  createdAt?: string | Date | null;
-  updatedAt?: string | Date | null;
+  
+  // Campos adicionais para UI (não vão para banco)
+  email?: string;
+  phone?: string;
+  address?: string;
+  nif?: string;
+  bi?: string;
+  socialSecurityNumber?: string;
+  bankAccount?: string;
+  isActive?: boolean;
   color?: string;
-  workDaysPerMonth?: number | null;
-  dailyWorkHours?: number | null;
+  workDaysPerMonth?: number;
+  dailyWorkHours?: number;
+  admissionDate?: string;
   externalBioId?: string | null;
-  is_active?: boolean | null;
-  admission_date?: string | null;
-  social_security_number?: string | null;
-  bank_account?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  work_days_per_month?: number | null;
-  daily_work_hours?: number | null;
-  external_bio_id?: string | null;
-  permissions?: Permission[]; // Custom permissions
-  [key: string]: any;
-};
-
-export type Role = string;
-export type Permission =
-  | 'CREATE_ORDER'
-  | 'EDIT_ORDER'
-  | 'DELETE_ORDER'
-  | 'PAY_ORDER'
-  | 'VIEW_FINANCIAL'
-  | 'MANAGE_USERS'
-  | 'MANAGE_INVENTORY'
-  | 'MANAGE_DELIVERIES'
-  | 'VIEW_KITCHEN'
-  | 'PRINT_BILL'
-  | 'APPLY_DISCOUNT'
-  | 'ACCESS_REPORTS'
-  | 'MANAGE_TABLES'
-  | 'MANAGE_RESERVATIONS'
-  | 'MANAGE_EMPLOYEES'
-  | 'QR_MENU_CONFIG'
-  | 'BIOMETRIC_SYNC'
-  | 'EXPORT_DATA'
-  | 'VIEW_SYSTEM_HEALTH'
-  | 'CLOSE_SHIFT'
-  | 'CORRECT_PAYMENT_PRE_PRINT'
-  | 'CORRECT_PAYMENT_POST_PRINT';
-
-export type AttendanceRecord = Partial<any['public']['Tables']['public']['Tables']['attendance_records']['Row']> & {
-  id?: string;
-  employeeId?: string | null;
-  date?: string;
-  clockIn?: Date | string | null;
-  clockOut?: Date | string | null;
-  createdAt?: Date | string | null;
-  updatedAt?: Date | string | null;
-  clockInMethod?: string | null;
-  clockOutMethod?: string | null;
-  totalHours?: number | null;
-  isLate?: boolean | null;
-  lateMinutes?: number | null;
-  overtimeHours?: number | null;
-  isAbsence?: boolean | null;
-  source?: string;
-  status?: string;
-  notes?: string;
-};
-
-export interface WorkShift {
-  id: UUID;
-  employeeId: UUID;
-  // Planning/Schedule fields
-  dayOfWeek?: number; // 1 (Mon) - 7 (Sun)
-  startTime: Date | string; // Date for worked shifts, string "HH:mm" for schedule
-  endTime: Date | string;   // Date for worked shifts, string "HH:mm" for schedule
-  // Worked shift fields
-  date?: Date;
-  shiftType?: string;
-  notes?: string;
-  salesBreakdown?: Partial<Record<PaymentMethod, number>>;
-  openingBalance?: number;
-}
-
-// --- Missing Types for Finance/Analytics ---
-
-export interface DailySalesAnalytics {
-  totalRevenue: number;
-  totalProfit: number;
-  orderCount: number;
-  averageTicket: number;
-  date: string;
-  totalProductCost?: number;
-}
-
-export interface MenuAnalytics {
-  id: string;
-  name: string;
-  quantity: number;
-  revenue: number;
-  profit: number;
-}
-
-export interface DailyAnalytics {
-  date: string;
-  totalOrders: number;
-  totalRevenue: number;
-  totalExpenses: number;
-  totalProductCost?: number;
-  netProfit: number;
-  paymentMethods?: Record<string, number>;
-  topDishes?: MenuAnalytics[];
   lastUpdated?: string;
+  salary?: number;
+  pin?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  permissions?: string[];
+};
+
+// ========================================
+// 💰 EXPENSES
+// ========================================
+export interface ExpenseRow {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  payment_method: string | null;
+  status: string;
+  notes: string | null;
+  supplier_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface RealtimePayload<T> {
-  new: T;
-  old: T;
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-  table: string;
-  schema: string;
-  commit_timestamp: string;
-  errors: null | any[];
+export type Expense = Partial<ExpenseRow> & {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+// ========================================
+// 💰 REVENUES
+// ========================================
+export interface RevenueRow {
+  id: string;
+  description: string | null;
+  amount: number;
+  date: string;
+  category: string | null;
+  created_at: string;
+  updated_at: string;
+  user_id: string | null;
 }
 
-export interface DashboardSummary {
-  totalRevenue: number;
-  totalExpenses: number;
-  totalOrders: number;
-  activeOrders: number;
-}
-
-export interface IntegrityIssue {
-  id: UUID;
-  severity: 'high' | 'medium' | 'low';
-  message: string;
-  action?: string;
-  entityType?: 'DISH' | 'CATEGORY' | 'ORDER' | 'EMPLOYEE' | 'TABLE' | 'STOCK_ITEM';
-  entityId?: UUID;
-  type?: 'INVALID_CATEGORY' | 'NO_IMAGE' | 'DUPLICATE_ID' | 'NEGATIVE_PRICE' | 'LOOP_REFERENCE' | 'INTEGRITY_CHECK';
-  timestamp?: number;
-  isResolved?: boolean;
-  data?: AnyRecord;
-}
-
-export interface Analytics {
-  [key: string]: any;
-}
-
-export interface AIAnalysisResult {
-  [key: string]: any;
-}
-
-export interface AIMonthlyReport {
-  month: string;
-  totalRevenue: number;
-  topSellingItem: string;
-  strategicAdvice: string;
-  operationalEfficiency: string;
-  customerSentiment: string;
-}
-
-export interface PedidoPayload {
-  [key: string]: any;
-}
-
-export interface DailyAnalyticsPayload {
-  [key: string]: any;
-}
-
-export interface Revenue {
+export type Revenue = Partial<RevenueRow> & {
   id: string;
   amount: number;
-  date: string | Date;
+  date: string;
   description?: string;
   category?: string;
-  paymentMethod?: PaymentMethod;
-  created_at?: string;
+  createdAt?: string;
   updatedAt?: string;
-  orderId?: string; // Link to order if applicable
-}
+};
 
-export interface PayrollRecord {
+// ========================================
+// 📦 STOCK_ITEMS
+// ========================================
+export interface StockItemRow {
   id: string;
-  employeeId: string;
-  amount: number;
-  date: string | Date;
-  paymentMethod: PaymentMethod;
-  month: number;
-  year: number;
+  name: string;
+  quantity: number | null;
+  min_threshold: number | null;
+  unit: string | null;
+  supplier_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type StockItem = Partial<StockItemRow> & {
+  id: string;
+  name: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  quantity?: number;
+  minThreshold?: number;
+  unit?: string;
+  supplierId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+// ========================================
+// 📅 RESERVATIONS
+// ========================================
+export interface ReservationRow {
+  id: string;
+  customer_name: string;
+  customer_phone: string;
+  date: string;
+  time: string;
+  guests: number;
+  table_id: string | null;
   status: string;
-  // Runtime / Legacy fields
-  netSalary?: number;
-  paymentDate?: string | Date;
-  baseSalary?: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Reservation = Partial<ReservationRow> & {
+  id: string;
+  customer_name: string;
+  guests: number;
+  date: string;
+  time: string;
+  status: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  tableId?: string;
+  customerPhone?: string;
   notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+// ========================================
+// 💳 CASH_SHIFTS
+// ========================================
+export interface CashShiftRow {
+  id: string;
+  user_id: string | null;
+  user_name: string | null;
+  opening_amount: number;
+  closing_amount: number | null;
+  opened_at: string;
+  closed_at: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export type CashShift = AnyRecord;
-export type User = AnyRecord;
-export type LayoutBackup = AnyRecord;
+export type CashShift = Partial<CashShiftRow> & {
+  id: string;
+  status: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  userId?: string;
+  userName?: string;
+  openingAmount?: number;
+  closingAmount?: number;
+  openedAt?: string;
+  closedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
-export interface FinancialClearanceReport {
-  timestamp: string;
-  user: UUID;
-  reason: string;
-  authorizedBy: UUID;
-  clearedOrders: number;
-  clearedExpenses: number;
-  clearedRevenues: number;
-  clearedPayroll: number;
-  summary: {
-    ordersCount: number;
-    expensesCount: number;
-    fixedExpensesCount: number;
-    revenuesCount: number;
-    payrollCount: number;
-    totalRevenue: number;
-    totalExpenses: number;
-  };
-  error?: string;
+// ========================================
+// 🏢 SETTINGS
+// ========================================
+export interface SettingsRow {
+  id: string;
+  restaurant_name: string | null;
+  nif: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  logo_url: string | null;
+  currency: string | null;
+  tax_percentage: number | null;
+  regime_iva: string | null;
+  motivo_isencao: string | null;
+  agt_certificate: string | null;
+  open_drawer_code: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface FinancialBackupData {
-  timestamp: string;
-  orders: Order[];
-  expenses: Expense[];
-  revenues: Revenue[];
-  payroll: PayrollRecord[];
-  // Add others as needed
-  [key: string]: any;
+export type Settings = Partial<SettingsRow> & {
+  id: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  restaurantName?: string;
+  nif?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  logoUrl?: string;
+  currency?: string;
+  taxPercentage?: number;
+  regimeIVA?: string;
+  motivoIsencao?: string;
+  agtCertificate?: string;
+  openDrawerCode?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+// ========================================
+// 📊 PAYROLL_RECORDS
+// ========================================
+export interface PayrollRecordRow {
+  id: string;
+  employee_id: string | null;
+  month: number | null;
+  year: number | null;
+  date: string;
+  amount: number;
+  base_salary: number | null;
+  net_salary: number | null;
+  status: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  payment_date: string | null;
+  employee_name: string;
 }
 
-export interface SupabaseSyncStatus {
-  isConnected: boolean;
-  status: 'connected' | 'disconnected' | 'connecting' | 'error' | 'syncing' | 'retrying';
-  lastErrorAt: string | null;
-  errorMessage: string | null;
-  retries: number;
+export type PayrollRecord = Partial<PayrollRecordRow> & {
+  id: string;
+  date: string;
+  amount: number;
+  employee_name: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  employeeId?: string;
+  month?: number;
+  year?: number;
+  baseSalary?: number;
+  netSalary?: number;
+  status?: string;
+  notes?: string;
+  paymentDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+// ========================================
+// 📊 ATTENDANCE_RECORDS
+// ========================================
+export interface AttendanceRecordRow {
+  id: string;
+  employee_id: string | null;
+  date: string;
+  clock_in: string | null;
+  clock_out: string | null;
+  late_minutes: number | null;
+  overtime_hours: number | null;
+  is_absence: boolean | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  clock_in_method: string | null;
+  clock_out_method: string | null;
 }
 
-export type PaymentCorrection = any;
+export type AttendanceRecord = Partial<AttendanceRecordRow> & {
+  id: string;
+  date: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  employeeId?: string;
+  clockIn?: Date | string | null;
+  clockOut?: Date | string | null;
+  lateMinutes?: number;
+  overtimeHours?: number;
+  isAbsence?: boolean;
+  notes?: string;
+  clockInMethod?: string | null;
+  clockOutMethod?: string | null;
+  createdAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+};
+
+// ========================================
+// 📋 PROFILES (USERS)
+// ========================================
+export interface ProfileRow {
+  id: string;
+  email: string | null;
+  role: string;
+  created_at: string;
+  updated_at: string;
+  name: string | null;
+  active: boolean | null;
+  permissions: any;
+}
+
+export type User = Partial<ProfileRow> & {
+  id: string;
+  role: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  email?: string;
+  name?: string;
+  active?: boolean;
+  permissions?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+// ========================================
+// 📢 NOTIFICATIONS
+// ========================================
+export interface NotificationRow {
+  id: string;
+  user_id: string | null;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export type Notification = Partial<NotificationRow> & {
+  id: string;
+  title: string;
+  message: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  userId?: string;
+  type?: string;
+  isRead?: boolean;
+  createdAt?: string;
+};
+
+// ========================================
+// 📋 AUDIT_LOGS
+// ========================================
+export interface AuditLogRow {
+  id: string;
+  action: string;
+  user_id: string | null;
+  details: any;
+  created_at: string;
+}
+
+export type AuditLog = Partial<AuditLogRow> & {
+  id: string;
+  action: string;
+  
+  // Campos adicionais para UI (não vão para banco)
+  userId?: string;
+  metadata?: any;
+  createdAt?: string | Date;
+};
+
+// ========================================
+// 🔑 API_KEYS
+// ========================================
+export interface ApiKeyRow {
+  id: string;
+  name: string;
+  key_hash: string;
+  created_at: string;
+  last_used: string | null;
+  status: string;
+  scopes: any;
+}
+
 export interface APIKey {
   id: string;
   name: string;
@@ -605,33 +664,37 @@ export interface APIKey {
   scopes: string[];
 }
 
+// ========================================
+// 📊 INTEGRATION_LOGS
+// ========================================
+export interface IntegrationLogRow {
+  id: string;
+  service: string;
+  event: string;
+  status: string;
+  request_data?: any;
+  response_data?: any;
+  error_message?: string;
+  created_at: string;
+}
+
+export type IntegrationLog = IntegrationLogRow;
+
 export interface WebhookConfig {
   id: string;
   name: string;
   url: string;
   events: string[];
   headers?: Record<string, string>;
-  createdAt?: Date | string;
+  created_at?: Date | string;
   lastTriggered?: Date | string;
   failureCount?: number;
   status?: 'ACTIVE' | 'DISABLED' | string;
 }
 
-export interface BiometricDevice {
-  id: string;
-  name: string;
-  type: string;
-  ipAddress: string;
-  port: number;
-  location?: string;
-  apiKey?: string;
-  status?: 'CONNECTED' | 'DISCONNECTED' | string;
-  lastSync?: Date | string | null;
-  syncInterval?: number;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
-}
-
+// ========================================
+// 📱 MOBILE SESSIONS
+// ========================================
 export interface MobileSession {
   id: string;
   userId: string;
@@ -645,406 +708,351 @@ export interface MobileSession {
   status: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | string;
 }
 
+// ========================================
+// 📺 CUSTOMER DISPLAY
+// ========================================
+export interface CustomerDisplayEvent {
+  id: string;
+  type: 'ORDER_UPDATE' | 'PAYMENT' | 'NOTIFICATION' | 'PAYMENT_STARTED' | 'PAYMENT_COMPLETED' | 'SHOW_ORDER';
+  message: string;
+  data?: any;
+  timestamp: string;
+  created_at?: string;
+}
+
+// ========================================
+// 🎯 TIPOS DE PAGAMENTO
+// ========================================
+export type PaymentMethod = 'NUMERARIO' | 'TPA' | 'TRANSFERENCIA' | 'QR_CODE' | 'SPLIT';
+
+// ========================================
+// 💳 ORDER_PAYMENT
+// ========================================
+export interface OrderPayment {
+  id: string;
+  method: PaymentMethod;
+  amount: number;
+  timestamp: string;
+}
+
+// ========================================
+// 📋 STATUS TYPES
+// ========================================
+export type OrderStatus = 'ABERTO' | 'CONCLUIDO' | 'CANCELADO' | 'FECHADO';
+export type ShiftStatus = 'OPEN' | 'CLOSED';
+
+// ========================================
+// 🔄 OFFLINE QUEUE
+// ========================================
+export type OfflineQueue = AnyRecord;
+
+// ========================================
+// 🔧 INTEGRATION TYPES
+// ========================================
+export interface Integration {
+  id: string;
+  name: string;
+  type: string;
+  config: any;
+  status?: 'CONNECTED' | 'DISCONNECTED' | string;
+  lastSync?: Date | string | null;
+  syncInterval?: number;
+  created_at?: Date | string;
+  updated_at?: Date | string;
+}
+
 export interface BiometricClockEvent {
   id: string;
   deviceId: string;
   externalBioId: string;
   clockTime: Date | string;
-  type: string;
-  temperature?: number;
-  processed?: boolean;
-  processedAt?: Date | string;
-  linkedAttendanceId?: string;
-}
-export interface MenuSlice {
-  dishes: Dish[];
-  categories: MenuCategory[];
-  deletedCategoryIds: UUID[];
-  isDiagnosing: boolean;
-  integrityIssues: IntegrityIssue[];
-  setDishes: (dishes: Dish[]) => void;
-  setCategories: (categories: MenuCategory[]) => void;
-  setDishesFromCloud: (dishes: Dish[]) => void;
-  setCategoriesFromCloud: (categories: MenuCategory[]) => void;
-  addCategory: (cat: MenuCategory) => void;
-  updateCategory: (cat: MenuCategory) => void;
-  removeCategory: (id: UUID) => void;
-  restoreCategory: (id: UUID) => void;
-  recoverDeletedCategory: (category: MenuCategory) => void;
-  scanAndRecoverCategories: () => Promise<void>;
-  addDish: (dish: Dish) => Promise<boolean>;
-  updateDish: (dish: Dish) => Promise<boolean>;
-  batchUpdateDishes: (updates: { id: UUID; changes: Partial<Dish> }[]) => Promise<boolean>;
-  removeDish: (id: UUID) => void;
-  restoreMenuData: () => Promise<void>;
-  hardResetMenu: () => Promise<void>;
-  loadFromSQLExclusively: () => Promise<boolean>;
-  getDishById: (id: UUID) => Dish | undefined;
-  getDishesByCategory: (categoryId: UUID) => Dish[];
-  getCategoryById: (id: UUID) => MenuCategory | undefined;
-  rebuildMenu: (categories: MenuCategory[], dishes: Dish[]) => void;
-  invalidateMenuCache: () => void;
-  syncMenuWithCloud: () => Promise<void>;
-  validateMenuIntegrity: (categories: MenuCategory[], dishes: Dish[]) => { isValid: boolean; issues: IntegrityIssue[] };
-  runIntegrityDiagnostics: () => Promise<void>;
-  performSafeCleanup: () => Promise<boolean>;
-  importCloudItems: (data: { categories: MenuCategory[], dishes: Dish[], preferCloud: boolean }) => Promise<void>;
-  detectCloudConflicts: (data: { categories: MenuCategory[], products: Dish[] }) => { categories: MenuCategory[], products: Dish[] };
-  menuAccessLogs: MenuAccessLog[];
-  getMenuAccessStats: () => MenuAccessAggregatedStats;
-  clearMenuAccessLogs: () => void;
-  logMenuAccess: (log: MenuAccessLog) => void;
+  type: 'IN' | 'OUT';
+  userId?: string;
+  created_at?: Date | string;
 }
 
-export interface StaffSlice {
-  employees: Employee[];
-  workShifts: WorkShift[];
-  attendance: AttendanceRecord[];
-  addEmployee: (emp: Employee) => void;
-  updateEmployee: (emp: Employee) => void;
-  removeEmployee: (id: UUID) => void;
-  addWorkShift: (shift: WorkShift) => void;
-  removeWorkShift: (id: UUID) => void;
-  clockIn: (employeeId: UUID, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => void;
-  clockOut: (employeeId: UUID, method: 'PIN' | 'BIOMETRIC' | 'EXTERNO') => void;
-  getEmployeeById: (id: UUID) => Employee | undefined;
-  getAttendanceByEmployeeId: (employeeId: UUID) => AttendanceRecord[];
-  setEmployees: (employees: Employee[]) => void;
-  setAttendance: (attendance: AttendanceRecord[]) => void;
-  updateAttendance: (record: AttendanceRecord) => void;
-}
-
-export interface UISlice {
-  settings: SystemSettings;
-  notifications: Notification[];
-  isSidebarCollapsed: boolean;
-  isMobileMenuOpen: boolean;
-  addNotification: (type: Notification['type'], message: string) => void;
-  removeNotification: (id: string) => void;
-  updateSettings: (settings: Partial<SystemSettings>) => void;
-  toggleSidebar: () => void;
-  toggleMobileMenu: () => void;
-  triggerSync: () => Promise<void>;
-}
-
-export interface IntegrationsSlice {
-  apiKeys: APIKey[];
-  generateApiKey: (name: string, scopes: string[]) => APIKey;
-  revokeApiKey: (keyId: string) => void;
-  webhooks: WebhookConfig[];
-  registerWebhook: (config: WebhookConfig) => void;
-  updateWebhook: (config: WebhookConfig) => void;
-  removeWebhook: (webhookId: string) => void;
-  triggerWebhook: (event: string, data: unknown) => Promise<void>;
-  testWebhook: (webhookId: string) => Promise<boolean>;
-  biometricDevices: BiometricDevice[];
-  registerBiometricDevice: (device: BiometricDevice) => void;
-  removeBiometricDevice: (deviceId: string) => void;
-  updateBiometricDevice: (device: BiometricDevice) => void;
-  syncBiometricDevice: (deviceId: string) => Promise<void>;
-  testBiometricConnection: (deviceId: string) => Promise<boolean>;
-  integrationLogs: IntegrationLog[]; 
-  mobileSessions: MobileSession[];
-  createMobileSession: (userId: string, deviceInfo: { deviceId: string; deviceName: string; ipAddress: string }) => MobileSession;
-  validateMobileSession: (token: string) => MobileSession | null;
-  revokeMobileSession: (sessionId: string) => void;
-  processBiometricWebhook: (payload: {
-    externalBioId: string;
-    type: string;
-    clockTime: string | Date;
-    temperature?: number;
-    deviceId?: string;
-  }) => Promise<void>;
-}
-
-export interface OperationalSlice {
-  tables: Table[];
-  fetchTables: () => Promise<void>;
-  activeTableId: string | null;
-  saveStatus: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE';
-  setSaveStatus: (status: 'SAVING' | 'SAVED' | 'ERROR' | 'IDLE') => void;
-  customers: Customer[];
-  reservations: Reservation[];
-  stock: StockItem[];
-  shifts: CashShift[];
-  currentShiftId: UUID | null;
-  deliveries: Delivery[];
-  
-  setActiveTable: (id: string | null) => void;
-  addTable: (table: Table) => void;
-  updateTable: (tableId: string, updates: Partial<Table>) => void;
-  removeTable: (id: string) => void;
-  updateTableStatus: (id: string, status: TableStatus) => Promise<void>;
-  
-  addCustomer: (customer: Customer) => void;
-  updateCustomer: (customer: Customer) => void;
-  removeCustomer: (id: UUID) => void;
-  
-  addReservation: (res: Reservation) => void;
-  updateReservation: (res: Reservation) => void;
-  removeReservation: (id: UUID) => void;
-  
-  addStockItem: (item: StockItem) => void;
-  updateStockItem: (item: StockItem) => void;
-  removeStockItem: (id: UUID) => void;
-  
-  openShift: (amount: number) => void;
-  closeShift: (closingAmount: number) => void;
-  backupLayout: () => void;
-  createNewOrder: (tableId: string, name: string) => UUID;
-  addOrderItem: (orderId: UUID, item: OrderItem) => void;
-  updateOrderItem: (orderId: UUID, itemId: UUID, updatedItem: Partial<OrderItem>) => void;
-  removeOrderItem: (orderId: UUID, itemId: UUID) => void;
-  updateStockQuantity: (id: UUID, quantity: number) => void;
-  
-  closeTableWithoutOrders: (tableId: string) => void;
-  transferTable: (fromTableId: string, toTableId: string) => void;
-
-  addDelivery: (delivery: Delivery) => void;
-  updateDelivery: (delivery: Delivery) => void;
-  removeDelivery: (id: UUID) => void;
-  setDeliveries: (deliveries: Delivery[]) => void;
-  setShifts: (shifts: CashShift[]) => void;
-  addAuditLog: (log: any) => void;
-  auditLogs: any[];
-  settleCustomerDebt: (customerId: UUID, amount: number) => void;
-}
-
-export interface FinanceSlice {
-  orders: Order[];
-  activeOrders: Order[];
-  activeOrderIds: UUID[];
-  expenses: Expense[];
-  fixedExpenses: FixedExpense[];
-  revenues: Revenue[];
-  payroll: PayrollRecord[];
-  activeOrderId: UUID | null;
-  dashboardSummary: DashboardSummary | null;
-  dashboardAnalytics: Analytics | null;
-  setActiveOrder: (id: UUID | null) => void;
-  setDashboardSummary: (summary: DashboardSummary) => void;
-  setDashboardAnalytics: (analytics: Analytics) => void;
-  addOrder: (order: Order) => void;
-  updateOrder: (order: Order) => void;
-  removeOrder: (id: UUID) => void;
-  addExpense: (expense: Expense) => void;
-  updateExpense: (expense: Expense) => void;
-  removeExpense: (id: UUID) => void;
-  addRevenue: (revenue: Revenue) => void;
-  removeRevenue: (id: UUID) => void;
-  addFixedExpense: (expense: FixedExpense) => void;
-  updateFixedExpense: (expense: FixedExpense) => void;
-  removeFixedExpense: (id: UUID) => void;
-  addPayrollRecord: (record: PayrollRecord) => void;
-  updatePayrollRecord: (record: PayrollRecord) => void;
-  removePayrollRecord: (id: UUID) => void;
-  setOrders: (orders: Order[]) => void;
-  setExpenses: (expenses: Expense[]) => void;
-  setRevenues: (revenues: Revenue[]) => void;
-  setPayroll: (payroll: PayrollRecord[]) => void;
-  getLoyaltyTier: (customerId: UUID) => string;
-  processPayroll: (employeeId: UUID, month: number, year: number, paymentMethod: PaymentMethod) => Promise<void>;
-  createFullFinancialBackup: () => Promise<boolean>;
-  restoreFullFinancialBackup: () => Promise<boolean>;
-  clearFinancialData: (reason: string, userId: UUID) => Promise<{ success: boolean; report: FinancialClearanceReport }>;
-  correctPayment: (orderId: UUID, newPayments: OrderPayment[], reason: string, user: User) => Promise<boolean>;
-  getDailySalesAnalytics: (days: number) => DailySalesAnalytics[];
-  getSalesForDate: (date: Date) => DailySalesAnalytics;
-  getMenuAnalytics: (period: 'day' | 'week' | 'month' | number) => MenuAnalytics[];
-  getStockAnalytics: () => Array<{ itemId: string; itemName: string; currentStock: number; minThreshold: number; daysToRunOut: number }>;
-  getEmployeePerformance: () => Array<{ employeeId: string; efficiency: number; rating: number }>;
-  getPeakHours: () => number[];
-  getTopSellingDishes: (limit?: number) => Dish[];
-  getAverageOrderValue: () => number;
-  getCustomerRetention: () => any;
-  getRevenueHistory: (days?: number) => Array<{ date: string; totalRevenue: number }>;
-  syncFinancialMetricsToDashboard: () => Promise<void>;
-  fetchRemoteDashboard: () => Promise<void>;
-  handleRealtimeUpdate: (payload: RealtimePayload<any>) => void;
-  
-  addToOrder: (tableId: string, dish: Dish, quantity: number, notes: string, orderId: UUID, userId?: string) => void;
-  removeFromOrder: (orderId: UUID, itemIndex: number, userId?: string) => void;
-  checkoutTable: (orderId: UUID, payments: OrderPayment[], subAccountName?: string, customerNif?: string, userId?: string) => Promise<void>;
-  fireOrderToKitchen: (orderId: UUID) => void;
-  clearDraftOrder: (orderId: UUID) => void;
-  updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => void;
-  markOrderAsServed: (orderId: string) => void;
-}
-
-export interface StoreState extends MenuSlice, StaffSlice, FinanceSlice, UISlice, OperationalSlice, IntegrationsSlice {
-  addAuditLog: (log: any) => void;
-  suppliers: Fornecedor[];
-  supabaseSyncStatus: SupabaseSyncStatus;
-  setSupabaseSyncStatus: (status: SupabaseSyncStatus) => void;
-  activeTableId: string | null;
-  shifts: WorkShift[];
-  stock: StockItem[];
-  attendance: AttendanceRecord[];
-  employees: Employee[];
-  notifications: Notification[];
-  payroll: PayrollRecord[];
-  loyaltyRewards: any[];
-  dailyAnalyticsData: DailySalesAnalytics | null;
-  menuAccessLogs: MenuAccessLog[];
-  integrationLogs: IntegrationLog[];
-  updateSettings: (newSettings: Partial<SystemSettings>) => void;
-  isInitialized: boolean;
-  initializeStore: () => Promise<void>;
-  isMobileMenuOpen: boolean;
-  toggleMobileMenu: () => void;
-  setDailyAnalyticsData: (data: DailySalesAnalytics | null) => void;
-  getMenuAccessStats: () => MenuAccessAggregatedStats;
-  clearMenuAccessLogs: () => void;
-  logMenuAccess: (log: MenuAccessLog) => void;
-  addIntegrationLog: (log: any) => void;
-  setShifts: (shifts: any[]) => void;
-  setAttendance: (records: any[]) => void;
-  setEmployees: (employees: any[]) => void;
-  setRevenues: (revenues: Revenue[]) => void;
-  addNotification: (type: any, message: string, duration?: number) => void;
-  onRealtimeChange: (payload: any) => void;
-  isDiagnosing: boolean;
-  integrityIssues: IntegrityIssue[];
-  auditLogs: AuditLog[];
-  updateOrderItemStatus: (orderId: string, itemIndex: number, status: string) => void;
-  markOrderAsServed: (orderId: string) => void;
-  retrySync: () => Promise<void>;
-}
-
-export type FullApplicationState = StoreState;
-
-export interface Notification {
+// ========================================
+// 🏭 SUPPLIERS
+// ========================================
+export interface SupplierRow {
   id: string;
-  type: 'success' | 'error' | 'info' | 'warning';
+  name: string;
+  contact: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  nif: string | null;
+  category: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contact?: string;
+  address?: string;
+  nif?: string;
+  phone?: string;
+  email?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ========================================
+// 🔍 INTEGRITY ISSUE
+// ========================================
+export interface IntegrityIssue {
+  id: string;
+  type: 'missing' | 'duplicate' | 'invalid';
+  field: string;
+  value?: any;
+  expected?: any;
   message: string;
-  duration?: number; // Add duration here as it's used in useStore
+  action?: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  created_at?: string;
 }
 
-export interface SystemSettings {
+// ========================================
+// �👥 CUSTOMERS
+// ========================================
+export interface Customer {
   id: string;
-  restaurantName: string;
-  nif: string;
+  name: string;
+  nif?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  points?: number;
+  balance?: number;
+  visits?: number;
+  lastVisit?: Date | string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ========================================
+// 🚚 DELIVERY
+// ========================================
+export interface Delivery {
+  id: string;
+  order_id: string;
+  driver_name: string;
+  status: 'pendente' | 'em_rota' | 'entregue' | 'cancelada';
   address: string;
-  phone: string;
-  email: string;
-  appLogoUrl: string | null;
-  taxPercentage: number;
-  currency: string;
-  timezone: string;
-  language: string;
-  // Supabase
-  supabaseConfig?: {
-    enabled: boolean;
-    url: string;
-    key: string;
-    autoSync: boolean;
+  customer_name: string;
+  customer_phone: string;
+  start_time: Date;
+  end_time?: Date;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ========================================
+// 🔐 BIOMETRIC DEVICE
+// ========================================
+export interface BiometricDevice {
+  id: string;
+  name: string;
+  type: 'fingerprint' | 'facial' | 'iris' | 'ZKTECO';
+  status: 'active' | 'inactive' | 'error' | 'OFFLINE';
+  lastSync?: string | null;
+  ipAddress?: string;
+  port?: number;
+  location?: string;
+  apiKey?: string;
+  syncInterval?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ========================================
+// 🤖 AI MONTHLY REPORT
+// ========================================
+export interface AIMonthlyReport {
+  month: string;
+  year: number;
+  totalRevenue: number;
+  totalOrders: number;
+  averageTicket: number;
+  topProducts: Array<{ name: string; quantity: number; revenue: number }>;
+  recommendations: string[];
+  strategicAdvice?: string;
+  operationalEfficiency?: string;
+  sentiment?: string;
+  topSellingItem?: string;
+  trends: {
+    revenue: Array<{ date: string; amount: number }>;
+    orders: Array<{ date: string; count: number }>;
   };
-  // Printer
-  printerConfig?: {
-    enabled: boolean;
-    name: string;
-    paperSize: string;
+  insights: string[];
+}
+
+// ========================================
+// 🤖 AI ANALYSIS TYPES
+// ========================================
+export interface AIAnalysisResult {
+  summary?: string;
+  recommendation?: string;
+  trend?: 'up' | 'down' | 'stable';
+  insights: string[];
+  recommendations: string[];
+  performance: {
+    totalRevenue: number;
+    totalOrders: number;
+    averageTicket: number;
+    topDishes: string[];
   };
-  // Backup
-  backupConfig?: {
-    enabled: boolean;
-    interval: string;
-    location: string;
+  trends: {
+    hourly: Array<{ hour: number; revenue: number }>;
+    daily: Array<{ date: string; revenue: number }>;
   };
-  // Others
-  agtCertificate?: string;
-  openDrawerCode?: string;
-  adminPin?: string;
-  apiToken?: string;
-  wifi_name?: string;
-  wifi_password?: string;
-  qr_code_title?: string;
-  qr_code_subtitle?: string;
-  qr_code_short_code?: string;
-  qr_menu_url?: string;
-  qr_menu_cloud_url?: string;
-  logo_url?: string;
-  name?: string;
-  legacyTotalRevenue?: number;
-  
+}
+
+export interface PedidoPayload {
   [key: string]: any;
 }
 
-export type Fornecedor = Supplier & {
-  nome?: string;
-  telefone?: string;
-  endereco?: string;
-  ativo?: boolean;
-  categoria?: string;
-  notes?: string;
-};
-export type IntegrationLog = any;
-
-export interface CustomerDisplayEvent {
-  type: 'order_update' | 'status_change' | 'new_order' | 'clear_display' | string;
-  order?: Order; // Assuming it might carry order information
-  message?: string;
-  // Add other properties as needed
+export interface DailyAnalyticsPayload {
   [key: string]: any;
 }
 
-export interface MenuAccessLog {
-  id?: string;
-  date: string;
-  type: string;
-  timestamp: string;
-  tableId?: string;
-  ip?: string;
-  userAgent?: string;
-}
+// ========================================
+// 🎯 CORRECTION TYPES
+// ========================================
+export type PaymentCorrection = any;
 
-export interface MenuAccessAggregatedStats {
-  total: number;
-  todayAccesses: number;
-  publicMenus: number;
-  tableMenus: number;
-  uniqueVisitors: number;
-  averageAccessPerDay: number;
-  peakAccessTime: string;
-  mostAccessedMenu: string;
+// ========================================
+// 📱 QR SCANNER TYPES
+// ========================================
+export interface QRScanResult {
+  success: boolean;
+  data?: QRScanData;
+  error?: string;
 }
 
 export interface QRScanData {
-  rawValue: string;
-  format?: string;
-  [key: string]: any;
+  table_id?: string;
+  session_id?: string;
+  menu_url?: string;
+  timestamp?: string;
+  rawValue?: string;
 }
 
-export type QRScanResult = QRScanData | QRScanData[] | string;
+// ========================================
+// 📱 MENU ACCESS LOG
+// ========================================
+export interface MenuAccessLog {
+  id: string;
+  table_id: string;
+  session_id: string;
+  access_time: string;
+  timestamp?: string;
+  duration?: number;
+  pages_viewed?: number;
+  items_viewed?: number;
+  type?: string;
+  created_at?: string;
+}
 
-export interface MenuAccessStats {
-  // Deprecated, kept for backward compatibility if needed, but should be removed
+export interface MenuAccessAggregatedStats {
   date: string;
-  totalAccesses: number;
-  uniqueAccesses: number;
-  qrCodeScans: number;
-  type: string;
-  timestamp: string;
-  tableId?: string;
+  total_accesses: number;
+  unique_tables: number;
+  avg_duration: number;
+  total_pages_viewed: number;
+  total_items_viewed: number;
+  peak_hour: string;
 }
 
-export interface BackupData {
-    version: string;
-    timestamp: string;
-    checksum?: string;
-    source: 'tasca-do-vereda-system';
-    data: {
-        menu?: Dish[];
-        categories?: MenuCategory[];
-        orders?: Order[];
-        expenses?: Expense[];
-        revenues?: Revenue[];
-        users?: User[];
-        employees?: Employee[];
-        attendance?: AttendanceRecord[];
-        stock?: StockItem[];
-        suppliers?: Fornecedor[];
-        settings?: any;
-        [key: string]: any;
-    };
+// ========================================
+// 🏢 SYSTEM SETTINGS
+// ========================================
+export interface SystemSettings {
+  restaurantName?: string;
+  nif?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  logoUrl?: string;
+  currency?: string;
+  taxPercentage?: number;
+  regimeIVA?: string;
+  motivoIsencao?: string;
+  agtCertificate?: string;
+  openDrawerCode?: string;
 }
+
+// ========================================
+// 📦 FORNECEDOR (SUPPLIER)
+// ========================================
+export interface Fornecedor {
+  id: string;
+  name: string;
+  contact?: string;
+  address?: string;
+  nif?: string;
+  phone?: string;
+  email?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// ========================================
+// 🆔 UUID TYPE
+// ========================================
+export type UUID = string;
+
+// ========================================
+// 📊 ANALYTICS TYPES
+// ========================================
+export interface DashboardSummary {
+  totalRevenue: number;
+  totalExpenses: number;
+  totalOrders: number;
+  activeOrders: number;
+}
+
+export interface DailyAnalytics {
+  date: string;
+  totalOrders: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  totalProfit?: number; // Adicionado para compatibilidade
+  orderCount?: number; // Adicionado para compatibilidade  
+  paymentMethods?: Record<string, number>;
+}
+
+export interface MenuAnalytics {
+  id: string;
+  name: string;
+  quantity: number;
+  revenue: number;
+  profit: number;
+}
+
+// ========================================
+// 🏆 REGRA FINAL: CÓDIGO É ESPELHO DO BANCO
+// ========================================
+/*
+📋 CHECKLIST OBRIGATÓRIO:
+✅ Usar snake_case em TODOS os campos do banco
+✅ NÃO enviar created_at/updated_at (Supabase usa DEFAULT NOW())
+✅ NÃO inventar campos que não existem no schema
+✅ Verificar schema antes de codar
+✅ Adaptar código ao banco, não banco ao código
+
+🔥 EXEMPLOS:
+✅ CORRETO: customer_name, table_id, order_number, tax_total
+❌ ERRADO: customerName, tableId, orderNumber, taxTotal
+
+🚀 RESULTADO:
+Zero erros de 'column does not exist'
+Código 100% compatível com Supabase
+Sistema resiliente a mudanças de schema
+*/

@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { SystemSettings, Notification, StoreState } from '../../types';
+import { SystemSettings, Notification } from '../../types';
 import { saveSettingsAction } from '@/app/actions';
 import { logger } from '../../services/logger';
 import { supabaseService } from '../../services/supabaseService';
@@ -22,7 +22,7 @@ export interface UISlice {
 }
 
 export const createUISlice: StateCreator<
-  StoreState,
+  any,
   [['zustand/persist', unknown]],
   [],
   UISlice
@@ -73,7 +73,7 @@ export const createUISlice: StateCreator<
   
   addNotification: (type, message) => {
     const id = Math.random().toString(36).substring(7);
-    set((state: StoreState) => {
+    set((state: any) => {
       // LIMITE DE EMPILHAMENTO: manter apenas as 3 mais recentes
       const maxNotifications = 3;
       const recentNotifications = state.notifications.slice(-maxNotifications);
@@ -87,12 +87,12 @@ export const createUISlice: StateCreator<
     setTimeout(() => get().removeNotification(id), 3000);
   },
   
-  removeNotification: (id) => set((state: StoreState) => ({
+  removeNotification: (id) => set((state: any) => ({
     notifications: state.notifications.filter((n: Notification) => n.id !== id)
   })),
   
   updateSettings: (newSettings) => {
-    set((state: StoreState) => {
+    set((state: any) => {
       const updated = { ...state.settings, ...newSettings };
       saveSettingsAction(updated).then(res => {
         if (!res.success) logger.error('Failed to save settings', { error: res.error }, 'DATABASE');
@@ -103,13 +103,13 @@ export const createUISlice: StateCreator<
   
   toggleSidebar: () => {
     console.log('🔧 toggleSidebar chamado - estado atual:', get().isSidebarCollapsed);
-    set((state: StoreState) => ({ 
+    set((state: any) => ({ 
       isSidebarCollapsed: !state.isSidebarCollapsed 
     }));
     console.log('🔧 toggleSidebar - novo estado:', !get().isSidebarCollapsed);
   },
 
-  toggleMobileMenu: () => set((state: StoreState) => ({
+  toggleMobileMenu: () => set((state: any) => ({
     isMobileMenuOpen: !state.isMobileMenuOpen
   })),
 

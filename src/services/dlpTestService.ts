@@ -1,7 +1,7 @@
 import { disasterRecoveryService } from './disasterRecoveryService';
 import { validationService } from './validationService';
 import { logger } from './logger';
-import { FullApplicationState, Dish, MenuCategory, SystemSettings } from '../types';
+import { Dish, MenuCategory, SystemSettings } from '../types';
 
 /**
  * DLP Test Service
@@ -36,7 +36,7 @@ export const dlpTestService = {
     
     // This would be called with a reference to the store to actually corrupt it.
     // For now, we return the "corrupted" payload that should fail validation.
-    const corruptedData: Partial<FullApplicationState> = {};
+    const corruptedData: any = {};
     
     if (type === 'MENU') {
       corruptedData.dishes = [{ id: '', name: null as unknown as string } as unknown as Dish]; // Invalid dish

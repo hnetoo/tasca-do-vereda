@@ -121,13 +121,13 @@ export default function MenuDigital() {
       isActive: row.is_active ?? true,
       isAvailableOnDigitalMenu: row.is_available_on_digital_menu ?? true,
       available: row.available ?? true,
-      created_at: row.created_at ? new Date(row.created_at) : undefined,
-      updated_at: row.updated_at ? new Date(row.updated_at) : undefined,
+      created_at: row.created_at || undefined,
+      updated_at: row.updated_at || undefined,
       preparationTime: row.preparation_time || undefined,
       trackStock: row.track_stock ?? false,
       stockQuantity: row.stock_quantity ?? 0,
       minStockQuantity: row.min_stock_quantity ?? 0,
-      maxStockQuantity: row.max_stock_quantity ?? 0,
+      max_stock_quantity: row.max_stock_quantity ?? 0,
       unit: row.unit || 'un',
       supplierId: row.supplier_id || undefined
     };
@@ -279,11 +279,11 @@ export default function MenuDigital() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shadow-lg flex items-center justify-center w-[200px] h-[60px]">
-                 <Image src={settings?.appLogoUrl || '/logo.png'} alt={settings?.restaurantName || 'Logo'} width={200} height={60} className="object-contain" />
+                 <Image src={settings?.logoUrl || '/logo.png'} alt={settings?.restaurantName || 'Logo'} width={200} height={60} className="object-contain" />
               </div>
               <div className="min-w-0">
                 <h1 className="text-[18px] md:text-[20px] font-bold text-white leading-none mb-1 truncate">{settings?.restaurantName || 'Tasca do Vereda'}</h1>
-                <p className="text-xs text-slate-400 max-w-md truncate">{(settings?.description || 'Vitrine Digital').slice(0, 150)}</p>
+                <p className="text-xs text-slate-400 max-w-md truncate">Vitrine Digital</p>
               </div>
             </div>
             <div className="flex items-center gap-3">

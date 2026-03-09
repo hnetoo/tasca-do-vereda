@@ -300,7 +300,7 @@ const Kitchen = () => {
           </div>
         ) : (
           kitchenOrders.map((order: Order) => {
-            const { minutes, seconds } = getOrderDuration(order.createdAt as Date);
+            const { minutes, seconds } = getOrderDuration(order.createdAt ? new Date(order.createdAt) : new Date());
             const urgencyClass = getUrgencyColor(minutes);
             const timerColor = getTimerColor(minutes);
 

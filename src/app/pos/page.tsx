@@ -72,7 +72,7 @@ const POS = () => {
   const [pendingOrderForPrint, setPendingOrderForPrint] = useState<Order | null>(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isCorrecting, setIsCorrecting] = useState(false);
-  const [activeZone, setActiveZone] = useState<TableZone>('INTERIOR');
+  const [activeZone, setActiveZone] = useState<string>('INTERIOR');
   const [showMap, setShowMap] = useState(false);
 
   const isImmersive = settings.isSidebarCollapsed;
@@ -1427,8 +1427,8 @@ const POS = () => {
                   {showMap ? (
                     <div className="h-full flex flex-col p-4">
                        <div className="flex gap-3 mb-6 overflow-x-auto no-scrollbar shrink-0">
-                          {(['INTERIOR', 'EXTERIOR', 'BALCAO'] as TableZone[]).map(zone => {
-                             const Icon = zoneConfig[zone].icon;
+                          {(['INTERIOR', 'EXTERIOR', 'BALCAO'] as string[]).map(zone => {
+                             const Icon = zoneConfig[zone as keyof typeof zoneConfig].icon;
                              const isActive = activeZone === zone;
                              return (
                                <button
@@ -1439,14 +1439,14 @@ const POS = () => {
                                  `}
                                >
                                   <Icon size={18} />
-                                  <span className="text-xs font-black uppercase tracking-widest">{zoneConfig[zone].label}</span>
+                                  <span className="text-xs font-black uppercase tracking-widest">{zoneConfig[zone as keyof typeof zoneConfig].label}</span>
                                   <span className="bg-black/20 px-2 py-0.5 rounded text-[10px] opacity-60">{(tables || []).filter((t: Table) => t.zone === zone).length}</span>
                                </button>
                              );
                           })}
                        </div>
 
-                       <div className={`flex-1 relative glass-panel rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-700 ${zoneConfig[activeZone].bg}`}>
+                       <div className={`flex-1 relative glass-panel rounded-[2.5rem] border-white/5 shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-700 ${zoneConfig[activeZone as keyof typeof zoneConfig].bg}`}>
                           <div className="absolute inset-0 pointer-events-none opacity-[0.05]" 
                             style={{ 
                               backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
@@ -1466,7 +1466,7 @@ const POS = () => {
                           >
                             {Array.from({ length: GRID_ROWS }).map((_, y) => (
                               Array.from({ length: GRID_SIZE }).map((_, x) => {
-                                const table = tables.find((t: Table) => t.zone === activeZone && t.x === x && t.y === y);
+                                const table = tables.find((t: Table) => t.zone === activeZone && t.position?.x === x && t.position?.y === y);
                                 
                                 if (!table) return <div key={`${x}-${y}`} />;
 

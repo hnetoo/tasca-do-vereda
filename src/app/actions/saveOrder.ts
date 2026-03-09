@@ -22,10 +22,8 @@ export async function saveOrderAction(order: Order) {
       user_id: order.user_id || null, // SNAKE_CASE DIRETO
       user_name: order.user_name || null, // SNAKE_CASE DIRETO
       customer_id: order.customer_id || null, // SNAKE_CASE DIRETO
-      created_at: order.created_at || new Date().toISOString(), // SNAKE_CASE OBRIGATÓRIO
-      updated_at: order.updated_at || new Date().toISOString(), // SNAKE_CASE OBRIGATÓRIO
-      // REMOVIDOS TODOS CAMELCASE: closedAt, createdAt, updatedAt, etc.
-      // USAR APENAS CAMPOS SNAKE_CASE QUE EXISTEM NO SCHEMA
+      // REMOVIDO: created_at e updated_at - Supabase usa DEFAULT NOW()
+      // NÃO ENVIAR: created_at e updated_at para evitar erros de schema
     };
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);

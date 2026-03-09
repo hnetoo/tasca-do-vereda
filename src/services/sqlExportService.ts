@@ -64,8 +64,8 @@ export const generateSQLSchema = (
   sql += `  '${escapeSQL((settings.phone as string) || '')}',\n`;
   sql += `  '${escapeSQL((settings.email as string) || '')}',\n`;
   sql += `  '${escapeSQL((settings.currency as string) || 'Kz')}',\n`;
-  sql += `  ${(settings.taxRate as number) || 14},\n`;
-  sql += `  ${settings.kdsEnabled ? 1 : 0}\n`;
+  sql += `  ${(settings as any).tax_percentage || 14},\n`;
+  sql += `  ${(settings as any).kds_enabled ? 1 : 0}\n`;
   sql += `);\n\n`;
 
   // Categories

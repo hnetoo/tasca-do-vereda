@@ -31,14 +31,14 @@ const Reservations = () => {
 
   // Filter Logic
   const filteredReservations = reservations.filter((res: Reservation) => 
-    res.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+    res.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenModal = (res?: Reservation) => {
     if (res) {
       setEditingReservation(res);
       setForm({
-        customerName: res.customerName,
+        customerName: res.customer_name,
         date: new Date(res.date).toISOString().split('T')[0],
         time: res.time,
         guests: res.guests,
@@ -146,7 +146,7 @@ const Reservations = () => {
                     </div>
                     <div className="w-px h-10 bg-gray-700"></div>
                     <div>
-                        <h4 className="text-lg font-bold text-white">{res.customerName}</h4>
+                        <h4 className="text-lg font-bold text-white">{res.customer_name}</h4>
                         <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                             <span className="flex items-center gap-1"><Clock size={14} /> {res.time}</span>
                             <span className="flex items-center gap-1"><Users size={14} /> {res.guests} pax</span>

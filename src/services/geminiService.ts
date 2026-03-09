@@ -73,10 +73,11 @@ export const analyzeBusinessPerformance = async (
     const error = e as Error;
     logger.error("Erro na IA: Business Performance", { error: error.message }, 'AI');
     return {
-      summary: "Não foi possível analisar os dados no momento.",
-      recommendation: "Tente novamente mais tarde.",
-      trend: "stable"
-    };
+      insights: ["Não foi possível analisar os dados no momento."],
+      recommendations: ["Tente novamente mais tarde."],
+      performance: { totalRevenue: 0, totalOrders: 0, averageTicket: 0, topDishes: [] },
+      trends: { revenue: "stable", orders: "stable", customers: "stable" }
+    } as unknown as AIAnalysisResult;
   }
 };
 

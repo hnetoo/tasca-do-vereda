@@ -63,11 +63,11 @@ const RoleManagementModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <div className="p-4 border-t border-slate-700 bg-slate-900/50">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {permissions.map((perm) => (
-                      <div key={perm} className="flex items-start gap-2 text-sm text-slate-300 p-2 rounded hover:bg-slate-800/50">
+                      <div key={perm.id} className="flex items-start gap-2 text-sm text-slate-300 p-2 rounded hover:bg-slate-800/50">
                         <Check size={14} className="text-green-500 mt-1 flex-shrink-0" />
                         <div>
-                          <span className="font-medium block text-slate-200">{perm}</span>
-                          <span className="text-xs text-slate-500">{permissionDescriptions[perm as Permission] || perm}</span>
+                          <span className="font-medium block text-slate-200">{perm.name}</span>
+                          <span className="text-xs text-slate-500">{(permissionDescriptions as any)[perm.id] || perm.description}</span>
                         </div>
                       </div>
                     ))}

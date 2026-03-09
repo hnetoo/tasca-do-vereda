@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import { exportChartToPDF } from '@/services/exportService';
-import { PaymentMethod, DailySalesAnalytics } from '@/types';
+import { PaymentMethod, DailyAnalytics } from '@/types';
 import { getOrderDate, normalizeDate, buildDateRange } from '@/services/utils/dateUtils';
 import { formatKz } from '@/services/utils/currencyFormatter';
 
@@ -48,9 +48,9 @@ const Analytics = () => {
   const avgOrderValue = useMemo(() => 0, []);
   const retention = useMemo(() => [], []);
 
-  const totalRevenue = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + d.totalRevenue, 0) + (settings?.legacyTotalRevenue || 0), [dailyAnalytics, settings?.legacyTotalRevenue]);
-  const totalProfit = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
-  const totalOrders = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailySalesAnalytics) => acc + d.orderCount, 0), [dailyAnalytics]);
+  const totalRevenue = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailyAnalytics) => acc + d.totalRevenue, 0) + (settings?.legacyTotalRevenue || 0), [dailyAnalytics, settings?.legacyTotalRevenue]);
+  const totalProfit = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailyAnalytics) => acc + (d.totalProfit || 0), 0), [dailyAnalytics]);
+  const totalOrders = useMemo(() => dailyAnalytics.reduce((acc: number, d: DailyAnalytics) => acc + (d.orderCount || d.totalOrders || 0), 0), [dailyAnalytics]);
   const avgDaily = useMemo(() => totalRevenue / (selectedPeriod || 1), [totalRevenue, selectedPeriod]);
 
   const COLORS = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444'];

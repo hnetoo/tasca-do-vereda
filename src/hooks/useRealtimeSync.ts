@@ -2,13 +2,12 @@
 
 import { useEffect, useRef } from 'react'; 
 import { supabase } from '@/lib/supabase';
-import { RealtimePayload } from '@/types';
 import { useStore } from '@/store/useStore';
 import { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 
 export const useRealtimeSync = <T = any>(
   table: string,
-  callback: (payload: RealtimePayload<T>) => void,
+  callback: (payload: any) => void,
   filter?: { column: string; value: string | number }
 ) => {
   const setSaveStatus = useStore((state) => state.setSaveStatus);
@@ -31,7 +30,7 @@ export const useRealtimeSync = <T = any>(
           },
           (payload: any) => {
             console.log(`Mudança real-time em ${table} (filtrado por ${filter.column}=${filter.value}):`, payload);
-            callback(payload as unknown as RealtimePayload<T>);
+            callback(payload);
           }
         );
     } else {
@@ -46,7 +45,7 @@ export const useRealtimeSync = <T = any>(
           },
           (payload: any) => {
             console.log(`Mudança real-time em ${table}:`, payload);
-            callback(payload as unknown as RealtimePayload<T>);
+            callback(payload);
           }
         );
     }

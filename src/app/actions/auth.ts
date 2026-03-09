@@ -65,8 +65,7 @@ export async function verifyPinAction(pin: string): Promise<{ success: boolean; 
         email: user.email || '',
         role: user.role,
         permissions: user.permissions || [],
-        pin: '', // Don't return the PIN to client
-        isActive: user.active
+        active: user.active
       };
 
       // Set cookie for middleware

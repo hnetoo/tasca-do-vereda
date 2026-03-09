@@ -227,7 +227,7 @@ export const sqliteOperations = {
           dish.trackStock ? 1 : 0,
           dish.stockQuantity || 0,
           dish.minStockQuantity || 0,
-          dish.maxStockQuantity ?? null,
+          dish.max_stock_quantity ?? null,
           dish.unit || 'unidade',
           dish.supplierId || null,
           now,

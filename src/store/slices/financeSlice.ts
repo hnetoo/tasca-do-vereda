@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Order, Expense, Revenue, FixedExpense, PayrollRecord, PaymentMethod, StoreState, FinancialClearanceReport, FinancialBackupData, OrderPayment, PaymentCorrection, DailySalesAnalytics, MenuAnalytics, DashboardSummary, Analytics, UUID, Dish, OrderItemDetail, User } from '@/types';
+import { Order, Expense, Revenue, PayrollRecord, PaymentMethod, PaymentCorrection, DailyAnalytics, DashboardSummary, UUID, Dish, OrderItemDetail, User } from '@/types';
 import { logger } from '@/services/logger';
 import { backupService } from '@/services/backupService';
 import { adminOperations_fixed } from '@/services/database/adminOperations_fixed';
@@ -17,18 +17,12 @@ export interface FinanceSlice {
   activeOrders: Order[];
   activeOrderIds: UUID[];
   expenses: Expense[];
-  fixedExpenses: FixedExpense[];
   revenues: Revenue[];
   payroll: PayrollRecord[];
   paymentMethods: PaymentMethod[];
-  financialClearanceReports: FinancialClearanceReport[];
-  financialBackups: FinancialBackupData[];
-  orderPayments: OrderPayment[];
   paymentCorrections: PaymentCorrection[];
-  dailySalesAnalytics: DailySalesAnalytics[];
-  menuAnalytics: MenuAnalytics[];
+  dailySalesAnalytics: DailyAnalytics[];
   dashboardSummary: DashboardSummary | null;
-  analytics: Analytics | null;
   currentShiftId: UUID | null;
   currentShift: any;
   
@@ -68,14 +62,14 @@ export interface FinanceSlice {
   restoreBackup: (backupId: string) => Promise<void>;
   
   // Payment actions
-  addOrderPayment: (payment: OrderPayment) => void;
+  addOrderPayment: (payment: any) => void;
   correctPayment: (correction: PaymentCorrection) => void;
   
   // Clear data
   clearFinancialData: () => Promise<void>;
 }
 
-export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> = (set, get) => ({
+export const createFinanceSlice: StateCreator<any, [], [], FinanceSlice> = (set, get) => ({
   orders: [],
   activeOrders: [],
   activeOrderIds: [],
@@ -97,10 +91,10 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
 
   // Order actions
   addOrder: (order: Order) => {
-    set((state) => ({ orders: [...state.orders, order] }));
+    set((state: any) => ({ orders: [...state.orders, order] }));
     
     // Sync with Supabase
-    const { tableId, userId, userName, customerNif, customerId, shiftId, subAccountName, invoiceNumber, previousHash, jwsPayload, isSyncedAgt, agtSubmissionUuid, created_at, updated_at, closedAt, paymentMethod, splitPayments, customerName, ...rest } = order;
+    const { tableId, userId, userName, customerNif, customerId, shiftId, subAccountName, invoiceNumber, created_at, updated_at, paymentMethod, splitPayments, customerName, ...rest } = order;
     const supabaseOrder = { 
       ...order, 
       table_id: tableId ? String(tableId) : null, 
@@ -111,20 +105,15 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
       shift_id: shiftId || null, 
       sub_account_name: subAccountName || null, 
       invoice_number: invoiceNumber || null, 
-      previous_hash: previousHash || null, 
-      jws_payload: jwsPayload || null, 
-      is_synced_agt: isSyncedAgt || null, 
-      agt_submission_uuid: agtSubmissionUuid || null, 
       created_at: created_at || null, 
       updated_at: updated_at || null, 
-      closed_at: closedAt || null, 
       payment_method: paymentMethod || null, 
       split_payments: splitPayments || null, 
       customer_name: customerName || null 
     };
     
     // Usar adminOperations_fixed em vez de integrationAPIService
-    adminOperations_fixed.saveOrder(supabaseOrder).then((res: any) => {
+    adminOperations_fixed.saveOrder(supabaseOrder as any).then((res: any) => {
       if (!res.success) {
         logger.error('Failed to sync new order to Supabase', { id: order.id, error: res.error }, 'CLOUD');
         get().addNotification('error', 'Pedido guardado localmente, mas falhou a sincronização.');
@@ -135,9 +124,9 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
   },
 
   updateOrder: (order: Order) => {
-    set((state) => ({
-      orders: state.orders.map((o) => o.id === order.id ? order : o),
-      activeOrders: state.activeOrders.map((o) => o.id === order.id ? order : o),
+    set((state: any) => ({
+      orders: state.orders.map((o: any) => o.id === order.id ? order : o),
+      activeOrders: state.activeOrders.map((o: any) => o.id === order.id ? order : o),
     }));
     
     // Sync with Supabase usando adminOperations_fixed
@@ -152,10 +141,10 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
   },
 
   removeOrder: (orderId: UUID) => {
-    set((state) => ({
-      orders: state.orders.filter((o) => o.id !== orderId),
-      activeOrders: state.activeOrders.filter((o) => o.id !== orderId),
-      activeOrderIds: state.activeOrderIds.filter((id) => id !== orderId),
+    set((state: any) => ({
+      orders: state.orders.filter((o: any) => o.id !== orderId),
+      activeOrders: state.activeOrders.filter((o: any) => o.id !== orderId),
+      activeOrderIds: state.activeOrderIds.filter((id: any) => id !== orderId),
     }));
     
     // Remover do Supabase
@@ -164,8 +153,8 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
   },
 
   setActiveOrders: (orders: Order[]) => {
-    const orderIds = orders.map((o) => o.id);
-    set((state) => ({
+    const orderIds = orders.map((o: any) => o.id);
+    set((state: any) => ({
       activeOrders: orders,
       activeOrderIds: orderIds,
     }));
@@ -200,15 +189,15 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
 
   // Expense actions
   addExpense: (expense: Expense) => {
-    set((state) => ({ expenses: [...state.expenses, expense] }));
+    set((state: any) => ({ expenses: [...state.expenses, expense] }));
     
     // TODO: Implementar sync com Supabase quando método estiver disponível
     logger.info('Expense added locally', { id: expense.id }, 'FINANCE');
   },
 
   updateExpense: (expense: Expense) => {
-    set((state) => ({
-      expenses: state.expenses.map((e) => e.id === expense.id ? expense : e),
+    set((state: any) => ({
+      expenses: state.expenses.map((e: any) => e.id === expense.id ? expense : e),
     }));
     
     // TODO: Implementar sync com Supabase quando método estiver disponível
@@ -216,8 +205,8 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
   },
 
   removeExpense: (expenseId: UUID) => {
-    set((state) => ({
-      expenses: state.expenses.filter((e) => e.id !== expenseId),
+    set((state: any) => ({
+      expenses: state.expenses.filter((e: any) => e.id !== expenseId),
     }));
     
     // TODO: Implementar remoção do Supabase quando método estiver disponível
@@ -226,15 +215,15 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
 
   // Revenue actions
   addRevenue: (revenue: Revenue) => {
-    set((state) => ({ revenues: [...state.revenues, revenue] }));
+    set((state: any) => ({ revenues: [...state.revenues, revenue] }));
     
     // TODO: Implementar sync com Supabase quando método estiver disponível
     logger.info('Revenue added locally', { id: revenue.id }, 'FINANCE');
   },
 
   updateRevenue: (revenue: Revenue) => {
-    set((state) => ({
-      revenues: state.revenues.map((r) => r.id === revenue.id ? revenue : r),
+    set((state: any) => ({
+      revenues: state.revenues.map((r: any) => r.id === revenue.id ? revenue : r),
     }));
     
     // TODO: Implementar sync com Supabase quando método estiver disponível
@@ -242,8 +231,8 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
   },
 
   removeRevenue: (revenueId: UUID) => {
-    set((state) => ({
-      revenues: state.revenues.filter((r) => r.id !== revenueId),
+    set((state: any) => ({
+      revenues: state.revenues.filter((r: any) => r.id !== revenueId),
     }));
     
     // TODO: Implementar remoção do Supabase quando método estiver disponível
@@ -252,15 +241,15 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
 
   // Payroll actions
   addPayroll: (payroll: PayrollRecord) => {
-    set((state) => ({ payroll: [...state.payroll, payroll] }));
+    set((state: any) => ({ payroll: [...state.payroll, payroll] }));
     
     // TODO: Implementar sync com Supabase quando método estiver disponível
     logger.info('Payroll added locally', { id: payroll.id }, 'FINANCE');
   },
 
   updatePayroll: (payroll: PayrollRecord) => {
-    set((state) => ({
-      payroll: state.payroll.map((p) => p.id === payroll.id ? payroll : p),
+    set((state: any) => ({
+      payroll: state.payroll.map((p: any) => p.id === payroll.id ? payroll : p),
     }));
     
     // TODO: Implementar sync com Supabase quando método estiver disponível
@@ -268,8 +257,8 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
   },
 
   removePayroll: (payrollId: UUID) => {
-    set((state) => ({
-      payroll: state.payroll.filter((p) => p.id !== payrollId),
+    set((state: any) => ({
+      payroll: state.payroll.filter((p: any) => p.id !== payrollId),
     }));
     
     // TODO: Implementar remoção do Supabase quando método estiver disponível
@@ -279,7 +268,7 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
   // Analytics actions
   generateDailySalesAnalytics: async (date: string) => {
     try {
-      const orders = get().orders.filter(o => {
+      const orders = get().orders.filter((o: any) => {
         const createdAt = o.created_at;
         if (typeof createdAt === 'string') {
           return createdAt.startsWith(date);
@@ -288,7 +277,7 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
         }
         return false;
       });
-      const totalSales = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+      const totalSales = orders.reduce((sum: any, order: any) => sum + (order.total || 0), 0);
       const totalOrders = orders.length;
       
       // Simplificar analytics para evitar erros de tipo
@@ -307,9 +296,25 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
     }
   },
 
+  getTotalRevenue: (startDate?: string, endDate?: string) => {
+    const { revenues } = get();
+    return revenues
+      .filter((r: any) => {
+        const createdAt = r.created_at;
+        if (typeof createdAt === 'string' && startDate && endDate) {
+          return createdAt >= startDate && createdAt <= endDate;
+        } else if ((createdAt as any) instanceof Date && startDate && endDate) {
+          const isoString = (createdAt as any).toISOString();
+          return isoString >= startDate && isoString <= endDate;
+        }
+        return false;
+      })
+      .reduce((sum: any, revenue: any) => sum + revenue.amount, 0);
+  },
+
   generateMenuAnalytics: async (startDate: string, endDate: string) => {
     try {
-      const orders = get().orders.filter(o => {
+      const orders = get().orders.filter((o: any) => {
         const createdAt = o.created_at;
         if (typeof createdAt === 'string') {
           return createdAt >= startDate && createdAt <= endDate;
@@ -323,8 +328,8 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
       // Simplificar analytics para evitar erros de tipo
       const dishSales = new Map<string, { count: number; revenue: number }>();
       
-      orders.forEach(order => {
-        order.items?.forEach(item => {
+      orders.forEach((order: any) => {
+        order.items?.forEach((item: any) => {
           const dishId = item.dishId || 'unknown';
           if (!dishSales.has(dishId)) {
             dishSales.set(dishId, { count: 0, revenue: 0 });
@@ -359,7 +364,7 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
       const orders = get().orders;
       const expenses = get().expenses;
       
-      const todayOrders = orders.filter(o => {
+      const todayOrders = orders.filter((o: any) => {
         const createdAt = o.created_at;
         if (typeof createdAt === 'string') {
           return createdAt.startsWith(today);
@@ -369,8 +374,8 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
         return false;
       });
       
-      const todayRevenue = todayOrders.reduce((sum, order) => sum + (order.total || 0), 0);
-      const todayExpenses = expenses.filter(e => e.date === today).reduce((sum, expense) => sum + expense.amount, 0);
+      const todayRevenue = todayOrders.reduce((sum: any, order: any) => sum + (order.total || 0), 0);
+      const todayExpenses = expenses.filter((e: any) => e.date === today).reduce((sum: any, expense: any) => sum + expense.amount, 0);
       
       // Simplificar summary para evitar erros de tipo
       const summary = {
@@ -425,14 +430,14 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
   },
 
   // Payment actions - simplificadas
-  addOrderPayment: (payment: OrderPayment) => {
+  addOrderPayment: (payment: any) => {
     // TODO: Implementar storage quando tipo estiver definido
     logger.info('Order payment added', { paymentId: payment.id }, 'FINANCE');
   },
 
   correctPayment: (correction: PaymentCorrection) => {
     // Aplicar correção
-    const order = get().orders.find(o => o.id === correction.orderId);
+    const order = get().orders.find((o: any) => o.id === correction.orderId);
     if (order && correction.newTotal !== undefined) {
       get().updateOrder({
         ...order,

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'; // Centralized Supabase client
 
 import { logger } from '../logger';
 import { translateDatabaseError } from './errors';
-import { Order, OrderItem, Table, MenuCategory, Dish, CashShift, Expense, Revenue, Fornecedor, User, AttendanceRecord, PayrollRecord, SystemSettings, Customer, Employee, StockItem, LayoutBackup, Reservation, Delivery } from '../../types';
+import { Order, OrderItem, Table, MenuCategory, Dish, CashShift, Expense, Revenue, Fornecedor, User, AttendanceRecord, PayrollRecord, SystemSettings, Customer, Employee, StockItem, Reservation, Delivery } from '../../types';
 
 // Kwanza ORM Config (centralized)
 const KWANZA_CONFIG = {
@@ -351,7 +351,7 @@ export const databaseOperations = {
             track_stock: product.trackStock ?? false,
             stock_quantity: product.stockQuantity || 0,
             min_stock_quantity: product.minStockQuantity || 0,
-            max_stock_quantity: product.maxStockQuantity || null,
+            max_stock_quantity: product.max_stock_quantity || null,
             unit: product.unit || 'unidade',
             supplier_id: product.supplierId || null,
             updated_at: new Date().toISOString()
@@ -492,7 +492,7 @@ export const databaseOperations = {
               track_stock: dish.trackStock ?? false,
               stock_quantity: dish.stockQuantity || 0,
               min_stock_quantity: dish.minStockQuantity || 0,
-              max_stock_quantity: dish.maxStockQuantity || null,
+              max_stock_quantity: dish.max_stock_quantity || null,
               unit: dish.unit || 'unidade',
               supplier_id: dish.supplierId || null,
               updated_at: new Date().toISOString()
@@ -560,11 +560,11 @@ export const databaseOperations = {
             id: expense.id,
             description: expense.description,
             amount: expense.amount,
-            date: (expense.date as any) instanceof Date ? (expense.date as Date).toISOString() : expense.date,
+            date: (expense.date as any) instanceof Date ? (expense.date as unknown as Date).toISOString() : expense.date,
             category: expense.category,
-            payment_method: expense.paymentMethod || (expense as any).payment_method || null,
-            supplier_id: expense.supplierId || (expense as any).supplier_id || null,
-            paid: expense.paid ?? true,
+            payment_method: (expense as any).payment_method || null,
+            supplier_id: (expense as any).supplier_id || null,
+            paid: (expense as any).paid ?? true,
             notes: expense.notes || null,
             updated_at: new Date().toISOString()
         };
@@ -595,9 +595,9 @@ export const databaseOperations = {
             id: revenue.id,
             description: revenue.description,
             amount: revenue.amount,
-            date: revenue.date instanceof Date ? revenue.date.toISOString() : revenue.date,
+            date: (revenue.date as any) instanceof Date ? (revenue.date as unknown as Date).toISOString() : revenue.date,
             category: revenue.category,
-            payment_method: revenue.paymentMethod || (revenue as any).payment_method || null,
+            payment_method: (revenue as any).payment_method || null,
             updated_at: new Date().toISOString()
         };
 
@@ -631,7 +631,7 @@ export const databaseOperations = {
             id: orderId,
             table_id: (order as any).table_id || order.tableId || null,
             status: order.status || 'PENDENTE',
-            timestamp: order.timestamp instanceof Date ? order.timestamp.toISOString() : (order.timestamp || new Date().toISOString()),
+            timestamp: (order.timestamp as any) instanceof Date ? (order.timestamp as unknown as Date).toISOString() : (order.timestamp || new Date().toISOString()),
             total: order.total || 0,
             tax_total: (order as any).tax_total || order.taxTotal || 0,
             payment_method: (order as any).payment_method || order.paymentMethod || null,
@@ -675,13 +675,13 @@ export const databaseOperations = {
       // A criação da tabela deve ser feita por migrações, não em tempo de execução.
       const dbShift = {
         id: shift.id,
-        user_id: shift.userId || (shift as any).user_id || null,
-        user_name: shift.userName || (shift as any).user_name || null,
-        start_time: shift.startTime instanceof Date ? shift.startTime.toISOString() : (shift.startTime || (shift as any).start_time || new Date().toISOString()),
-        end_time: shift.endTime instanceof Date ? shift.endTime.toISOString() : (shift.endTime || (shift as any).end_time || null),
-        opening_balance: shift.openingBalance || (shift as any).opening_balance || 0,
-        closing_balance: shift.closingBalance || (shift as any).closing_balance || 0,
-        expected_balance: shift.expectedBalance || (shift as any).expected_balance || 0,
+        user_id: (shift as any).user_id || null,
+        user_name: (shift as any).user_name || null,
+        start_time: (shift as any).start_time || new Date().toISOString(),
+        end_time: (shift as any).end_time || null,
+        opening_balance: (shift as any).opening_balance || 0,
+        closing_balance: (shift as any).closing_balance || 0,
+        expected_balance: (shift as any).expected_balance || 0,
         status: shift.status || 'FECHADO'
       };
 
@@ -698,13 +698,13 @@ export const databaseOperations = {
       // A criação da tabela deve ser feita por migrações.
       const dbShifts = shifts.map(shift => ({
         id: shift.id,
-        user_id: shift.userId || (shift as any).user_id || null,
-        user_name: shift.userName || (shift as any).user_name || null,
-        start_time: shift.startTime instanceof Date ? shift.startTime.toISOString() : (shift.startTime || (shift as any).start_time || new Date().toISOString()),
-        end_time: shift.endTime instanceof Date ? shift.endTime.toISOString() : (shift.endTime || (shift as any).end_time || null),
-        opening_balance: shift.openingBalance || (shift as any).opening_balance || 0,
-        closing_balance: shift.closingBalance || (shift as any).closing_balance || 0,
-        expected_balance: shift.expectedBalance || (shift as any).expected_balance || 0,
+        user_id: (shift as any).user_id || null,
+        user_name: (shift as any).user_name || null,
+        start_time: (shift as any).start_time || new Date().toISOString(),
+        end_time: (shift as any).end_time || null,
+        opening_balance: (shift as any).opening_balance || 0,
+        closing_balance: (shift as any).closing_balance || 0,
+        expected_balance: (shift as any).expected_balance || 0,
         status: shift.status || 'FECHADO'
       }));
 
@@ -756,12 +756,20 @@ export const databaseOperations = {
 
   getTables: async (): Promise<Table[]> => {
     const result = await databaseOperations._handleDatabaseOperation(async (supabase) => {
-      const { data, error } = await supabase.from('restaurant_tables').select('id, status');
+      const { data, error } = await supabase.from('restaurant_tables').select('*');
       if (error) throw error;
       
       // Map database fields to application type if needed
       return (data || []).map(t => ({
-        ...t,
+        id: t.id,
+        number: t.number || 0,
+        status: t.status || 'AVAILABLE',
+        name: t.label || `Mesa ${t.number || 0}`,
+        label: t.label,
+        zone: t.zone,
+        capacity: t.seats,
+        position: { x: t.x || 0, y: t.y || 0 },
+        qrCode: t.qr_code,
         activeOrderIds: [] // Initialize runtime property
       })) as Table[];
     }, 'get tables', 'DATABASE');
@@ -814,9 +822,9 @@ export const databaseOperations = {
       const dbReservation = {
         id: reservation.id,
         table_id: reservation.tableId,
-        customer_name: reservation.customerName,
+        customer_name: reservation.customer_name,
         customer_phone: reservation.customerPhone,
-        date: reservation.date instanceof Date ? reservation.date.toISOString() : reservation.date,
+        date: (reservation.date as any) instanceof Date ? (reservation.date as unknown as Date).toISOString() : reservation.date,
         time: reservation.time,
         guests: reservation.guests,
         status: reservation.status,
@@ -872,14 +880,14 @@ export const databaseOperations = {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       const dbDelivery = {
         id: delivery.id,
-        order_id: delivery.orderId || delivery.order_id,
-        driver_name: delivery.driverName || delivery.driver_name,
+        order_id: delivery.order_id,
+        driver_name: delivery.driver_name,
         status: delivery.status,
         address: delivery.address,
-        customer_name: delivery.customerName || delivery.customer_name,
-        customer_phone: delivery.customerPhone || delivery.customer_phone,
-        start_time: delivery.startTime instanceof Date ? delivery.startTime.toISOString() : delivery.startTime || delivery.start_time,
-        end_time: delivery.endTime instanceof Date ? delivery.endTime.toISOString() : delivery.endTime || delivery.end_time
+        customer_name: delivery.customer_name,
+        customer_phone: delivery.customer_phone,
+        start_time: delivery.start_time,
+        end_time: delivery.end_time
       };
       const { error } = await supabase.from('deliveries').upsert(dbDelivery);
       if (error) throw error;
@@ -898,33 +906,14 @@ export const databaseOperations = {
   saveSettings: async (settings: SystemSettings, client?: SupabaseClient<any>): Promise<{ success: boolean; error?: string }> => {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       const dbSettings = {
-        id: settings.id,
-        restaurant_name: settings.restaurantName || settings.restaurant_name,
+        restaurant_name: (settings as any).restaurant_name,
         nif: settings.nif,
         address: settings.address,
         phone: settings.phone,
         email: settings.email,
-        tax_percentage: settings.taxPercentage || settings.tax_percentage,
+        tax_percentage: (settings as any).tax_percentage,
         currency: settings.currency,
-        timezone: settings.timezone,
-        language: settings.language,
-        supabase_config: settings.supabaseConfig || settings.supabase_config,
-        printer_config: settings.printerConfig || settings.printer_config,
-        backup_config: settings.backupConfig || settings.backup_config,
-        app_logo_url: settings.appLogoUrl || settings.app_logo_url,
-        agt_certificate: settings.agtCertificate || settings.agt_certificate,
-        open_drawer_code: settings.openDrawerCode || settings.open_drawer_code,
-        admin_pin: settings.adminPin || settings.admin_pin,
-        api_token: settings.apiToken || settings.api_token,
-        wifi_name: settings.wifi_name,
-        wifi_password: settings.wifi_password,
-        qr_code_title: settings.qr_code_title,
-        qr_code_subtitle: settings.qr_code_subtitle,
-        qr_code_short_code: settings.qr_code_short_code,
-        qr_menu_url: settings.qr_menu_url,
-        qr_menu_cloud_url: settings.qr_menu_cloud_url,
-        logo_url: settings.logo_url,
-        name: settings.name
+        logo_url: settings.logoUrl || (settings as any).logo_url
       };
       const { error } = await supabase.from('settings').upsert(dbSettings);
       if (error) {
@@ -962,12 +951,12 @@ export const databaseOperations = {
     return databaseOperations._handleDatabaseOperation(async (supabase) => {
       const dbEmployees = employees.map(e => ({
         ...e,
-        admission_date: e.admissionDate instanceof Date ? e.admissionDate.toISOString() : (e.admissionDate || e.admission_date),
+        admission_date: (e.admissionDate as any) instanceof Date ? (e.admissionDate as unknown as Date).toISOString() : (e.admissionDate || e.admission_date),
         social_security_number: e.socialSecurityNumber || e.social_security_number,
         bank_account: e.bankAccount || e.bank_account,
         is_active: e.isActive ?? e.is_active,
-        created_at: e.createdAt instanceof Date ? e.createdAt.toISOString() : (e.createdAt || e.created_at || new Date().toISOString()),
-        updated_at: e.updatedAt instanceof Date ? e.updatedAt.toISOString() : (e.updatedAt || e.updated_at || new Date().toISOString())
+        created_at: (e.createdAt as any) instanceof Date ? (e.createdAt as unknown as Date).toISOString() : (e.createdAt || e.created_at || new Date().toISOString()),
+        updated_at: (e.updatedAt as any) instanceof Date ? (e.updatedAt as unknown as Date).toISOString() : (e.updatedAt || e.updated_at || new Date().toISOString())
       }));
       const { error } = await supabase.from('employees').upsert(dbEmployees);
       if (error) throw error;
@@ -994,8 +983,8 @@ export const databaseOperations = {
         clock_out: r.clockOut instanceof Date ? r.clockOut.toISOString() : (r.clockOut || r.clock_out),
         clock_in_method: r.clockInMethod || r.clock_in_method,
         clock_out_method: r.clockOutMethod || r.clock_out_method,
-        total_hours: r.totalHours || r.total_hours,
-        is_late: r.isLate ?? r.is_late,
+        total_hours: (r as any).total_hours || 0,
+        is_late: (r as any).is_late ?? false,
         late_minutes: r.lateMinutes || r.late_minutes,
         overtime_hours: r.overtimeHours || r.overtime_hours,
         is_absence: r.isAbsence ?? r.is_absence,
@@ -1016,7 +1005,7 @@ export const databaseOperations = {
             email: u.email,
             name: u.name,
             role: u.role,
-            pin: u.pin
+            pin: (u as any).pin,
         })));
         if (error) throw error;
         return true;
@@ -1041,7 +1030,7 @@ export const databaseOperations = {
             year: p.year,
             base_salary: p.baseSalary || (p as any).base_salary || 0,
             amount: p.amount,
-            date: p.date instanceof Date ? p.date.toISOString() : p.date,
+            date: (p.date as any) instanceof Date ? (p.date as unknown as Date).toISOString() : p.date,
             created_at: (p as any).created_at || (p as any).createdAt || new Date().toISOString()
         })));
         if (error) throw error;

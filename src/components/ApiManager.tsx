@@ -74,7 +74,7 @@ export const ApiManager = () => {
       const newWebhook: WebhookConfig = {
         ...webhookForm as WebhookConfig,
         id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
         failureCount: 0,
       };
       registerWebhook(newWebhook);

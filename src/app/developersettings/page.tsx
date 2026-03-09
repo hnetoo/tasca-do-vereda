@@ -332,8 +332,8 @@ const DeveloperSettings = () => {
                   {integrationLogs.map((l: IntegrationLog) => {
                     return (
                     <tr key={l.id} className="border-b border-white/5 hover:bg-white/5 transition-all">
-                      <td className="py-3 px-4 font-bold">{l.integrationName}</td>
-                      <td className="py-3 px-4 text-slate-300">{(l.request as any)?.message || (l as any).eventType}</td>
+                      <td className="py-3 px-4 font-bold">{l.service}</td>
+                      <td className="py-3 px-4 text-slate-300">{l.event}</td>
                       <td className="py-3 px-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                           (l as any).status === 'FAILED'
@@ -347,7 +347,7 @@ const DeveloperSettings = () => {
                         {formatDateInLuanda((l as any).timestamp, { timeStyle: 'medium' })}
                       </td>
                       <td className="py-3 px-4 text-slate-400">
-                        {(l.request as any)?.details ? JSON.stringify((l.request as any).details).substring(0, 30) + '...' : '-'}
+                        {l.request_data ? JSON.stringify(l.request_data).substring(0, 30) + '...' : '-'}
                       </td>
                     </tr>
                   );

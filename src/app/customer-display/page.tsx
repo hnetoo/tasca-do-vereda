@@ -140,7 +140,7 @@ const CustomerDisplayContent = () => {
               {paymentItems.filter(Boolean).map((item: OrderItem, idx: number) => {
                 const dish = menu.find((d: Dish) => d.id === item.dishId);
                 const quantity = item.quantity || 0;
-                const unitPrice = item.unitPrice || 0;
+                const unit_price = item.unit_price || 0;
                 return (
                   <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -151,11 +151,11 @@ const CustomerDisplayContent = () => {
                         <p className="text-sm font-black text-white uppercase tracking-tighter truncate">{dish?.name}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="px-2 py-0.5 bg-primary text-black text-[10px] font-black rounded">{quantity}x</span>
-                          <span className="text-slate-500 font-mono text-xs">{formatKz(unitPrice)}</span>
+                          <span className="text-slate-500 font-mono text-xs">{formatKz(unit_price)}</span>
                         </div>
                       </div>
                     </div>
-                    <p className="text-lg font-mono font-bold text-white whitespace-nowrap">{formatKz(unitPrice * quantity)}</p>
+                    <p className="text-lg font-mono font-bold text-white whitespace-nowrap">{formatKz(unit_price * quantity)}</p>
                   </div>
                 );
               })}
@@ -258,7 +258,7 @@ const CustomerDisplayContent = () => {
               (allItems.filter(Boolean) as OrderItem[]).map((item: OrderItem, idx: number) => {
                 const dish = menu.find((d: Dish) => d.id === item.dishId);
                 const quantity = item.quantity || 0;
-                const unitPrice = item.unitPrice || 0;
+                const unit_price = item.unit_price || 0;
                 return (
                   <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all animate-in slide-in-from-right duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -269,11 +269,11 @@ const CustomerDisplayContent = () => {
                           <p className="text-sm font-black text-white uppercase tracking-tighter truncate pr-2">{dish?.name}</p>
                           <div className="flex items-center gap-2 mt-1">
                              <span className="px-2 py-0.5 bg-primary text-black text-[10px] font-black rounded">{quantity}x</span>
-                             <span className="text-slate-500 font-mono text-xs">{formatKz(unitPrice)}</span>
+                             <span className="text-slate-500 font-mono text-xs">{formatKz(unit_price)}</span>
                           </div>
                        </div>
                     </div>
-                    <p className="text-lg font-mono font-bold text-white group-hover:text-primary transition-colors whitespace-nowrap">{formatKz(unitPrice * quantity)}</p>
+                    <p className="text-lg font-mono font-bold text-white group-hover:text-primary transition-colors whitespace-nowrap">{formatKz(unit_price * quantity)}</p>
                   </div>
                 );
               })

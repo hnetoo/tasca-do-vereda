@@ -3,7 +3,7 @@ import { logger } from "./logger";
 
 export async function fetchMenuFromFeed(settings: SystemSettings) {
   try {
-    const base = settings.qrMenuCloudUrl || "";
+    const base = (settings as any).qr_menu_cloud_url || "";
     const url = base ? `${base.replace(/\/+$/, "")}/menu_feed.json` : "/menu_feed.json";
     const res = await fetch(url, { cache: "no-cache" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

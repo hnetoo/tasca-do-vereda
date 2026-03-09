@@ -1,4 +1,4 @@
-import { MenuCategory, Product, Order, SystemSettings, Employee, FullApplicationState } from "../types";
+import { MenuCategory, Product, Order, SystemSettings, Employee } from "../types";
 
 
 export interface ValidationResult {

@@ -30,10 +30,10 @@ const paymentLabels: Record<PaymentMethod, string> = {
 
 const extractPayments = (order: Order) => {
   if (order.splitPayments && order.splitPayments.length > 0) {
-    return order.splitPayments.map(p => ({ method: p.method, amount: p.amount }));
+    return order.splitPayments.map((p: any) => ({ method: p.method, amount: p.amount }));
   }
   if (order.payments && order.payments.length > 0) {
-    return order.payments.map(p => ({ method: p.method, amount: p.amount }));
+    return order.payments.map((p: any) => ({ method: p.method, amount: p.amount }));
   }
   if (order.paymentMethod) {
     return [{ method: order.paymentMethod, amount: order.total }];
@@ -131,7 +131,7 @@ const Reports = () => {
     const paymentAggregates: Record<string, number> = {};
     filteredOrders.forEach((order: any) => {
       const payments = extractPayments(order);
-      payments.forEach(payment => {
+      payments.forEach((payment: any) => {
         const key = payment.method;
         const amount = payment.amount || 0;
         paymentAggregates[key] = (paymentAggregates[key] || 0) + amount;
@@ -369,7 +369,7 @@ const Reports = () => {
                   </div>
                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
                      <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Sentiment</p>
-                     <p className="text-sm font-black text-blue-400">{report.customerSentiment}</p>
+                     <p className="text-sm font-black text-blue-400">{report.sentiment}</p>
                   </div>
                </div>
 

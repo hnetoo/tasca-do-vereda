@@ -26,7 +26,7 @@ const Customers = () => {
 
   const filteredCustomers = customers.filter((c: Customer) => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone.includes(searchTerm)
+    (c.phone && c.phone.includes(searchTerm))
   );
 
   const formatKz = (val: number) => new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA' }).format(val);
@@ -39,8 +39,8 @@ const Customers = () => {
         nif: c.nif || 'N/A',
         visits: c.visits,
         points: c.points,
-        balance: formatKz(c.balance),
-        status: c.balance > 0 ? 'Devedor' : 'Regular'
+        balance: formatKz(c.balance || 0),
+        status: (c.balance || 0) > 0 ? 'Devedor' : 'Regular'
       })),
       columns: [
         { header: 'Nome', dataKey: 'name' },
@@ -200,7 +200,7 @@ const Customers = () => {
           
           <div class="row total-row">
             <span>SALDO DEVEDOR:</span>
-            <span>${formatKz(customer.balance)}</span>
+            <span>${formatKz(customer.balance || 0)}</span>
           </div>
           
           <div class="footer">
@@ -281,10 +281,10 @@ const Customers = () => {
                              </div>
                         </td>
                         <td className="px-6 py-4">
-                            {customer.balance > 0 ? (
+                            {(customer.balance || 0) > 0 ? (
                                 <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-1 rounded-lg w-fit">
                                     <Wallet size={16} />
-                                    <span className="font-bold">{formatKz(customer.balance)}</span>
+                                    <span className="font-bold">{formatKz(customer.balance || 0)}</span>
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1 rounded-lg w-fit">
@@ -295,9 +295,9 @@ const Customers = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                                {customer.balance > 0 && (
-                                    <button 
-                                        onClick={() => setPaymentModal({ id: customer.id, name: customer.name, debt: customer.balance })}
+                                {(customer.balance || 0) > 0 && (
+                                    <button
+                                        onClick={() => setPaymentModal({ id: customer.id, name: customer.name, debt: customer.balance || 0 })}
                                         className="px-3 py-2 rounded-lg bg-primary text-white text-xs font-bold shadow hover:bg-orange-800 transition-colors"
                                     >
                                         Pagar

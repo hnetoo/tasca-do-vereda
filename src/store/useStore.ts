@@ -24,7 +24,6 @@ import {
   Dish,
   Employee,
   OrderItem,
-  OrderPayment,
   PaymentMethod,
   MenuCategory,
   StockItem,
@@ -33,16 +32,12 @@ import {
   Customer,
   Supplier,
   UUID,
-  MenuAnalytics,
   DashboardSummary,
-  Analytics,
   MenuAccessLog,
   MenuAccessAggregatedStats,
   IntegrityIssue,
-  WorkShift,
   AttendanceRecord,
   SystemSettings,
-  SupabaseSyncStatus,
   Notification,
   AuditLog,
   Permission
@@ -115,7 +110,7 @@ export const useStore = create<any>()(
         errorMessage: null,
         retries: 0
       },
-      setSupabaseSyncStatus: (status: SupabaseSyncStatus) => set({ supabaseSyncStatus: status }),
+      setSupabaseSyncStatus: (status: any) => set({ supabaseSyncStatus: status }),
       
       databaseConfig: undefined,
       setDatabaseConfig: (config: any) => set({ databaseConfig: config }),
@@ -125,6 +120,7 @@ export const useStore = create<any>()(
         const notification: Notification = {
           id: crypto.randomUUID() as UUID,
           type: type as any,
+          title: type,
           message
         };
         set((state: any) => ({ notifications: [notification, ...state.notifications].slice(0, 50) }));

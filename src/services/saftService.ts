@@ -86,7 +86,7 @@ export const generateSAFT = async (
         const item = items[j];
         const dish = menu.find(m => m.id === item.dishId);
         const taxCode = dish?.taxCode || 'NOR';
-        const taxRate = (settings.taxRate as number) || 14;
+        const taxRate = (settings as any).tax_percentage || 14;
         linesXml += `
         <Line>
           <LineNumber>${j + 1}</LineNumber>
@@ -170,7 +170,7 @@ export const generateSAFT = async (
         <TaxCountryRegion>AO</TaxCountryRegion>
         <TaxCode>NOR</TaxCode>
         <Description>Taxa Normal</Description>
-        <TaxPercentage>${Number(settings.taxRate).toFixed(2)}</TaxPercentage>
+        <TaxPercentage>${Number((settings as any).tax_percentage || 14).toFixed(2)}</TaxPercentage>
       </TaxTableEntry>
       <TaxTableEntry>
         <TaxType>IVA</TaxType>

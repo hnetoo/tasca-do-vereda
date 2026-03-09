@@ -1,5 +1,19 @@
-import { StoreState, Dish, MenuCategory, Order, Expense, Revenue, User, Employee, AttendanceRecord, StockItem, Fornecedor, FinancialBackupData } from '../types';
-export type { FinancialBackupData };
+import { Dish, MenuCategory, Order, Expense, Revenue, User, Employee, AttendanceRecord, StockItem, Fornecedor } from '../types';
+
+type FinancialBackupData = {
+  orders: Order[];
+  expenses: Expense[];
+  revenue: Revenue[];
+  revenues: Revenue[];
+  payroll: any[];
+  users: User[];
+  employees: Employee[];
+  attendance: AttendanceRecord[];
+  stock: StockItem[];
+  suppliers: Fornecedor[];
+  dishes: Dish[];
+  categories: MenuCategory[];
+};
 import { logger } from './logger';
 import { integrationAPIService } from './integrationAPIService';
 import { invoke, isTauri } from '@tauri-apps/api/core';

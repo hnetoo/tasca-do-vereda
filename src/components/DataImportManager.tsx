@@ -86,8 +86,8 @@ export const DataImportManager = () => {
                 isActive: true,
                 isAvailableOnDigitalMenu: true,
                 sortOrder: 0,
-                created_at: new Date(),
-                updated_at: new Date()
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             };
             // Note: addCategory might be async in some implementations, but here it's Zustand action
             addCategory(newCategory);
@@ -108,8 +108,8 @@ export const DataImportManager = () => {
                 categoryId: 'uncategorized', // robust import would resolve this
                 isActive: true,
                 isAvailableOnDigitalMenu: true,
-                created_at: new Date(),
-                updated_at: new Date()
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             };
             addDish(newDish);
             productsCount++;
@@ -148,8 +148,8 @@ export const DataImportManager = () => {
                     isActive: true,
                     isAvailableOnDigitalMenu: true,
                     sortOrder: 0,
-                    created_at: new Date(),
-                    updated_at: new Date()
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                 };
                 addCategory(newCategory);
                 categoriesCount++;
@@ -164,8 +164,8 @@ export const DataImportManager = () => {
                     categoryId: 'uncategorized',
                     isActive: true,
                     isAvailableOnDigitalMenu: true,
-                    created_at: new Date(),
-                    updated_at: new Date()
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                 };
                 addDish(newDish);
                 productsCount++;

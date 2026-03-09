@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { Table, Customer, Reservation, StockItem, CashShift, StoreState, Delivery, UUID, OrderItem, Order, TableStatus, Dish } from '../../types';
+import { Table, Customer, Reservation, StockItem, CashShift, Delivery, UUID, OrderItem, Order, TableStatus, Dish } from '../../types';
 import { 
   saveTableAction, 
   deleteTableAction, 
@@ -56,9 +56,9 @@ export interface OperationalSlice {
   closeShift: (closingAmount: number) => void;
   backupLayout: () => void;
   createNewOrder: (tableId: string, name: string) => UUID;
-  addOrderItem: (orderId: UUID, item: OrderItem) => void;
-  updateOrderItem: (orderId: UUID, itemId: UUID, updatedItem: Partial<OrderItem>) => void;
-  removeOrderItem: (orderId: UUID, itemId: UUID) => void;
+  addOrderItem: (order_id: UUID, item: OrderItem) => void;
+  updateOrderItem: (order_id: UUID, itemId: UUID, updatedItem: Partial<OrderItem>) => void;
+  removeOrderItem: (order_id: UUID, itemId: UUID) => void;
   updateStockQuantity: (id: UUID, quantity: number) => void;
   
   closeTableWithoutOrders: (tableId: string) => void;
@@ -75,7 +75,7 @@ export interface OperationalSlice {
 }
 
 export const createOperationalSlice: StateCreator<
-  StoreState,
+  any,
   [['zustand/persist', unknown]],
   [],
   OperationalSlice
@@ -106,7 +106,7 @@ export const createOperationalSlice: StateCreator<
 
   settleCustomerDebt: (customerId: UUID, amount: number) => {
     const state = get();
-    const customer = state.customers.find(c => c.id === customerId);
+    const customer = state.customers.find((c: any) => c.id === customerId);
     if (customer) {
       const newBalance = (customer.balance || 0) - amount;
       const updatedCustomer = { ...customer, balance: newBalance };
@@ -124,14 +124,14 @@ export const createOperationalSlice: StateCreator<
 
   setActiveTable: (id: string | null) => {
     if (id && id !== 'balcao-999') {
-      get().updateTableStatus(id, 'OCCUPIED');
+      get().updateTableStatus(id, 'ocupada');
     }
     set({ activeTableId: id });
   },
   
   addTable: (table: Table) => {
     set({ saveStatus: 'SAVING' });
-    set((state) => ({ tables: [...state.tables, table] }));
+    set((state: any) => ({ tables: [...state.tables, table] }));
     saveTableClient(table).then(res => {
       if (!res.success) {
         set({ saveStatus: 'ERROR' });
@@ -147,11 +147,11 @@ export const createOperationalSlice: StateCreator<
   },
   
   updateTable: (tableId: string, updates: Partial<Table>) => {
-    const table = get().tables.find(t => t.id === tableId);
+    const table = get().tables.find((t: any) => t.id === tableId);
     if (!table) return;
     
     set({ saveStatus: 'SAVING' });
-    set((state) => ({
+    set((state: any) => ({
       tables: state.tables.map((t: Table) => t.id === tableId ? { ...t, ...updates } : t)
     }));
     saveTableClient({ ...table, ...updates }).then(res => {
@@ -170,7 +170,7 @@ export const createOperationalSlice: StateCreator<
   
   removeTable: (id: string) => {
     set({ saveStatus: 'SAVING' });
-    set((state) => ({
+    set((state: any) => ({
       tables: state.tables.filter((t: Table) => t.id !== id)
     }));
     deleteTableClient(id).then(res => {
@@ -206,8 +206,8 @@ export const createOperationalSlice: StateCreator<
     });
 
     // 1. Atualização Otimista
-    set((state) => ({
-      tables: state.tables.map((t) =>
+    set((state: any) => ({
+      tables: state.tables.map((t: any) =>
         t.id === tableId ? { ...t, status: 'UPDATING' } : t
       ),
     }));
@@ -218,8 +218,8 @@ export const createOperationalSlice: StateCreator<
 
       if (success) {
         // 3. Sucesso: Atualizar para o estado final
-        set((state) => ({
-          tables: state.tables.map((t) =>
+        set((state: any) => ({
+          tables: state.tables.map((t: any) =>
             t.id === tableId ? { ...t, status: newStatus } : t
           ),
         }));
@@ -266,8 +266,8 @@ export const createOperationalSlice: StateCreator<
       get().addNotification?.('error', `Não foi possível atualizar a mesa ${tableName}: ${errorMessage}`);
       
       // Reverter para o estado original
-      set((state) => ({
-        tables: state.tables.map((t) =>
+      set((state: any) => ({
+        tables: state.tables.map((t: any) =>
           t.id === tableId ? { ...t, status: originalStatus } : t
         ),
       }));
@@ -275,7 +275,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   addCustomer: (customer: Customer) => {
-    set((state) => ({ customers: [...state.customers, customer] }));
+    set((state: any) => ({ customers: [...state.customers, customer] }));
     saveCustomerAction(customer).then(res => {
       if (!res.success) logger.error('Failed to persist new customer to SQL', { id: customer.id, error: res.error }, 'DATABASE');
     }).catch(e => 
@@ -284,7 +284,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   updateCustomer: (customer: Customer) => {
-    set((state) => ({
+    set((state: any) => ({
       customers: state.customers.map((c: Customer) => c.id === customer.id ? customer : c)
     }));
     saveCustomerAction(customer).then(res => {
@@ -295,7 +295,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   removeCustomer: (id: UUID) => {
-    set((state) => ({
+    set((state: any) => ({
       customers: state.customers.filter((c: Customer) => c.id !== id)
     }));
     deleteCustomerAction(id).then(res => {
@@ -305,18 +305,18 @@ export const createOperationalSlice: StateCreator<
     );
   },
   
-  addReservation: (res: Reservation) => set((state) => ({ reservations: [...state.reservations, res] })),
+  addReservation: (res: Reservation) => set((state: any) => ({ reservations: [...state.reservations, res] })),
   
-  updateReservation: (res: Reservation) => set((state) => ({
+  updateReservation: (res: Reservation) => set((state: any) => ({
     reservations: state.reservations.map((r: Reservation) => r.id === res.id ? res : r)
   })),
   
-  removeReservation: (id: UUID) => set((state) => ({
+  removeReservation: (id: UUID) => set((state: any) => ({
     reservations: state.reservations.filter((r: Reservation) => r.id !== id)
   })),
   
   addStockItem: (item: StockItem) => {
-    set((state) => ({ stock: [...state.stock, item] }));
+    set((state: any) => ({ stock: [...state.stock, item] }));
     saveStockItemAction(item).then(res => {
       if (!res.success) logger.error('Failed to persist new stock item to SQL', { id: item.id, error: res.error }, 'DATABASE');
     }).catch(e => 
@@ -325,7 +325,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   updateStockItem: (item: StockItem) => {
-    set((state) => ({
+    set((state: any) => ({
       stock: state.stock.map((s: StockItem) => s.id === item.id ? item : s)
     }));
     saveStockItemAction(item).then(res => {
@@ -336,7 +336,7 @@ export const createOperationalSlice: StateCreator<
   },
   
   removeStockItem: (id: UUID) => {
-    set((state) => ({
+    set((state: any) => ({
       stock: state.stock.filter((s: StockItem) => s.id !== id)
     }));
     deleteStockItemAction(id).then(res => {
@@ -364,9 +364,9 @@ export const createOperationalSlice: StateCreator<
   },
 
   createNewOrder: (tableId: string, name: string) => {
-    const orderId = generateUUID();
+    const order_id = generateUUID();
     const newOrder: Order = {
-      id: orderId,
+      id: order_id,
       tableId,
       customerName: name,
       items: [],
@@ -391,10 +391,10 @@ export const createOperationalSlice: StateCreator<
         // Persist to Supabase
         saveOrderAction(newOrder).then(res => {
           if (!res.success) {
-             logger.error('Failed to persist new order', { id: orderId, error: res.error }, 'OPERATIONAL');
+             logger.error('Failed to persist new order', { id: order_id, error: res.error }, 'OPERATIONAL');
           }
         }).catch(err => {
-           logger.error('Exception persisting new order', { id: orderId, error: err }, 'OPERATIONAL');
+           logger.error('Exception persisting new order', { id: order_id, error: err }, 'OPERATIONAL');
         });
       } else {
         console.error('❌ [createNewOrder] addOrder function not available');
@@ -405,13 +405,13 @@ export const createOperationalSlice: StateCreator<
       logger.error('Error in createNewOrder', { error, tableId, name }, 'OPERATIONAL');
     }
     
-    return orderId;
+    return order_id;
   },
 
-  addOrderItem: (orderId: UUID, item: OrderItem) => {
+  addOrderItem: (order_id: UUID, item: OrderItem) => {
     const state = get();
     const orders = (state as any).orders as Order[];
-    const orderIndex = orders.findIndex(o => o.id === orderId);
+    const orderIndex = orders.findIndex(o => o.id === order_id);
 
     if (orderIndex !== -1) {
       const updatedOrders = [...orders];
@@ -420,7 +420,7 @@ export const createOperationalSlice: StateCreator<
       const newItem = { 
         ...item, 
         id: item.id || generateUUID(), 
-        orderId, 
+        order_id, 
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString() 
       };
@@ -429,7 +429,7 @@ export const createOperationalSlice: StateCreator<
 
       // Recalculate order totals - USAR APENAS CAMPOS EXISTENTES
       orderToUpdate.total = (orderToUpdate.items || []).reduce((sum, oi) => {
-        const price = oi.unitPrice || oi.price || 0;
+        const price = oi.unit_price || oi.price || 0;
         const qty = oi.quantity || 1;
         return sum + (price * qty);
       }, 0);
@@ -445,14 +445,14 @@ export const createOperationalSlice: StateCreator<
         logger.error('Exception persisting new order item', { orderItemId: newItem.id, error: err }, 'OPERATIONAL');
       });
     } else {
-      logger.warn(`Order with ID ${orderId} not found when trying to add item.`, undefined, 'OPERATIONAL');
+      logger.warn(`Order with ID ${order_id} not found when trying to add item.`, undefined, 'OPERATIONAL');
     }
   },
 
-  updateOrderItem: (orderId: UUID, itemId: UUID, updatedItem: Partial<OrderItem>) => {
+  updateOrderItem: (order_id: UUID, itemId: UUID, updatedItem: Partial<OrderItem>) => {
     const state = get();
     const orders = (state as any).orders as Order[];
-    const orderIndex = orders.findIndex(o => o.id === orderId);
+    const orderIndex = orders.findIndex(o => o.id === order_id);
 
     if (orderIndex !== -1) {
       const updatedOrders = [...orders];
@@ -468,7 +468,7 @@ export const createOperationalSlice: StateCreator<
 
         // Recalculate order totals - USAR APENAS CAMPOS EXISTENTES
       orderToUpdate.total = newItems.reduce((sum, oi) => {
-        const price = oi.unitPrice || oi.price || 0;
+        const price = oi.unit_price || oi.price || 0;
         const qty = oi.quantity || 1;
         return sum + (price * qty);
       }, 0);
@@ -484,10 +484,10 @@ export const createOperationalSlice: StateCreator<
           logger.error('Exception persisting updated order item', { orderItemId: itemToUpdate.id, error: err }, 'OPERATIONAL');
         });
       } else {
-        logger.warn(`Order item with ID ${itemId} not found for order ID ${orderId}.`, undefined, 'OPERATIONAL');
+        logger.warn(`Order item with ID ${itemId} not found for order ID ${order_id}.`, undefined, 'OPERATIONAL');
       }
     } else {
-      logger.warn(`Order with ID ${orderId} not found when trying to update item.`, undefined, 'OPERATIONAL');
+      logger.warn(`Order with ID ${order_id} not found when trying to update item.`, undefined, 'OPERATIONAL');
     }
   },
 
@@ -503,14 +503,14 @@ export const createOperationalSlice: StateCreator<
     // Criar item do carrinho IMEDIATAMENTE para estado local
     const orderItem: OrderItem = {
       id: generateUUID(),
-      orderId: activeOrderId || 'temp-order',
-      dishId: product.id,
+      order_id: activeOrderId || 'temp-order',
+      dish_id: product.id,
       price: product.price || 0,
-      unitPrice: product.price || 0,
+      unit_price: product.price || 0,
       quantity,
       notes: '',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     // Adicionar ao cartItems IMEDIATAMENTE
@@ -562,7 +562,7 @@ export const createOperationalSlice: StateCreator<
     if (activeOrderId) {
       const targetOrder = orders.find(o => o.id === activeOrderId);
       if (targetOrder) {
-        const existingItemIndex = targetOrder.items?.findIndex(item => item.dishId === product.id);
+        const existingItemIndex = targetOrder.items?.findIndex(item => item.dish_id === product.id);
         
         if (existingItemIndex !== undefined && existingItemIndex !== -1) {
           // Update existing item
@@ -576,7 +576,7 @@ export const createOperationalSlice: StateCreator<
           const updatedOrder = {
             ...targetOrder,
             items: updatedItems,
-            total: updatedItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
+            total: updatedItems.reduce((sum, item) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0),
             updated_at: new Date().toISOString()
           };
           
@@ -597,7 +597,7 @@ export const createOperationalSlice: StateCreator<
         const updatedOrder = {
           ...targetOrder,
           items: newItems,
-          total: newItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
+          total: newItems.reduce((sum, item) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0),
           updated_at: new Date().toISOString()
         };
         
@@ -617,14 +617,14 @@ export const createOperationalSlice: StateCreator<
   },
 
   // FUNÇÃO AUSENTE - Adicionar addToOrder para o carrinho funcionar
-  addToOrder: (tableId: string, product: Dish, quantity: number = 1, notes: string = '', orderId?: string, userId?: string) => {
+  addToOrder: (tableId: string, product: Dish, quantity: number = 1, notes: string = '', order_id?: string, userId?: string) => {
     const state = get();
     const orders = (state as any).orders as Order[];
     
     // Find or create order
     let targetOrder: Order | undefined;
-    if (orderId) {
-      targetOrder = orders.find(o => o.id === orderId);
+    if (order_id) {
+      targetOrder = orders.find(o => o.id === order_id);
     } else {
       // Find active order for this table
       targetOrder = orders.find(o => o.tableId === tableId && o.status === 'ABERTO');
@@ -638,20 +638,20 @@ export const createOperationalSlice: StateCreator<
     // Create order item
     const orderItem: OrderItem = {
       id: generateUUID(),
-      orderId: targetOrder.id,
-      dishId: product.id,
+      order_id: targetOrder.id,
+      dish_id: product.id,
       price: product.price || 0,
-      unitPrice: product.price || 0,
+      unit_price: product.price || 0,
       quantity,
       notes,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     // Add to order
     const updatedOrders = orders.map(order => {
       if (order.id === targetOrder!.id) {
-        const existingItemIndex = order.items?.findIndex(item => item.dishId === product.id);
+        const existingItemIndex = order.items?.findIndex(item => item.dish_id === product.id);
         
         if (existingItemIndex !== undefined && existingItemIndex !== -1) {
           // Update existing item
@@ -665,7 +665,7 @@ export const createOperationalSlice: StateCreator<
           return {
             ...order,
             items: updatedItems,
-            total: updatedItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
+            total: updatedItems.reduce((sum, item) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0),
             updated_at: new Date().toISOString()
           };
         } else {
@@ -675,7 +675,7 @@ export const createOperationalSlice: StateCreator<
           return {
             ...order,
             items: newItems,
-            total: newItems.reduce((sum, item) => sum + ((item.unitPrice || 0) * (item.quantity || 1)), 0),
+            total: newItems.reduce((sum, item) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0),
             updated_at: new Date().toISOString()
           };
         }
@@ -693,10 +693,10 @@ export const createOperationalSlice: StateCreator<
     });
   },
 
-  removeOrderItem: (orderId: UUID, itemId: UUID) => {
+  removeOrderItem: (order_id: UUID, itemId: UUID) => {
     const state = get();
     const orders = (state as any).orders as Order[];
-    const orderIndex = orders.findIndex(o => o.id === orderId);
+    const orderIndex = orders.findIndex(o => o.id === order_id);
 
     if (orderIndex !== -1) {
       const updatedOrders = [...orders];
@@ -710,7 +710,7 @@ export const createOperationalSlice: StateCreator<
 
         // Recalculate order totals - USAR APENAS CAMPOS EXISTENTES
       orderToUpdate.total = orderToUpdate.items.reduce((sum, oi) => {
-        const price = oi.unitPrice || oi.price || 0;
+        const price = oi.unit_price || oi.price || 0;
         const qty = oi.quantity || 1;
         return sum + (price * qty);
       }, 0);
@@ -728,18 +728,18 @@ export const createOperationalSlice: StateCreator<
           });
         }
       } else {
-        logger.warn(`Order item with ID ${itemId} not found for order ID ${orderId}.`, undefined, 'OPERATIONAL');
+        logger.warn(`Order item with ID ${itemId} not found for order ID ${order_id}.`, undefined, 'OPERATIONAL');
       }
     } else {
-      logger.warn(`Order with ID ${orderId} not found when trying to remove item.`, undefined, 'OPERATIONAL');
+      logger.warn(`Order with ID ${order_id} not found when trying to remove item.`, undefined, 'OPERATIONAL');
     }
   },
 
   closeTableWithoutOrders: (tableId: string) => {
     if (tableId !== 'balcao-999') {
-      get().updateTableStatus(tableId, 'AVAILABLE');
+      get().updateTableStatus(tableId, 'disponível');
     }
-    set((state) => ({
+    set((state: any) => ({
       activeTableId: state.activeTableId === tableId ? null : state.activeTableId
     }));
   },
@@ -747,10 +747,10 @@ export const createOperationalSlice: StateCreator<
   transferTable: (fromTableId: string, toTableId: string) => {
     const state = get();
     // Update tables
-    set((state) => ({
+    set((state: any) => ({
       tables: state.tables.map((t: Table) => {
-        if (t.id === fromTableId) return { ...t, status: 'AVAILABLE' };
-        if (t.id === toTableId) return { ...t, status: 'OCCUPADO' };
+        if (t.id === fromTableId) return { ...t, status: 'disponível' };
+        if (t.id === toTableId) return { ...t, status: 'ocupada' };
         return t;
       }),
       activeTableId: toTableId
@@ -775,7 +775,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   updateStockQuantity: (id: UUID, quantity: number) => {
-    set((state) => ({
+    set((state: any) => ({
       stock: state.stock.map((item: StockItem) => 
         item.id === id ? { ...item, quantity, lastUpdated: new Date() } : item
       )
@@ -792,16 +792,16 @@ export const createOperationalSlice: StateCreator<
   },
 
   addDelivery: (delivery: Delivery) => {
-    set((state) => ({ deliveries: [...state.deliveries, delivery] }));
+    set((state: any) => ({ deliveries: [...state.deliveries, delivery] }));
     get().addAuditLog({
       action: 'DELIVERY_ADD',
-      details: `Entrega adicionada para o pedido: ${delivery.orderId}`,
+      details: `Entrega adicionada para o pedido: ${delivery.order_id}`,
       metadata: { deliveryId: delivery.id },
     });
   },
 
   updateDelivery: (delivery: Delivery) => {
-    set((state) => ({
+    set((state: any) => ({
       deliveries: state.deliveries.map((d: Delivery) => d.id === delivery.id ? delivery : d)
     }));
     get().addAuditLog({
@@ -812,7 +812,7 @@ export const createOperationalSlice: StateCreator<
   },
 
   removeDelivery: (id: UUID) => {
-    set((state) => ({
+    set((state: any) => ({
       deliveries: state.deliveries.filter((d: Delivery) => d.id !== id)
     }));
     get().addAuditLog({
@@ -826,7 +826,7 @@ export const createOperationalSlice: StateCreator<
   setShifts: (shifts: CashShift[]) => set({ shifts }),
   addAuditLog: (log: any) => {
     logger.info('AUDIT LOG', log, 'AUDIT');
-    set((state) => ({ 
+    set((state: any) => ({ 
       auditLogs: [
         { 
           ...log, 

@@ -8,7 +8,7 @@ export const buildFeed = (categories: MenuCategory[], dishes: Product[], setting
     const safeDishes = dishes.filter(d => d.id && d.name && d.categoryId && validCatIds.has(d.categoryId));
     
     const feed = {
-      restaurant: { name: settings.restaurantName, logo: (settings.qrMenuLogo as string) || (settings.appLogoUrl as string) || "" },
+      restaurant: { name: settings.restaurantName, logo: (settings as any).qr_menu_logo || (settings.logoUrl as string) || "" },
       categories: safeCats,
       dishes: safeDishes,
       updatedAt: new Date().toISOString()

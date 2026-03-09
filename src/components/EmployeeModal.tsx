@@ -20,17 +20,17 @@ const createDefaultEmployee = (): Employee => ({
   role: 'GARCOM',
   pin: null,
   phone: '',
-  email: null,
-  nif: null,
-  address: null,
+  email: undefined,
+  nif: undefined,
+  address: undefined,
   salary: 0,
   isActive: true,
-  admissionDate: null,
-  socialSecurityNumber: null,
-  bankAccount: null,
-  bi: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  admissionDate: undefined,
+  socialSecurityNumber: undefined,
+  bankAccount: undefined,
+  bi: undefined,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   color: '#06b6d4',
   workDaysPerMonth: 22,
   dailyWorkHours: 8,
@@ -51,7 +51,7 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
     if (employee) return { ...employee };
     const defaultEmp = createDefaultEmployee();
     // Pre-fill permissions for new employee based on default role
-    defaultEmp.permissions = DEFAULT_ROLES[defaultEmp.role] || [];
+    defaultEmp.permissions = DEFAULT_ROLES[defaultEmp.role]?.map(p => p.id) || [];
     return defaultEmp;
   });
   
@@ -67,7 +67,7 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
       setFormData((prev: Employee) => ({
         ...prev,
         role: value,
-        permissions: newRolePermissions
+        permissions: newRolePermissions?.map(p => p.id) || []
       }));
     } else {
       setFormData((prev: Employee) => ({
@@ -80,16 +80,19 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
   const togglePermission = (permission: Permission) => {
     setFormData((prev: Employee) => {
       const currentPermissions = prev.permissions || [];
-      const hasPermission = currentPermissions.includes(permission);
+      const hasPermission = currentPermissions.includes(permission.id);
       
-      let newPermissions;
       if (hasPermission) {
-        newPermissions = currentPermissions.filter((p: Permission) => p !== permission);
+        return {
+          ...prev,
+          permissions: currentPermissions.filter(p => p !== permission.id)
+        };
       } else {
-        newPermissions = [...currentPermissions, permission];
+        return {
+          ...prev,
+          permissions: [...currentPermissions, permission.id]
+        };
       }
-      
-      return { ...prev, permissions: newPermissions };
     });
   };
 
@@ -248,7 +251,7 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
                 id="admissionDate"
                 name="admissionDate"
                 value={formData.admissionDate ? new Date(formData.admissionDate).toISOString().split('T')[0] : ''}
-                onChange={(e) => setFormData((prev: Employee) => ({ ...prev, admissionDate: new Date(e.target.value) }))}
+                onChange={(e) => setFormData((prev: Employee) => ({ ...prev, admissionDate: new Date(e.target.value).toISOString() }))}
                 className="flex-1 p-2.5 bg-transparent outline-none"
               />
             </div>
@@ -399,9 +402,9 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
              {showPermissions && (
                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-950/50 p-4 rounded-xl border border-white/5 max-h-60 overflow-y-auto custom-scrollbar">
                      {ALL_PERMISSIONS.map(permission => {
-                         const isSelected = (formData.permissions || []).includes(permission);
+                         const isSelected = (formData.permissions || []).includes(permission.id);
                          return (
-                             <label key={permission} className="flex items-start gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors select-none">
+                             <label key={permission.id} className="flex items-start gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors select-none">
                                  <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'bg-primary border-primary text-black' : 'border-slate-600 bg-transparent'}`}>
                                      {isSelected && <ShieldCheck size={14} />}
                                  </div>
@@ -411,9 +414,9 @@ const EmployeeModalContent: React.FC<EmployeeModalContentProps> = ({ employee, o
                                     checked={isSelected}
                                     onChange={() => togglePermission(permission)}
                                  />
-                                 <div>
-                                     <div className="text-xs font-bold text-slate-200">{permission}</div>
-                                     <div className="text-[10px] text-slate-500 leading-tight">{permissionDescriptions[permission] || permission}</div>
+                                 <div className="flex-1">
+                                     <div className="font-medium text-white text-sm">{permission.name}</div>
+                                     <div className="text-xs text-slate-400">{(permissionDescriptions as any)[permission.id] || permission.description}</div>
                                  </div>
                              </label>
                          );

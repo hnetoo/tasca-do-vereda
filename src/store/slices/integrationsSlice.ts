@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { StoreState, APIKey, WebhookConfig, BiometricDevice, IntegrationLog, MobileSession, BiometricClockEvent } from '@/types';
+import { APIKey, WebhookConfig, BiometricDevice, IntegrationLog, MobileSession, BiometricClockEvent } from '@/types';
 import { BiometricIntegrationService } from '@/services/biometricService';
 import { logger } from '@/services/logger';
 
@@ -45,7 +45,7 @@ export interface IntegrationsSlice {
 }
 
 export const createIntegrationsSlice: StateCreator<
-  StoreState,
+  any,
   [],
   [],
   IntegrationsSlice
@@ -74,36 +74,36 @@ export const createIntegrationsSlice: StateCreator<
         scopes
       };
       
-      set((state) => ({ apiKeys: [...state.apiKeys, apiKey] }));
+      set((state: any) => ({ apiKeys: [...state.apiKeys, apiKey] }));
       return apiKey;
     },
 
     revokeApiKey: (keyId) => {
-      set((state) => ({
-        apiKeys: state.apiKeys.map(k => k.id === keyId ? { ...k, status: 'REVOKED' } : k)
+      set((state: any) => ({
+        apiKeys: state.apiKeys.map((k: APIKey) => k.id === keyId ? { ...k, status: 'REVOKED' } : k)
       }));
     },
 
-    registerWebhook: (config) => {
-      set((state) => ({ webhooks: [...state.webhooks, config] }));
+    registerWebhook: (config: WebhookConfig) => {
+      set((state: any) => ({ webhooks: [...state.webhooks, config] }));
     },
 
-    updateWebhook: (config) => {
-      set((state) => ({
-        webhooks: state.webhooks.map(w => w.id === config.id ? config : w)
+    updateWebhook: (config: WebhookConfig) => {
+      set((state: any) => ({
+        webhooks: state.webhooks.map((w: WebhookConfig) => w.id === config.id ? config : w)
       }));
     },
 
-    removeWebhook: (webhookId) => {
-      set((state) => ({
-        webhooks: state.webhooks.filter(w => w.id !== webhookId)
+    removeWebhook: (webhookId: string) => {
+      set((state: any) => ({
+        webhooks: state.webhooks.filter((w: WebhookConfig) => w.id !== webhookId)
       }));
     },
 
-    triggerWebhook: async (event, data) => {
+    triggerWebhook: async (event: string, data: unknown) => {
       const state = get();
       const relevantWebhooks = state.webhooks.filter(
-        w => w.status === 'ACTIVE' && w.events.includes(event)
+        (w: WebhookConfig) => w.status === 'ACTIVE' && w.events.includes(event)
       );
 
       for (const webhook of relevantWebhooks) {
@@ -159,7 +159,7 @@ export const createIntegrationsSlice: StateCreator<
 
     testWebhook: async (webhookId) => {
       const state = get();
-      const webhook = state.webhooks.find(w => w.id === webhookId);
+      const webhook = state.webhooks.find((w: any) => w.id === webhookId);
       if (!webhook) return false;
 
       try {
@@ -182,7 +182,7 @@ export const createIntegrationsSlice: StateCreator<
     },
 
     registerBiometricDevice: (device) => {
-      set((state) => ({ biometricDevices: [...state.biometricDevices, device] }));
+      set((state: any) => ({ biometricDevices: [...state.biometricDevices, device] }));
       get().addIntegrationLog({
         type: 'biometric.device.registered',
         message: `Biometric device registered: ${device.name}`,
@@ -191,8 +191,8 @@ export const createIntegrationsSlice: StateCreator<
     },
 
     removeBiometricDevice: (deviceId) => {
-      set((state) => ({
-        biometricDevices: state.biometricDevices.filter(d => d.id !== deviceId)
+      set((state: any) => ({
+        biometricDevices: state.biometricDevices.filter((d: any) => d.id !== deviceId)
       }));
       get().addIntegrationLog({
         type: 'biometric.device.removed',
@@ -202,8 +202,8 @@ export const createIntegrationsSlice: StateCreator<
     },
 
     updateBiometricDevice: (device) => {
-        set((state) => ({
-            biometricDevices: state.biometricDevices.map(d => d.id === device.id ? device : d)
+        set((state: any) => ({
+            biometricDevices: state.biometricDevices.map((d: any) => d.id === device.id ? device : d)
         }));
     },
 
@@ -227,7 +227,7 @@ export const createIntegrationsSlice: StateCreator<
     },
 
     testBiometricConnection: async (deviceId) => {
-       const device = get().biometricDevices.find(d => d.id === deviceId);
+       const device = get().biometricDevices.find((d: any) => d.id === deviceId);
        if (!device) return false;
        
        // Simulate connection test
@@ -249,13 +249,13 @@ export const createIntegrationsSlice: StateCreator<
         status: 'ACTIVE'
       };
 
-      set((state) => ({ mobileSessions: [...state.mobileSessions, session] }));
+      set((state: any) => ({ mobileSessions: [...state.mobileSessions, session] }));
       return session;
     },
 
     validateMobileSession: (token) => {
       const state = get();
-      const session = state.mobileSessions.find(s => s.token === token && s.status === 'ACTIVE');
+      const session = state.mobileSessions.find((s: any) => s.token === token && s.status === 'ACTIVE');
       
       if (!session) return null;
       
@@ -266,16 +266,16 @@ export const createIntegrationsSlice: StateCreator<
 
       // Update last active
       const updatedSession = { ...session, lastActive: new Date() };
-      set((state) => ({
-        mobileSessions: state.mobileSessions.map(s => s.id === session.id ? updatedSession : s)
+      set((state: any) => ({
+        mobileSessions: state.mobileSessions.map((s: any) => s.id === session.id ? updatedSession : s)
       }));
 
       return updatedSession;
     },
 
     revokeMobileSession: (sessionId) => {
-      set((state) => ({
-        mobileSessions: state.mobileSessions.map(s => s.id === sessionId ? { ...s, status: 'REVOKED' } : s)
+      set((state: any) => ({
+        mobileSessions: state.mobileSessions.map((s: any) => s.id === sessionId ? { ...s, status: 'REVOKED' } : s)
       }));
     },
 

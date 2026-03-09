@@ -1,19 +1,19 @@
 import { StateCreator } from 'zustand';
-import { Employee, WorkShift, AttendanceRecord, StoreState } from '@/types';
+import { Employee, AttendanceRecord } from '@/types';
 import { logger } from '@/services/logger';
 import { integrationAPIService } from '@/services/integrationAPIService';
 
 export interface StaffSlice {
   employees: Employee[];
-  workShifts: WorkShift[];
+  workShifts: any[];
   attendance: AttendanceRecord[];
   
   addEmployee: (emp: Employee) => void;
   updateEmployee: (emp: Employee) => void;
   removeEmployee: (id: string) => void;
   
-  addWorkShift: (shift: WorkShift) => void;
-  updateWorkShift: (shift: WorkShift) => void;
+  addWorkShift: (shift: any) => void;
+  updateWorkShift: (shift: any) => void;
   removeWorkShift: (id: string) => void;
   
   addAttendance: (record: AttendanceRecord) => void;
@@ -21,7 +21,11 @@ export interface StaffSlice {
   removeAttendance: (id: string) => void;
 }
 
-export const createStaffSlice: StateCreator<StoreState, [], [], StaffSlice> = (set, get) => ({
+export const createStaffSlice: StateCreator<
+  any,
+  [],
+  [],
+  StaffSlice> = (set, get) => ({
   employees: [
     {
       id: 'emp-001',
@@ -66,15 +70,15 @@ export const createStaffSlice: StateCreator<StoreState, [], [], StaffSlice> = (s
   attendance: [],
   
   addEmployee: (emp: Employee) => {
-    set((state) => ({ employees: [...state.employees, emp] }));
+    set((state: any) => ({ employees: [...state.employees, emp] }));
     
     // TODO: Implementar sync com Supabase quando método estiver disponível
     logger.info('Employee added locally', { id: emp.id }, 'STAFF');
   },
 
   updateEmployee: (emp: Employee) => {
-    set((state) => ({
-      employees: state.employees.map((e) => e.id === emp.id ? emp : e),
+    set((state: any) => ({
+      employees: state.employees.map((e: any) => e.id === emp.id ? emp : e),
     }));
     
     // TODO: Implementar sync com Supabase quando método estiver disponível
@@ -82,48 +86,48 @@ export const createStaffSlice: StateCreator<StoreState, [], [], StaffSlice> = (s
   },
 
   removeEmployee: (id: string) => {
-    set((state) => ({
-      employees: state.employees.filter((e) => e.id !== id),
+    set((state: any) => ({
+      employees: state.employees.filter((e: any) => e.id !== id),
     }));
     
     // TODO: Implementar remoção do Supabase quando método estiver disponível
     logger.info('Employee removed locally', { id }, 'STAFF');
   },
 
-  addWorkShift: (shift: WorkShift) => {
-    set((state) => ({ workShifts: [...state.workShifts, shift] }));
+  addWorkShift: (shift: any) => {
+    set((state: any) => ({ workShifts: [...state.workShifts, shift] }));
     logger.info('Work shift added', { id: shift.id }, 'STAFF');
   },
 
-  updateWorkShift: (shift: WorkShift) => {
-    set((state) => ({
-      workShifts: state.workShifts.map((s) => s.id === shift.id ? shift : s),
+  updateWorkShift: (shift: any) => {
+    set((state: any) => ({
+      workShifts: state.workShifts.map((s: any) => s.id === shift.id ? shift : s),
     }));
     logger.info('Work shift updated', { id: shift.id }, 'STAFF');
   },
 
   removeWorkShift: (id: string) => {
-    set((state) => ({
-      workShifts: state.workShifts.filter((s) => s.id !== id),
+    set((state: any) => ({
+      workShifts: state.workShifts.filter((s: any) => s.id !== id),
     }));
     logger.info('Work shift removed', { id }, 'STAFF');
   },
 
   addAttendance: (record: AttendanceRecord) => {
-    set((state) => ({ attendance: [...state.attendance, record] }));
+    set((state: any) => ({ attendance: [...state.attendance, record] }));
     logger.info('Attendance record added', { id: record.id }, 'STAFF');
   },
 
   updateAttendance: (record: AttendanceRecord) => {
-    set((state) => ({
-      attendance: state.attendance.map((a) => a.id === record.id ? record : a),
+    set((state: any) => ({
+      attendance: state.attendance.map((a: any) => a.id === record.id ? record : a),
     }));
     logger.info('Attendance record updated', { id: record.id }, 'STAFF');
   },
 
   removeAttendance: (id: string) => {
-    set((state) => ({
-      attendance: state.attendance.filter((a) => a.id !== id),
+    set((state: any) => ({
+      attendance: state.attendance.filter((a: any) => a.id !== id),
     }));
     logger.info('Attendance record removed', { id }, 'STAFF');
   },

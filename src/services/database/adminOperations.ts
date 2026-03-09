@@ -189,7 +189,7 @@ export const adminOperations = {
             track_stock: dish.trackStock ?? false,
             stock_quantity: dish.stockQuantity || 0,
             min_stock_quantity: dish.minStockQuantity || 0,
-            max_stock_quantity: dish.maxStockQuantity || null,
+            max_stock_quantity: dish.max_stock_quantity || null,
             unit: dish.unit || 'unidade',
             supplier_id: dish.supplierId && isValidUUID(dish.supplierId) ? dish.supplierId : null,
             updated_at: new Date().toISOString()
@@ -350,10 +350,10 @@ export const adminOperations = {
               zone: table.zone,
               shape: table.shape,
               rotation: table.rotation,
-              group_id: table.groupId,
+              group_id: table.group_id,
               color: table.color,
-              user_id: table.userId,
-              is_active: table.isActive ?? true,
+              user_id: table.user_id,
+              is_active: table.is_active ?? true,
               updated_at: new Date().toISOString()
           };
           const { error } = await supabaseAdmin.from('restaurant_tables').upsert(dbTable);
@@ -387,7 +387,7 @@ export const adminOperations = {
               email: customer.email || null,
               phone: customer.phone || null,
               address: customer.address || null,
-              created_at: customer.createdAt || (customer as any).created_at || new Date().toISOString(),
+              created_at: customer.created_at || new Date().toISOString(),
               updated_at: new Date().toISOString()
           };
           const { error } = await supabaseAdmin.from('customers').upsert(dbCustomer);
@@ -417,9 +417,9 @@ export const adminOperations = {
           const { error } = await supabaseAdmin.from('reservations').upsert({
               id: reservation.id,
               table_id: reservation.tableId,
-              customer_name: reservation.customerName,
+              customer_name: reservation.customer_name,
               customer_phone: reservation.customerPhone,
-              date: reservation.date instanceof Date ? reservation.date.toISOString() : reservation.date,
+              date: (reservation.date as any) instanceof Date ? (reservation.date as any).toISOString() : reservation.date,
               time: reservation.time,
               guests: reservation.guests,
               status: reservation.status,
@@ -453,13 +453,12 @@ export const adminOperations = {
               id: shift.id,
               user_id: shift.userId || (shift as any).user_id || null,
               user_name: shift.userName || (shift as any).user_name || null,
-              start_time: shift.startTime instanceof Date ? shift.startTime.toISOString() : (shift.startTime || (shift as any).start_time || new Date().toISOString()),
-              end_time: shift.endTime instanceof Date ? shift.endTime.toISOString() : (shift.endTime || (shift as any).end_time || null),
-              opening_balance: shift.openingBalance || (shift as any).opening_balance || 0,
-              closing_balance: shift.closingBalance || (shift as any).closing_balance || 0,
-              expected_balance: shift.expectedBalance || (shift as any).expected_balance || 0,
-              status: shift.status || 'FECHADO',
-              notes: shift.notes
+              start_time: (shift as any).start_time || new Date().toISOString(),
+              end_time: (shift as any).end_time || null,
+              opening_balance: (shift as any).opening_balance || 0,
+              closing_balance: (shift as any).closing_balance || 0,
+              expected_balance: (shift as any).expected_balance || 0,
+              status: shift.status || 'FECHADO'
           });
           if (error) throw error;
           return { success: true };
@@ -474,14 +473,14 @@ export const adminOperations = {
       try {
           const { error } = await supabaseAdmin.from('deliveries').upsert({
               id: delivery.id,
-              order_id: delivery.orderId || (delivery as any).order_id,
-              driver_name: delivery.driverName || (delivery as any).driver_name,
+              order_id: (delivery as any).order_id,
+              driver_name: (delivery as any).driver_name,
               status: delivery.status,
               address: delivery.address,
-              customer_name: delivery.customerName || (delivery as any).customer_name,
-              customer_phone: delivery.customerPhone || (delivery as any).customer_phone,
-              start_time: delivery.startTime instanceof Date ? delivery.startTime.toISOString() : delivery.startTime || (delivery as any).start_time,
-              end_time: delivery.endTime instanceof Date ? delivery.endTime.toISOString() : delivery.endTime || (delivery as any).end_time,
+              customer_name: (delivery as any).customer_name,
+              customer_phone: (delivery as any).customer_phone,
+              start_time: (delivery as any).start_time,
+              end_time: (delivery as any).end_time,
               updated_at: new Date().toISOString()
           });
           if (error) throw error;
@@ -510,12 +509,11 @@ export const adminOperations = {
       const dbOrderItem = {
         id: orderItem.id,
         order_id: orderItem.orderId || orderItem.order_id,
-        product_id: orderItem.productId || orderItem.product_id || orderItem.dishId,
+        product_id: orderItem.dish_id || orderItem.dishId,
         quantity: orderItem.quantity,
-        price: orderItem.price || orderItem.unitPrice || orderItem.unit_price,
+        price: orderItem.unit_price,
         // REMOVIDO: subtotal (não existe no tipo OrderItem)
-        tax: orderItem.tax || orderItem.taxAmount || orderItem.tax_amount,
-        total: orderItem.total,
+        tax: orderItem.tax_amount,
         notes: orderItem.notes,
         status: orderItem.status,
         created_at: orderItem.created_at,
@@ -719,8 +717,7 @@ export const adminOperations = {
             contact: supplier.contact,
             email: supplier.email,
             nif: supplier.nif,
-            address: supplier.address,
-            notes: supplier.notes
+            address: supplier.address
         });
         if (error) throw error;
         return { success: true };
@@ -734,8 +731,6 @@ export const adminOperations = {
     if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
     try {
         const dbSettings = {
-            id: settings.id,
-            name: settings.name,
             restaurant_name: settings.restaurantName || (settings as any).restaurant_name,
             nif: settings.nif,
             address: settings.address,
@@ -743,24 +738,7 @@ export const adminOperations = {
             email: settings.email,
             tax_percentage: settings.taxPercentage || (settings as any).tax_percentage,
             currency: settings.currency,
-            timezone: settings.timezone,
-            language: settings.language,
-            supabase_config: settings.supabaseConfig || (settings as any).supabase_config,
-            printer_config: settings.printerConfig || (settings as any).printer_config,
-            backup_config: settings.backupConfig || (settings as any).backup_config,
-            app_logo_url: settings.appLogoUrl || (settings as any).app_logo_url,
-            agt_certificate: settings.agtCertificate || (settings as any).agt_certificate,
-            open_drawer_code: settings.openDrawerCode || (settings as any).open_drawer_code,
-            admin_pin: settings.adminPin || (settings as any).admin_pin,
-            api_token: settings.apiToken || (settings as any).api_token,
-            wifi_name: settings.wifi_name || (settings as any).wifi_name,
-            wifi_password: settings.wifi_password || (settings as any).wifi_password,
-            qr_code_title: settings.qr_code_title || (settings as any).qr_code_title,
-            qr_code_subtitle: settings.qr_code_subtitle || (settings as any).qr_code_subtitle,
-            qr_code_short_code: settings.qr_code_short_code || (settings as any).qr_code_short_code,
-            qr_menu_url: settings.qr_menu_url || (settings as any).qr_menu_url,
-            qr_menu_cloud_url: settings.qr_menu_cloud_url || (settings as any).qr_menu_cloud_url,
-            logo_url: settings.logo_url || (settings as any).logo_url,
+            logo_url: settings.logoUrl || (settings as any).logo_url,
             updated_at: new Date().toISOString()
         };
 

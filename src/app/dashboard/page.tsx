@@ -99,10 +99,10 @@ const Dashboard = () => {
 
   const extractPayments = (order: Order): { method: PaymentMethod; amount: number }[] => {
     if (order.splitPayments && order.splitPayments.length > 0) {
-      return order.splitPayments.map(p => ({ method: p.method as PaymentMethod, amount: p.amount }));
+      return order.splitPayments.map((p: any) => ({ method: p.method as PaymentMethod, amount: p.amount }));
     }
     if (order.payments && order.payments.length > 0) {
-      return order.payments.map(p => ({ method: p.method as PaymentMethod, amount: p.amount }));
+      return order.payments.map((p: any) => ({ method: p.method as PaymentMethod, amount: p.amount }));
     }
     if (order.paymentMethod) {
       return [{ method: order.paymentMethod as PaymentMethod, amount: order.total || 0 }];

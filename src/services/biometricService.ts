@@ -35,7 +35,7 @@ export class BiometricIntegrationService {
         return false;
       }
 
-      this.devices.set(device.id, { ...device, status: 'CONNECTED' });
+      this.devices.set(device.id, { ...device, status: 'inactive' });
       this.saveDevicesToStorage();
 
       // Iniciar sincronização periódica
@@ -121,7 +121,7 @@ export class BiometricIntegrationService {
    */
   public async syncDevice(deviceId: string): Promise<void> {
     const device = this.devices.get(deviceId);
-    if (!device || device.status !== 'CONNECTED') return;
+    if (!device || device.status !== 'active') return;
 
     try {
       const response = await fetch(
@@ -145,13 +145,13 @@ export class BiometricIntegrationService {
       }
 
       // Atualizar timestamp de sincronização
-      device.lastSync = new Date();
+      device.lastSync = new Date().toISOString();
       this.saveDevicesToStorage();
 
     } catch (e: unknown) {
       const error = e as Error;
       logger.error(`Erro ao sincronizar com ${device.name}`, { error: error.message }, 'BIOMETRICS');
-      device.status = 'DISCONNECTED';
+      device.status = 'inactive';
     }
   }
 
@@ -176,15 +176,12 @@ export class BiometricIntegrationService {
         id: `att-${Date.now()}`,
         employeeId: employee.id,
         date: new Date(event.clockTime).toISOString().split('T')[0],
-        source: 'EXTERNO',
-        isLate: false,
         lateMinutes: 0,
         overtimeHours: 0,
         isAbsence: false,
-        totalHours: 0,
         clockInMethod: 'BIOMETRIC',
-        clockIn: event.type === 'CLOCK_IN' ? new Date(event.clockTime).toISOString() : undefined,
-        clockOut: event.type === 'CLOCK_OUT' ? new Date(event.clockTime).toISOString() : undefined
+        clockIn: event.type === 'IN' ? new Date(event.clockTime).toISOString() : undefined,
+        clockOut: event.type === 'OUT' ? new Date(event.clockTime).toISOString() : undefined
       };
 
       // Verificar se há registro de clock in no mesmo dia
@@ -196,8 +193,8 @@ export class BiometricIntegrationService {
         // Atualizar com novo horário
         const updatedAttendance = {
           ...existingAttendance,
-          clockOut: event.type === 'CLOCK_OUT' ? new Date(event.clockTime).toISOString() : existingAttendance.clockOut,
-          clockIn: event.type === 'CLOCK_IN' ? new Date(event.clockTime).toISOString() : existingAttendance.clockIn
+          clockOut: event.type === 'OUT' ? new Date(event.clockTime).toISOString() : existingAttendance.clockOut,
+          clockIn: event.type === 'IN' ? new Date(event.clockTime).toISOString() : existingAttendance.clockIn
         };
 
         // Calcular horas e atrasos
@@ -205,15 +202,10 @@ export class BiometricIntegrationService {
 
         // TODO: Implementar setAttendance quando método estiver disponível
         console.log('Attendance update requested:', updatedAttendance);
-      } else if (event.type === 'CLOCK_IN') {
+      } else if (event.type === 'IN') {
         // TODO: Implementar setAttendance quando método estiver disponível
         console.log('New attendance record:', attendanceRecord);
       }
-
-      // 3. Marcar evento como processado
-      event.processed = true;
-      event.processedAt = new Date();
-      event.linkedAttendanceId = attendanceRecord.id;
 
       // 4. Log de integração
       if (store.addIntegrationLog) {
@@ -265,19 +257,18 @@ export class BiometricIntegrationService {
 
     // Calcular total de horas
     const totalMinutes = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60);
-    attendance.totalHours = totalMinutes / 60;
 
     // Detectar atrasos (se entrou depois das 8:00 AM)
     const lateHour = 8;
     if (clockIn.getHours() > lateHour || 
         (clockIn.getHours() === lateHour && clockIn.getMinutes() > 0)) {
-      attendance.isLate = true;
       attendance.lateMinutes = (clockIn.getHours() - lateHour) * 60 + clockIn.getMinutes();
     }
 
     // Detectar horas extras (se trabalhou mais de 8 horas)
-    if (attendance.totalHours > 8) {
-      attendance.overtimeHours = attendance.totalHours - 8;
+    const totalHours = totalMinutes / 60;
+    if (totalHours > 8) {
+      attendance.overtimeHours = totalHours - 8;
     }
   }
 
@@ -286,7 +277,6 @@ export class BiometricIntegrationService {
    * Chamado quando dispositivo envia dados via webhook
    */
   async handleWebhookEvent(event: BiometricClockEvent): Promise<void> {
-    event.processed = false;
     await this.processBiometricEvent(event);
   }
 
@@ -300,7 +290,7 @@ export class BiometricIntegrationService {
   /**
    * Atualizar status de dispositivo
    */
-  updateDeviceStatus(deviceId: string, status: 'CONNECTED' | 'DISCONNECTED'): void {
+  updateDeviceStatus(deviceId: string, status: 'active' | 'inactive' | 'error' | 'OFFLINE'): void {
     const device = this.devices.get(deviceId);
     if (device) {
       device.status = status;

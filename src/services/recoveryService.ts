@@ -24,7 +24,7 @@ export const recoveryService = {
                 foundItems.set(cat.id, {
                     category: cat,
                     source: 'AUDIT_LOG',
-                    timestamp: (log.timestamp ? new Date(log.timestamp).toISOString() : new Date().toISOString())
+                    timestamp: ((log as any).timestamp ? new Date((log as any).timestamp).toISOString() : new Date().toISOString())
                 });
             }
         });

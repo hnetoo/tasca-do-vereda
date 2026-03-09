@@ -1,4 +1,3 @@
-import { SecurityAlert } from '../types';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug' | 'critical';
 
@@ -166,20 +165,11 @@ class LoggerService {
       .reverse();
   }
 
-  getSecurityAlerts(limit = 50): SecurityAlert[] {
+  getSecurityAlerts(limit = 50): LogEntry[] {
     return this.logs
       .filter(l => l.context === 'SECURITY' || l.message.includes('SECURITY ALERT'))
       .slice(-limit)
-      .reverse()
-      .map(logEntry => ({
-        id: logEntry.id,
-        type: 'system_error',
-        severity: (logEntry.level === 'error' ? 'critical' : logEntry.level === 'warn' ? 'medium' : 'low'),
-        message: logEntry.message,
-        timestamp: new Date(logEntry.timestamp).toISOString(),
-        isResolved: false,
-        details: (logEntry.data as Record<string, unknown>) || {},
-      }));
+      .reverse();
   }
 
   getFirebaseReadAudit(limit = 100) {

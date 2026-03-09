@@ -69,7 +69,7 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
     <div
       className={`
         absolute cursor-pointer transition-all duration-200
-        ${getTableColor(table.status)}
+        ${getTableColor(table.status as TableStatus)}
         ${getShapeStyles(table.shape || 'RECTANGLE')}
         ${isDragging ? 'opacity-50 scale-105 shadow-2xl' : ''}
         ${isEditMode ? 'hover:scale-105 hover:shadow-xl' : ''}
@@ -77,8 +77,8 @@ const DraggableTable: React.FC<DraggableTableProps> = ({
         ${isSaving ? 'animate-pulse' : ''}
       `}
       style={{
-        left: `${table.posicao_x || table.x || 0}px`,
-        top: `${table.posicao_y || table.y || 0}px`,
+        left: `${table.x || 0}px`,
+        top: `${table.y || 0}px`,
         width: `${table.width || 80}px`,
         height: `${table.height || 80}px`,
         zIndex: isDragging ? 1000 : 1
@@ -159,8 +159,8 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
     
     try {
       // Calculate new position
-      const newX = (table.posicao_x || table.x || 0) + delta.x;
-      const newY = (table.posicao_y || table.y || 0) + delta.y;
+      const newX = (table.x || 0) + delta.x;
+      const newY = (table.y || 0) + delta.y;
       
       // Update in database via API route for better security
       const response = await fetch('/api/tables/update-position', {
@@ -214,7 +214,7 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
   const filteredTables = displayTables; // Sem filtro por agora - mostrar todas
 
   console.log('🔍 Mesas após filtro:', filteredTables.length);
-  console.log('🔍 Mesas filtradas:', filteredTables.map(t => ({ id: t.id, name: t.name, ambiente: t.ambiente || t.zone || 'INTERIOR' })));
+  console.log('🔍 Mesas filtradas:', filteredTables.map(t => ({ id: t.id, name: (t as any).name || (t as any).label, ambiente: (t as any).zone || 'INTERIOR' })));
 
   // FORÇAR POSIÇÃO PADRÃO PARA TODAS AS MESAS
   const tablesWithPosition = filteredTables.map((table, index) => ({
@@ -224,7 +224,7 @@ const EnhancedTableLayout: React.FC<TableLayoutProps> = ({
     posicao_y: table.y || Math.floor(index / 3) * 120, // Próxima linha
     // Garantir compatibilidade com componentes antigos
     number: table.number,
-    name: table.name || table.label || `Mesa ${table.number}`,
+    name: (table as any).name || (table as any).label || `Mesa ${table.number}`,
     // Mapear zone para ambiente se necessário
     ambiente: table.zone || 'INTERIOR'
   }));
