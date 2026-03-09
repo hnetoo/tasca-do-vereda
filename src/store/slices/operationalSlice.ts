@@ -500,16 +500,19 @@ export const createOperationalSlice: StateCreator<
     const cartItems = (state as any).cartItems || [];
     const orders = (state as any).orders || [];
     
-    // Criar OrderItem
+    // Criar OrderItem - EXATAMENTE como no schema Supabase
     const orderItem: OrderItem = {
       id: generateUUID(),
       order_id: activeOrderId || 'temp',
       dish_id: product.id,
       quantity: Math.abs(quantity),
       unit_price: product.price || 0,
+      tax_percentage: 0,
+      tax_amount: 0,
+      tax_code: '',
       notes: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      status: 'pending',
+      created_at: new Date().toISOString()
     };
     
     // Se quantity for negativo, remover do carrinho
