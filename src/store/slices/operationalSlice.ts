@@ -497,118 +497,147 @@ export const createOperationalSlice: StateCreator<
     
     const state = get();
     let activeOrderId = (state as any).activeOrderId;
-    const orders = (state as any).orders as Order[];
     const cartItems = (state as any).cartItems || [];
+    const orders = (state as any).orders || [];
     
-    // Criar item do carrinho IMEDIATAMENTE para estado local
+    // Criar OrderItem
     const orderItem: OrderItem = {
       id: generateUUID(),
-      order_id: activeOrderId || 'temp-order',
+      order_id: activeOrderId || 'temp',
       dish_id: product.id,
-      price: product.price || 0,
+      quantity: Math.abs(quantity),
       unit_price: product.price || 0,
-      quantity,
       notes: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     
-    // Adicionar ao cartItems IMEDIATAMENTE
-    const updatedCartItems = [...cartItems, orderItem];
+    // Se quantity for negativo, remover do carrinho
+    if (quantity < 0) {
+      console.log('🛒 [addToCart] Removendo item do carrinho...');
+      const updatedCartItems = cartItems.filter((item: OrderItem) => item.dish_id !== product.id);
+      (set as any)({ cartItems: updatedCartItems });
+      
+      // Salvar no LocalStorage
+      try {
+        localStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
+        console.log('🛒 [addToCart] Carrinho salvo no LocalStorage (remoção)');
+      } catch (error) {
+        console.error('🛒 [addToCart] Erro ao salvar no LocalStorage:', error);
+      }
+      
+      console.log('🛒 [addToCart] Item removido do cartItems local!');
+      return;
+    }
+    
+    // Adicionar ao carrinho local
+    const existingItemIndex = cartItems.findIndex((item: OrderItem) => item.dish_id === product.id);
+    let updatedCartItems;
+    
+    if (existingItemIndex >= 0) {
+      // Atualizar quantidade
+      updatedCartItems = cartItems.map((item: OrderItem, index: number) => 
+        index === existingItemIndex 
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      );
+    } else {
+      // Adicionar novo item
+      updatedCartItems = [...cartItems, orderItem];
+    }
+    
     (set as any)({ cartItems: updatedCartItems });
     
-    console.log(' [addToCart] Item adicionado ao cartItems local!');
+    // Salvar no LocalStorage
+    try {
+      localStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
+      localStorage.setItem('activeOrderId', activeOrderId || generateUUID());
+      console.log('🛒 [addToCart] Carrinho salvo no LocalStorage');
+    } catch (error) {
+      console.error('🛒 [addToCart] Erro ao salvar no LocalStorage:', error);
+    }
+    
+    console.log('🛒 [addToCart] Item adicionado ao cartItems local! Total itens:', updatedCartItems.length);
     
     // AGORA SIM processar pedido para Supabase (background)
     if (!activeOrderId) {
-      console.log(' [addToCart] Criando pedido no Balcão...');
+      console.log('🛒 [addToCart] Criando pedido no Balcão...');
       
       // Verificar se já existe um pedido aberto para o Balcão
-      const balcaoOrder = orders.find(o => o.tableId === 'balcao-999' && o.status === 'ABERTO');
+      const balcaoOrder = orders.find((o: any) => o.table_id === 'balcao-999' && o.status === 'ABERTO');
       
       if (balcaoOrder) {
         activeOrderId = balcaoOrder.id;
-        console.log(' [addToCart] Usando pedido existente do Balcão:', activeOrderId);
+        console.log('🛒 [addToCart] Usando pedido existente do Balcão:', activeOrderId);
       } else {
         // Criar novo pedido para o Balcão COM O ITEM
         const newOrderId = generateUUID();
         const newOrder: Order = {
           id: newOrderId,
-          tableId: 'balcao-999',
-          customerName: 'Balcão',
-          items: [orderItem], //  NÃO VAZIO - COM O ITEM!
-          status: 'ABERTO',
-          total: (product.price || 0) * quantity,
-          total_amount: (product.price || 0) * quantity,
+          status: 'ABERTO' as const,
+          total: 0,
+          total_amount: 0,
           tax_amount: 0,
+          customer_name: 'Balcão',
+          table_id: 'balcao-999',
+          order_number: newOrderId,
+          payment_method: 'CASH',
+          items: [orderItem],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          isPaid: false,
-          subAccountName: 'Balcão',
-          shiftId: (state as any).currentShiftId || null,
-          shift_id: (state as any).currentShiftId || null
+          user_name: 'System',
+          customer_id: null,
+          shift_id: (state as any).currentShiftId || null,
+          notes: ''
         } as unknown as Order;
         
-        // Adicionar pedido aos orders
         const updatedOrders = [...orders, newOrder];
         (set as any)({ orders: updatedOrders, activeOrderId: newOrderId, cartItems: updatedCartItems });
         activeOrderId = newOrderId;
         
-        console.log(' [addToCart] Pedido criado para Balcão COM ITEM:', activeOrderId);
+        console.log('🛒 [addToCart] Pedido criado para Balcão COM ITEM:', activeOrderId);
       }
     }
     
-    // Se já tem activeOrderId, apenas adicionar ao pedido existente
+    // Adicionar item ao pedido existente
     if (activeOrderId) {
-      const targetOrder = orders.find(o => o.id === activeOrderId);
-      if (targetOrder) {
-        const existingItemIndex = targetOrder.items?.findIndex(item => item.dish_id === product.id);
+      const order = orders.find((o: any) => o.id === activeOrderId);
+      if (order) {
+        const existingItem = order.items?.find((item: OrderItem) => item.dish_id === product.id);
         
-        if (existingItemIndex !== undefined && existingItemIndex !== -1) {
-          // Update existing item
-          const updatedItems = [...(targetOrder.items || [])];
-          updatedItems[existingItemIndex] = {
-            ...updatedItems[existingItemIndex],
-            quantity: (updatedItems[existingItemIndex].quantity || 1) + quantity,
-            updated_at: new Date().toISOString()
-          };
+        if (existingItem) {
+          // Atualizar item existente
+          const finalCartItems = updatedCartItems.map((item: OrderItem) => 
+            item.dish_id === product.id 
+              ? { ...item, quantity: existingItem.quantity + quantity }
+              : item
+          );
           
-          const updatedOrder = {
-            ...targetOrder,
-            items: updatedItems,
-            total: updatedItems.reduce((sum, item) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0),
-            updated_at: new Date().toISOString()
-          };
+          (set as any)({ cartItems: finalCartItems });
           
-          const updatedOrders = orders.map(o => o.id === activeOrderId ? updatedOrder : o);
-          const finalCartItems = updatedOrder.items || [];
-          
-          set({ 
-            orders: updatedOrders,
-            cartItems: finalCartItems
-          } as any);
-          
-          console.log(' [addToCart] Item atualizado no pedido existente!');
+          console.log('🛒 [addToCart] Item atualizado no pedido existente!');
           return;
         }
         
-        // Add new item to existing order
-        const newItems = [...(targetOrder.items || []), orderItem];
-        const updatedOrder = {
-          ...targetOrder,
-          items: newItems,
-          total: newItems.reduce((sum, item) => sum + ((item.unit_price || 0) * (item.quantity || 1)), 0),
+        // Adicionar novo item ao pedido
+        const orderWithNewItem = {
+          ...order,
+          items: [...(order.items || []), orderItem],
+          total: order.total + (product.price || 0) * quantity,
+          total_amount: order.total_amount + (product.price || 0) * quantity,
           updated_at: new Date().toISOString()
         };
         
-        const updatedOrders = orders.map(o => o.id === activeOrderId ? updatedOrder : o);
+        const updatedCartItemsFinal = updatedCartItems.map((item: OrderItem) => 
+          item.dish_id === product.id ? orderItem : item
+        );
         
-        set({ 
-          orders: updatedOrders,
-          cartItems: newItems
-        } as any);
+        (set as any)({ 
+          orders: orders.map((o: any) => o.id === activeOrderId ? orderWithNewItem : o),
+          cartItems: updatedCartItemsFinal
+        });
         
-        console.log(' [addToCart] Item adicionado ao pedido existente!');
+        console.log('🛒 [addToCart] Item adicionado ao pedido existente!');
         return;
       }
     }
