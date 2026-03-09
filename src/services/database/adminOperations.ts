@@ -212,16 +212,21 @@ export const adminOperations = {
     if (!supabaseAdmin) return { success: false, error: 'Supabase Service Role Key not configured.' };
 
     try {
-        const dbCategory = {
+        const dbCategory: any = {
             id: category.id,
             name: category.name,
             icon: category.icon,
-            sort_order: category.sortOrder || 0,
             parent_id: category.parentId || null,
             "isAvailableOnDigitalMenu": category.isAvailableOnDigitalMenu ?? true,
             updated_at: new Date().toISOString()
         };
 
+        // Adicionar sort_order apenas se não for undefined
+        if (category.sortOrder !== undefined) {
+            dbCategory.sort_order = category.sortOrder;
+        }
+
+        console.log('🔧 Objeto enviado para o Supabase:', dbCategory);
         console.log('🔧 SALVANDO EM menu_categories (snake_case):', dbCategory);
 
         const { error } = await supabaseAdmin
