@@ -172,41 +172,27 @@ export const adminOperations = {
 
     try {
         logger.debug('Attempting to save dish (admin)', { dish }, 'DATABASE_ADMIN');
+        // 🎯 SIMPLIFICADO: Apenas campos essenciais
         const dbDish = {
             id: dish.id,
             name: dish.name,
             description: dish.description || null,
             price: dish.price,
-            cost_price: dish.costPrice || 0,
             category_id: dish.categoryId && isValidUUID(dish.categoryId) ? dish.categoryId : null,
             image_url: dish.imageUrl || null,
-            tax_code: dish.taxCode || null,
-            tax_percentage: dish.taxPercentage || null,
-            preparation_time: dish.preparationTime || null,
-            is_active: dish.isActive ?? true,
-            available: dish.available ?? true,
-            is_available_on_digital_menu: dish.isAvailableOnDigitalMenu ?? true,
-            track_stock: dish.trackStock ?? false,
-            stock_quantity: dish.stockQuantity || 0,
-            min_stock_quantity: dish.minStockQuantity || 0,
-            max_stock_quantity: (dish as any).maxStockQuantity || null,
-            unit: dish.unit || 'unidade',
-            // REMOVIDO: supplier_id - tabela pode não existir ainda
-            updated_at: new Date().toISOString()
+            status: 'ACTIVE' // 🎯 STATUS SIMPLES
         };
 
-        console.log('🔧 SALVANDO PRATO EM dishes:', dbDish);
-        console.log('🔧 category_id enviado:', dbDish.category_id);
-        console.log('🔧 categoryId original:', dish.categoryId);
-        console.log('🔧 TODAS AS COLUNAS ENVIADAS:', Object.keys(dbDish));
-        console.log('🔧 VALORES DAS COLUNAS:', dbDish);
+        console.log('🔧 SALVANDO PRATO SIMPLES:', dbDish);
+        console.log('🔧 category_id (snake_case):', dbDish.category_id);
 
         const { error } = await supabaseAdmin
             .from('dishes')
             .upsert(dbDish);
 
         if (error) {
-            console.error('ERRO REAL DO SUPABASE:', error.message, error.details, error.hint);
+            console.error('❌ ERRO DO SUPABASE:');
+            console.log(JSON.stringify(error, null, 2));
             throw error;
         }
         return { success: true };
