@@ -368,7 +368,7 @@ export const createOperationalSlice: StateCreator<
     const newOrder: Order = {
       id: order_id,
       tableId,
-      customerName: name,
+      customerName: name || 'Balcão', // 🎯 DEFEITO 'Balcão' quando não há nome
       items: [],
       status: 'ABERTO',
       total: 0,
@@ -376,8 +376,9 @@ export const createOperationalSlice: StateCreator<
       tax_amount: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      closedAt: null, // 🎯 closedAt conforme schema atualizado
       isPaid: false,
-      subAccountName: name,
+      subAccountName: name || 'Balcão',
       shiftId: get().currentShiftId || null,
       shift_id: get().currentShiftId || null
     } as unknown as Order;

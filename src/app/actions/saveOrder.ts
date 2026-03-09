@@ -42,7 +42,7 @@ export async function saveOrderAction(order: Order) {
       total: calculatedTotal, // 🎯 USAR TOTAL CALCULADO DO CARTITEMS
       total_amount: calculatedTotal, // 🎯 USAR TOTAL CALCULADO - SNAKE_CASE
       paid_amount: calculatedTotal, // 🎯 USAR TOTAL CALCULADO - SNAKE_CASE
-      customer_name: order.customer_name || null, // SNAKE_CASE DIRETO
+      customer_name: order.customer_name || 'Balcão', // 🎯 DEFEITO 'Balcão' quando não há mesa
       table_id: order.table_id || null, // SNAKE_CASE DIRETO
       order_number: order.order_number || null, // SNAKE_CASE DIRETO
       shift_id: order.shift_id || null, // SNAKE_CASE DIRETO
@@ -52,6 +52,8 @@ export async function saveOrderAction(order: Order) {
       user_id: order.user_id || null, // SNAKE_CASE DIRETO
       user_name: order.user_name || null, // SNAKE_CASE DIRETO
       customer_id: order.customer_id || null, // SNAKE_CASE DIRETO
+      // 🎯 USAR closedAt (CAMELCASE) CONFORME SCHEMA ATUALIZADO
+      closedAt: new Date().toISOString(),
       // 🎯 USAR ITENS MAPEADOS DO CARTITEMS
       items: mappedItems,
       // REMOVIDO: created_at e updated_at - Supabase usa DEFAULT NOW()
