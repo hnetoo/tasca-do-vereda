@@ -198,6 +198,8 @@ export const adminOperations = {
         console.log('🔧 SALVANDO PRATO EM dishes:', dbDish);
         console.log('🔧 category_id enviado:', dbDish.category_id);
         console.log('🔧 categoryId original:', dish.categoryId);
+        console.log('🔧 TODAS AS COLUNAS ENVIADAS:', Object.keys(dbDish));
+        console.log('🔧 VALORES DAS COLUNAS:', dbDish);
 
         const { error } = await supabaseAdmin
             .from('dishes')
