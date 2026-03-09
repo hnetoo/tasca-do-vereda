@@ -100,7 +100,7 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
     set((state) => ({ orders: [...state.orders, order] }));
     
     // Sync with Supabase
-    const { tableId, userId, userName, customerNif, customerId, shiftId, subAccountName, invoiceNumber, previousHash, jwsPayload, isSyncedAgt, agtSubmissionUuid, createdAt, updatedAt, closedAt, paymentMethod, splitPayments, customerName, ...rest } = order;
+    const { tableId, userId, userName, customerNif, customerId, shiftId, subAccountName, invoiceNumber, previousHash, jwsPayload, isSyncedAgt, agtSubmissionUuid, created_at, updated_at, closedAt, paymentMethod, splitPayments, customerName, ...rest } = order;
     const supabaseOrder = { 
       ...order, 
       table_id: tableId ? String(tableId) : null, 
@@ -115,8 +115,8 @@ export const createFinanceSlice: StateCreator<StoreState, [], [], FinanceSlice> 
       jws_payload: jwsPayload || null, 
       is_synced_agt: isSyncedAgt || null, 
       agt_submission_uuid: agtSubmissionUuid || null, 
-      created_at: createdAt || null, 
-      updated_at: updatedAt || null, 
+      created_at: created_at || null, 
+      updated_at: updated_at || null, 
       closed_at: closedAt || null, 
       payment_method: paymentMethod || null, 
       split_payments: splitPayments || null, 

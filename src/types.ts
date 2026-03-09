@@ -599,7 +599,7 @@ export interface APIKey {
   name: string;
   key: string;
   secret: string;
-  createdAt: Date | string;
+  created_at: Date | string;
   lastUsed?: Date | string;
   status: 'ACTIVE' | 'REVOKED' | 'EXPIRED' | string;
   scopes: string[];
@@ -639,7 +639,7 @@ export interface MobileSession {
   deviceId: string;
   deviceName: string;
   ipAddress: string;
-  createdAt: Date | string;
+  created_at: Date | string;
   expiresAt: Date | string;
   lastActive: Date | string;
   status: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | string;

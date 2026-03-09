@@ -69,7 +69,7 @@ export const createIntegrationsSlice: StateCreator<
         name,
         key,
         secret,
-        createdAt: new Date(),
+        created_at: new Date(),
         status: 'ACTIVE',
         scopes
       };
@@ -243,7 +243,7 @@ export const createIntegrationsSlice: StateCreator<
         deviceId: deviceInfo.deviceId,
         deviceName: deviceInfo.deviceName,
         ipAddress: deviceInfo.ipAddress,
-        createdAt: new Date(),
+        created_at: new Date(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
         lastActive: new Date(),
         status: 'ACTIVE'
