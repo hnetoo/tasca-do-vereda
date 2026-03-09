@@ -34,6 +34,40 @@ const POS = () => {
   // Enable realtime table updates
   useTables();
 
+  // 🎯 INICIALIZAÇÃO AUTOMÁTICA DE DADOS AO CARREGAR POS
+  useEffect(() => {
+    console.log('🚀 [POS] Inicializando dados automaticamente...');
+    
+    const initializeData = async () => {
+      try {
+        // 1. Buscar mesas
+        console.log('📋 [POS] Buscando mesas...');
+        const { fetchTables } = useStore.getState();
+        await fetchTables();
+        
+        // 2. Buscar categorias e produtos do menu
+        console.log('🍽️ [POS] Buscando menu...');
+        const { loadFromSQLExclusively, syncMenuWithCloud } = useStore.getState();
+        
+        // Tentar carregar do SQL local primeiro
+        const sqlLoaded = await loadFromSQLExclusively();
+        if (sqlLoaded) {
+          console.log('✅ [POS] Menu carregado do SQL local');
+        } else {
+          console.log('⚠️ [POS] Falha ao carregar do SQL, tentando sync com cloud...');
+          await syncMenuWithCloud();
+        }
+        
+        console.log('✅ [POS] Dados inicializados com sucesso!');
+      } catch (error) {
+        console.error('❌ [POS] Erro ao inicializar dados:', error);
+      }
+    };
+    
+    // Executar inicialização
+    initializeData();
+  }, []);
+
   const { 
     tables, activeTableId, setActiveTable, fetchTables,
     dishes: menu, categories, activeOrders, activeOrderId, 
