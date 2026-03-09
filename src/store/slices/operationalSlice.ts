@@ -514,6 +514,25 @@ export const createOperationalSlice: StateCreator<
       status: 'pending',
       created_at: new Date().toISOString()
     };
+
+    // 🎯 VERIFICAR PRODUTO CONFORME SCHEMA DISHES
+    console.log('🛒 [addToCart] Produto do schema dishes:', {
+      id: product.id,           // ✅ id (uuid)
+      name: product.name,         // ✅ name (text)
+      price: product.price,       // ✅ price (numeric 15,2)
+      description: product.description, // ✅ description (text)
+      category_id: product.category_id, // ✅ category_id (uuid)
+      image_url: product.image_url,     // ✅ image_url (text)
+      available: product.available,       // ✅ available (boolean)
+      is_active: product.is_active,       // ✅ is_active (boolean)
+      tax_percentage: product.tax_percentage, // ✅ tax_percentage (numeric)
+      tax_code: product.tax_code,         // ✅ tax_code (text)
+      preparation_time: product.preparation_time, // ✅ preparation_time (integer)
+      track_stock: product.track_stock,     // ✅ track_stock (boolean)
+      stock_quantity: product.stock_quantity, // ✅ stock_quantity (numeric)
+      created_at: product.created_at,     // ✅ created_at (timestamp)
+      updated_at: product.updated_at      // ✅ updated_at (timestamp)
+    });
     
     // Se quantity for negativo, remover do carrinho
     if (quantity < 0) {
