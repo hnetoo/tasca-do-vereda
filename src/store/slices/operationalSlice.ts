@@ -494,9 +494,9 @@ export const createOperationalSlice: StateCreator<
     }
   },
 
-  // FUNÇÃO addToCart - ESTADO LOCAL PRIMEIRO
+  // FUNÇÃO addToCart - INSERÇÃO DIRETA COM VALIDAÇÃO
   addToCart: (product: Dish, quantity: number = 1) => {
-    console.log('🛒 [addToCart] Produto:', product.name, 'Quantidade:', quantity);
+    console.log(' [addToCart] Produto:', product.name, 'Quantidade:', quantity);
     
     const state = get();
     let activeOrderId = (state as any).activeOrderId;
@@ -517,41 +517,23 @@ export const createOperationalSlice: StateCreator<
       status: 'pending',
       created_at: new Date().toISOString()
     };
-
-    // 🎯 VERIFICAR PRODUTO CONFORME SCHEMA DISHES
-    console.log('🛒 [addToCart] Produto do schema dishes:', {
-      id: product.id,           // ✅ id (uuid)
-      name: product.name,         // ✅ name (text)
-      price: product.price,       // ✅ price (numeric 15,2)
-      description: product.description, // ✅ description (text)
-      category_id: product.category_id, // ✅ category_id (uuid)
-      image_url: product.image_url,     // ✅ image_url (text)
-      available: product.available,       // ✅ available (boolean)
-      is_active: product.is_active,       // ✅ is_active (boolean)
-      tax_percentage: product.tax_percentage, // ✅ tax_percentage (numeric)
-      tax_code: product.tax_code,         // ✅ tax_code (text)
-      preparation_time: product.preparation_time, // ✅ preparation_time (integer)
-      track_stock: product.track_stock,     // ✅ track_stock (boolean)
-      stock_quantity: product.stock_quantity, // ✅ stock_quantity (numeric)
-      created_at: product.created_at,     // ✅ created_at (timestamp)
-      updated_at: product.updated_at      // ✅ updated_at (timestamp)
-    });
+    
+    console.log(' [addToCart] OrderItem criado:', orderItem);
     
     // Se quantity for negativo, remover do carrinho
     if (quantity < 0) {
-      console.log('🛒 [addToCart] Removendo item do carrinho...');
+      console.log(' [addToCart] Removendo item do carrinho...');
       const updatedCartItems = cartItems.filter((item: OrderItem) => item.dish_id !== product.id);
       (set as any)({ cartItems: updatedCartItems });
       
-      // Salvar no LocalStorage
       try {
         localStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
-        console.log('🛒 [addToCart] Carrinho salvo no LocalStorage (remoção)');
+        console.log(' [addToCart] Carrinho salvo no LocalStorage (remoção)');
       } catch (error) {
-        console.error('🛒 [addToCart] Erro ao salvar no LocalStorage:', error);
+        console.error(' [addToCart] Erro ao salvar no LocalStorage:', error);
       }
       
-      console.log('🛒 [addToCart] Item removido do cartItems local!');
+      console.log(' [addToCart] Item removido do cartItems local!');
       return;
     }
     
@@ -577,50 +559,111 @@ export const createOperationalSlice: StateCreator<
     try {
       localStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
       localStorage.setItem('activeOrderId', activeOrderId || generateUUID());
-      console.log('🛒 [addToCart] Carrinho salvo no LocalStorage');
+      console.log(' [addToCart] Carrinho salvo no LocalStorage');
     } catch (error) {
-      console.error('🛒 [addToCart] Erro ao salvar no LocalStorage:', error);
+      console.error(' [addToCart] Erro ao salvar no LocalStorage:', error);
     }
     
-    console.log('🛒 [addToCart] Item adicionado ao cartItems local! Total itens:', updatedCartItems.length);
+    console.log(' [addToCart] Item adicionado ao cartItems local! Total itens:', updatedCartItems.length);
     
-    // AGORA SIM processar pedido para Supabase (background)
+    // CRIAR/SALVAR PEDIDO DIRETAMENTE COM TOTAL E ITENS CORRETOS
     if (!activeOrderId) {
-      console.log('🛒 [addToCart] Criando pedido no Balcão...');
+      console.log(' [addToCart] Criando pedido no Balcão...');
       
       // Verificar se já existe um pedido aberto para o Balcão
       const balcaoOrder = orders.find((o: any) => o.table_id === 'balcao-999' && o.status === 'ABERTO');
       
       if (balcaoOrder) {
         activeOrderId = balcaoOrder.id;
-        console.log('🛒 [addToCart] Usando pedido existente do Balcão:', activeOrderId);
+        console.log(' [addToCart] Usando pedido existente do Balcão:', activeOrderId);
       } else {
-        // Criar novo pedido para o Balcão COM O ITEM
+        // CRIAR NOVO PEDIDO COM TOTAL E ITENS CORRETOS
         const newOrderId = generateUUID();
-        const newOrder: Order = {
+        
+        // Calcular total real dos itens
+        const realTotal = updatedCartItems.reduce((sum: number, item: OrderItem) => {
+          return sum + (item.unit_price * item.quantity);
+        }, 0);
+        
+        console.log(' [addToCart] Total real calculado:', realTotal);
+        console.log(' [addToCart] Itens para salvar:', updatedCartItems);
+        
+        // VALIDAÇÃO CRÍTICA ANTES DE INSERIR
+        if (realTotal === 0 || updatedCartItems.length === 0) {
+          console.error(' [addToCart] ERRO: Total ou itens vazios! Abortando inserção.');
+          return;
+        }
+        
+        // PAYLOAD CORRETO PARA INSERÇÃO DIRETA
+        const orderPayload = {
           id: newOrderId,
           status: 'ABERTO' as const,
-          total: 0,
-          total_amount: 0,
+          total: realTotal,                    // TOTAL REAL
+          total_amount: realTotal,             // TOTAL REAL
           tax_amount: 0,
           customer_name: 'Balcão',
           table_id: 'balcao-999',
           order_number: newOrderId,
           payment_method: 'CASH',
-          items: [orderItem],
+          items: updatedCartItems,             // ITENS REAIS
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           user_name: 'System',
           customer_id: null,
           shift_id: (state as any).currentShiftId || null,
-          notes: ''
+          notes: '',
+          closedAt: null,                   // closedAt conforme schema
         } as unknown as Order;
         
-        const updatedOrders = [...orders, newOrder];
-        (set as any)({ orders: updatedOrders, activeOrderId: newOrderId, cartItems: updatedCartItems });
+        console.log(' [addToCart] Payload para inserir:', orderPayload);
+        console.log(' [addToCart] VALIDAÇÃO: total !== 0?', orderPayload.total !== 0);
+        console.log(' [addToCart] VALIDAÇÃO: items.length > 0?', orderPayload.items.length > 0);
+        
+        // INSERÇÃO DIRETA NO SUPABASE COM VALIDAÇÃO
+        const insertOrderDirectly = async () => {
+          try {
+            // Importar supabase dinamicamente para evitar múltiplas instâncias
+            const { supabase } = await import('@/lib/supabase');
+            
+            // VALIDAÇÃO FINAL ANTES DO INSERT
+            if (orderPayload.total === 0 || orderPayload.items.length === 0) {
+              throw new Error('Dados vazios detetados! Total ou itens vazios.');
+            }
+            
+            console.log('🛒 [addToCart] ENVIANDO PARA SUPABASE...');
+            
+            // @ts-ignore - Ignorar erro de TypeScript do Supabase
+            const { data, error } = await (supabase as any)
+              .from('orders')
+              .insert(orderPayload)
+              .select();
+            
+            if (error) {
+              console.error(' [addToCart] Erro ao inserir pedido:', error);
+              return;
+            }
+            
+            console.log(' [addToCart] SUCESSO! Pedido inserido:', data);
+            console.log(' [addToCart] Total salvo:', (data as any)?.[0]?.total);
+            console.log(' [addToCart] Items salvos:', (data as any)?.[0]?.items?.length);
+            
+            // Atualizar estado local
+            const updatedOrders = [...orders, ...(data as any)];
+            (set as any)({ orders: updatedOrders, activeOrderId: newOrderId, cartItems: updatedCartItems });
+            
+            console.log(' [addToCart] Pedido criado e salvo com sucesso!');
+            
+          } catch (error) {
+            console.error(' [addToCart] Exceção ao inserir pedido:', error);
+          }
+        };
+        
+        // Executar inserção em background
+        insertOrderDirectly();
         activeOrderId = newOrderId;
         
-        console.log('🛒 [addToCart] Pedido criado para Balcão COM ITEM:', activeOrderId);
+        console.log(' [addToCart] Pedido criado para Balcão COM ITEM:', activeOrderId);
+        return;
       }
     }
     
@@ -640,34 +683,66 @@ export const createOperationalSlice: StateCreator<
           
           (set as any)({ cartItems: finalCartItems });
           
-          console.log('🛒 [addToCart] Item atualizado no pedido existente!');
+          console.log(' [addToCart] Item atualizado no pedido existente!');
           return;
+        } else {
+          // Adicionar novo item ao pedido existente
+          const updatedItems = [...(order.items || []), orderItem];
+          
+          // Calcular novo total
+          const newTotal = updatedItems.reduce((sum: number, item: OrderItem) => {
+            return sum + (item.unit_price * item.quantity);
+          }, 0);
+          
+          // ATUALIZAR PEDIDO EXISTENTE COM TOTAL E ITENS CORRETOS
+          const updateOrderDirectly = async () => {
+            try {
+              const { supabase } = await import('@/lib/supabase');
+              
+              const updatePayload = {
+                total: newTotal,
+                total_amount: newTotal,
+                items: updatedItems,
+                updated_at: new Date().toISOString()
+              };
+              
+              // VALIDAÇÃO ANTES DO UPDATE
+              if (updatePayload.total === 0 || updatePayload.items.length === 0) {
+                throw new Error('Dados vazios detetados! Total ou itens vazios.');
+              }
+              
+              console.log('🛒 [addToCart] Atualizando pedido existente:', updatePayload);
+              
+              // @ts-ignore - Ignorar erro de TypeScript do Supabase
+              const { data, error } = await (supabase as any)
+                .from('orders')
+                .update(updatePayload)
+                .eq('id', activeOrderId)
+                .select();
+              
+              if (error) {
+                console.error(' [addToCart] Erro ao atualizar pedido:', error);
+                return;
+              }
+              
+              console.log(' [addToCart] Pedido atualizado com sucesso:', data);
+              
+              // Atualizar estado local
+              const updatedOrders = orders.map((o: any) => 
+                o.id === activeOrderId ? { ...o, ...updatePayload } : o
+              );
+              (set as any)({ orders: updatedOrders, cartItems: updatedItems });
+              
+            } catch (error) {
+              console.error(' [addToCart] Exceção ao atualizar pedido:', error);
+            }
+          };
+          
+          updateOrderDirectly();
+          console.log(' [addToCart] Item adicionado ao pedido existente!');
         }
-        
-        // Adicionar novo item ao pedido
-        const orderWithNewItem = {
-          ...order,
-          items: [...(order.items || []), orderItem],
-          total: order.total + (product.price || 0) * quantity,
-          total_amount: order.total_amount + (product.price || 0) * quantity,
-          updated_at: new Date().toISOString()
-        };
-        
-        const updatedCartItemsFinal = updatedCartItems.map((item: OrderItem) => 
-          item.dish_id === product.id ? orderItem : item
-        );
-        
-        (set as any)({ 
-          orders: orders.map((o: any) => o.id === activeOrderId ? orderWithNewItem : o),
-          cartItems: updatedCartItemsFinal
-        });
-        
-        console.log('🛒 [addToCart] Item adicionado ao pedido existente!');
-        return;
       }
     }
-    
-    console.log(' [addToCart] Nenhum pedido válido encontrado');
   },
 
   // FUNÇÃO AUSENTE - Adicionar addToOrder para o carrinho funcionar
