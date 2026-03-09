@@ -37,6 +37,19 @@ const nextConfig = {
             key: 'Access-Control-Allow-Headers',
             value: 'Content-Type, Authorization',
           },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://myppylcyupoirizyxhpo.supabase.co https://www.googletagmanager.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https://myppylcyupoirizyxhpo.supabase.co",
+              "connect-src 'self' https://myppylcyupoirizyxhpo.supabase.co https://*.googleapis.com wss://myppylcyupoirizyxhpo.supabase.co",
+              "worker-src 'self' blob:",
+              "frame-src 'none'"
+            ].join('; ')
+          },
         ],
       },
       {

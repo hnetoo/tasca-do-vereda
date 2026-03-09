@@ -5,24 +5,41 @@ export async function saveOrderAction(order: Order) {
   try {
     console.log('💾 [saveOrderAction] Salvando pedido:', order);
     
-    // 🎯 MAPEAR ITENS DO CARRINHO CONFORME SCHEMA ORDER_ITEMS
-    const items = order.items || [];
-    console.log('💾 [saveOrderAction] Itens do pedido:', items);
+    // 🎯 FIX CRÍTICO: Obter cartItems do estado real, não do order
+    const { cartItems } = await import('@/store/useStore').then(m => m.useStore.getState());
+    console.log('💾 [saveOrderAction] cartItems do estado:', cartItems);
     
-    // 🎯 CALCULAR TOTAL CORRETO A PARTIR DOS ITENS
-    const calculatedTotal = items.reduce((sum: number, item: any) => {
+    // 🎯 CALCULAR TOTAL CORRETO A PARTIR DO CARTITEMS REAL
+    const calculatedTotal = cartItems.reduce((sum: number, item: any) => {
       const price = item.unit_price || item.price || 0;
       const quantity = item.quantity || 1;
       return sum + (price * quantity);
     }, 0);
     
-    console.log('💾 [saveOrderAction] Total calculado:', calculatedTotal);
+    console.log('💾 [saveOrderAction] Total calculado do cartItems:', calculatedTotal);
+    
+    // 🎯 MAPEAR ITENS DO CARTITEMS CONFORME SCHEMA ORDER_ITEMS
+    const mappedItems = cartItems.map((item: any) => ({
+      id: item.id,
+      order_id: order.id,
+      dish_id: item.dish_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      tax_percentage: item.tax_percentage || 0,
+      tax_amount: item.tax_amount || 0,
+      tax_code: item.tax_code || '',
+      notes: item.notes || '',
+      status: item.status || 'pending',
+      created_at: item.created_at
+    }));
+    
+    console.log('💾 [saveOrderAction] Itens mapeados:', mappedItems);
     
     // GARANTIR STATUS CONCLUIDO e TOTAL CORRETO - SNAKE_CASE OBRIGATÓRIO
     const orderToSave: any = {
       ...order,
       status: 'CONCLUIDO', // Força status CONCLUIDO
-      total: calculatedTotal, // 🎯 USAR TOTAL CALCULADO
+      total: calculatedTotal, // 🎯 USAR TOTAL CALCULADO DO CARTITEMS
       total_amount: calculatedTotal, // 🎯 USAR TOTAL CALCULADO - SNAKE_CASE
       paid_amount: calculatedTotal, // 🎯 USAR TOTAL CALCULADO - SNAKE_CASE
       customer_name: order.customer_name || null, // SNAKE_CASE DIRETO
@@ -35,24 +52,13 @@ export async function saveOrderAction(order: Order) {
       user_id: order.user_id || null, // SNAKE_CASE DIRETO
       user_name: order.user_name || null, // SNAKE_CASE DIRETO
       customer_id: order.customer_id || null, // SNAKE_CASE DIRETO
-      // 🎯 MAPEAR ITENS CONFORME SCHEMA ORDER_ITEMS
-      items: items.map((item: any) => ({
-        id: item.id,
-        order_id: item.order_id,
-        dish_id: item.dish_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        tax_percentage: item.tax_percentage || 0,
-        tax_amount: item.tax_amount || 0,
-        tax_code: item.tax_code || '',
-        notes: item.notes || '',
-        status: item.status || 'pending',
-        created_at: item.created_at
-      })),
+      // 🎯 USAR ITENS MAPEADOS DO CARTITEMS
+      items: mappedItems,
       // REMOVIDO: created_at e updated_at - Supabase usa DEFAULT NOW()
     };
     
     console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
+    console.log('💾 [saveOrderAction] TOTAL FINAL:', calculatedTotal, 'ITENS:', mappedItems.length);
     
     // 🎯 SALVAR NO LOCALSTORAGE PRIMEIRO (RESILIÊNCIA HÍBRIDA)
     try {
