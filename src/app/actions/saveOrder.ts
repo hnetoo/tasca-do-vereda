@@ -1,13 +1,29 @@
 import { Order } from '@/types';
-import { supabase } from '@/lib/supabase';
 
-export async function saveOrderAction(order: Order) {
+// 🎯 SINGLETON SUPABASE CLIENT - EVITAR MULTIPLE GOTHCLIENT
+let supabaseClient: any = null;
+
+async function getSupabaseClient() {
+  if (!supabaseClient) {
+    const { supabase } = await import('@/lib/supabase');
+    supabaseClient = supabase;
+    console.log('🔒 [SUPABASE] Singleton client criado');
+  }
+  return supabaseClient;
+}
+
+export async function saveOrderAction(order: Order, cartItems?: any[]) {
   try {
     console.log('💾 [saveOrderAction] Salvando pedido:', order);
     
-    // 🎯 FIX CRÍTICO: Obter cartItems do estado real, não do order
-    const { cartItems } = await import('@/store/useStore').then(m => m.useStore.getState());
-    console.log('💾 [saveOrderAction] cartItems do estado:', cartItems);
+    // 🎯 OBRIGATORIEDADE: Receber carrinho como argumento direto
+    if (!cartItems) {
+      // Se não recebeu, obter do estado (fallback)
+      const { cartItems: stateCartItems } = await import('@/store/useStore').then(m => m.useStore.getState());
+      cartItems = stateCartItems;
+    }
+    
+    console.log('💾 [saveOrderAction] Carrinho recebido:', cartItems);
     
     // 🎯 VALIDAÇÃO CRÍTICA: Se não há itens, erro
     if (!cartItems || cartItems.length === 0) {
@@ -15,22 +31,24 @@ export async function saveOrderAction(order: Order) {
       return { success: false, error: 'Carrinho vazio! Adicione itens antes de salvar.' };
     }
     
-    // 🎯 CALCULAR TOTAL CORRETO A PARTIR DO CARTITEMS REAL
-    const calculatedTotal = cartItems.reduce((sum: number, item: any) => {
-      const price = item.unit_price || item.price || 0;
-      const quantity = item.quantity || 1;
-      return sum + (price * quantity);
+    // 🎯 OBRIGATORIEDADE: Recalcular total manualmente
+    const realTotal = cartItems.reduce((acc: number, i: any) => {
+      const price = i.unit_price || i.price || 0;
+      const quantity = i.quantity || 1;
+      return acc + (price * quantity);
     }, 0);
     
-    console.log('💾 [saveOrderAction] Total calculado do cartItems:', calculatedTotal);
+    console.log('💾 [saveOrderAction] Total manualmente calculado:', realTotal);
     
-    // 🎯 VALIDAÇÃO CRÍTICA: Se total é 0, erro
-    if (calculatedTotal <= 0) {
-      console.error('❌ [saveOrderAction] ERRO: Total calculado é 0! Verifique preços dos itens.');
-      return { success: false, error: 'Total do pedido é 0! Verifique os preços dos itens.' };
+    // 🎯 TRAVÃO DE SEGURANÇA: Se total é 0, parar e dar erro
+    if (realTotal === 0) {
+      console.error('🚨 [saveOrderAction] TRAVÃO DE SEGURANÇA: Total calculado é 0! ENVIANDO LIXO PARA DB - PARADO!');
+      console.error('🚨 [saveOrderAction] Itens no carrinho:', cartItems);
+      console.error('🚨 [saveOrderAction] Preços dos itens:', cartItems.map(i => ({ name: i.name, price: i.unit_price || i.price })));
+      return { success: false, error: 'TRAVÃO DE SEGURANÇA: Total calculado é 0! Verifique os preços dos itens.' };
     }
     
-    // 🎯 MAPEAR ITENS DO CARTITEMS CONFORME SCHEMA ORDER_ITEMS
+    // 🎯 MAPEAR ITENS CONFORME SCHEMA
     const mappedItems = cartItems.map((item: any) => ({
       id: item.id,
       order_id: order.id,
@@ -47,41 +65,44 @@ export async function saveOrderAction(order: Order) {
     
     console.log('💾 [saveOrderAction] Itens mapeados:', mappedItems);
     
-    // 🎯 VALIDAÇÃO FINAL: Garantir que temos itens mapeados
+    // 🎯 VALIDAÇÃO FINAL
     if (!mappedItems || mappedItems.length === 0) {
       console.error('❌ [saveOrderAction] ERRO: Falha ao mapear itens do carrinho!');
       return { success: false, error: 'Falha ao processar itens do carrinho!' };
     }
     
-    // GARANTIR STATUS CONCLUIDO e TOTAL CORRETO - SNAKE_CASE OBRIGATÓRIO
+    // 🎯 PAYLOAD CORRETO COM closedAt (COM 'A' MAIÚSCULO)
     const orderToSave: any = {
       ...order,
-      status: 'CONCLUIDO', // Força status CONCLUIDO
-      total: calculatedTotal, // 🎯 USAR TOTAL CALCULADO DO CARTITEMS
-      total_amount: calculatedTotal, // 🎯 USAR TOTAL CALCULADO - SNAKE_CASE
-      paid_amount: calculatedTotal, // 🎯 USAR TOTAL CALCULADO - SNAKE_CASE
-      customer_name: order.customer_name || 'Balcão', // 🎯 DEFEITO 'Balcão' quando não há mesa
-      table_id: order.table_id || null, // SNAKE_CASE DIRETO
-      order_number: order.order_number || null, // SNAKE_CASE DIRETO
-      shift_id: order.shift_id || null, // SNAKE_CASE DIRETO
-      invoice_number: order.invoice_number || null, // SNAKE_CASE DIRETO
-      tax_total: order.tax_total || null, // SNAKE_CASE DIRETO
-      sub_account_name: order.sub_account_name || null, // SNAKE_CASE DIRETO
-      user_id: order.user_id || null, // SNAKE_CASE DIRETO
-      user_name: order.user_name || null, // SNAKE_CASE DIRETO
-      customer_id: order.customer_id || null, // SNAKE_CASE DIRETO
-      // 🎯 USAR closedAt (CAMELCASE) CONFORME SCHEMA ATUALIZADO
+      status: 'CONCLUIDO',
+      total: realTotal,                    // 🎯 TOTAL MANUALMENTE CALCULADO
+      total_amount: realTotal,             // 🎯 TOTAL MANUALMENTE CALCULADO
+      paid_amount: realTotal,             // 🎯 TOTAL MANUALMENTE CALCULADO
+      customer_name: order.customer_name || 'Balcão',
+      table_id: order.table_id || null,
+      order_number: order.order_number || null,
+      shift_id: order.shift_id || null,
+      invoice_number: order.invoice_number || null,
+      tax_total: order.tax_total || null,
+      sub_account_name: order.sub_account_name || null,
+      user_id: order.user_id || null,
+      user_name: order.user_name || null,
+      customer_id: order.customer_id || null,
+      // 🎯 OBRIGATORIEDADE: closedAt COM 'A' MAIÚSCULO CONFORME SUPABASE
       closedAt: new Date().toISOString(),
-      // 🎯 USAR ITENS MAPEADOS DO CARTITEMS
+      // 🎯 ITENS REAIS DO CARRINHO
       items: mappedItems,
-      // REMOVIDO: created_at e updated_at - Supabase usa DEFAULT NOW()
     };
     
-    console.log('💾 [saveOrderAction] Pedido formatado para salvar:', orderToSave);
-    console.log('💾 [saveOrderAction] TOTAL FINAL:', calculatedTotal, 'ITENS:', mappedItems.length);
-    console.log('💾 [saveOrderAction] ENVIANDO PARA SUPABASE...');
+    console.log('💾 [saveOrderAction] Payload final:', {
+      id: orderToSave.id,
+      total: orderToSave.total,
+      items_count: orderToSave.items.length,
+      closedAt: orderToSave.closedAt,
+      customer_name: orderToSave.customer_name
+    });
     
-    // 🎯 SALVAR NO LOCALSTORAGE PRIMEIRO (RESILIÊNCIA HÍBRIDA)
+    // 🎯 SALVAR NO LOCALSTORAGE PRIMEIRO
     try {
       localStorage.setItem('pendingOrder', JSON.stringify(orderToSave));
       console.log('💾 [saveOrderAction] Pedido salvo no LocalStorage como backup');
@@ -89,7 +110,12 @@ export async function saveOrderAction(order: Order) {
       console.warn('💾 [saveOrderAction] Erro ao salvar no LocalStorage:', error);
     }
     
-    // 🎯 INSERT DIRETO COM VALIDAÇÃO
+    // 🎯 USAR SINGLETON SUPABASE CLIENT
+    const supabase = await getSupabaseClient();
+    
+    console.log('💾 [saveOrderAction] ENVIANDO PARA SUPABASE...');
+    
+    // 🎯 INSERT DIRETO
     const { data, error } = await supabase
       .from('orders')
       .insert(orderToSave)
@@ -101,10 +127,9 @@ export async function saveOrderAction(order: Order) {
     }
 
     console.log('✅ [saveOrderAction] SUCESSO! Pedido salvo no Supabase:', data);
-    console.log('✅ [saveOrderAction] Status:', (data as any)?.[0]?.status);
-    console.log('✅ [saveOrderAction] Total:', (data as any)?.[0]?.total, '(Tipo:', typeof (data as any)?.[0]?.total, ')');
+    console.log('✅ [saveOrderAction] Total salvo:', (data as any)?.[0]?.total);
     console.log('✅ [saveOrderAction] Items salvos:', (data as any)?.[0]?.items?.length);
-    console.log('✅ [saveOrderAction] Resposta Supabase:', { status: 201, data: data });
+    console.log('✅ [saveOrderAction] closedAt salvo:', (data as any)?.[0]?.closedAt);
     
     // 🎯 LIMPAR LOCALSTORAGE APÓS SUCESSO
     try {
