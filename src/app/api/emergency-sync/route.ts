@@ -98,7 +98,7 @@ export async function PUT(request: Request) {
             total: order.total || 0,
             customer_name: order.customerName || '',
             items: JSON.stringify(order.items || []),
-            created_at: order.createdAt || new Date().toISOString(),
+            created_at: order.created_at || new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
 

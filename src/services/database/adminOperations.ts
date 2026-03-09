@@ -597,7 +597,7 @@ export const adminOperations = {
           sub_account_name: order.sub_account_name || null,
           shift_id: shiftId,                           // ✓ apenas se existir shift aberto
           closed_at: order.closed_at || null,
-          created_at: order.createdAt || order.created_at || new Date().toISOString(),
+          created_at: order.created_at || new Date().toISOString(),
           updated_at: new Date().toISOString(),
           items: order.items || []                     // ✓ existe (jsonb)
       };

@@ -113,7 +113,7 @@ class OrderService {
           notes: item.notes || '',
           status: item.status || 'pending'
         })) || [],
-        created_at: order.createdAt || new Date().toISOString(),
+        created_at: order.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
